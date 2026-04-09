@@ -17,6 +17,7 @@ export interface Source {
   name: string;
   is_active: boolean;
   created_at: Date;
+  default_category_id: number;
 }
 
 // Category - التصنيفات

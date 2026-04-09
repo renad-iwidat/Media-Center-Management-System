@@ -4,3 +4,4 @@
  */
 
 export { NewsController } from './news.controller';
+export { classifyUnclassifiedArticles, getUnclassifiedArticles } from './classifier.controller';

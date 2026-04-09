@@ -84,7 +84,10 @@ export class SourceService {
    */
   static async getActive(): Promise<Source[]> {
     const result = await query(
-      'SELECT * FROM sources WHERE is_active = true ORDER BY id'
+      `SELECT id, source_type_id, url, name, is_active, created_at, default_category_id 
+       FROM sources 
+       WHERE is_active = true 
+       ORDER BY id`
     );
     return result.rows;
   }
@@ -195,6 +198,28 @@ export class RawDataService {
       [source_id]
     );
     return result.rows;
+  }
+
+  /**
+   * التحقق من وجود خبر بالـ URL
+   */
+  static async existsByUrl(url: string): Promise<boolean> {
+    const result = await query(
+      'SELECT id FROM raw_data WHERE url = $1 LIMIT 1',
+      [url]
+    );
+    return result.rows.length > 0;
+  }
+
+  /**
+   * تحديث تصنيف الخبر
+   */
+  static async updateCategory(id: number, category_id: number): Promise<RawData | null> {
+    const result = await query(
+      'UPDATE raw_data SET category_id = $1 WHERE id = $2 RETURNING *',
+      [category_id, id]
+    );
+    return result.rows[0] || null;
   }
 }
 

@@ -9,7 +9,8 @@ const pool = new Pool({
   connectionString: environment.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
+  statement_timeout: 30000,
 });
 
 pool.on('error', (err) => {
@@ -32,16 +33,28 @@ export async function testConnection(): Promise<void> {
 }
 
 /**
- * تنفيذ query
+ * تنفيذ query مع retry
  */
 export async function query(text: string, params?: any[]): Promise<any> {
-  try {
-    const result = await pool.query(text, params);
-    return result;
-  } catch (error) {
-    console.error('❌ خطأ في تنفيذ Query:', error);
-    throw error;
+  const maxRetries = 3;
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await pool.query(text, params);
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.error(`❌ خطأ في تنفيذ Query (محاولة ${attempt}/${maxRetries}):`, error);
+      
+      // انتظر قبل المحاولة التالية
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
   }
+
+  throw lastError;
 }
 
 /**

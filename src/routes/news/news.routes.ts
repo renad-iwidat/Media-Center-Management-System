@@ -5,8 +5,19 @@
 
 import { Router } from 'express';
 import { NewsController } from '../../controllers/news/news.controller';
+import { classifyUnclassifiedArticles, getUnclassifiedArticles } from '../../controllers/news/classifier.controller';
 
 const router = Router();
+
+/**
+ * GET /api/news/classifier/unclassified - الحصول على الأخبار بدون تصنيف
+ */
+router.get('/classifier/unclassified', getUnclassifiedArticles);
+
+/**
+ * POST /api/news/classifier/process - تصنيف الأخبار بدون تصنيف
+ */
+router.post('/classifier/process', classifyUnclassifiedArticles);
 
 /**
  * GET /api/news - الحصول على جميع الأخبار

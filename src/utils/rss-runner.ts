@@ -5,8 +5,8 @@
  * يسحب من RSS ويحفظ النتائج في JSON
  */
 
-import { rssFetcherService } from '../services/news/rss-fetcher.service';
-import { dataStorageService } from '../services/news/data-storage.servicervice';
+import { rssFetcherService, dataStorageService } from '../services/news';
+import { RawDataService, SourceService } from '../services/database/database.service';
 
 /**
  * تشغيل خدمة سحب RSS
@@ -15,47 +15,70 @@ async function runRSSFetcher(): Promise<void> {
   try {
     console.log('📰 جاري سحب الأخبار من RSS...\n');
 
-    // سحب من المصادر الرئيسية
-    console.log('🔄 سحب المصادر الرئيسية...');
-    const mainResults = await rssFetcherService.fetchFirstArticleFromAllSources();
+    // الحصول على المصادر النشطة من الداتابيس
+    const activeSources = await SourceService.getActive();
+    console.log(`✅ تم تحميل ${activeSources.length} مصدر نشط من الداتابيس\n`);
 
-    // سحب من المصادر المتنوعة
-    console.log('🔄 سحب المصادر المتنوعة...');
-    const diverseResults = await rssFetcherService.fetchFirstArticleFromDiverseSources();
-
-    // حفظ جميع النتائج في JSON
-    const filepath = dataStorageService.saveAllResults(
-      mainResults,
-      diverseResults,
-      `rss-results-${new Date().toISOString().split('T')[0]}.json`
-    );
-
-    console.log(`\n✅ تم حفظ النتائج في: ${filepath}\n`);
-
-    // طباعة الأخطاء فقط
-    console.log('❌ الأخطاء والمشاكل:\n');
-    console.log('='.repeat(80));
-
-    const allResults = [...mainResults, ...diverseResults];
-    const errors = allResults.filter((r) => r.error);
-
-    if (errors.length === 0) {
-      console.log('✅ لا توجد أخطاء - جميع المصادر تم سحبها بنجاح!');
-    } else {
-      errors.forEach((result) => {
-        console.log(`\n📌 المصدر: ${result.source.name}`);
-        console.log(`🔗 الرابط: ${result.source.url}`);
-        console.log(`❌ الخطأ: ${result.error}`);
-        console.log('-'.repeat(80));
-      });
+    if (activeSources.length === 0) {
+      console.log('⚠️  لا توجد مصادر نشطة في الداتابيس');
+      return;
     }
 
-    // إحصائيات
+    // سحب الأخبار من جميع المصادر النشطة
+    console.log('🔄 جاري سحب الأخبار من المصادر...');
+    const results = await rssFetcherService.fetchFromSources(activeSources as any);
+
+    // حفظ النتائج في JSON للمرجعية
+    const filepath = dataStorageService.saveAllResults(
+      results,
+      [],
+      `rss-results-${new Date().toISOString().split('T')[0]}.json`
+    );
+    console.log(`✅ تم حفظ النتائج في: ${filepath}\n`);
+
+    // حفظ البيانات الناجحة في الداتابيس
+    console.log('💾 جاري حفظ البيانات في الداتابيس...');
+    let savedCount = 0;
+    let errorCount = 0;
+
+    for (const result of results) {
+      if (result.error || !result.article) {
+        console.log(`❌ ${result.source.name}: ${result.error}`);
+        errorCount++;
+        continue;
+      }
+
+      try {
+        const categoryId = result.source.default_category_id || 1;
+
+        // حفظ البيانات الخام في الداتابيس
+        await RawDataService.create({
+          source_id: result.source.id,
+          source_type_id: result.source.source_type_id,
+          category_id: categoryId,
+          url: result.article.link,
+          title: result.article.title,
+          content: result.article.description,
+          image_url: '',
+          tags: [],
+          fetch_status: 'completed'
+        });
+
+        savedCount++;
+        console.log(`✅ تم حفظ: ${result.article.title.substring(0, 50)}...`);
+      } catch (error) {
+        console.log(`❌ خطأ في حفظ ${result.source.name}: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+        errorCount++;
+      }
+    }
+
+    // الإحصائيات النهائية
     console.log('\n' + '='.repeat(80));
-    console.log('📊 الإحصائيات:');
-    console.log(`📈 إجمالي المصادر: ${allResults.length}`);
-    console.log(`✅ نجح: ${allResults.filter((r) => !r.error).length}`);
-    console.log(`❌ فشل: ${errors.length}`);
+    console.log('📊 الإحصائيات النهائية:');
+    console.log(`📈 إجمالي المصادر: ${results.length}`);
+    console.log(`✅ تم السحب بنجاح: ${results.filter(r => !r.error).length}`);
+    console.log(`💾 تم الحفظ في الداتابيس: ${savedCount}`);
+    console.log(`❌ أخطاء: ${errorCount}`);
     console.log('='.repeat(80) + '\n');
   } catch (error) {
     console.error('❌ حدث خطأ أثناء تشغيل خدمة RSS:', error);
