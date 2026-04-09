@@ -9,7 +9,10 @@
     "start": "node dist/index.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
-    "rss:fetch": "ts-node src/utils/rss-runner.ts"
+    "rss:fetch": "ts-node src/utils/rss-runner.ts",
+    "rss:insert": "ts-node src/utils/insert-rss-sources.ts",
+    "rss:list": "ts-node src/utils/insert-rss-sources.ts list",
+    "rss:delete": "ts-node src/utils/insert-rss-sources.ts delete"
   },
   "keywords": [
     "media",
@@ -29,7 +32,8 @@
     "bcryptjs": "^2.4.3",
     "mongoose": "^8.0.0",
     "axios": "^1.6.2",
-    "rss-parser": "^3.13.0"
+    "rss-parser": "^3.13.0",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

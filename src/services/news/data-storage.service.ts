@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { RSSFetchResult } from './rss-fetcher.service';
+import { RSSFetchResult } from '../../types/news/news.types';
 
 /**
  * واجهة لنتيجة التخزين

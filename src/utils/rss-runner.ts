@@ -5,8 +5,8 @@
  * يسحب من RSS ويحفظ النتائج في JSON
  */
 
-import { rssFetcherService } from '../services/rss-fetcher.service';
-import { dataStorageService } from '../services/data-storage.service';
+import { rssFetcherService } from '../services/news/rss-fetcher.service';
+import { dataStorageService } from '../services/news/data-storage.servicervice';
 
 /**
  * تشغيل خدمة سحب RSS

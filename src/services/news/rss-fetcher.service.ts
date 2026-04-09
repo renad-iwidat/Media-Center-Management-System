@@ -6,7 +6,8 @@
  */
 
 import Parser from 'rss-parser';
-import { RSS_SOURCES, RSS_SOURCES_DIVERSE, RSSSource } from '../config/rss-sources';
+import { RSS_SOURCES, RSS_SOURCES_DIVERSE, RSSSource } from '../../config/rss-sources';
+import { RawDataService, SourceService } from '../database/database.service';
 
 /**
  * واجهة لتمثيل مقالة RSS
