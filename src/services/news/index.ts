@@ -9,3 +9,4 @@ export { aiClassifierService } from './ai-classifier.service';
 export { unclassifiedProcessorService } from './unclassified-processor.service';
 export { articleSaverService } from './article-saver.service';
 export { rssPipelineService } from './rss-pipeline.service';
+export { schedulerService } from './scheduler.service';

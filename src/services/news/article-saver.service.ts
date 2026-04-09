@@ -81,7 +81,7 @@ class ArticleSaverService {
   }
 
   /**
-   * حفظ مجموعة من المقالات
+   * حفظ مجموعة من المقالات مع التصنيف الآلي
    */
   async saveArticles(articles: ArticleWithSource[]): Promise<SaveResult> {
     const details: SaveResult['details'] = [];
@@ -105,12 +105,13 @@ class ArticleSaverService {
 
         // إذا لم يكن للمصدر تصنيف افتراضي، استخدم AI
         if (!categoryId) {
+          console.log(`   🤖 تصنيف: ${article.title.substring(0, 50)}...`);
           const classification = await aiClassifierService.classifyArticle(
             article.title,
             article.description
           );
           categoryId = classification.categoryId;
-          classificationMethod = 'ai';
+          classificationMethod = `ai (${classification.category})`;
         }
 
         // حفظ في قاعدة البيانات
@@ -135,7 +136,7 @@ class ArticleSaverService {
 
         savedCount++;
         console.log(
-          `✅ تم حفظ: ${article.title} (${classificationMethod})`
+          `✅ تم حفظ: ${article.title.substring(0, 50)}... (${classificationMethod})`
         );
       } catch (error) {
         failedCount++;
