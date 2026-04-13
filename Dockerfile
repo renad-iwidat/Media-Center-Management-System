@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with npm ci (more reliable)
-RUN npm ci
+# Install all dependencies (including devDependencies)
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -15,8 +15,8 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Remove devDependencies for production
-RUN npm ci --omit=dev
+# Clean up devDependencies
+RUN npm prune --omit=dev
 
 # Expose port
 EXPOSE 3000
