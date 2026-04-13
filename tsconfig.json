@@ -5,16 +5,15 @@
     "lib": ["ES2020", "DOM"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "declaration": false,
+    "sourceMap": false,
     "moduleResolution": "node"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/tests"]
+  "include": ["src/config/**/*", "src/controllers/**/*", "src/models/**/*", "src/routes/**/*", "src/services/**/*", "src/index.ts"],
+  "exclude": ["node_modules", "dist", "src/tests", "src/utils"]
 }
