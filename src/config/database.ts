@@ -21,6 +21,9 @@ pool.on('error', (err) => {
 
 export const connectDatabase = async (): Promise<void> => {
   try {
+    console.log('🔍 Attempting to connect to database...');
+    console.log(`📍 Database URL: ${environment.databaseUrl ? 'configured' : 'NOT CONFIGURED'}`);
+
     if (!environment.databaseUrl) {
       throw new Error('DATABASE_URL is not defined in environment variables');
     }
