@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (including devDependencies for build)
-RUN npm ci --include=dev
+# Install all dependencies (including devDependencies for build)
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Remove devDependencies for production
-RUN npm ci --omit=dev
+RUN npm prune --omit=dev
 
 # Expose port
 EXPOSE 3000
