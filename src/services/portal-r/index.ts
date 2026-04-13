@@ -1,0 +1,15 @@
+/**
+ * Portal Services - Barrel Export
+ * Exports all services used in the portal
+ */
+
+export { DeskService } from './DeskService';
+export { TeamService } from './TeamService';
+export { UserService } from './UserService';
+export { ProgramService } from './ProgramService';
+export { EpisodeService } from './EpisodeService';
+export { GuestService } from './GuestService';
+export { ProgramRoleService } from './ProgramRoleService';
+export { RoleService } from './RoleService';
+export { MediaUnitService } from './MediaUnitService';
+export { EpisodeGuestService } from './EpisodeGuestService';
