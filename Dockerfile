@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies)
-RUN npm install
+# Install dependencies
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -15,7 +15,7 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Clean up devDependencies
+# Remove devDependencies
 RUN npm prune --omit=dev
 
 # Expose port
