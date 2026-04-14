@@ -24,6 +24,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Media Center Management System API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api/portal'
+    }
+  });
+});
+
 // Portal API Routes
 app.use('/api/portal', portalRoutes);
 
