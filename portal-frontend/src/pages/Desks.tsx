@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deskAPI, teamAPI, userAPI, teamUserAPI } from '../api/services';
 import Modal from '../components/Modal';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Desk {
   id: string;
@@ -385,7 +384,7 @@ export default function Desks() {
                             </td>
                             <td className="p-4 text-right text-gray-600 text-sm">
                               <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                {teamUsers.filter(tu => {
+                                {teamUsers.filter(_tu => {
                                   // Find team users for this team
                                   return teams.find(t => t.id === team.id);
                                 }).length}

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { guestAPI } from '../api/services';
 import Modal from '../components/Modal';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Guest {
   id: string;

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userAPI, roleAPI } from '../api/services';
 import Modal from '../components/Modal';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 interface User {
   id: string;
@@ -38,7 +37,7 @@ export default function Users() {
   const daysOfWeek = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
   // تحويل الوقت من 24 ساعة إلى 12 ساعة
-  const convertTo12Hour = (time: string) => {
+  const convertTo12Hour = (time: string | undefined) => {
     if (!time) return '-';
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
