@@ -21,7 +21,7 @@ const buildDatabaseUrl = (): string => {
 };
 
 export const environment = {
-  port: process.env.PORT || 3000,
+  port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   databaseUrl: buildDatabaseUrl(),
   aiClassifierUrl: process.env.AI_CLASSIFIER_URL || '',
