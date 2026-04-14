@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build argument for API URL
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build the application
 RUN npm run build
 
@@ -26,8 +30,8 @@ RUN npm install -g serve
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
-# Expose port
-EXPOSE 5173
+# Expose port (Render will use PORT env variable)
+EXPOSE 10000
 
-# Start application
-CMD ["serve", "-s", "dist", "-l", "5173"]
+# Start application - use PORT env variable
+CMD serve -s dist -l $PORT
