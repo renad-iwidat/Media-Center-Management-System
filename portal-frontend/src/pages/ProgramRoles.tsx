@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { programAPI, userAPI, programRoleAPI } from '../api/services';
+import { programAPI, userAPI, programRoleAPI, roleAPI } from '../api/services';
 import Modal from '../components/Modal';
 
 interface Program {
@@ -19,21 +19,23 @@ interface ProgramRole {
   id: string;
   program_id: string;
   user_id: string;
-  role: string;
-  name?: string;
+  role_id: string;
+  role_name?: string;
+  user_name?: string;
   email?: string;
 }
 
-const ROLE_OPTIONS = [
-  { value: 'presenter', label: 'مقدم' },
-  { value: 'producer', label: 'منتج' },
-  { value: 'assistant', label: 'مساعد' },
-];
+interface Role {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 export default function ProgramRoles() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [programRoles, setProgramRoles] = useState<ProgramRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,13 +45,14 @@ export default function ProgramRoles() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     user_id: '',
-    role: 'مقدم',
+    role_id: '',
   });
 
   useEffect(() => {
     const init = async () => {
       await fetchPrograms();
       await fetchUsers();
+      await fetchRoles();
     };
     init();
   }, []);
@@ -85,6 +88,16 @@ export default function ProgramRoles() {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const response = await roleAPI.getAll();
+      setRoles(response.data || []);
+    } catch (err: any) {
+      console.error('Error fetching roles:', err);
+      setRoles([]);
+    }
+  };
+
   const fetchProgramRoles = async (programId: string) => {
     try {
       const response = await programRoleAPI.getByProgram(programId);
@@ -98,56 +111,40 @@ export default function ProgramRoles() {
     setEditingId(null);
     setFormData({
       user_id: '',
-      role: 'مقدم',
+      role_id: '',
     });
     setIsModalOpen(true);
   };
 
   const handleEditModal = (pr: ProgramRole) => {
     setEditingId(pr.id);
-    // Convert English role to Arabic for display
-    const roleMap: { [key: string]: string } = {
-      'presenter': 'مقدم',
-      'producer': 'منتج',
-      'assistant': 'مساعد',
-    };
-    const arabicRole = roleMap[pr.role] || pr.role;
     setFormData({
       user_id: pr.user_id,
-      role: arabicRole,
+      role_id: pr.role_id,
     });
     setIsModalOpen(true);
   };
 
   const handleSubmit = async () => {
     try {
-      if (!formData.user_id) {
-        alert('اختر موظفاً');
+      if (!formData.user_id || !formData.role_id) {
+        alert('اختر موظفاً ودوراً');
         return;
       }
 
       setIsSubmitting(true);
 
-      // Convert Arabic role to English for storage
-      const roleMap: { [key: string]: string } = {
-        'مقدم': 'presenter',
-        'منتج': 'producer',
-        'مساعد': 'assistant',
-      };
-
-      const englishRole = roleMap[formData.role] || formData.role;
-
       if (editingId) {
         // Update existing role
         await programRoleAPI.update(editingId, {
-          role: englishRole,
+          role_id: formData.role_id,
         });
       } else {
         // Create new role
         await programRoleAPI.create({
           program_id: selectedProgram,
           user_id: formData.user_id,
-          role: englishRole,
+          role_id: formData.role_id,
         });
       }
 
@@ -285,11 +282,11 @@ export default function ProgramRoles() {
                             idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                           }`}
                         >
-                          <td className="p-4 text-right font-semibold text-gray-800">{pr.name}</td>
+                          <td className="p-4 text-right font-semibold text-gray-800">{pr.user_name}</td>
                           <td className="p-4 text-right text-gray-600 text-sm">{pr.email}</td>
                           <td className="p-4 text-right">
                             <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-                              {ROLE_OPTIONS.find(r => r.value === pr.role)?.label || pr.role}
+                              {pr.role_name || '-'}
                             </span>
                           </td>
                           <td className="p-4 flex gap-2 justify-start">
@@ -346,14 +343,23 @@ export default function ProgramRoles() {
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 text-right">الدور *</label>
-              <input
-                type="text"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              <select
+                value={formData.role_id}
+                onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
                 disabled={isSubmitting}
-                placeholder="مثال: مقدم، منتج، مساعد"
                 className="w-full border-2 border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent disabled:bg-gray-100 text-right font-medium"
-              />
+              >
+                <option value="">-- اختر دوراً --</option>
+                {roles && roles.length > 0 ? (
+                  roles.map((role) => (
+                    <option key={role.id} value={String(role.id)}>
+                      {role.name}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>جاري التحميل...</option>
+                )}
+              </select>
             </div>
           </div>
         </Modal>
