@@ -10,13 +10,24 @@ export class ProgramRoleService {
   private pool = getPool();
 
   /**
-   * Get all program roles
+   * Get all program roles with joined data
    */
   async getAllProgramRoles(): Promise<ProgramRole[]> {
     const result = await this.pool.query(`
-      SELECT id, program_id, user_id, role, created_at
-      FROM public.program_roles
-      ORDER BY created_at DESC
+      SELECT 
+        pr.id, 
+        pr.program_id, 
+        pr.user_id, 
+        pr.role_id, 
+        pr.created_at,
+        r.name as role_name,
+        u.name as user_name,
+        p.title as program_name
+      FROM public.program_roles pr
+      INNER JOIN public.roles r ON pr.role_id = r.id
+      INNER JOIN public.users u ON pr.user_id = u.id
+      INNER JOIN public.programs p ON pr.program_id = p.id
+      ORDER BY pr.created_at DESC
     `);
     return result.rows;
   }
@@ -26,9 +37,20 @@ export class ProgramRoleService {
    */
   async getProgramRoleById(id: bigint): Promise<ProgramRole | null> {
     const result = await this.pool.query(`
-      SELECT id, program_id, user_id, role, created_at
-      FROM public.program_roles
-      WHERE id = $1
+      SELECT 
+        pr.id, 
+        pr.program_id, 
+        pr.user_id, 
+        pr.role_id, 
+        pr.created_at,
+        r.name as role_name,
+        u.name as user_name,
+        p.title as program_name
+      FROM public.program_roles pr
+      INNER JOIN public.roles r ON pr.role_id = r.id
+      INNER JOIN public.users u ON pr.user_id = u.id
+      INNER JOIN public.programs p ON pr.program_id = p.id
+      WHERE pr.id = $1
     `, [id]);
     return result.rows[0] || null;
   }
@@ -38,12 +60,20 @@ export class ProgramRoleService {
    */
   async getRolesByProgramId(programId: bigint): Promise<any[]> {
     const result = await this.pool.query(`
-      SELECT pr.id, pr.program_id, pr.user_id, pr.role, pr.created_at,
-             u.name, u.email
+      SELECT 
+        pr.id, 
+        pr.program_id, 
+        pr.user_id, 
+        pr.role_id, 
+        pr.created_at,
+        r.name as role_name,
+        u.name as user_name,
+        u.email
       FROM public.program_roles pr
+      INNER JOIN public.roles r ON pr.role_id = r.id
       INNER JOIN public.users u ON pr.user_id = u.id
       WHERE pr.program_id = $1
-      ORDER BY pr.role
+      ORDER BY r.name, u.name
     `, [programId]);
     return result.rows;
   }
@@ -53,9 +83,16 @@ export class ProgramRoleService {
    */
   async getRolesByUserId(userId: bigint): Promise<any[]> {
     const result = await this.pool.query(`
-      SELECT pr.id, pr.program_id, pr.user_id, pr.role, pr.created_at,
-             p.title as program_title
+      SELECT 
+        pr.id, 
+        pr.program_id, 
+        pr.user_id, 
+        pr.role_id, 
+        pr.created_at,
+        r.name as role_name,
+        p.title as program_name
       FROM public.program_roles pr
+      INNER JOIN public.roles r ON pr.role_id = r.id
       INNER JOIN public.programs p ON pr.program_id = p.id
       WHERE pr.user_id = $1
       ORDER BY p.title
@@ -68,27 +105,32 @@ export class ProgramRoleService {
    */
   async createProgramRole(data: CreateProgramRoleDTO): Promise<ProgramRole> {
     const result = await this.pool.query(`
-      INSERT INTO public.program_roles (program_id, user_id, role)
+      INSERT INTO public.program_roles (program_id, user_id, role_id)
       VALUES ($1, $2, $3)
-      RETURNING id, program_id, user_id, role, created_at
-    `, [data.program_id, data.user_id, data.role]);
-    return result.rows[0];
+      RETURNING id, program_id, user_id, role_id, created_at
+    `, [data.program_id, data.user_id, data.role_id]);
+    
+    // Get full data with joins
+    return this.getProgramRoleById(result.rows[0].id) as Promise<ProgramRole>;
   }
 
   /**
    * Update a program role
    */
   async updateProgramRole(id: bigint, data: UpdateProgramRoleDTO): Promise<ProgramRole | null> {
-    if (data.role === undefined) return this.getProgramRoleById(id);
+    if (data.role_id === undefined) return this.getProgramRoleById(id);
 
     const result = await this.pool.query(`
       UPDATE public.program_roles
-      SET role = $1
+      SET role_id = $1
       WHERE id = $2
-      RETURNING id, program_id, user_id, role, created_at
-    `, [data.role, id]);
+      RETURNING id
+    `, [data.role_id, id]);
 
-    return result.rows[0] || null;
+    if (result.rows.length === 0) return null;
+    
+    // Get full data with joins
+    return this.getProgramRoleById(id);
   }
 
   /**
@@ -105,37 +147,25 @@ export class ProgramRoleService {
   /**
    * Check if user has role in program
    */
-  async userHasRoleInProgram(programId: bigint, userId: bigint, role: string): Promise<boolean> {
+  async userHasRoleInProgram(programId: bigint, userId: bigint, roleId: bigint): Promise<boolean> {
     const result = await this.pool.query(`
       SELECT id FROM public.program_roles
-      WHERE program_id = $1 AND user_id = $2 AND role = $3
-    `, [programId, userId, role]);
+      WHERE program_id = $1 AND user_id = $2 AND role_id = $3
+    `, [programId, userId, roleId]);
     return result.rows.length > 0;
   }
 
   /**
-   * Get program presenters
+   * Get users by program and role
    */
-  async getProgramPresenters(programId: bigint): Promise<any[]> {
+  async getUsersByProgramAndRole(programId: bigint, roleId: bigint): Promise<any[]> {
     const result = await this.pool.query(`
       SELECT u.id, u.name, u.email
       FROM public.program_roles pr
       INNER JOIN public.users u ON pr.user_id = u.id
-      WHERE pr.program_id = $1 AND pr.role = 'presenter'
-    `, [programId]);
-    return result.rows;
-  }
-
-  /**
-   * Get program producers
-   */
-  async getProgramProducers(programId: bigint): Promise<any[]> {
-    const result = await this.pool.query(`
-      SELECT u.id, u.name, u.email
-      FROM public.program_roles pr
-      INNER JOIN public.users u ON pr.user_id = u.id
-      WHERE pr.program_id = $1 AND pr.role = 'producer'
-    `, [programId]);
+      WHERE pr.program_id = $1 AND pr.role_id = $2
+      ORDER BY u.name
+    `, [programId, roleId]);
     return result.rows;
   }
 }

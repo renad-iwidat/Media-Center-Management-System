@@ -117,12 +117,12 @@ export class ProgramRoleController {
    */
   static async createProgramRole(req: Request, res: Response): Promise<void> {
     try {
-      const { program_id, user_id, role } = req.body;
+      const { program_id, user_id, role_id } = req.body;
 
-      if (!program_id || !user_id || !role) {
+      if (!program_id || !user_id || !role_id) {
         res.status(400).json({
           success: false,
-          error: 'Program ID, user ID, and role are required',
+          error: 'Program ID, user ID, and role ID are required',
         });
         return;
       }
@@ -130,7 +130,7 @@ export class ProgramRoleController {
       const programRole = await programRoleService.createProgramRole({
         program_id: BigInt(program_id),
         user_id: BigInt(user_id),
-        role,
+        role_id: BigInt(role_id),
       });
 
       res.status(201).json({
@@ -153,9 +153,9 @@ export class ProgramRoleController {
   static async updateProgramRole(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { role } = req.body;
+      const { role_id } = req.body;
 
-      const programRole = await programRoleService.updateProgramRole(BigInt(id), { role });
+      const programRole = await programRoleService.updateProgramRole(BigInt(id), { role_id: role_id ? BigInt(role_id) : undefined });
 
       if (!programRole) {
         res.status(404).json({
@@ -209,12 +209,14 @@ export class ProgramRoleController {
   }
 
   /**
-   * GET /programs/:programId/presenters - Get program presenters
+   * GET /programs/:programId/presenters - Get program presenters (deprecated - use role filter)
    */
   static async getProgramPresenters(req: Request, res: Response): Promise<void> {
     try {
       const { programId } = req.params;
-      const presenters = await programRoleService.getProgramPresenters(BigInt(programId));
+      // This is deprecated - frontend should filter by role_id instead
+      const roles = await programRoleService.getRolesByProgramId(BigInt(programId));
+      const presenters = roles.filter(r => r.role_name?.toLowerCase().includes('مقدم') || r.role_name?.toLowerCase().includes('presenter'));
 
       res.json({
         success: true,
@@ -231,12 +233,14 @@ export class ProgramRoleController {
   }
 
   /**
-   * GET /programs/:programId/producers - Get program producers
+   * GET /programs/:programId/producers - Get program producers (deprecated - use role filter)
    */
   static async getProgramProducers(req: Request, res: Response): Promise<void> {
     try {
       const { programId } = req.params;
-      const producers = await programRoleService.getProgramProducers(BigInt(programId));
+      // This is deprecated - frontend should filter by role_id instead
+      const roles = await programRoleService.getRolesByProgramId(BigInt(programId));
+      const producers = roles.filter(r => r.role_name?.toLowerCase().includes('منتج') || r.role_name?.toLowerCase().includes('producer'));
 
       res.json({
         success: true,
