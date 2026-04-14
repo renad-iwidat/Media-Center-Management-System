@@ -35,8 +35,13 @@ export const connectDatabase = async (): Promise<void> => {
     console.log('✓ Database connected successfully');
     console.log(`✓ Current database time: ${result.rows[0].now}`);
   } catch (error) {
-    console.error('✗ Database connection failed:', error);
-    process.exit(1);
+    console.error('✗ Database connection failed:');
+    console.error('Error details:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error; // Re-throw instead of process.exit
   }
 };
 

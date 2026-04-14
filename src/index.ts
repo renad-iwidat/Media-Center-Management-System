@@ -30,17 +30,18 @@ app.use('/api/portal', portalRoutes);
 // Initialize server
 const startServer = async () => {
   try {
-    // Connect to database
-    await connectDatabase();
-
-    // Start listening
-    app.listen(environment.port, '0.0.0.0', () => {
+    // Start listening first
+    const server = app.listen(environment.port, '0.0.0.0', () => {
       console.log(`\n🚀 Server running on port ${environment.port}`);
       console.log(`📝 Environment: ${environment.nodeEnv}`);
-      console.log(`\n✓ Application started successfully\n`);
     });
+
+    // Then connect to database
+    await connectDatabase();
+    console.log(`\n✓ Application started successfully\n`);
   } catch (error) {
     console.error('Failed to start server:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     process.exit(1);
   }
 };
