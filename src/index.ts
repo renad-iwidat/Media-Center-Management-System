@@ -34,7 +34,7 @@ const startServer = async () => {
     await connectDatabase();
 
     // Start listening
-    app.listen(environment.port, () => {
+    app.listen(environment.port, '0.0.0.0', () => {
       console.log(`\n🚀 Server running on port ${environment.port}`);
       console.log(`📝 Environment: ${environment.nodeEnv}`);
       console.log(`\n✓ Application started successfully\n`);
