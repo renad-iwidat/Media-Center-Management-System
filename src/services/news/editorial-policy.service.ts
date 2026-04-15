@@ -173,14 +173,16 @@ class EditorialPolicyService {
   /**
    * حساب max_tokens بناءً على نوع المهمة وطول النص
    * السياسات اللي بتعدّل النص تحتاج tokens أكثر
+   * الحد الأقصى الآمن للـ vLLM هو 2048 لتجنب تجاوز الـ context window
    */
-  private calculateMaxTokens(taskType: string, textLength: number): number {
+  private calculateMaxTokens(taskType: string, textLength: number, safeMode: boolean = false): number {
+    if (safeMode) return 1024;
     const textTasks = ['rewrite', 'replace', 'remove', 'cleanup', 'formatting', 'balance', 'disclaimer'];
     if (textTasks.includes(taskType)) {
-      // النص العربي بياخد tokens أكثر — نحسب بناءً على طول النص الكامل + هامش للـ JSON
-      return Math.max(4096, Math.min(Math.ceil(textLength * 1.5) + 1000, 16384));
+      // نحسب بناءً على طول النص لكن بحد أقصى آمن 2048
+      return Math.max(512, Math.min(Math.ceil(textLength / 3) + 512, 2048));
     }
-    return 2048;
+    return 1024;
   }
 
   /**
@@ -220,7 +222,7 @@ class EditorialPolicyService {
 
     try {
       const prompt = buildPrompt(editorInstructions, text, injectedVars, outputSchema);
-      const maxTokens = this.calculateMaxTokens(taskType, text.length);
+      let maxTokens = this.calculateMaxTokens(taskType, text.length);
 
       // تقدير عدد الـ tokens (النص العربي تقريباً 1 token لكل 2-3 أحرف)
       const estimatedPromptTokens = Math.ceil(prompt.length / 2);
@@ -230,16 +232,28 @@ class EditorialPolicyService {
       console.log(`📤 [${policyName}] task: ${taskType} | max_tokens: ${maxTokens} | prompt: ${prompt.length} chars (~${estimatedPromptTokens} tokens)`);
       console.log(`📤 [${policyName}] estimated total tokens (prompt + completion): ~${totalEstimatedTokens}`);
 
-      const response = await axios.post(
-        apiUrl,
-        {
-          prompt,
-          think: false,
-          max_tokens: maxTokens,
-          temperature: 0.3,
-        },
-        { timeout: 120000 }
-      );
+      // محاولة الإرسال مع retry تلقائي لو جاء 400 (تجاوز الـ context window)
+      let response;
+      try {
+        response = await axios.post(
+          apiUrl,
+          { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 },
+          { timeout: 120000 }
+        );
+      } catch (firstErr: any) {
+        if (firstErr?.response?.status === 400) {
+          // تجاوز الـ context window → نخفض max_tokens ونعيد المحاولة
+          maxTokens = this.calculateMaxTokens(taskType, text.length, true);
+          console.warn(`⚠️ [${policyName}] 400 Bad Request → retry with max_tokens=${maxTokens}`);
+          response = await axios.post(
+            apiUrl,
+            { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 },
+            { timeout: 120000 }
+          );
+        } else {
+          throw firstErr;
+        }
+      }
 
       const executionTime = Date.now() - startTime;
       const rawData = response.data;
