@@ -6,6 +6,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import { environment } from './config/environment';
 import { testConnection } from './config/database';
 
@@ -13,13 +14,20 @@ import { testConnection } from './config/database';
 import sourcesRoutes from './routes/database/sources.routes';
 import newsRoutes from './routes/news/news.routes';
 import dataRoutes from './routes/news/data.routes';
+import flowRoutes from './routes/news/flow.routes';
+import editorialPolicyRoutes from './routes/news/editorial-policy.routes';
 
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors());
 app.use(express.json());
+
+// Frontend Dashboard
+app.use('/dashboard', express.static(path.join(__dirname, '..', 'frontend')));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -229,13 +237,18 @@ app.get('/db-test', async (req, res) => {
   }
 });
 
-// API Routes
+// API Routes — editorial-policies لازم يكون قبل news عشان /:id ما يمسكه
 app.use('/api/sources', sourcesRoutes);
+app.use('/api/news/editorial-policies', editorialPolicyRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/data', (req, res, next) => {
   console.log(`📍 Data Route: ${req.method} ${req.path}`);
   next();
 }, dataRoutes);
+app.use('/api/flow', (req, res, next) => {
+  console.log(`📍 Flow Route: ${req.method} ${req.path}`);
+  next();
+}, flowRoutes);
 
 // 404 Handler
 app.use((req, res) => {

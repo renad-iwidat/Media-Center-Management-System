@@ -70,7 +70,7 @@ class ArticleSaverService {
         content: article.description,
         image_url: '',
         tags: [],
-        fetch_status: 'completed',
+        fetch_status: 'fetched',
       });
 
       return true;
@@ -124,7 +124,7 @@ class ArticleSaverService {
           content: article.description,
           image_url: article.image_url || '',
           tags: article.tags || [],
-          fetch_status: 'completed',
+          fetch_status: 'fetched',
         });
 
         details.push({

@@ -14,9 +14,14 @@
     "rss:list": "ts-node src/utils/insert-rss-sources.ts list",
     "rss:delete": "ts-node src/utils/insert-rss-sources.ts delete",
     "classify": "ts-node src/utils/classify-articles.ts",
+    "flow:process": "ts-node src/utils/process-news-flow.ts",
+    "flow:test": "ts-node src/utils/test-flow.ts",
     "fetch:save": "ts-node src/utils/fetch-and-save.ts",
     "db:test": "ts-node src/utils/test-db-connection.ts",
-    "scheduler": "ts-node src/utils/start-scheduler.ts"
+    "scheduler": "ts-node src/utils/start-scheduler.ts",
+    "test:policies": "ts-node src/utils/test-policies-pipeline.ts",
+    "test:ai": "ts-node src/utils/test-ai-with-policies.ts",
+    "test:replace": "ts-node src/utils/test-replace-policy-and-flow.ts"
   },
   "keywords": [
     "media",

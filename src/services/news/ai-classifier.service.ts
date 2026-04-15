@@ -50,7 +50,8 @@ class AIClassifierService {
   private systemPrompt: string;
 
   constructor() {
-    this.apiUrl = process.env.AI_CLASSIFIER_URL || 'http://93.127.132.59:8080/generate';
+    const baseUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
+    this.apiUrl = `${baseUrl}/generate`;
     this.systemPrompt = `SYSTEM: أنت مصنف أخبار فلسطيني آلي صارم.
 مهمتك تصنيف الأخبار وفق المنظور التحريري الفلسطيني وليس فقط الموضوع العام للخبر.
 
@@ -101,8 +102,13 @@ USER:
     try {
       const articleText = `${title}\n${content}`;
       
+      // تنظيف الـ prompt من newlines لتفادي 400 من vLLM
+      const rawPrompt = `${this.systemPrompt}\n${articleText}/no_think`;
+      const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
       const payload = {
-        text: `${this.systemPrompt}\n${articleText}/no_think`,
+        prompt: cleanPrompt,
+        think: false,
         max_tokens: 200,
         temperature: 0,
       };
@@ -112,9 +118,6 @@ USER:
         payload,
         {
           timeout: 30000,
-          headers: {
-            'Content-Type': 'application/json',
-          },
         }
       );
 

@@ -13,9 +13,13 @@ import {
   getArticlesByCategory,
   getComprehensiveData,
   getStatistics,
+  getMediaUnits,
 } from '../../controllers/news/data.controller';
 
 const router = Router();
+
+// Media Units
+router.get('/media-units', getMediaUnits);
 
 /**
  * @swagger

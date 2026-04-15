@@ -5,6 +5,26 @@
 
 import { Request, Response } from 'express';
 import { SourceService, RawDataService, CategoryService } from '../../services/database/database.service';
+import { query } from '../../config/database';
+
+/**
+ * الحصول على جميع وحدات الإعلام النشطة
+ */
+export async function getMediaUnits(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await query(
+      'SELECT id, name, is_active FROM media_units WHERE is_active = true ORDER BY id'
+    );
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error('❌ خطأ في جلب وحدات الإعلام:', error);
+    res.status(500).json({ success: false, message: 'فشل جلب وحدات الإعلام' });
+  }
+}
 
 /**
  * الحصول على جميع المصادر

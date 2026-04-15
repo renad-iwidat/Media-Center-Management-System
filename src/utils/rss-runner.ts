@@ -61,7 +61,7 @@ async function runRSSFetcher(): Promise<void> {
           content: result.article.description,
           image_url: '',
           tags: [],
-          fetch_status: 'completed'
+          fetch_status: 'fetched'
         });
 
         savedCount++;

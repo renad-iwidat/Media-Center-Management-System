@@ -6,8 +6,13 @@
 import { Router } from 'express';
 import { NewsController } from '../../controllers/news/news.controller';
 import { classifyUnclassifiedArticles, getUnclassifiedArticles } from '../../controllers/news/classifier.controller';
+import { getPolicies as getAllPolicies } from '../../controllers/news/editorial-policy.controller';
 
 const router = Router();
+
+/**
+ * Specific routes MUST come before /:id route
+ */
 
 /**
  * GET /api/news/classifier/unclassified - الحصول على الأخبار بدون تصنيف
@@ -18,6 +23,11 @@ router.get('/classifier/unclassified', getUnclassifiedArticles);
  * POST /api/news/classifier/process - تصنيف الأخبار بدون تصنيف
  */
 router.post('/classifier/process', classifyUnclassifiedArticles);
+
+/**
+ * GET /api/news/editorial-policies - الحصول على السياسات التحريرية
+ */
+router.get('/editorial-policies', getAllPolicies);
 
 /**
  * GET /api/news - الحصول على جميع الأخبار

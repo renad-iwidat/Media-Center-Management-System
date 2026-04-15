@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Center Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    
+    .header { background: #1e293b; padding: 16px 24px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .header h1 { font-size: 20px; color: #38bdf8; }
+    .unit-selector { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+    .unit-selector label { color: #94a3b8; font-size: 13px; }
+    .unit-selector select { background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .unit-badge { background: #1e3a5f; color: #7dd3fc; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+    
+    .tabs { display: flex; background: #1e293b; border-bottom: 2px solid #334155; padding: 0 16px; overflow-x: auto; }
+    .tab { padding: 12px 20px; cursor: pointer; color: #94a3b8; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: all 0.2s; }
+    .tab:hover { color: #e2e8f0; background: #334155; }
+    .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+    
+    .content { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .card h3 { color: #38bdf8; margin-bottom: 12px; font-size: 16px; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; text-align: center; }
+    .stat-card .number { font-size: 36px; font-weight: bold; color: #38bdf8; }
+    .stat-card .label { color: #94a3b8; font-size: 13px; margin-top: 4px; }
+    
+    button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-warning { background: #d97706; color: white; }
+    .btn-warning:hover { background: #b45309; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    
+    input, textarea, select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 6px; font-size: 14px; width: 100%; font-family: inherit; }
+    textarea { min-height: 120px; resize: vertical; }
+    
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 4px; color: #94a3b8; font-size: 13px; }
+    
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background: #854d0e; color: #fef08a; }
+    .badge-approved { background: #166534; color: #86efac; }
+    .badge-rejected { background: #991b1b; color: #fca5a5; }
+    .badge-automated { background: #1e3a5f; color: #7dd3fc; }
+    .badge-editorial { background: #4c1d95; color: #c4b5fd; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #334155; padding: 10px; text-align: right; color: #94a3b8; font-weight: 600; }
+    td { padding: 10px; border-bottom: 1px solid #334155; }
+    tr:hover { background: #334155; }
+    
+    .result-box { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 16px; margin-top: 12px; white-space: pre-wrap; font-size: 13px; max-height: 400px; overflow-y: auto; line-height: 1.6; }
+    .result-box.success { border-color: #16a34a; }
+    .result-box.error { border-color: #dc2626; }
+    
+    .loading { text-align: center; padding: 40px; color: #94a3b8; }
+    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .flex { display: flex; gap: 12px; align-items: center; }
+    .flex-wrap { flex-wrap: wrap; }
+    .mt { margin-top: 12px; }
+    .mb { margin-bottom: 12px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+    .tag { display: inline-block; background: #334155; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📰 Media Center Dashboard</h1>
+    <div class="unit-selector">
+      <label>وحدة الإعلام:</label>
+      <select id="media-unit-select" onchange="onUnitChange()">
+        <option value="">جاري التحميل...</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">📊 نظرة عامة</div>
+    <div class="tab" data-tab="fetch">📡 سحب الأخبار</div>
+    <div class="tab" data-tab="flow">🔄 الفلو</div>
+    <div class="tab" data-tab="queue">📝 طابور التحرير</div>
+    <div class="tab" data-tab="policies">⚙️ السياسات</div>
+    <div class="tab" data-tab="published">📤 المنشور</div>
+  </div>
+
+  <div class="content">
+    <!-- نظرة عامة -->
+    <div class="panel active" id="panel-overview">
+      <div class="grid" id="stats-grid">
+        <div class="stat-card"><div class="number" id="stat-sources">-</div><div class="label">مصادر نشطة</div></div>
+        <div class="stat-card"><div class="number" id="stat-articles">-</div><div class="label">أخبار بالداتابيس</div></div>
+        <div class="stat-card"><div class="number" id="stat-pending">-</div><div class="label">بانتظار التحرير</div></div>
+        <div class="stat-card"><div class="number" id="stat-published">-</div><div class="label">منشور</div></div>
+      </div>
+      <div class="two-col mt">
+        <div class="card"><h3>📊 إحصائيات الطابور</h3><div id="queue-stats-overview"><div class="loading"><div class="spinner"></div></div></div></div>
+        <div class="card"><h3>📤 إحصائيات النشر</h3><div id="publish-stats-overview"><div class="loading"><div class="spinner"></div></div></div></div>
+      </div>
+    </div>
+
+    <!-- سحب الأخبار -->
+    <div class="panel" id="panel-fetch">
+      <div class="card">
+        <h3>📡 سحب الأخبار من المصادر</h3>
+        <p style="color:#94a3b8;margin-bottom:12px">سحب أخبار جديدة من RSS وحفظها بالداتابيس بحالة fetched</p>
+        <div class="flex">
+          <button class="btn-primary" onclick="fetchArticles()">🔄 سحب الأخبار</button>
+          <button class="btn-warning" onclick="classifyArticles()">🤖 تصنيف بدون تصنيف</button>
+        </div>
+        <div id="fetch-result" class="result-box mt" style="display:none"></div>
+      </div>
+      <div class="card"><h3>📋 المصادر النشطة</h3><div id="sources-list"><div class="loading"><div class="spinner"></div></div></div></div>
+      <div class="card"><h3>📰 آخر الأخبار المسحوبة</h3><div id="raw-articles"><div class="loading"><div class="spinner"></div></div></div></div>
+    </div>
+
+    <!-- الفلو -->
+    <div class="panel" id="panel-flow">
+      <div class="card">
+        <h3>🔄 تشغيل الفلو — توجيه الأخبار</h3>
+        <p style="color:#94a3b8;margin-bottom:12px">يأخذ الأخبار بحالة fetched ويوجهها: automated → نشر مباشر | editorial → طابور التحرير</p>
+        <button class="btn-primary" onclick="processFlow()">▶️ تشغيل الفلو</button>
+        <div id="flow-result" class="result-box mt" style="display:none"></div>
+      </div>
+      <div class="card">
+        <h3>📊 مخطط الفلو</h3>
+        <pre style="color:#94a3b8;font-size:13px;line-height:1.8">
+raw_data (fetched)
+    │
+    ├── flow = automated ──→ published_items (queue_id = NULL)
+    │
+    └── flow = editorial ──→ editorial_queue (pending)
+                                │
+                                ├── rejected ──→ بيخلص هون
+                                └── approved ──→ published_items (queue_id = X)</pre>
+      </div>
+    </div>
+
+    <!-- طابور التحرير -->
+    <div class="panel" id="panel-queue">
+      <div class="card">
+        <h3>📝 الأخبار المعلقة — <span id="queue-unit-name"></span></h3>
+        <button class="btn-primary mb" onclick="loadPendingQueue()">🔄 تحديث</button>
+        <div id="pending-queue"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card" id="article-editor" style="display:none">
+        <h3>✏️ تحرير الخبر — <span id="editor-title"></span></h3>
+        <div class="two-col">
+          <div>
+            <div class="form-group"><label>النص الأصلي</label><textarea id="editor-original" readonly style="min-height:200px;background:#1a1a2e"></textarea></div>
+          </div>
+          <div>
+            <div class="form-group"><label>النص المعدّل</label><textarea id="editor-modified" style="min-height:200px"></textarea></div>
+          </div>
+        </div>
+        <div class="card" style="background:#0f172a;margin-top:12px">
+          <h3>⚙️ تطبيق سياسة تحرير</h3>
+          <div class="flex flex-wrap">
+            <select id="policy-select" style="max-width:300px"><option value="">اختر سياسة...</option></select>
+            <button class="btn-warning" onclick="applyPolicyToQueue()">▶️ طبّق السياسة</button>
+            <button class="btn-primary btn-sm" onclick="copyModifiedToInput()">📋 انسخ المعدّل كأصلي (لسياسة ثانية)</button>
+          </div>
+          <div id="policy-result" class="result-box mt" style="display:none"></div>
+        </div>
+        <div class="flex mt">
+          <button class="btn-success" onclick="approveArticle()">✅ موافقة ونشر</button>
+          <button class="btn-danger" onclick="rejectArticle()">❌ رفض</button>
+          <input id="editor-notes" placeholder="ملاحظات المحرر (اختياري)" style="max-width:400px">
+        </div>
+        <div id="approve-result" class="result-box mt" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- السياسات -->
+    <div class="panel" id="panel-policies">
+      <div class="card">
+        <h3>⚙️ السياسات التحريرية — <span id="policies-unit-name"></span></h3>
+        <div id="policies-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card">
+        <h3>🧪 تجربة سياسة على نص حر (بدون تخزين)</h3>
+        <div class="form-group"><label>اختر السياسة</label><select id="test-policy-select" style="max-width:300px"><option value="">اختر سياسة...</option></select></div>
+        <div class="form-group"><label>النص</label><textarea id="test-text" placeholder="الصق النص هنا..."></textarea></div>
+        <button class="btn-primary" onclick="testPolicy()">▶️ طبّق</button>
+        <div id="test-result" class="result-box mt" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- المنشور -->
+    <div class="panel" id="panel-published">
+      <div class="card">
+        <h3>📤 المحتوى المنشور — <span id="published-unit-name"></span></h3>
+        <div class="flex mb">
+          <button class="btn-primary" onclick="loadPublished()">🔄 تحديث</button>
+          <select id="flow-filter" onchange="loadPublished()" style="max-width:200px">
+            <option value="all">الكل</option>
+            <option value="automated">أوتوماتيكي</option>
+            <option value="editorial">تحريري</option>
+          </select>
+        </div>
+        <div id="published-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API = 'http://localhost:3000/api';
+let currentQueueId = null;
+let currentPolicies = [];
+let selectedUnitId = null;
+let selectedUnitName = '';
+let mediaUnits = [];
+
+// === TABS ===
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    const h = { overview: loadOverview, fetch: loadFetchTab, queue: loadPendingQueue, policies: loadPolicies, published: loadPublished };
+    if (h[tab.dataset.tab]) h[tab.dataset.tab]();
+  });
+});
+
+// === API HELPER ===
+async function api(path, opts = {}) {
+  try {
+    const res = await fetch(API + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    return await res.json();
+  } catch (e) { return { error: e.message }; }
+}
+
+function showResult(id, data, isError) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'result-box ' + (isError ? 'error' : 'success');
+  el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+}
+
+function unitParam(prefix) {
+  if (!selectedUnitId) return '';
+  return (prefix ? '&' : '?') + 'media_unit_id=' + selectedUnitId;
+}
+
+// === MEDIA UNIT SELECTOR ===
+async function loadMediaUnits() {
+  const data = await api('/data/media-units');
+  mediaUnits = data.data || [];
+  const sel = document.getElementById('media-unit-select');
+  sel.innerHTML = '<option value="">كل الوحدات</option>';
+  mediaUnits.forEach(u => {
+    sel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+  });
+  if (mediaUnits.length > 0) {
+    sel.value = mediaUnits[0].id;
+    selectedUnitId = mediaUnits[0].id;
+    selectedUnitName = mediaUnits[0].name;
+  }
+  updateUnitLabels();
+  loadOverview();
+}
+
+function onUnitChange() {
+  const sel = document.getElementById('media-unit-select');
+  selectedUnitId = sel.value || null;
+  selectedUnitName = sel.options[sel.selectedIndex].text;
+  updateUnitLabels();
+  // reload active tab
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab) {
+    const h = { overview: loadOverview, fetch: loadFetchTab, queue: loadPendingQueue, policies: loadPolicies, published: loadPublished };
+    if (h[activeTab.dataset.tab]) h[activeTab.dataset.tab]();
+  }
+}
+
+function updateUnitLabels() {
+  const name = selectedUnitId ? selectedUnitName : 'كل الوحدات';
+  ['queue-unit-name', 'policies-unit-name', 'published-unit-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = name;
+  });
+}
+
+// === OVERVIEW ===
+async function loadOverview() {
+  const [sources, stats, queueStats, pubStats] = await Promise.all([
+    api('/data/sources/active'),
+    api('/data/statistics'),
+    api('/flow/queue/stats'),
+    api('/flow/published/stats'),
+  ]);
+  
+  document.getElementById('stat-sources').textContent = sources.data?.length || 0;
+  document.getElementById('stat-articles').textContent = stats.data?.totalArticles || 0;
+  
+  let pendingTotal = 0;
+  let queueData = queueStats.data || [];
+  if (selectedUnitId) queueData = queueData.filter(s => String(s.id) === String(selectedUnitId));
+  queueData.forEach(s => { pendingTotal += parseInt(s.pending_count || 0); });
+  document.getElementById('stat-pending').textContent = pendingTotal;
+  document.getElementById('stat-published').textContent = pubStats.data?.total_published || 0;
+  
+  let qhtml = '<table><tr><th>الوحدة</th><th>معلق</th><th>مراجعة</th><th>معتمد</th><th>مرفوض</th></tr>';
+  queueData.forEach(s => {
+    qhtml += `<tr><td>${s.name}</td><td>${s.pending_count}</td><td>${s.in_review_count}</td><td>${s.approved_count}</td><td>${s.rejected_count}</td></tr>`;
+  });
+  qhtml += '</table>';
+  document.getElementById('queue-stats-overview').innerHTML = qhtml;
+  
+  let phtml = `<p>إجمالي: <strong>${pubStats.data?.total_published || 0}</strong> | أوتوماتيكي: <strong>${pubStats.data?.automated_count || 0}</strong> | تحريري: <strong>${pubStats.data?.editorial_count || 0}</strong></p>`;
+  if (pubStats.data?.by_category?.length) {
+    phtml += '<p style="margin-top:8px">حسب الفئة:</p>';
+    pubStats.data.by_category.forEach(c => { phtml += `<span class="tag">${c.category}: ${c.count}</span> `; });
+  }
+  document.getElementById('publish-stats-overview').innerHTML = phtml;
+}
+
+// === FETCH TAB ===
+async function loadFetchTab() {
+  const [sources, articles] = await Promise.all([
+    api('/data/sources/active'),
+    api('/data/articles?limit=20'),
+  ]);
+  let shtml = '<table><tr><th>ID</th><th>الاسم</th><th>الرابط</th></tr>';
+  (sources.data || []).forEach(s => {
+    shtml += `<tr><td>${s.id}</td><td>${s.name}</td><td style="font-size:11px;color:#64748b;max-width:300px;overflow:hidden;text-overflow:ellipsis">${s.url}</td></tr>`;
+  });
+  document.getElementById('sources-list').innerHTML = shtml + '</table>';
+  
+  let ahtml = '<table><tr><th>ID</th><th>العنوان</th><th>التصنيف</th><th>الحالة</th><th>التاريخ</th></tr>';
+  (articles.data || []).slice(0, 20).forEach(a => {
+    const st = a.fetch_status === 'fetched' ? '<span class="badge badge-pending">fetched</span>' : a.fetch_status === 'processed' ? '<span class="badge badge-approved">processed</span>' : `<span class="badge">${a.fetch_status}</span>`;
+    ahtml += `<tr><td>${a.id}</td><td style="max-width:400px">${(a.title||'-').substring(0,80)}</td><td>${a.category_id||'-'}</td><td>${st}</td><td style="font-size:11px">${new Date(a.fetched_at).toLocaleDateString('ar')}</td></tr>`;
+  });
+  document.getElementById('raw-articles').innerHTML = ahtml + '</table>';
+}
+
+async function fetchArticles() {
+  showResult('fetch-result', '⏳ جاري السحب...', false);
+  showResult('fetch-result', await api('/flow/process', { method: 'POST' }), false);
+}
+async function classifyArticles() {
+  showResult('fetch-result', '⏳ جاري التصنيف...', false);
+  showResult('fetch-result', await api('/news/classifier/process', { method: 'POST' }), false);
+}
+
+// === FLOW ===
+async function processFlow() {
+  showResult('flow-result', '⏳ جاري تشغيل الفلو...', false);
+  showResult('flow-result', await api('/flow/process', { method: 'POST' }), false);
+}
+
+// === QUEUE ===
+async function loadPendingQueue() {
+  const data = await api('/flow/queue/pending' + (selectedUnitId ? '?media_unit_id=' + selectedUnitId : ''));
+  document.getElementById('article-editor').style.display = 'none';
+  if (!data.data?.length) {
+    document.getElementById('pending-queue').innerHTML = '<p style="color:#94a3b8">لا توجد أخبار معلقة ✅</p>';
+    return;
+  }
+  let html = '<table><tr><th>ID</th><th>العنوان</th><th>الفئة</th><th>الوحدة</th><th>الحالة</th><th>إجراء</th></tr>';
+  data.data.forEach(item => {
+    html += `<tr><td>${item.id}</td><td style="max-width:350px">${(item.title||'-').substring(0,70)}</td><td>${item.category_name}</td><td>${item.media_unit_name}</td><td><span class="badge badge-pending">${item.status}</span></td><td><button class="btn-primary btn-sm" onclick="openEditor(${item.id})">✏️ تحرير</button></td></tr>`;
+  });
+  document.getElementById('pending-queue').innerHTML = html + '</table>';
+  await loadPolicyOptions();
+}
+
+async function openEditor(queueId) {
+  currentQueueId = queueId;
+  const data = await api('/flow/queue/' + queueId);
+  if (!data.data) return;
+  const item = data.data;
+  document.getElementById('editor-title').textContent = item.title;
+  document.getElementById('editor-original').value = item.content;
+  document.getElementById('editor-modified').value = item.content;
+  document.getElementById('article-editor').style.display = 'block';
+  document.getElementById('article-editor').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('policy-result').style.display = 'none';
+  document.getElementById('approve-result').style.display = 'none';
+}
+
+async function loadPolicyOptions() {
+  const data = await api('/news/editorial-policies' + (selectedUnitId ? '?media_unit_id=' + selectedUnitId : ''));
+  currentPolicies = data.policies || [];
+  ['policy-select', 'test-policy-select'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">اختر سياسة...</option>';
+    currentPolicies.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.isModifying ? '✏️' : '🔍'} ${p.name} — ${p.description}</option>`;
+    });
+  });
+}
+
+async function applyPolicyToQueue() {
+  const policyId = document.getElementById('policy-select').value;
+  if (!policyId || !currentQueueId) return alert('اختر سياسة أولاً');
+  showResult('policy-result', '⏳ جاري تطبيق السياسة...', false);
+  const data = await api('/news/editorial-policies/apply', { method: 'POST', body: { queueId: currentQueueId, policyId: parseInt(policyId) } });
+  if (data.error) { showResult('policy-result', data, true); return; }
+  showResult('policy-result', data, false);
+  if (data.policy?.isModifying && data.modifiedText) {
+    document.getElementById('editor-modified').value = data.modifiedText;
+  }
+}
+
+function copyModifiedToInput() {
+  document.getElementById('editor-original').value = document.getElementById('editor-modified').value;
+}
+
+async function approveArticle() {
+  if (!currentQueueId) return;
+  const policyId = document.getElementById('policy-select').value;
+  if (!policyId) return alert('اختر سياسة أولاً');
+  const data = await api('/flow/queue/' + currentQueueId + '/approve', {
+    method: 'POST',
+    body: { policyId: parseInt(policyId), editorNotes: document.getElementById('editor-notes').value, finalContent: document.getElementById('editor-modified').value }
+  });
+  showResult('approve-result', data, !data.success);
+  if (data.success) setTimeout(() => loadPendingQueue(), 1000);
+}
+
+async function rejectArticle() {
+  if (!currentQueueId) return;
+  const data = await api('/flow/queue/' + currentQueueId + '/reject', { method: 'POST', body: { editorNotes: document.getElementById('editor-notes').value } });
+  showResult('approve-result', data, !data.success);
+  if (data.success) { document.getElementById('article-editor').style.display = 'none'; setTimeout(() => loadPendingQueue(), 1000); }
+}
+
+// === POLICIES ===
+async function loadPolicies() {
+  await loadPolicyOptions();
+  let html = '<table><tr><th>ID</th><th>الاسم</th><th>الوصف</th><th>النوع</th><th>تعديل/فحص</th></tr>';
+  currentPolicies.forEach(p => {
+    html += `<tr><td>${p.id}</td><td><strong>${p.name}</strong></td><td>${p.description}</td><td>${p.task_type}</td><td>${p.isModifying ? '<span class="badge badge-automated">✏️ تعديل</span>' : '<span class="badge badge-editorial">🔍 فحص</span>'}</td></tr>`;
+  });
+  document.getElementById('policies-list').innerHTML = html + '</table>';
+}
+
+async function testPolicy() {
+  const policyId = document.getElementById('test-policy-select').value;
+  const text = document.getElementById('test-text').value;
+  if (!policyId || !text) return alert('اختر سياسة وأدخل نص');
+  showResult('test-result', '⏳ جاري التطبيق...', false);
+  showResult('test-result', await api('/news/editorial-policies/apply', { method: 'POST', body: { policyId: parseInt(policyId), text } }), false);
+}
+
+// === PUBLISHED ===
+async function loadPublished() {
+  const data = await api('/flow/published?limit=50' + (selectedUnitId ? '&media_unit_id=' + selectedUnitId : ''));
+  if (!data.data?.length) { document.getElementById('published-list').innerHTML = '<p style="color:#94a3b8">لا يوجد محتوى منشور</p>'; return; }
+  const filter = document.getElementById('flow-filter')?.value || 'all';
+  let items = data.data;
+  if (filter !== 'all') items = items.filter(i => i.flow_type === filter);
+  let html = '<table><tr><th>ID</th><th>العنوان</th><th>الفئة</th><th>الوحدة</th><th>النوع</th><th>تاريخ النشر</th></tr>';
+  items.forEach(item => {
+    html += `<tr><td>${item.id}</td><td style="max-width:400px">${(item.title||'-').substring(0,80)}</td><td>${item.category_name||'-'}</td><td>${item.media_unit_name||'-'}</td><td>${item.flow_type==='automated'?'<span class="badge badge-automated">أوتوماتيكي</span>':'<span class="badge badge-editorial">تحريري</span>'}</td><td style="font-size:11px">${new Date(item.published_at).toLocaleString('ar')}</td></tr>`;
+  });
+  document.getElementById('published-list').innerHTML = html + '</table>';
+}
+
+// === INIT ===
+loadMediaUnits();
+</script>
+</body>
+</html>

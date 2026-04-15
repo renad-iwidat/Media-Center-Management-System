@@ -8,7 +8,6 @@ export {
   SourceService,
   RawDataService,
   CategoryService,
-  EditorialPolicyService,
   EditorialQueueService,
   PublishedItemService,
 } from './database.service';
