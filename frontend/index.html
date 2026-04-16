@@ -161,21 +161,58 @@ raw_data (fetched)
         <h3>✏️ تحرير الخبر — <span id="editor-title"></span></h3>
         <div class="two-col">
           <div>
-            <div class="form-group"><label>النص الأصلي</label><textarea id="editor-original" readonly style="min-height:200px;background:#1a1a2e"></textarea></div>
+            <div class="form-group"><label>النص الأصلي (من المصدر)</label><textarea id="editor-original" readonly style="min-height:200px;background:#1a1a2e"></textarea></div>
           </div>
           <div>
-            <div class="form-group"><label>النص المعدّل</label><textarea id="editor-modified" style="min-height:200px"></textarea></div>
+            <div class="form-group"><label>النص الحالي (للتعديل)</label><textarea id="editor-modified" style="min-height:200px"></textarea></div>
           </div>
         </div>
+
+        <!-- محرك السياسات -->
         <div class="card" style="background:#0f172a;margin-top:12px">
-          <h3>⚙️ تطبيق سياسة تحرير</h3>
+          <h3>⚙️ تطبيق سياسات التحرير</h3>
+
+          <!-- السياسات المطبقة -->
+          <div id="applied-policies-bar" style="display:none;margin-bottom:12px">
+            <label style="color:#94a3b8;font-size:12px;margin-bottom:6px;display:block">السياسات المطبقة:</label>
+            <div id="applied-policies-list" class="flex flex-wrap" style="gap:6px"></div>
+          </div>
+
           <div class="flex flex-wrap">
             <select id="policy-select" style="max-width:300px"><option value="">اختر سياسة...</option></select>
             <button class="btn-warning" onclick="applyPolicyToQueue()">▶️ طبّق السياسة</button>
-            <button class="btn-primary btn-sm" onclick="copyModifiedToInput()">📋 انسخ المعدّل كأصلي (لسياسة ثانية)</button>
           </div>
-          <div id="policy-result" class="result-box mt" style="display:none"></div>
+
+          <!-- نتيجة السياسة -->
+          <div id="policy-result-area" style="display:none;margin-top:12px">
+            <div class="two-col">
+              <div>
+                <label style="color:#94a3b8;font-size:12px">النص قبل السياسة:</label>
+                <div id="policy-before" class="result-box" style="min-height:100px;max-height:250px"></div>
+              </div>
+              <div>
+                <label style="color:#94a3b8;font-size:12px">النص بعد السياسة:</label>
+                <div id="policy-after" class="result-box success" style="min-height:100px;max-height:250px"></div>
+              </div>
+            </div>
+            <div id="policy-inspection" style="display:none;margin-top:8px">
+              <label style="color:#94a3b8;font-size:12px">نتيجة الفحص:</label>
+              <div id="policy-inspection-result" class="result-box" style="max-height:200px"></div>
+            </div>
+            <div style="margin-top:8px">
+              <label style="color:#94a3b8;font-size:12px">📋 الاستجابة الكاملة (output_schema):</label>
+              <div id="policy-full-result" class="result-box" style="max-height:250px"></div>
+            </div>
+            <div class="flex mt" style="gap:8px">
+              <button class="btn-success btn-sm" onclick="acceptPolicyResult()">✅ قبول التعديل</button>
+              <button class="btn-danger btn-sm" onclick="rejectPolicyResult()">❌ رفض (إبقاء النص الحالي)</button>
+              <button class="btn-primary btn-sm" onclick="resetToOriginal()">🔄 رجوع للنص الأصلي</button>
+            </div>
+          </div>
+
+          <div id="policy-loading" style="display:none;margin-top:12px" class="loading"><div class="spinner"></div> جاري تطبيق السياسة...</div>
         </div>
+
         <div class="flex mt">
           <button class="btn-success" onclick="approveArticle()">✅ موافقة ونشر</button>
           <button class="btn-danger" onclick="rejectArticle()">❌ رفض</button>
@@ -192,11 +229,39 @@ raw_data (fetched)
         <div id="policies-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
       <div class="card">
-        <h3>🧪 تجربة سياسة على نص حر (بدون تخزين)</h3>
+        <h3>🧪 تجربة سياسة على نص حر</h3>
         <div class="form-group"><label>اختر السياسة</label><select id="test-policy-select" style="max-width:300px"><option value="">اختر سياسة...</option></select></div>
         <div class="form-group"><label>النص</label><textarea id="test-text" placeholder="الصق النص هنا..."></textarea></div>
         <button class="btn-primary" onclick="testPolicy()">▶️ طبّق</button>
-        <div id="test-result" class="result-box mt" style="display:none"></div>
+
+        <div id="test-result-area" style="display:none;margin-top:12px">
+          <div id="test-applied-bar" style="margin-bottom:8px">
+            <label style="color:#94a3b8;font-size:12px">السياسات المطبقة:</label>
+            <div id="test-applied-list" class="flex flex-wrap" style="gap:6px;margin-top:4px"></div>
+          </div>
+          <div class="two-col">
+            <div>
+              <label style="color:#94a3b8;font-size:12px">النص قبل:</label>
+              <div id="test-before" class="result-box" style="min-height:80px;max-height:250px"></div>
+            </div>
+            <div>
+              <label style="color:#94a3b8;font-size:12px">النص بعد:</label>
+              <div id="test-after" class="result-box success" style="min-height:80px;max-height:250px"></div>
+            </div>
+          </div>
+          <div id="test-inspection" style="display:none;margin-top:8px">
+            <label style="color:#94a3b8;font-size:12px">نتيجة الفحص:</label>
+            <div id="test-inspection-result" class="result-box" style="max-height:200px"></div>
+          </div>
+          <div style="margin-top:8px">
+            <label style="color:#94a3b8;font-size:12px">📋 الاستجابة الكاملة (output_schema):</label>
+            <div id="test-full-result" class="result-box" style="max-height:250px"></div>
+          </div>
+          <div class="flex mt" style="gap:8px">
+            <button class="btn-success btn-sm" onclick="acceptTestResult()">✅ قبول واستخدام كنص جديد</button>
+            <button class="btn-danger btn-sm" onclick="rejectTestResult()">❌ رفض</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -224,6 +289,21 @@ let currentPolicies = [];
 let selectedUnitId = null;
 let selectedUnitName = '';
 let mediaUnits = [];
+
+// تتبع السياسات المطبقة والنص الأصلي
+let editorState = {
+  originalText: '',       // النص الأصلي من المصدر (لا يتغير)
+  currentText: '',        // النص الحالي (بعد قبول التعديلات)
+  lastResult: null,       // آخر نتيجة من الـ API
+  appliedPolicies: [],    // السياسات المطبقة والمقبولة
+};
+
+let testState = {
+  originalText: '',
+  currentText: '',
+  lastResult: null,
+  appliedPolicies: [],
+};
 
 // === TABS ===
 document.querySelectorAll('.tab').forEach(tab => {
@@ -390,12 +470,23 @@ async function openEditor(queueId) {
   const data = await api('/flow/queue/' + queueId);
   if (!data.data) return;
   const item = data.data;
+
+  // تهيئة حالة المحرر
+  editorState = {
+    originalText: item.content,
+    currentText: item.content,
+    lastResult: null,
+    appliedPolicies: [],
+  };
+
   document.getElementById('editor-title').textContent = item.title;
   document.getElementById('editor-original').value = item.content;
   document.getElementById('editor-modified').value = item.content;
   document.getElementById('article-editor').style.display = 'block';
   document.getElementById('article-editor').scrollIntoView({ behavior: 'smooth' });
-  document.getElementById('policy-result').style.display = 'none';
+  document.getElementById('policy-result-area').style.display = 'none';
+  document.getElementById('policy-loading').style.display = 'none';
+  document.getElementById('applied-policies-bar').style.display = 'none';
   document.getElementById('approve-result').style.display = 'none';
 }
 
@@ -414,14 +505,105 @@ async function loadPolicyOptions() {
 
 async function applyPolicyToQueue() {
   const policyId = document.getElementById('policy-select').value;
-  if (!policyId || !currentQueueId) return alert('اختر سياسة أولاً');
-  showResult('policy-result', '⏳ جاري تطبيق السياسة...', false);
-  const data = await api('/news/editorial-policies/apply', { method: 'POST', body: { queueId: currentQueueId, policyId: parseInt(policyId) } });
-  if (data.error) { showResult('policy-result', data, true); return; }
-  showResult('policy-result', data, false);
+  if (!policyId) return alert('اختر سياسة أولاً');
+
+  // النص الحالي هو اللي بالـ textarea
+  const textToProcess = document.getElementById('editor-modified').value;
+  if (!textToProcess.trim()) return alert('لا يوجد نص للمعالجة');
+
+  document.getElementById('policy-result-area').style.display = 'none';
+  document.getElementById('policy-loading').style.display = 'block';
+
+  const body = {
+    policyId: parseInt(policyId),
+    text: textToProcess,
+    appliedPolicies: editorState.appliedPolicies,
+  };
+  // لو في queueId نبعثه كمان عشان الـ source info
+  if (currentQueueId) body.queueId = currentQueueId;
+
+  const data = await api('/news/editorial-policies/apply', { method: 'POST', body });
+  document.getElementById('policy-loading').style.display = 'none';
+
+  if (data.error) {
+    document.getElementById('policy-result-area').style.display = 'block';
+    document.getElementById('policy-before').textContent = textToProcess;
+    document.getElementById('policy-after').textContent = 'خطأ: ' + (data.error || 'خطأ غير معروف');
+    document.getElementById('policy-after').className = 'result-box error';
+    return;
+  }
+
+  editorState.lastResult = data;
+
+  // عرض المقارنة
+  document.getElementById('policy-result-area').style.display = 'block';
+  document.getElementById('policy-before').textContent = data.originalText || textToProcess;
+  document.getElementById('policy-after').className = 'result-box success';
+
+  if (data.policy?.isModifying) {
+    document.getElementById('policy-after').textContent = data.modifiedText || textToProcess;
+    document.getElementById('policy-inspection').style.display = 'none';
+  } else {
+    // سياسة فحص
+    document.getElementById('policy-after').textContent = 'سياسة فحص — لا تعديل على النص';
+    document.getElementById('policy-inspection').style.display = 'block';
+    document.getElementById('policy-inspection-result').textContent = JSON.stringify(data.inspection || data, null, 2);
+  }
+
+  // عرض الاستجابة الكاملة (output_schema) دائماً
+  document.getElementById('policy-full-result').textContent = JSON.stringify(data.result || {}, null, 2);
+}
+
+function acceptPolicyResult() {
+  if (!editorState.lastResult) return;
+  const data = editorState.lastResult;
+
+  // تحديث النص الحالي
   if (data.policy?.isModifying && data.modifiedText) {
+    editorState.currentText = data.modifiedText;
     document.getElementById('editor-modified').value = data.modifiedText;
   }
+
+  // إضافة السياسة للقائمة
+  editorState.appliedPolicies = data.appliedPolicies || [...editorState.appliedPolicies, {
+    name: data.policy?.name,
+    taskType: data.policy?.taskType,
+    timestamp: new Date().toISOString(),
+  }];
+
+  // تحديث شريط السياسات المطبقة
+  renderAppliedPolicies();
+
+  // إخفاء نتيجة السياسة
+  document.getElementById('policy-result-area').style.display = 'none';
+  editorState.lastResult = null;
+}
+
+function rejectPolicyResult() {
+  document.getElementById('policy-result-area').style.display = 'none';
+  editorState.lastResult = null;
+}
+
+function resetToOriginal() {
+  editorState.currentText = editorState.originalText;
+  editorState.appliedPolicies = [];
+  editorState.lastResult = null;
+  document.getElementById('editor-modified').value = editorState.originalText;
+  document.getElementById('policy-result-area').style.display = 'none';
+  document.getElementById('applied-policies-bar').style.display = 'none';
+}
+
+function renderAppliedPolicies() {
+  const list = document.getElementById('applied-policies-list');
+  const bar = document.getElementById('applied-policies-bar');
+  if (!editorState.appliedPolicies.length) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'block';
+  list.innerHTML = editorState.appliedPolicies.map((p, i) =>
+    `<span class="tag" style="background:#1e3a5f;color:#7dd3fc">${i + 1}. ${p.name}</span>`
+  ).join('');
 }
 
 function copyModifiedToInput() {
@@ -430,11 +612,15 @@ function copyModifiedToInput() {
 
 async function approveArticle() {
   if (!currentQueueId) return;
-  const policyId = document.getElementById('policy-select').value;
-  if (!policyId) return alert('اختر سياسة أولاً');
+  const finalContent = document.getElementById('editor-modified').value;
+  if (!finalContent.trim()) return alert('لا يوجد نص للنشر');
   const data = await api('/flow/queue/' + currentQueueId + '/approve', {
     method: 'POST',
-    body: { policyId: parseInt(policyId), editorNotes: document.getElementById('editor-notes').value, finalContent: document.getElementById('editor-modified').value }
+    body: {
+      editorNotes: document.getElementById('editor-notes').value,
+      finalContent: finalContent,
+      appliedPolicies: editorState.appliedPolicies,
+    }
   });
   showResult('approve-result', data, !data.success);
   if (data.success) setTimeout(() => loadPendingQueue(), 1000);
@@ -461,8 +647,79 @@ async function testPolicy() {
   const policyId = document.getElementById('test-policy-select').value;
   const text = document.getElementById('test-text').value;
   if (!policyId || !text) return alert('اختر سياسة وأدخل نص');
-  showResult('test-result', '⏳ جاري التطبيق...', false);
-  showResult('test-result', await api('/news/editorial-policies/apply', { method: 'POST', body: { policyId: parseInt(policyId), text } }), false);
+
+  // تهيئة الحالة لو أول مرة
+  if (!testState.originalText) {
+    testState.originalText = text;
+    testState.currentText = text;
+  }
+
+  document.getElementById('test-result-area').style.display = 'none';
+
+  const data = await api('/news/editorial-policies/apply', {
+    method: 'POST',
+    body: {
+      policyId: parseInt(policyId),
+      text: text,
+      appliedPolicies: testState.appliedPolicies,
+    }
+  });
+
+  if (data.error) {
+    document.getElementById('test-result-area').style.display = 'block';
+    document.getElementById('test-before').textContent = text;
+    document.getElementById('test-after').textContent = 'خطأ: ' + data.error;
+    document.getElementById('test-after').className = 'result-box error';
+    return;
+  }
+
+  testState.lastResult = data;
+
+  document.getElementById('test-result-area').style.display = 'block';
+  document.getElementById('test-before').textContent = text;
+  document.getElementById('test-after').className = 'result-box success';
+
+  if (data.policy?.isModifying) {
+    document.getElementById('test-after').textContent = data.modifiedText || text;
+    document.getElementById('test-inspection').style.display = 'none';
+  } else {
+    document.getElementById('test-after').textContent = 'سياسة فحص — لا تعديل';
+    document.getElementById('test-inspection').style.display = 'block';
+    document.getElementById('test-inspection-result').textContent = JSON.stringify(data.inspection || data, null, 2);
+  }
+
+  // عرض الاستجابة الكاملة (output_schema) دائماً
+  document.getElementById('test-full-result').textContent = JSON.stringify(data.result || {}, null, 2);
+
+  // عرض السياسات المطبقة
+  const allPolicies = data.appliedPolicies || [...testState.appliedPolicies, { name: data.policy?.name, taskType: data.policy?.taskType }];
+  document.getElementById('test-applied-list').innerHTML = allPolicies.map((p, i) =>
+    `<span class="tag" style="background:#1e3a5f;color:#7dd3fc">${i + 1}. ${p.name}</span>`
+  ).join('');
+}
+
+function acceptTestResult() {
+  if (!testState.lastResult) return;
+  const data = testState.lastResult;
+
+  if (data.policy?.isModifying && data.modifiedText) {
+    testState.currentText = data.modifiedText;
+    document.getElementById('test-text').value = data.modifiedText;
+  }
+
+  testState.appliedPolicies = data.appliedPolicies || [...testState.appliedPolicies, {
+    name: data.policy?.name,
+    taskType: data.policy?.taskType,
+    timestamp: new Date().toISOString(),
+  }];
+
+  document.getElementById('test-result-area').style.display = 'none';
+  testState.lastResult = null;
+}
+
+function rejectTestResult() {
+  document.getElementById('test-result-area').style.display = 'none';
+  testState.lastResult = null;
 }
 
 // === PUBLISHED ===

@@ -27,7 +27,7 @@ const INSPECTION_POLICIES = ['content_validation', 'classify', 'terminology_chec
  */
 export async function applyPolicy(req: Request, res: Response) {
   try {
-    const { policyName, policyId, text, queueId } = req.body;
+    const { policyName, policyId, text, queueId, appliedPolicies: previousPolicies } = req.body;
 
     if (!policyName && !policyId) {
       return res.status(400).json({
@@ -106,7 +106,10 @@ export async function applyPolicy(req: Request, res: Response) {
         });
       }
 
-      articleText = article.content;
+      // لو الفرونت بعث text (مثلاً بعد تعديل سابق) نستخدمه، وإلا نستخدم محتوى الـ queue
+      if (!articleText) {
+        articleText = article.content;
+      }
       articleTitle = article.title;
       sourceInfo = {
         queueId: article.queue_id,
@@ -120,6 +123,17 @@ export async function applyPolicy(req: Request, res: Response) {
     }
 
     // 3. تطبيق السياسة
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`📋 [applyPolicy] السياسة المختارة من الداتابيس:`);
+    console.log(`  id: ${policy.id}`);
+    console.log(`  name: ${policy.name}`);
+    console.log(`  task_type: ${policy.task_type}`);
+    console.log(`  editor_instructions: ${policy.editor_instructions?.substring(0, 100)}...`);
+    console.log(`  injected_vars: ${JSON.stringify(policy.injected_vars)?.substring(0, 200)}...`);
+    console.log(`  output_schema: ${JSON.stringify(policy.output_schema)}`);
+    console.log(`  prompt_template: ${policy.prompt_template ? 'من الداتابيس' : 'الافتراضي (من الكود)'}`);
+    console.log(`  text length: ${articleText?.length}`);
+    console.log(`${'='.repeat(80)}\n`);
     const aiResult = await editorialPolicyService.applyPolicy(
       policy.name,
       policy.task_type,
@@ -127,7 +141,8 @@ export async function applyPolicy(req: Request, res: Response) {
       articleText,
       policy.injected_vars,
       policy.output_schema,
-      endpoint
+      endpoint,
+      policy.prompt_template
     );
 
     // 4. بناء الـ response حسب نوع السياسة
@@ -152,6 +167,15 @@ export async function applyPolicy(req: Request, res: Response) {
       response.originalTitle = articleTitle;
     }
 
+    // تتبع السياسات المطبقة — الفرونت يبعثها مع كل طلب تالي
+    const appliedPolicies: Array<{ name: string; taskType: string; timestamp: string }> = Array.isArray(previousPolicies) ? [...previousPolicies] : [];
+    appliedPolicies.push({
+      name: policy.name,
+      taskType: policy.task_type,
+      timestamp: new Date().toISOString(),
+    });
+    response.appliedPolicies = appliedPolicies;
+
     if (isModifying) {
       // سياسة بتعدّل النص → رجّع النص المعدّل
       response.modifiedText = aiResult.modifiedText;
@@ -175,6 +199,9 @@ export async function applyPolicy(req: Request, res: Response) {
       // سياسة فحص بس → رجّع نتيجة الفحص
       response.inspection = aiResult.result || {};
     }
+
+    // دائماً رجّع الـ result الكامل من الـ AI
+    response.result = aiResult.result || {};
 
     res.json(response);
   } catch (error) {

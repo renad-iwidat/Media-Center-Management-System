@@ -27,108 +27,107 @@ function sanitizeForJSON(text: string): string {
 }
 
 /**
- * تحويل الـ output_schema من الداتابيس لمثال JSON واقعي
- * بيساعد الـ AI يفهم الشكل المطلوب
+ * القالب الافتراضي الموحد لجميع السياسات
+ * Placeholders:
+ *   {{editor_instructions}} — تعليمات المحرر
+ *   {{injected_vars}}       — المتغيرات المحقونة (قوائم، قواميس، إلخ)
+ *   {{text}}                — النص المراد معالجته
+ *   {{output_schema}}       — شكل الـ JSON المطلوب
  */
-function schemaToExample(schema: Record<string, any>): Record<string, any> {
-  const example: Record<string, any> = {};
-  for (const [key, value] of Object.entries(schema)) {
-    if (typeof value === 'string') {
-      const lower = value.toLowerCase().trim();
-      if (lower === 'string') {
-        example[key] = '...';
-      } else if (lower === 'number' || lower.startsWith('number')) {
-        example[key] = 0;
-      } else if (lower === 'boolean') {
-        example[key] = true;
-      } else if (lower === 'array') {
-        example[key] = [];
-      } else if (lower === 'string or null') {
-        example[key] = '... or null';
-      } else if (lower.includes('|')) {
-        example[key] = value.split('|').map((o: string) => o.trim()).join(' or ');
-      } else {
-        example[key] = value;
-      }
-    } else if (typeof value === 'object' && value !== null) {
-      example[key] = schemaToExample(value);
-    } else {
-      example[key] = value;
-    }
+const DEFAULT_PROMPT_TEMPLATE = `أنت محرر صحفي محترف . نفّذ التعليمات التالية بدقة على النص المعطى.
+
+## التعليمات:
+{{editor_instructions}}
+
+## البيانات المرجعية:
+{{injected_vars}}
+
+## النص:
+{{text}}
+
+## صيغة الإخراج:
+{{output_schema}}`;
+
+/**
+ * تحويل injected_vars لنص مقروء للبرومبت
+ * نبعث الـ JSON كما هو عشان الموديل يفهمه بوضوح
+ */
+function formatInjectedVars(injectedVars: Record<string, any> | null): string {
+  if (!injectedVars || Object.keys(injectedVars).length === 0) {
+    return 'لا توجد بيانات مرجعية.';
   }
-  return example;
+  return JSON.stringify(injectedVars, null, 2);
 }
 
 /**
- * بناء البرومت النهائي من 4 أقسام:
- * 1. editor_instructions  2. injected_vars  3. النص  4. output_schema
+ * تحويل output_schema لتعليمات واضحة للـ AI
+ */
+function formatOutputSchema(outputSchema: Record<string, any> | null): string {
+  if (!outputSchema || Object.keys(outputSchema).length === 0) {
+    return 'أعد النتيجة كنص عادي.';
+  }
+  return JSON.stringify(outputSchema, null, 2);
+}
+
+/**
+ * بناء البرومت النهائي من القالب (prompt_template) أو القالب الافتراضي
+ * يستبدل الـ placeholders بالقيم الفعلية:
+ *   {{editor_instructions}} ← تعليمات المحرر
+ *   {{injected_vars}}       ← المتغيرات المحقونة
+ *   {{text}}                ← النص
+ *   {{output_schema}}       ← شكل الـ JSON المطلوب
  */
 function buildPrompt(
   editorInstructions: string,
   text: string,
   injectedVars: Record<string, any> | null,
-  outputSchema: Record<string, any> | null
+  outputSchema: Record<string, any> | null,
+  promptTemplate: string | null = null
 ): string {
-  const cleanInstructions = sanitizeForJSON(editorInstructions);
-  const cleanText = sanitizeForJSON(text);
+  const template = promptTemplate && promptTemplate.trim()
+    ? promptTemplate
+    : DEFAULT_PROMPT_TEMPLATE;
 
-  let prompt = cleanInstructions;
+  const prompt = template
+    .replace(/\{\{editor_instructions\}\}/g, sanitizeForJSON(editorInstructions))
+    .replace(/\{\{injected_vars\}\}/g, formatInjectedVars(injectedVars))
+    .replace(/\{\{text\}\}/g, sanitizeForJSON(text))
+    .replace(/\{\{output_schema\}\}/g, formatOutputSchema(outputSchema));
 
-  // إضافة المتغيرات المحقونة (injected_vars) إذا وُجدت
-  if (injectedVars && Object.keys(injectedVars).length > 0) {
-    prompt += ' --- المتغيرات ---';
-    for (const [key, value] of Object.entries(injectedVars)) {
-      if (Array.isArray(value)) {
-        // array عادي — كل عنصر بسطر منفصل مرقّم
-        prompt += ` [${key}]:`;
-        value.forEach((item: any, i: number) => {
-          prompt += ` (${i + 1}) ${item}`;
-        });
-      } else if (typeof value === 'object' && value !== null) {
-        prompt += ` [${key}]:`;
-        for (const [subKey, subValue] of Object.entries(value)) {
-          if (Array.isArray(subValue)) {
-            // array داخل object — مثل forbidden_terms.titles
-            prompt += ` ${subKey}: ${(subValue as string[]).join(' | ')}`;
-          } else if (typeof subValue === 'string') {
-            // key-value pair — مثل replace_map أو approved_disclaimers
-            prompt += ` "${subKey}" → "${subValue}" ;`;
-          }
-        }
-      } else {
-        prompt += ` ${key}: ${value}`;
-      }
-    }
-  }
-
-  // إضافة النص المراد معالجته
-  prompt += ` النص: ${cleanText}`;
-
-  // إضافة صيغة الاوتبوت المطلوبة
-  if (outputSchema && Object.keys(outputSchema).length > 0) {
-    const exampleStr = JSON.stringify(schemaToExample(outputSchema));
-    prompt += ` أعد الناتج بصيغة JSON فقط بدون أي شرح أو نص إضافي وبالشكل التالي: ${exampleStr}`;
-  }
-
-  return prompt.replace(/\s{2,}/g, ' ').trim();
+  return prompt.trim();
 }
 
 /**
  * استخراج JSON من نتيجة الـ AI
  * بيحاول عدة طرق لاستخراج الـ JSON من الـ response
+ * ويتأكد من أن الـ response يطابق الـ output_schema
  */
-function extractJSON(text: string): Record<string, any> {
+function extractJSON(
+  text: string,
+  outputSchema: Record<string, any> | null = null
+): Record<string, any> {
   if (!text || !text.trim()) return {};
   const cleaned = text.trim();
 
   // محاولة 1: parse مباشر
   try {
     const parsed = JSON.parse(cleaned);
-    if (typeof parsed === 'object' && parsed !== null) return parsed;
+    if (typeof parsed === 'object' && parsed !== null) {
+      // التحقق من الـ schema إذا وُجد
+      if (outputSchema && !validateSchema(parsed, outputSchema)) {
+        console.warn('⚠️ JSON extracted but schema validation failed');
+      }
+      return parsed;
+    }
     if (typeof parsed === 'string') {
       try {
         const inner = JSON.parse(parsed);
-        if (typeof inner === 'object' && inner !== null) return inner;
+        if (typeof inner === 'object' && inner !== null) {
+          if (outputSchema && !validateSchema(inner, outputSchema)) {
+            console.warn('⚠️ Inner JSON extracted but schema validation failed');
+          }
+          return inner;
+        }
       } catch {}
     }
   } catch {}
@@ -138,7 +137,12 @@ function extractJSON(text: string): Record<string, any> {
     const m = cleaned.match(/\{[\s\S]*\}/);
     if (m) {
       const p = JSON.parse(m[0]);
-      if (typeof p === 'object' && p !== null) return p;
+      if (typeof p === 'object' && p !== null) {
+        if (outputSchema && !validateSchema(p, outputSchema)) {
+          console.warn('⚠️ First {} extracted but schema validation failed');
+        }
+        return p;
+      }
     }
   } catch {}
 
@@ -148,7 +152,12 @@ function extractJSON(text: string): Record<string, any> {
     const m = u.match(/\{[\s\S]*\}/);
     if (m) {
       const p = JSON.parse(m[0]);
-      if (typeof p === 'object' && p !== null) return p;
+      if (typeof p === 'object' && p !== null) {
+        if (outputSchema && !validateSchema(p, outputSchema)) {
+          console.warn('⚠️ Escaped {} extracted but schema validation failed');
+        }
+        return p;
+      }
     }
   } catch {}
 
@@ -157,12 +166,64 @@ function extractJSON(text: string): Record<string, any> {
     const m = cleaned.match(/\[[\s\S]*\]/);
     if (m) {
       const p = JSON.parse(m[0]);
-      if (Array.isArray(p)) return { items: p };
+      if (Array.isArray(p)) {
+        return { items: p };
+      }
     }
   } catch {}
 
   // fallback: رجّع النص كـ modified_text
   return { modified_text: cleaned };
+}
+
+/**
+ * التحقق من أن الـ JSON يطابق الـ output_schema
+ */
+function validateSchema(
+  data: Record<string, any>,
+  schema: Record<string, any>
+): boolean {
+  for (const [field, expectedType] of Object.entries(schema)) {
+    if (!(field in data)) {
+      console.warn(`Missing required field: ${field}`);
+      return false;
+    }
+
+    const actualValue = data[field];
+    const expected = String(expectedType).toLowerCase().trim();
+
+    // التحقق من الـ type
+    if (expected === 'string') {
+      if (typeof actualValue !== 'string') {
+        console.warn(`Field ${field} should be string, got ${typeof actualValue}`);
+        return false;
+      }
+    } else if (expected === 'number' || expected.startsWith('number')) {
+      if (typeof actualValue !== 'number') {
+        console.warn(`Field ${field} should be number, got ${typeof actualValue}`);
+        return false;
+      }
+    } else if (expected === 'boolean') {
+      if (typeof actualValue !== 'boolean') {
+        console.warn(`Field ${field} should be boolean, got ${typeof actualValue}`);
+        return false;
+      }
+    } else if (expected === 'array') {
+      if (!Array.isArray(actualValue)) {
+        console.warn(`Field ${field} should be array, got ${typeof actualValue}`);
+        return false;
+      }
+    } else if (expected.includes('|')) {
+      // type union مثل "string or null"
+      const allowedTypes = expected.split('|').map((t) => t.trim());
+      const actualType = typeof actualValue;
+      if (!allowedTypes.includes(actualType) && !allowedTypes.includes('null') && actualValue !== null) {
+        console.warn(`Field ${field} should be one of ${allowedTypes}, got ${actualType}`);
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 // ============================================================================
@@ -171,18 +232,11 @@ function extractJSON(text: string): Record<string, any> {
 
 class EditorialPolicyService {
   /**
-   * حساب max_tokens بناءً على نوع المهمة وطول النص
-   * السياسات اللي بتعدّل النص تحتاج tokens أكثر
-   * الحد الأقصى الآمن للـ vLLM هو 2048 لتجنب تجاوز الـ context window
+   * حساب max_tokens للـ completion
+   * الموديل بيقبل حتى 5000 token كـ prompt، والـ response حده 3000
    */
-  private calculateMaxTokens(taskType: string, textLength: number, safeMode: boolean = false): number {
-    if (safeMode) return 1024;
-    const textTasks = ['rewrite', 'replace', 'remove', 'cleanup', 'formatting', 'balance', 'disclaimer'];
-    if (textTasks.includes(taskType)) {
-      // نحسب بناءً على طول النص لكن بحد أقصى آمن 2048
-      return Math.max(512, Math.min(Math.ceil(textLength / 3) + 512, 2048));
-    }
-    return 1024;
+  private calculateMaxTokens(): number {
+    return 1000;
   }
 
   /**
@@ -203,7 +257,8 @@ class EditorialPolicyService {
     text: string,
     injectedVars: Record<string, any> | null,
     outputSchema: Record<string, any> | null,
-    endpoint: string = 'generate'
+    endpoint: string = 'generate',
+    promptTemplate: string | null = null
   ): Promise<{
     policyName: string;
     taskType: string;
@@ -221,46 +276,31 @@ class EditorialPolicyService {
     const apiUrl = `${baseUrl}/${endpoint}`;
 
     try {
-      const prompt = buildPrompt(editorInstructions, text, injectedVars, outputSchema);
-      let maxTokens = this.calculateMaxTokens(taskType, text.length);
+      const prompt = buildPrompt(editorInstructions, text, injectedVars, outputSchema, promptTemplate);
+      const maxTokens = this.calculateMaxTokens();
 
-      // تقدير عدد الـ tokens (النص العربي تقريباً 1 token لكل 2-3 أحرف)
-      const estimatedPromptTokens = Math.ceil(prompt.length / 2);
-      const totalEstimatedTokens = estimatedPromptTokens + maxTokens;
+      const requestBody = { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 };
 
-      console.log(`📤 [${policyName}] → ${apiUrl}`);
-      console.log(`📤 [${policyName}] task: ${taskType} | max_tokens: ${maxTokens} | prompt: ${prompt.length} chars (~${estimatedPromptTokens} tokens)`);
-      console.log(`📤 [${policyName}] estimated total tokens (prompt + completion): ~${totalEstimatedTokens}`);
+      // === LOG: الريكويست الكامل ===
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`📤 [${policyName}] REQUEST → ${apiUrl}`);
+      console.log(`${'='.repeat(80)}`);
+      console.log(`📤 [${policyName}] FULL REQUEST BODY:`);
+      console.log(JSON.stringify(requestBody, null, 2));
+      console.log(`${'='.repeat(80)}\n`);
 
-      // محاولة الإرسال مع retry تلقائي لو جاء 400 (تجاوز الـ context window)
-      let response;
-      try {
-        response = await axios.post(
-          apiUrl,
-          { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 },
-          { timeout: 120000 }
-        );
-      } catch (firstErr: any) {
-        if (firstErr?.response?.status === 400) {
-          // تجاوز الـ context window → نخفض max_tokens ونعيد المحاولة
-          maxTokens = this.calculateMaxTokens(taskType, text.length, true);
-          console.warn(`⚠️ [${policyName}] 400 Bad Request → retry with max_tokens=${maxTokens}`);
-          response = await axios.post(
-            apiUrl,
-            { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 },
-            { timeout: 120000 }
-          );
-        } else {
-          throw firstErr;
-        }
-      }
+      const response = await axios.post(apiUrl, requestBody, { timeout: 120000 });
 
       const executionTime = Date.now() - startTime;
       const rawData = response.data;
 
-      console.log(`📡 [${policyName}] response in ${executionTime}ms`);
-      console.log(`📡 [${policyName}] rawData keys:`, Object.keys(rawData));
-      console.log(`📡 [${policyName}] rawData:`, JSON.stringify(rawData).substring(0, 500));
+      // === LOG: الريسبونس الكامل ===
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`📡 [${policyName}] RESPONSE (${executionTime}ms)`);
+      console.log(`${'='.repeat(80)}`);
+      console.log(`📡 [${policyName}] FULL RESPONSE:`);
+      console.log(JSON.stringify(rawData, null, 2));
+      console.log(`${'='.repeat(80)}\n`);
 
       // فحص إذا الـ AI server رجّع خطأ داخل الـ response body
       if (rawData.status === 'failed' || rawData.error) {
@@ -269,7 +309,7 @@ class EditorialPolicyService {
         throw new Error(`AI server error: ${errorMsg}`);
       }
 
-      // استخراج النص من الـ response (بيختلف حسب الـ AI server)
+      // استخراج النص من الـ response
       const responseText: string =
         rawData.result ||
         rawData.text ||
@@ -281,13 +321,12 @@ class EditorialPolicyService {
         (rawData.choices && rawData.choices[0]?.message?.content) ||
         (typeof rawData === 'string' ? rawData : '');
 
-      console.log(`📡 [${policyName}] responseText (first 300):`, responseText?.substring(0, 300) || '(empty)');
+      const result = extractJSON(responseText, outputSchema);
 
-      const result = extractJSON(responseText);
-      console.log(`📡 [${policyName}] extractJSON keys:`, Object.keys(result));
+      // النص المنظف (بعد sanitize) — نستخدمه للمقارنة العادلة
+      const sanitizedOriginal = sanitizeForJSON(text);
 
       // استخراج النص المعدّل من الـ result
-      // بنحاول كل الأسماء الممكنة اللي الـ AI ممكن يستخدمها للنص المعدّل
       const modifiedText: string =
         result.modified_text ||
         result.modifiedText ||
@@ -305,24 +344,26 @@ class EditorialPolicyService {
         (responseText && !responseText.startsWith('{') && !responseText.startsWith('[') ? responseText : null) ||
         text;
 
-      console.log(`📡 [${policyName}] modifiedText === originalText?`, modifiedText === text);
-      if (modifiedText === text) {
-        console.warn(`⚠️ [${policyName}] النص ما تغيّر! result keys:`, Object.keys(result), '| result:', JSON.stringify(result).substring(0, 500));
-      }
+      // المقارنة مع النص المنظف عشان نكتشف التغييرات الفعلية
+      const hasRealChanges = modifiedText !== text && modifiedText !== sanitizedOriginal;
 
       // fallback ذكي: إذا ما لقينا النص بالحقول المعروفة، ندوّر على أطول string بالـ result
       let finalText = modifiedText;
       if (finalText === text && Object.keys(result).length > 0) {
         let longestStr = '';
-        for (const [key, value] of Object.entries(result)) {
-          if (typeof value === 'string' && value.length > longestStr.length && value !== text) {
+        for (const [_, value] of Object.entries(result)) {
+          if (typeof value === 'string' && value.length > longestStr.length && value !== text && value !== sanitizedOriginal) {
             longestStr = value;
           }
         }
         if (longestStr.length > 50) {
-          console.log(`📡 [${policyName}] fallback: استخدمنا أطول string بالـ result (${longestStr.length} chars)`);
           finalText = longestStr;
         }
+      }
+
+      // لو النص المعدّل مطابق للأصلي بس فيه modified_text مختلف عن الـ sanitized — نستخدمه
+      if (finalText === text && result.modified_text && result.modified_text !== sanitizedOriginal) {
+        finalText = result.modified_text;
       }
 
       return {
@@ -334,7 +375,7 @@ class EditorialPolicyService {
         rawResponse: responseText,
         executionTime,
         endpoint: apiUrl,
-        hasChanges: finalText !== text,
+        hasChanges: finalText !== text && finalText !== sanitizedOriginal,
       };
     } catch (error: any) {
       const executionTime = Date.now() - startTime;
