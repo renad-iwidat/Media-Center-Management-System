@@ -148,17 +148,9 @@ export class FlowRouterService {
   }
 
   /**
-   * جلب content_type_id للأخبار
+   * content_type_id للأخبار — ثابت = 1
    */
-  private async getNewsContentTypeId(): Promise<number> {
-    const result = await query(
-      `SELECT id FROM content_types WHERE name = 'news' LIMIT 1`
-    );
-    if (result.rows.length === 0) {
-      throw new Error("content_type 'news' غير موجود في جدول content_types");
-    }
-    return result.rows[0].id;
-  }
+  private readonly NEWS_CONTENT_TYPE_ID = 1;
 
   /**
    * توجيه الخبر للمسار الأوتوماتيكي
@@ -170,7 +162,7 @@ export class FlowRouterService {
   ): Promise<void> {
     console.log(`🚀 توجيه الخبر "${article.title}" للمسار الأوتوماتيكي`);
 
-    const contentTypeId = await this.getNewsContentTypeId();
+    const contentTypeId = this.NEWS_CONTENT_TYPE_ID;
 
     // نشر الخبر لكل وحدة إعلام نشطة
     for (const unit of mediaUnits) {
