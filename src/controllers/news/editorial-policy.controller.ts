@@ -15,12 +15,6 @@ function getEndpointForPolicy(_taskType: string): string {
 }
 
 /**
- * السياسات اللي بتعدّل النص vs اللي بتفحص بس
- */
-const MODIFYING_POLICIES = ['replace', 'remove', 'rewrite', 'cleanup', 'formatting', 'balance', 'disclaimer'];
-const INSPECTION_POLICIES = ['content_validation', 'classify', 'terminology_check', 'validate'];
-
-/**
  * تطبيق سياسة واحدة على نص
  * حالة 1: إرسال queueId + policyId → يجلب الخبر من الداتابيس ويطبق السياسة
  * حالة 2: إرسال text + policyName/policyId → يطبق السياسة على النص مباشرة (بدون تخزين)
@@ -63,8 +57,8 @@ export async function applyPolicy(req: Request, res: Response) {
 
     const policy = policyResult.rows[0];
     const endpoint = getEndpointForPolicy(policy.task_type);
-    const isModifying = MODIFYING_POLICIES.includes(policy.task_type);
-    const isInspection = INSPECTION_POLICIES.includes(policy.task_type);
+    const isModifying = !!policy.is_modifying;
+    const isInspection = !policy.is_modifying;
 
     // 2. تحديد النص المراد معالجته
     let articleText = text;
@@ -142,7 +136,8 @@ export async function applyPolicy(req: Request, res: Response) {
       policy.injected_vars,
       policy.output_schema,
       endpoint,
-      policy.prompt_template
+      policy.prompt_template,
+      isModifying
     );
 
     // 4. بناء الـ response حسب نوع السياسة
@@ -206,6 +201,254 @@ export async function applyPolicy(req: Request, res: Response) {
     res.json(response);
   } catch (error) {
     console.error('❌ خطأ في تطبيق السياسة:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'خطأ غير معروف',
+    });
+  }
+}
+
+/**
+ * تطبيق سياسات بشكل متسلسل (Sequential Transformation) على الـ Backend
+ * السياسة 1 → output1 → السياسة 2 تطبّق على output1 → output2
+ * الناتج النهائي يرجع للمحرر ليعدّل عليه ويحفظه
+ */
+export async function applyPoliciesSequential(req: Request, res: Response) {
+  try {
+    const { text, queueId, policyIds } = req.body;
+
+    if (!policyIds || !Array.isArray(policyIds) || policyIds.length === 0) {
+      return res.status(400).json({
+        error: 'policyIds (array) مطلوبة وغير فارغة',
+      });
+    }
+
+    if (!text && !queueId) {
+      return res.status(400).json({
+        error: 'text أو queueId مطلوب',
+      });
+    }
+
+    // 1. تحديد النص الأصلي
+    let currentText = text;
+    let articleTitle = '';
+    let sourceInfo: any = null;
+
+    if (queueId) {
+      const queueResult = await db.query(
+        `SELECT 
+          eq.id as queue_id,
+          eq.media_unit_id,
+          eq.raw_data_id,
+          eq.status,
+          rd.title,
+          rd.content,
+          rd.image_url,
+          rd.url,
+          c.name as category_name,
+          mu.name as media_unit_name
+        FROM editorial_queue eq
+        JOIN raw_data rd ON eq.raw_data_id = rd.id
+        JOIN categories c ON rd.category_id = c.id
+        JOIN media_units mu ON eq.media_unit_id = mu.id
+        WHERE eq.id = $1`,
+        [queueId]
+      );
+
+      if (queueResult.rows.length === 0) {
+        return res.status(404).json({
+          error: `الخبر ${queueId} غير موجود في الطابور`,
+        });
+      }
+
+      const article = queueResult.rows[0];
+      if (!currentText) {
+        currentText = article.content;
+      }
+      articleTitle = article.title;
+      sourceInfo = {
+        queueId: article.queue_id,
+        rawDataId: article.raw_data_id,
+        mediaUnitId: article.media_unit_id,
+        title: article.title,
+        category: article.category_name,
+        mediaUnit: article.media_unit_name,
+        status: article.status,
+      };
+    }
+
+    // 2. جلب السياسات المعدّلة فقط (is_modifying = true) بالترتيب المطلوب
+    const policiesResult = await db.query(
+      'SELECT * FROM editorial_policies WHERE id = ANY($1) AND is_active = TRUE AND is_modifying = TRUE',
+      [policyIds]
+    );
+
+    if (policiesResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'لم يتم العثور على سياسات تعديل مفعّلة — التطبيق المتسلسل متاح فقط للسياسات المعدّلة (is_modifying)',
+      });
+    }
+
+    // ترتيب السياسات حسب الترتيب المرسل من الفرونت (مع تجاهل اللي مش modifying)
+    const policyMap = new Map(policiesResult.rows.map((p: any) => [p.id, p]));
+    const orderedPolicies: any[] = [];
+    const skippedIds: number[] = [];
+    for (const id of policyIds) {
+      const policy = policyMap.get(id);
+      if (policy) {
+        orderedPolicies.push(policy);
+      } else {
+        skippedIds.push(id);
+      }
+    }
+
+    if (orderedPolicies.length === 0) {
+      return res.status(404).json({
+        error: 'لم يتم العثور على أي سياسات تعديل مفعّلة بالـ IDs المرسلة',
+      });
+    }
+
+    // 3. تطبيق السياسات بشكل متسلسل
+    const originalText = currentText;
+    const steps: Array<{
+      policyId: number;
+      policyName: string;
+      taskType: string;
+      inputText: string;
+      outputText: string;
+      hasChanges: boolean;
+      executionTime: number;
+      status: 'success' | 'error';
+      error?: string;
+    }> = [];
+
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🔗 [Sequential] بدء تطبيق ${orderedPolicies.length} سياسة بشكل متسلسل`);
+    console.log(`${'='.repeat(80)}\n`);
+
+    for (let i = 0; i < orderedPolicies.length; i++) {
+      const policy = orderedPolicies[i];
+      const endpoint = getEndpointForPolicy(policy.task_type);
+
+      console.log(`\n🔗 [Sequential ${i + 1}/${orderedPolicies.length}] تطبيق "${policy.name}" على النص...`);
+
+      const aiResult = await editorialPolicyService.applyPolicy(
+        policy.name,
+        policy.task_type,
+        policy.editor_instructions,
+        currentText,
+        policy.injected_vars,
+        policy.output_schema,
+        endpoint,
+        policy.prompt_template,
+        true // sequential = always modifying
+      );
+
+      const step = {
+        policyId: policy.id,
+        policyName: policy.name,
+        taskType: policy.task_type,
+        inputText: currentText,
+        outputText: aiResult.modifiedText,
+        hasChanges: aiResult.hasChanges,
+        executionTime: aiResult.executionTime,
+        status: aiResult.status,
+        error: aiResult.error,
+      };
+      steps.push(step);
+
+      // السياسة نجحت — نستخدم الـ output كـ input للسياسة التالية
+      if (aiResult.status === 'success' && aiResult.hasChanges) {
+        currentText = aiResult.modifiedText;
+        console.log(`  ✅ تم التعديل — النص الجديد سيُمرر للسياسة التالية`);
+      } else if (aiResult.status === 'error') {
+        console.log(`  ⚠️ خطأ في السياسة "${policy.name}" — نكمل بالنص الحالي`);
+      } else {
+        console.log(`  ℹ️ السياسة "${policy.name}" لم تعدّل النص — نكمل بنفس النص`);
+      }
+    }
+
+    const totalExecutionTime = steps.reduce((sum, s) => sum + s.executionTime, 0);
+
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🔗 [Sequential] انتهى — ${steps.length} سياسة في ${totalExecutionTime}ms`);
+    console.log(`${'='.repeat(80)}\n`);
+
+    // 4. بناء الـ response
+    const response: any = {
+      status: 'success',
+      originalText,
+      finalText: currentText,
+      hasChanges: currentText !== originalText,
+      totalExecutionTime,
+      policiesApplied: steps.length,
+      skippedPolicyIds: skippedIds.length > 0 ? skippedIds : undefined,
+      steps: steps.map(s => ({
+        policyId: s.policyId,
+        policyName: s.policyName,
+        taskType: s.taskType,
+        hasChanges: s.hasChanges,
+        executionTime: s.executionTime,
+        status: s.status,
+        error: s.error,
+      })),
+    };
+
+    if (sourceInfo) {
+      response.source = sourceInfo;
+    }
+    if (articleTitle) {
+      response.originalTitle = articleTitle;
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error('❌ خطأ في تطبيق السياسات المتسلسلة:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'خطأ غير معروف',
+    });
+  }
+}
+
+/**
+ * حفظ النص المعدّل بعد التحرير اليدوي من المحرر
+ * المحرر يعدّل الـ finalText ويبعثه هنا للحفظ
+ */
+export async function saveEditedText(req: Request, res: Response) {
+  try {
+    const { queueId, editedText, appliedPolicies } = req.body;
+
+    if (!queueId || !editedText) {
+      return res.status(400).json({
+        error: 'queueId و editedText مطلوبة',
+      });
+    }
+
+    // تحديث الخبر في editorial_queue بالنص المعدّل
+    const result = await db.query(
+      `UPDATE editorial_queue 
+       SET edited_content = $1, 
+           status = 'edited', 
+           applied_policies = $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [editedText, JSON.stringify(appliedPolicies || []), queueId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: `الخبر ${queueId} غير موجود في الطابور`,
+      });
+    }
+
+    res.json({
+      status: 'success',
+      message: 'تم حفظ النص المعدّل بنجاح',
+      queueId,
+      updatedAt: result.rows[0].updated_at,
+    });
+  } catch (error) {
+    console.error('❌ خطأ في حفظ النص المعدّل:', error);
     res.status(500).json({
       error: error instanceof Error ? error.message : 'خطأ غير معروف',
     });
@@ -281,7 +524,7 @@ export async function getPolicies(req: Request, res: Response) {
   try {
     const mediaUnitId = req.query.media_unit_id;
     
-    let sql = 'SELECT id, name, description, task_type, media_unit_id, is_active FROM editorial_policies WHERE is_active = TRUE';
+    let sql = 'SELECT id, name, description, task_type, media_unit_id, is_active, is_modifying FROM editorial_policies WHERE is_active = TRUE';
     const params: any[] = [];
     
     if (mediaUnitId) {
@@ -294,7 +537,7 @@ export async function getPolicies(req: Request, res: Response) {
 
     const policies = result.rows.map((p: any) => ({
       ...p,
-      isModifying: MODIFYING_POLICIES.includes(p.task_type),
+      isModifying: !!p.is_modifying,
     }));
 
     res.json({
@@ -393,6 +636,13 @@ export async function updatePolicy(req: Request, res: Response) {
 
 /**
  * إنشاء سياسة جديدة
+ * 
+ * المطلوب: name, editorInstructions
+ * اختياري: description, taskType, isModifying, injectedVars, mediaUnitId
+ * 
+ * - output_schema يتحدد تلقائياً حسب isModifying (الموحد)
+ * - prompt_template يستخدم الافتراضي من الـ service
+ * - injectedVars لازم يكون JSON object صحيح إذا تم إرساله
  */
 export async function createPolicy(req: Request, res: Response) {
   try {
@@ -402,28 +652,63 @@ export async function createPolicy(req: Request, res: Response) {
       taskType,
       editorInstructions,
       injectedVars,
-      outputSchema,
+      isModifying,
+      mediaUnitId,
     } = req.body;
 
-    if (!name || !editorInstructions) {
+    // --- Validation ---
+    if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({
-        error: 'name و editorInstructions مطلوبة',
+        error: 'name مطلوب (string غير فارغ)',
       });
     }
 
+    if (!editorInstructions || typeof editorInstructions !== 'string' || !editorInstructions.trim()) {
+      return res.status(400).json({
+        error: 'editorInstructions مطلوب (string غير فارغ) — تعليمات المحرر للـ AI',
+      });
+    }
+
+    // التحقق من injectedVars — لازم يكون JSON object إذا تم إرساله
+    if (injectedVars !== undefined && injectedVars !== null) {
+      if (typeof injectedVars !== 'object' || Array.isArray(injectedVars)) {
+        return res.status(400).json({
+          error: 'injectedVars لازم يكون JSON object (مثال: {"banned_words": ["كلمة1", "كلمة2"], "replacement_map": {"قديم": "جديد"}})',
+        });
+      }
+
+      // التحقق إنو القيم داخل الـ object صالحة (string, array, object, number, boolean)
+      for (const [key, value] of Object.entries(injectedVars)) {
+        if (value === undefined || value === '') {
+          return res.status(400).json({
+            error: `injectedVars["${key}"] قيمة فارغة — كل مفتاح لازم يكون عنده قيمة`,
+          });
+        }
+      }
+    }
+
+    // تحديد isModifying — افتراضي true
+    const policyIsModifying = isModifying !== undefined ? !!isModifying : true;
+
+    // output_schema الموحد حسب النوع — تلقائي
+    const outputSchema = policyIsModifying
+      ? { modified_text: 'string', changes: 'array', total_changes: 'number', notes: 'string' }
+      : { status: 'string', issues: 'array', summary: 'string', details: 'object' };
+
     const result = await db.query(
       `INSERT INTO editorial_policies 
-        (media_unit_id, name, description, task_type, editor_instructions, injected_vars, output_schema, is_active, version)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1)
+        (media_unit_id, name, description, task_type, editor_instructions, injected_vars, output_schema, is_active, is_modifying, version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8, 1)
        RETURNING *`,
       [
-        2, // media_unit_id (يمكن تعديله لاحقاً)
-        name,
+        mediaUnitId || null,
+        name.trim(),
         description || null,
         taskType || 'custom',
-        editorInstructions,
+        editorInstructions.trim(),
         injectedVars ? JSON.stringify(injectedVars) : null,
-        outputSchema ? JSON.stringify(outputSchema) : null,
+        JSON.stringify(outputSchema),
+        policyIsModifying,
       ]
     );
 

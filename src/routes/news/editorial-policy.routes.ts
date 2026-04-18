@@ -7,6 +7,8 @@ import { Router } from 'express';
 import {
   applyPolicy,
   applyPoliciesPipeline,
+  applyPoliciesSequential,
+  saveEditedText,
   getPolicies,
   getPolicyDetails,
   updatePolicy,
@@ -38,6 +40,18 @@ router.post('/apply', applyPolicy);
  * تطبيق سلسلة من السياسات على نص
  */
 router.post('/pipeline', applyPoliciesPipeline);
+
+/**
+ * POST /api/news/editorial-policies/sequential
+ * تطبيق سياسات بشكل متسلسل — output1 يصير input للسياسة التالية
+ */
+router.post('/sequential', applyPoliciesSequential);
+
+/**
+ * POST /api/news/editorial-policies/save-edited
+ * حفظ النص المعدّل يدوياً من المحرر بعد التطبيق المتسلسل
+ */
+router.post('/save-edited', saveEditedText);
 
 /**
  * GET /api/news/editorial-policies/:policyName

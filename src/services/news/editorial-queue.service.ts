@@ -116,12 +116,14 @@ export class EditorialQueueService {
    */
   async approveItem(
     queueId: number,
-    policyId: number,
+    policyId: number | null,
     editorNotes?: string,
-    finalContent?: string
+    finalContent?: string,
+    finalTitle?: string,
+    finalImageUrl?: string
   ): Promise<ApprovalResult> {
     try {
-      // 1. تحديث الحالة إلى 'in_review' مع اختيار السياسة
+      // 1. تحديث الحالة إلى 'in_review' مع اختيار السياسة (اختياري)
       await query(
         `UPDATE editorial_queue 
          SET status = 'in_review', 
@@ -129,7 +131,7 @@ export class EditorialQueueService {
              editor_notes = $2,
              updated_at = NOW()
          WHERE id = $3`,
-        [policyId, editorNotes || null, queueId]
+        [policyId || null, editorNotes || null, queueId]
       );
 
       console.log(`📋 تم تحديث الخبر ${queueId} إلى 'in_review'`);
@@ -146,7 +148,7 @@ export class EditorialQueueService {
       console.log(`✅ تم الموافقة على الخبر ${queueId}`);
 
       // 3. نشر الخبر في published_items
-      await this.publishApprovedItem(queueId, finalContent);
+      await this.publishApprovedItem(queueId, finalContent, finalTitle, finalImageUrl);
 
       return {
         success: true,
@@ -200,7 +202,7 @@ export class EditorialQueueService {
   /**
    * نشر الخبر المعتمد في published_items
    */
-  private async publishApprovedItem(queueId: number, finalContent?: string): Promise<void> {
+  private async publishApprovedItem(queueId: number, finalContent?: string, finalTitle?: string, finalImageUrl?: string): Promise<void> {
     try {
       // جلب بيانات الخبر من editorial_queue
       const queueItem = await query(
@@ -210,6 +212,7 @@ export class EditorialQueueService {
           eq.raw_data_id,
           rd.title,
           rd.content,
+          rd.image_url,
           rd.tags
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
@@ -223,30 +226,26 @@ export class EditorialQueueService {
 
       const item = queueItem.rows[0];
 
-      // جلب content_type_id للأخبار
-      const ctResult = await query(
-        `SELECT id FROM content_types WHERE name = 'news' LIMIT 1`
-      );
-      if (ctResult.rows.length === 0) {
-        throw new Error("content_type 'news' غير موجود في جدول content_types");
-      }
-      const contentTypeId = ctResult.rows[0].id;
+      // content_type_id للأخبار ثابت = 1
+      const contentTypeId = 1;
 
-      // استخدم finalContent إذا تم توفيره، وإلا استخدم المحتوى الأصلي
+      const titleToPublish = finalTitle || item.title;
       const contentToPublish = finalContent || item.content;
+      const imageToPublish = finalImageUrl !== undefined ? finalImageUrl : item.image_url;
 
       // إدراج في published_items مع queue_id
       await query(
         `INSERT INTO published_items 
-         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())`,
+         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, image_url, tags, is_active, published_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW())`,
         [
           item.media_unit_id,
           item.raw_data_id,
           queueId,
           contentTypeId,
-          item.title,
+          titleToPublish,
           contentToPublish,
+          imageToPublish,
           item.tags,
         ]
       );

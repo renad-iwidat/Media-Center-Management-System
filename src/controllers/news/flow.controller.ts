@@ -122,21 +122,15 @@ export class FlowController {
   static async approveQueueItem(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { policyId, editorNotes, finalContent } = req.body;
-
-      if (!policyId) {
-        res.status(400).json({
-          success: false,
-          message: 'يجب تحديد السياسة التحريرية',
-        });
-        return;
-      }
+      const { policyId, editorNotes, finalContent, finalTitle, finalImageUrl } = req.body;
 
       const result = await EditorialQueueService.approveItem(
         parseInt(id),
-        policyId,
+        policyId || null,
         editorNotes,
-        finalContent
+        finalContent,
+        finalTitle,
+        finalImageUrl
       );
 
       res.status(200).json({

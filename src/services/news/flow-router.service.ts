@@ -42,6 +42,12 @@ interface FlowRoutingResult {
 
 export class FlowRouterService {
   /**
+   * الحد الأدنى لطول المحتوى عشان يدخل الفلو (بالأحرف)
+   * الأخبار الأقصر من هيك تبقى بحالة fetched وتظهر بتاب "أخبار ناقصة"
+   */
+  private readonly MIN_CONTENT_LENGTH = 150;
+
+  /**
    * معالجة جميع الأخبار الجديدة وتوجيهها للمسار الصحيح
    */
   async processNewArticles(): Promise<FlowRoutingResult> {
@@ -72,8 +78,17 @@ export class FlowRouterService {
       const mediaUnits = await this.getActiveMediaUnits();
 
       // 4. معالجة كل خبر
+      let skippedIncomplete = 0;
       for (const article of rawArticles) {
         try {
+          // فلتر: الأخبار الناقصة ما تدخل الفلو
+          const contentLength = (article.content || '').length;
+          if (contentLength < this.MIN_CONTENT_LENGTH) {
+            skippedIncomplete++;
+            console.log(`⏭️ تخطي الخبر ${article.id} — محتوى ناقص (${contentLength} حرف)`);
+            continue;
+          }
+
           const category = categoryMap.get(article.category_id);
 
           if (!category) {
@@ -103,7 +118,12 @@ export class FlowRouterService {
         }
       }
 
-      result.message = `تمت معالجة ${result.processedCount} خبر بنجاح`;
+      if (skippedIncomplete > 0) {
+        console.log(`⏭️ تم تخطي ${skippedIncomplete} خبر ناقص — يظهرون بتاب "أخبار ناقصة"`);
+      }
+
+      result.message = `تمت معالجة ${result.processedCount} خبر بنجاح` +
+        (skippedIncomplete > 0 ? ` | تم تخطي ${skippedIncomplete} خبر ناقص` : '');
       return result;
     } catch (error) {
       result.success = false;

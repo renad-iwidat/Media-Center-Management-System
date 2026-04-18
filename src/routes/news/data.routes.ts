@@ -14,12 +14,20 @@ import {
   getComprehensiveData,
   getStatistics,
   getMediaUnits,
+  getIncompleteArticles,
+  getArticleById,
+  updateArticleContent,
 } from '../../controllers/news/data.controller';
 
 const router = Router();
 
 // Media Units
 router.get('/media-units', getMediaUnits);
+
+// أخبار ناقصة المحتوى
+router.get('/articles/incomplete', getIncompleteArticles);
+router.get('/articles/:id/detail', getArticleById);
+router.put('/articles/:id/content', updateArticleContent);
 
 /**
  * @swagger

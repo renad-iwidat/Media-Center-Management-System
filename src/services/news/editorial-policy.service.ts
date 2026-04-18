@@ -227,6 +227,47 @@ function validateSchema(
 }
 
 // ============================================================================
+// UNIFIED OUTPUT SCHEMAS
+// ============================================================================
+
+/**
+ * Schema موحد لسياسات التعديل (is_modifying = true)
+ * كل سياسة تعديل لازم ترجع هالحقول
+ */
+const MODIFYING_OUTPUT_SCHEMA: Record<string, string> = {
+  modified_text: 'string',
+  changes: 'array',
+  total_changes: 'number',
+  notes: 'string',
+};
+
+/**
+ * Schema موحد لسياسات الفحص (is_modifying = false)
+ * كل سياسة فحص لازم ترجع هالحقول
+ */
+const INSPECTION_OUTPUT_SCHEMA: Record<string, string> = {
+  status: 'string',
+  issues: 'array',
+  summary: 'string',
+  details: 'object',
+};
+
+/**
+ * اختيار الـ output schema المناسب:
+ * - إذا السياسة عندها output_schema خاص بالداتابيس → نستخدمه
+ * - إذا لا → نستخدم الموحد حسب is_modifying
+ */
+function resolveOutputSchema(
+  policySchema: Record<string, any> | null,
+  isModifying: boolean
+): Record<string, any> {
+  if (policySchema && Object.keys(policySchema).length > 0) {
+    return policySchema;
+  }
+  return isModifying ? MODIFYING_OUTPUT_SCHEMA : INSPECTION_OUTPUT_SCHEMA;
+}
+
+// ============================================================================
 // SERVICE
 // ============================================================================
 
@@ -247,8 +288,10 @@ class EditorialPolicyService {
    * @param editorInstructions  تعليمات المحرر من الداتابيس
    * @param text        النص المراد معالجته
    * @param injectedVars  متغيرات محقونة (مثل قوائم الكلمات المحظورة)
-   * @param outputSchema  شكل الـ JSON المطلوب من الـ AI
+   * @param outputSchema  شكل الـ JSON المطلوب من الـ AI (إذا null يستخدم الموحد)
    * @param endpoint    الـ endpoint على الـ AI server (افتراضي: generate)
+   * @param promptTemplate  قالب البرومبت (إذا null يستخدم الافتراضي)
+   * @param isModifying  هل السياسة بتعدّل النص؟ (لاختيار الـ schema الموحد)
    */
   async applyPolicy(
     policyName: string,
@@ -258,7 +301,8 @@ class EditorialPolicyService {
     injectedVars: Record<string, any> | null,
     outputSchema: Record<string, any> | null,
     endpoint: string = 'generate',
-    promptTemplate: string | null = null
+    promptTemplate: string | null = null,
+    isModifying: boolean = true
   ): Promise<{
     policyName: string;
     taskType: string;
@@ -276,7 +320,8 @@ class EditorialPolicyService {
     const apiUrl = `${baseUrl}/${endpoint}`;
 
     try {
-      const prompt = buildPrompt(editorInstructions, text, injectedVars, outputSchema, promptTemplate);
+      const resolvedSchema = resolveOutputSchema(outputSchema, isModifying);
+      const prompt = buildPrompt(editorInstructions, text, injectedVars, resolvedSchema, promptTemplate);
       const maxTokens = this.calculateMaxTokens();
 
       const requestBody = { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 };
@@ -321,7 +366,7 @@ class EditorialPolicyService {
         (rawData.choices && rawData.choices[0]?.message?.content) ||
         (typeof rawData === 'string' ? rawData : '');
 
-      const result = extractJSON(responseText, outputSchema);
+      const result = extractJSON(responseText, resolvedSchema);
 
       // النص المنظف (بعد sanitize) — نستخدمه للمقارنة العادلة
       const sanitizedOriginal = sanitizeForJSON(text);
