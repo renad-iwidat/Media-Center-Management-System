@@ -17,6 +17,7 @@ import {
   getIncompleteArticles,
   getArticleById,
   updateArticleContent,
+  deleteArticle,
 } from '../../controllers/news/data.controller';
 
 const router = Router();
@@ -28,6 +29,7 @@ router.get('/media-units', getMediaUnits);
 router.get('/articles/incomplete', getIncompleteArticles);
 router.get('/articles/:id/detail', getArticleById);
 router.put('/articles/:id/content', updateArticleContent);
+router.delete('/articles/:id', deleteArticle);
 
 /**
  * @swagger

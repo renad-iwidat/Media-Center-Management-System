@@ -21,6 +21,7 @@ interface QueueItemWithDetails extends QueueItem {
   content: string;
   category_name: string;
   media_unit_name: string;
+  source_name?: string;
 }
 
 interface ApprovalResult {
@@ -53,11 +54,13 @@ export class EditorialQueueService {
           rd.title,
           rd.content,
           c.name as category_name,
-          mu.name as media_unit_name
+          mu.name as media_unit_name,
+          COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
+        LEFT JOIN sources s ON rd.source_id = s.id
         WHERE eq.status = 'pending'`;
       
       const params: any[] = [];
@@ -68,6 +71,10 @@ export class EditorialQueueService {
       sql += ` ORDER BY eq.created_at ASC`;
 
       const result = await query(sql, params);
+      console.log('📊 البيانات المرجعة من getPendingItems:', result.rows.length, 'عنصر');
+      if (result.rows.length > 0) {
+        console.log('🔍 أول عنصر:', result.rows[0]);
+      }
       return result.rows;
     } catch (error) {
       console.error('❌ خطأ في جلب العناصر المعلقة:', error);
@@ -95,11 +102,13 @@ export class EditorialQueueService {
           rd.image_url,
           rd.url,
           c.name as category_name,
-          mu.name as media_unit_name
+          mu.name as media_unit_name,
+          s.name as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
+        LEFT JOIN sources s ON rd.source_id = s.id
         WHERE eq.id = $1`,
         [queueId]
       );

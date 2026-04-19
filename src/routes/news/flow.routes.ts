@@ -21,6 +21,7 @@ router.post('/queue/:id/reject', FlowController.rejectQueueItem);
 // المحتوى المنشور
 router.get('/published', FlowController.getPublished);
 router.get('/published/stats', FlowController.getPublishedStats);
+router.get('/daily-stats', FlowController.getDailyStats);
 router.get('/published/:id', FlowController.getPublishedItem);
 router.get('/published/category/:category', FlowController.getPublishedByCategory);
 

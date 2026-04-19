@@ -32,16 +32,26 @@ export async function getMediaUnits(req: Request, res: Response): Promise<void> 
 export async function getIncompleteArticles(req: Request, res: Response): Promise<void> {
   try {
     const maxLength = parseInt(req.query.max_length as string) || 500;
-    const result = await query(
-      `SELECT rd.id, rd.title, rd.content, rd.url, rd.image_url, rd.fetch_status, rd.fetched_at,
-              rd.category_id, c.name as category_name, s.name as source_name
+    const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : null;
+    
+    let query_str = `SELECT rd.id, rd.title, rd.content, rd.url, rd.image_url, rd.fetch_status, rd.fetched_at,
+              rd.category_id, rd.media_unit_id, c.name as category_name, s.name as source_name, mu.name as media_unit_name
        FROM raw_data rd
        LEFT JOIN categories c ON rd.category_id = c.id
        LEFT JOIN sources s ON rd.source_id = s.id
-       WHERE LENGTH(rd.content) < $1 AND rd.fetch_status IN ('fetched', 'processed')
-       ORDER BY rd.fetched_at DESC`,
-      [maxLength]
-    );
+       LEFT JOIN media_units mu ON rd.media_unit_id = mu.id
+       WHERE LENGTH(rd.content) < $1 AND rd.fetch_status IN ('fetched', 'processed')`;
+    
+    const params: any[] = [maxLength];
+    
+    if (mediaUnitId) {
+      query_str += ` AND rd.media_unit_id = $${params.length + 1}`;
+      params.push(mediaUnitId);
+    }
+    
+    query_str += ` ORDER BY rd.fetched_at DESC`;
+    
+    const result = await query(query_str, params);
     res.status(200).json({
       success: true,
       count: result.rows.length,
@@ -80,6 +90,45 @@ export async function getArticleById(req: Request, res: Response): Promise<void>
   } catch (error) {
     console.error('❌ خطأ في جلب الخبر:', error);
     res.status(500).json({ success: false, message: 'فشل جلب الخبر' });
+  }
+}
+
+/**
+ * حذف خبر من قاعدة البيانات
+ */
+export async function deleteArticle(req: Request, res: Response): Promise<void> {
+  try {
+    const articleId = parseInt(req.params.id);
+    if (isNaN(articleId)) {
+      res.status(400).json({ success: false, message: 'معرف الخبر غير صحيح' });
+      return;
+    }
+
+    // حذف من editorial_queue أولاً (إن وجد)
+    await query(
+      `DELETE FROM editorial_queue WHERE raw_data_id = $1`,
+      [articleId]
+    );
+
+    // ثم حذف من raw_data
+    const result = await query(
+      `DELETE FROM raw_data WHERE id = $1 RETURNING id`,
+      [articleId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'الخبر غير موجود' });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'تم حذف الخبر بنجاح',
+      data: { id: result.rows[0].id }
+    });
+  } catch (error) {
+    console.error('❌ خطأ في حذف الخبر:', error);
+    res.status(500).json({ success: false, message: 'فشل حذف الخبر' });
   }
 }
 

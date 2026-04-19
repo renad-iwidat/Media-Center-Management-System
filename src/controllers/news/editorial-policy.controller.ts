@@ -695,10 +695,12 @@ export async function createPolicy(req: Request, res: Response) {
       ? { modified_text: 'string', changes: 'array', total_changes: 'number', notes: 'string' }
       : { status: 'string', issues: 'array', summary: 'string', details: 'object' };
 
+    const DEFAULT_PROMPT = `أنت محرر صحفي محترف . نفّذ التعليمات التالية بدقة على النص المعطى.## التعليمات:{{editor_instructions}}## البيانات المرجعية:{{injected_vars}}## النص:{{text}}## صيغة الإخراج:{{output_schema}}`;
+
     const result = await db.query(
       `INSERT INTO editorial_policies 
-        (media_unit_id, name, description, task_type, editor_instructions, injected_vars, output_schema, is_active, is_modifying, version)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8, 1)
+        (media_unit_id, name, description, task_type, editor_instructions, prompt_template, injected_vars, output_schema, is_active, is_modifying, version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, $9, 1)
        RETURNING *`,
       [
         mediaUnitId || null,
@@ -706,6 +708,7 @@ export async function createPolicy(req: Request, res: Response) {
         description || null,
         taskType || 'custom',
         editorInstructions.trim(),
+        DEFAULT_PROMPT,
         injectedVars ? JSON.stringify(injectedVars) : null,
         JSON.stringify(outputSchema),
         policyIsModifying,

@@ -291,6 +291,31 @@ export class FlowController {
       });
     }
   }
+
+  /**
+   * GET /api/flow/daily-stats
+   * جلب إحصائيات النشر والرفض اليومية لكل وحدة إعلامية
+   */
+  static async getDailyStats(req: Request, res: Response): Promise<void> {
+    try {
+      const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      
+      const stats = await PublishedItemsService.getDailyStats(mediaUnitId, days);
+
+      res.status(200).json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error('❌ خطأ في جلب الإحصائيات اليومية:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب الإحصائيات اليومية',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
 }
 
 export default FlowController;
