@@ -22,7 +22,7 @@ export class S3UploadService {
    */
   static async uploadFile(
     file: Express.Multer.File,
-    fileType: 'audio' | 'video',
+    fileType: 'audio' | 'video' | 'image',
     title?: string
   ): Promise<UploadResult> {
     try {
@@ -66,10 +66,16 @@ export class S3UploadService {
   /**
    * التحقق من نوع الملف
    */
-  static validateFileType(file: Express.Multer.File, fileType: 'audio' | 'video'): boolean {
-    const allowedTypes = fileType === 'audio' 
-      ? S3_CONFIG.ALLOWED_MIME_TYPES.AUDIO 
-      : S3_CONFIG.ALLOWED_MIME_TYPES.VIDEO;
+  static validateFileType(file: Express.Multer.File, fileType: 'audio' | 'video' | 'image'): boolean {
+    let allowedTypes: string[];
+    
+    if (fileType === 'audio') {
+      allowedTypes = S3_CONFIG.ALLOWED_MIME_TYPES.AUDIO;
+    } else if (fileType === 'video') {
+      allowedTypes = S3_CONFIG.ALLOWED_MIME_TYPES.VIDEO;
+    } else {
+      allowedTypes = S3_CONFIG.ALLOWED_MIME_TYPES.IMAGE;
+    }
     
     return allowedTypes.includes(file.mimetype);
   }
@@ -77,10 +83,16 @@ export class S3UploadService {
   /**
    * التحقق من حجم الملف
    */
-  static validateFileSize(file: Express.Multer.File, fileType: 'audio' | 'video'): boolean {
-    const maxSize = fileType === 'audio' 
-      ? S3_CONFIG.MAX_FILE_SIZE.AUDIO 
-      : S3_CONFIG.MAX_FILE_SIZE.VIDEO;
+  static validateFileSize(file: Express.Multer.File, fileType: 'audio' | 'video' | 'image'): boolean {
+    let maxSize: number;
+    
+    if (fileType === 'audio') {
+      maxSize = S3_CONFIG.MAX_FILE_SIZE.AUDIO;
+    } else if (fileType === 'video') {
+      maxSize = S3_CONFIG.MAX_FILE_SIZE.VIDEO;
+    } else {
+      maxSize = S3_CONFIG.MAX_FILE_SIZE.IMAGE;
+    }
     
     return file.size <= maxSize;
   }

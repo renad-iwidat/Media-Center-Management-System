@@ -1,0 +1,265 @@
+{
+  "info": {
+    "name": "Media Center Management System - Manual Input APIs",
+    "description": "Complete API collection for Manual Input feature",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "1"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "api_base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Server Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "API Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/health",
+              "host": ["{{api_base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manual Input - GET",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/categories",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get All Sources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/sources",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "sources"]
+            }
+          }
+        },
+        {
+          "name": "Get Text Source",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/source/text",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "source", "text"]
+            }
+          }
+        },
+        {
+          "name": "Get Media Units",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/media-units",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "media-units"]
+            }
+          }
+        },
+        {
+          "name": "Get Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/users",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Files",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/pending-files",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "pending-files"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manual Input - POST",
+      "item": [
+        {
+          "name": "Submit Text News",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_id\": 14,\n  \"source_type_id\": 6,\n  \"category_id\": 1,\n  \"url\": null,\n  \"title\": \"عنوان الخبر للاختبار\",\n  \"content\": \"محتوى الخبر للاختبار يجب أن يكون 100 حرف على الأقل لذلك نكتب نص طويل هنا للتأكد من أن التحقق يعمل بشكل صحيح\",\n  \"image_url\": \"\",\n  \"tags\": [],\n  \"fetch_status\": \"fetched\",\n  \"created_by\": 50,\n  \"media_unit_id\": 1,\n  \"uploaded_file_id\": null\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/submit",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Upload Audio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/audio.mp3"
+                },
+                {
+                  "key": "uploaded_by",
+                  "value": "50",
+                  "type": "text"
+                },
+                {
+                  "key": "media_unit_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Test Audio Upload",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/upload-audio",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "upload-audio"]
+            }
+          }
+        },
+        {
+          "name": "Upload Video",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/video.mp4"
+                },
+                {
+                  "key": "uploaded_by",
+                  "value": "50",
+                  "type": "text"
+                },
+                {
+                  "key": "media_unit_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Test Video Upload",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/upload-video",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "upload-video"]
+            }
+          }
+        },
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/image.jpg"
+                },
+                {
+                  "key": "uploaded_by",
+                  "value": "50",
+                  "type": "text"
+                },
+                {
+                  "key": "media_unit_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Test Image Upload",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{api_base_url}}/manual-input/upload-image",
+              "host": ["{{api_base_url}}"],
+              "path": ["manual-input", "upload-image"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

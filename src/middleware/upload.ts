@@ -58,3 +58,28 @@ export const uploadVideo = multer({
     }
   }
 });
+
+/**
+ * Multer instance للصور
+ * الحد الأقصى: 10 MB
+ */
+export const uploadImage = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = [
+      'image/jpeg',      // .jpg, .jpeg
+      'image/png',       // .png
+      'image/gif',       // .gif
+      'image/webp',      // .webp
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('نوع الملف غير مدعوم'));
+    }
+  }
+});

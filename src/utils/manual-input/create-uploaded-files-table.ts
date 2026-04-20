@@ -20,7 +20,7 @@ async function createUploadedFilesTable() {
         source_type_id BIGINT REFERENCES source_types(id),
         
         -- معلومات الملف
-        file_type VARCHAR(20) NOT NULL CHECK (file_type IN ('audio', 'video')),
+        file_type VARCHAR(20) NOT NULL CHECK (file_type IN ('audio', 'video', 'image')),
         original_filename VARCHAR(500),
         file_size BIGINT,
         mime_type VARCHAR(100),

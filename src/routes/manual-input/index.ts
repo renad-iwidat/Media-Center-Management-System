@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ManualInputController } from '../../controllers/manual-input/ManualInputController';
-import { uploadAudio, uploadVideo } from '../../middleware/upload';
+import { uploadAudio, uploadVideo, uploadImage } from '../../middleware/upload';
 
 /**
  * Manual Input Routes
@@ -45,5 +45,13 @@ router.post('/upload-audio', uploadAudio.single('file'), ManualInputController.u
 // - file: ملف الفيديو (required)
 // - uploaded_by: معرف المستخدم (required)
 router.post('/upload-video', uploadVideo.single('file'), ManualInputController.uploadVideo);
+
+// POST /api/manual-input/upload-image - رفع صورة
+// Body: multipart/form-data
+// - file: ملف الصورة (required)
+// - uploaded_by: معرف المستخدم (required)
+// - media_unit_id: معرف الوحدة الإعلامية (required)
+// - title: عنوان الصورة (optional)
+router.post('/upload-image', uploadImage.single('file'), ManualInputController.uploadImage);
 
 export default router;

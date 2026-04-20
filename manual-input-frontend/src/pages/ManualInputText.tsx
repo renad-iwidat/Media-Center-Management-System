@@ -31,11 +31,14 @@ export default function ManualInputText() {
     title: '',
     content: '',
     category_id: '',
-    tags: '',
     image_url: '',
     created_by: '',
     media_unit_id: ''
   });
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -68,6 +71,54 @@ export default function ManualInputText() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('نوع الصورة غير مدعوم. الأنواع المسموحة: JPG, PNG, GIF, WebP');
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        setError('حجم الصورة كبير جداً. الحد الأقصى: 10 MB');
+        return;
+      }
+
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setError(null);
+    }
+  };
+
+  const uploadImage = async (): Promise<{ url: string; fileId: number } | null> => {
+    if (!selectedImage) return null;
+
+    setUploadingImage(true);
+    try {
+      const imageFormData = new FormData();
+      imageFormData.append('file', selectedImage);
+      imageFormData.append('uploaded_by', formData.created_by);
+      imageFormData.append('media_unit_id', formData.media_unit_id);
+      imageFormData.append('title', formData.title);
+
+      const response = await apiClient.post('/manual-input/upload-image', imageFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setUploadingImage(false);
+      return {
+        url: response.data.data.file_url,
+        fileId: response.data.data.id
+      };
+    } catch (err: any) {
+      setUploadingImage(false);
+      throw new Error(err.response?.data?.message || 'فشل في رفع الصورة');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -78,27 +129,36 @@ export default function ManualInputText() {
       return;
     }
 
-    const tags = formData.tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-
-    const payload = {
-      source_id: source.id,
-      source_type_id: source.source_type_id,
-      category_id: parseInt(formData.category_id),
-      url: null,
-      title: formData.title,
-      content: formData.content,
-      image_url: formData.image_url || '',
-      tags: tags,
-      fetch_status: 'fetched' as const,
-      created_by: parseInt(formData.created_by),
-      media_unit_id: parseInt(formData.media_unit_id)
-    };
-
     try {
       setLoading(true);
+
+      // رفع الصورة أولاً إذا كانت موجودة
+      let imageUrl = formData.image_url;
+      let uploadedFileId: number | undefined = undefined;
+      
+      if (selectedImage) {
+        const uploadResult = await uploadImage();
+        if (uploadResult) {
+          imageUrl = uploadResult.url;
+          uploadedFileId = uploadResult.fileId;
+        }
+      }
+
+      const payload = {
+        source_id: source.id,
+        source_type_id: source.source_type_id,
+        category_id: parseInt(formData.category_id),
+        url: null,
+        title: formData.title,
+        content: formData.content,
+        image_url: imageUrl,
+        tags: [],
+        fetch_status: 'fetched' as const,
+        created_by: parseInt(formData.created_by),
+        media_unit_id: parseInt(formData.media_unit_id),
+        uploaded_file_id: uploadedFileId
+      };
+      
       await apiClient.post('/manual-input/submit', payload);
       
       setSuccess('تم إضافة الخبر بنجاح! ✅');
@@ -107,11 +167,13 @@ export default function ManualInputText() {
         title: '',
         content: '',
         category_id: '',
-        tags: '',
         image_url: '',
         created_by: '',
         media_unit_id: ''
       });
+
+      setSelectedImage(null);
+      setImagePreview(null);
 
       setLoading(false);
       
@@ -257,8 +319,11 @@ export default function ManualInputText() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="أدخل عنوان الخبر"
                 required
-                minLength={5}
+                minLength={20}
               />
+              <p className={`text-sm mt-1 ${formData.title.length < 20 ? 'text-red-500 font-semibold' : 'text-green-600 font-semibold'}`}>
+                عدد الأحرف: {formData.title.length} / 20 حرف كحد أدنى
+              </p>
             </div>
 
             {/* Category */}
@@ -283,20 +348,53 @@ export default function ManualInputText() {
               </select>
             </div>
 
-            {/* Image URL */}
+            {/* Image Upload */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image_url">
-                رابط الصورة (اختياري)
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                صورة الخبر (اختياري)
               </label>
-              <input
-                type="url"
-                id="image_url"
-                name="image_url"
-                value={formData.image_url}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://example.com/image.jpg"
-              />
+              
+              {!selectedImage && !imagePreview && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition">
+                  <input
+                    type="file"
+                    id="image-file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <label htmlFor="image-file" className="cursor-pointer block">
+                    <div className="text-4xl mb-2">🖼️</div>
+                    <p className="text-gray-700">اضغط لاختيار صورة</p>
+                    <p className="text-sm text-gray-500 mt-1">JPG, PNG, GIF, WebP (حتى 10 MB)</p>
+                  </label>
+                </div>
+              )}
+
+              {imagePreview && (
+                <div className="relative">
+                  <img 
+                    src={imagePreview} 
+                    alt="معاينة الصورة" 
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedImage(null);
+                      setImagePreview(null);
+                    }}
+                    className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition"
+                  >
+                    ❌ حذف
+                  </button>
+                  {selectedImage && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      الحجم: {(selectedImage.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -316,10 +414,10 @@ export default function ManualInputText() {
                 placeholder="أدخل محتوى الخبر"
                 rows={16}
                 required
-                minLength={20}
+                minLength={100}
               />
-              <p className="text-sm text-gray-500 mt-1">
-                عدد الأحرف: {formData.content.length}
+              <p className={`text-sm mt-1 ${formData.content.length < 100 ? 'text-red-500 font-semibold' : 'text-green-600 font-semibold'}`}>
+                عدد الأحرف: {formData.content.length} / 100 حرف كحد أدنى
               </p>
             </div>
           </div>
@@ -329,12 +427,12 @@ export default function ManualInputText() {
         <div className="flex justify-end mt-8">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || uploadingImage}
             className={`px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition ${
-              loading ? 'opacity-50 cursor-not-allowed' : ''
+              (loading || uploadingImage) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            {loading ? 'جاري الإرسال...' : 'إرسال الخبر'}
+            {uploadingImage ? '🔄 جاري رفع الصورة...' : loading ? '🔄 جاري الإرسال...' : 'إرسال الخبر'}
           </button>
         </div>
       </form>

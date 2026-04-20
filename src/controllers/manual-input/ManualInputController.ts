@@ -425,4 +425,119 @@ export class ManualInputController {
       });
     }
   }
+
+  /**
+   * POST /api/manual-input/upload-image
+   * رفع صورة
+   * 
+   * Body: multipart/form-data
+   * - file: ملف الصورة (required)
+   * - uploaded_by: معرف المستخدم (required)
+   * - media_unit_id: معرف الوحدة الإعلامية (required)
+   * - title: عنوان الصورة (optional)
+   */
+  static async uploadImage(req: Request, res: Response): Promise<void> {
+    try {
+      // التحقق من وجود الملف
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: 'ملف الصورة مطلوب'
+        });
+        return;
+      }
+
+      // التحقق من معرف المستخدم
+      const uploadedBy = parseInt(req.body.uploaded_by);
+      if (!uploadedBy) {
+        res.status(400).json({
+          success: false,
+          message: 'معرف المستخدم مطلوب'
+        });
+        return;
+      }
+
+      // التحقق من معرف الوحدة الإعلامية
+      const mediaUnitId = parseInt(req.body.media_unit_id);
+      if (!mediaUnitId) {
+        res.status(400).json({
+          success: false,
+          message: 'معرف الوحدة الإعلامية مطلوب'
+        });
+        return;
+      }
+
+      // الحصول على العنوان (اختياري)
+      const title = req.body.title?.trim() || undefined;
+
+      // استيراد الخدمات
+      const { S3UploadService } = await import('../../services/manual-input/S3UploadService');
+
+      // التحقق من نوع الملف
+      if (!S3UploadService.validateFileType(req.file, 'image')) {
+        res.status(400).json({
+          success: false,
+          message: 'نوع الملف غير مدعوم. الأنواع المسموحة: JPG, PNG, GIF, WebP'
+        });
+        return;
+      }
+
+      // التحقق من حجم الملف
+      if (!S3UploadService.validateFileSize(req.file, 'image')) {
+        res.status(400).json({
+          success: false,
+          message: 'حجم الملف كبير جداً. الحد الأقصى: 10 MB'
+        });
+        return;
+      }
+
+      // رفع الملف على S3 مع العنوان
+      const uploadResult = await S3UploadService.uploadFile(req.file, 'image', title);
+
+      // جلب معلومات المصدر
+      const sources = await ManualInputService.getManualInputSources();
+      if (!sources || !sources.text) {
+        res.status(500).json({
+          success: false,
+          message: 'مصدر الإدخال النصي غير موجود'
+        });
+        return;
+      }
+
+      // حفظ معلومات الملف في قاعدة البيانات
+      const fileRecord = await ManualInputService.saveUploadedFile({
+        source_id: sources.text.id,
+        source_type_id: sources.text.source_type_id,
+        file_type: 'image',
+        original_filename: uploadResult.original_filename,
+        file_size: uploadResult.file_size,
+        mime_type: uploadResult.mime_type,
+        s3_bucket: uploadResult.s3_bucket,
+        s3_key: uploadResult.s3_key,
+        s3_url: uploadResult.s3_url,
+        uploaded_by: uploadedBy,
+        media_unit_id: mediaUnitId
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: fileRecord.id,
+          file_url: fileRecord.s3_url,
+          file_size: fileRecord.file_size,
+          original_filename: fileRecord.original_filename,
+          uploaded_at: fileRecord.uploaded_at
+        },
+        message: 'تم رفع الصورة بنجاح'
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في رفع الصورة:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في رفع الصورة',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
 }

@@ -73,13 +73,13 @@ export class ManualInputService {
     const errors: string[] = [];
 
     // التحقق من العنوان
-    if (!data.title || data.title.trim().length < 5) {
-      errors.push('العنوان مطلوب ولا يقل عن 5 أحرف');
+    if (!data.title || data.title.trim().length < 20) {
+      errors.push('العنوان مطلوب ولا يقل عن 20 حرف');
     }
 
     // التحقق من المحتوى
-    if (!data.content || data.content.trim().length < 20) {
-      errors.push('المحتوى مطلوب ولا يقل عن 20 حرف');
+    if (!data.content || data.content.trim().length < 100) {
+      errors.push('المحتوى مطلوب ولا يقل عن 100 حرف');
     }
 
     // التحقق من التصنيف
@@ -120,9 +120,10 @@ export class ManualInputService {
         fetch_status,
         created_by,
         media_unit_id,
+        uploaded_file_id,
         fetched_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
       RETURNING id, source_id, source_type_id, category_id, title, fetch_status, fetched_at
     `;
 
@@ -137,7 +138,8 @@ export class ManualInputService {
       data.tags || [],
       data.fetch_status,
       data.created_by,
-      data.media_unit_id
+      data.media_unit_id,
+      data.uploaded_file_id || null
     ];
 
     const result = await pool.query(query, values);
@@ -162,7 +164,7 @@ export class ManualInputService {
   static async saveUploadedFile(data: {
     source_id: number;
     source_type_id: number;
-    file_type: 'audio' | 'video';
+    file_type: 'audio' | 'video' | 'image';
     original_filename: string;
     file_size: number;
     mime_type: string;

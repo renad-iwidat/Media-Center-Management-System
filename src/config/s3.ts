@@ -25,12 +25,14 @@ export const S3_CONFIG = {
   FOLDERS: {
     AUDIO: 'manual-input-audio',
     VIDEO: 'manual-input-video',
+    IMAGE: 'manual-input-image',
   },
   
   // الحد الأقصى لحجم الملفات (بالـ bytes)
   MAX_FILE_SIZE: {
     AUDIO: 50 * 1024 * 1024, // 50 MB
     VIDEO: 500 * 1024 * 1024, // 500 MB
+    IMAGE: 10 * 1024 * 1024, // 10 MB
   },
   
   // أنواع الملفات المسموحة
@@ -48,14 +50,33 @@ export const S3_CONFIG = {
       'video/quicktime', // .mov
       'video/x-msvideo', // .avi
     ],
+    IMAGE: [
+      'image/jpeg',      // .jpg, .jpeg
+      'image/png',       // .png
+      'image/gif',       // .gif
+      'image/webp',      // .webp
+    ],
   },
 };
 
 /**
  * توليد مسار S3 للملف
  */
-export function generateS3Key(fileType: 'audio' | 'video', filename: string, title?: string): string {
-  const folder = fileType === 'audio' ? S3_CONFIG.FOLDERS.AUDIO : S3_CONFIG.FOLDERS.VIDEO;
+export function generateS3Key(fileType: 'audio' | 'video' | 'image', filename: string, title?: string): string {
+  let folder: string;
+  let prefix: string;
+  
+  if (fileType === 'audio') {
+    folder = S3_CONFIG.FOLDERS.AUDIO;
+    prefix = 'audio';
+  } else if (fileType === 'video') {
+    folder = S3_CONFIG.FOLDERS.VIDEO;
+    prefix = 'video';
+  } else {
+    folder = S3_CONFIG.FOLDERS.IMAGE;
+    prefix = 'image';
+  }
+  
   const timestamp = Date.now();
   const randomStr = Math.random().toString(36).substring(2, 8);
   
@@ -70,10 +91,9 @@ export function generateS3Key(fileType: 'audio' | 'video', filename: string, tit
   }
   
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const prefix = fileType === 'audio' ? 'audio' : 'video';
   
-  // إذا في عنوان: audio-العنوان-timestamp-random.ext
-  // إذا ما في عنوان: audio-timestamp-random-filename.ext
+  // إذا في عنوان: image-العنوان-timestamp-random.ext
+  // إذا ما في عنوان: image-timestamp-random-filename.ext
   if (sanitizedTitle) {
     const ext = sanitizedFilename.split('.').pop();
     return `${folder}/${prefix}-${sanitizedTitle}-${timestamp}-${randomStr}.${ext}`;

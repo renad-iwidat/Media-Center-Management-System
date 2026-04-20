@@ -17,6 +17,7 @@ export interface ManualInputData {
   fetch_status: 'fetched';
   created_by: number;
   media_unit_id: number;
+  uploaded_file_id?: number;
 }
 
 export interface ManualInputResponse {
