@@ -1,0 +1,771 @@
+{
+  "info": {
+    "name": "Media Center Management System API",
+    "description": "Complete API testing collection for Media Center Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Server Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"تصوير حلقة جديدة\",\n  \"description\": \"تصوير حلقة جديدة من البرنامج الرئيسي\",\n  \"desk_id\": 1,\n  \"media_unit_id\": 1,\n  \"program_id\": 1,\n  \"episode_id\": 1,\n  \"status_id\": 1,\n  \"priority_id\": 2,\n  \"deadline\": \"2026-05-19T23:59:59Z\",\n  \"created_by\": 1,\n  \"notes\": \"ملاحظات إضافية\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders?limit=10&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"تصوير حلقة جديدة - محدثة\",\n  \"priority_id\": 1,\n  \"notes\": \"ملاحظات محدثة\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/orders/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 2,\n  \"changed_by\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"تم إلغاء الطلب\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "cancel"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Statuses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/statuses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "statuses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "history"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Orders by Desk",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/desk/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "desk", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Orders by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/status/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "status", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Orders by Program",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/program/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "program", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/progress",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "progress"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Order Deadline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/deadline",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "deadline"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check if Order Can Delete",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/can-delete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "can-delete"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/details",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "details"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Auto Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/orders/1/auto-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1", "auto-status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "orders", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": 1,\n  \"title\": \"تحضير السيناريو\",\n  \"description\": \"تحضير السيناريو للحلقة الجديدة\",\n  \"assigned_to\": 2,\n  \"status_id\": 1,\n  \"priority_id\": 2,\n  \"deadline\": \"2026-04-25T23:59:59Z\",\n  \"sequence_order\": 1,\n  \"task_type_id\": 1,\n  \"estimated_duration\": 480\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks?limit=10&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Task",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"تحضير السيناريو - محدث\",\n  \"priority_id\": 1,\n  \"estimated_duration\": 600\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 2,\n  \"changed_by\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Statuses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/statuses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "statuses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "history"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assigned_to\": 3,\n  \"assigned_by\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "assign"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reassign Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assigned_to\": 4,\n  \"assigned_by\": 1,\n  \"reason\": \"تغيير المسؤول\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/reassign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "reassign"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/assignments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "assignments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"comment\": \"تم إكمال الجزء الأول من المهمة\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "comments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Comments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "comments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Attachment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_url\": \"https://example.com/files/scenario.pdf\",\n  \"file_type\": \"pdf\",\n  \"uploaded_by\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/attachments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "attachments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Attachments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/attachments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "attachments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Task Relation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"related_to_type\": \"task\",\n  \"related_to_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/relations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "relations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Relations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/relations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "relations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Task Dependency",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/dependency",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "dependency"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tasks by Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/order/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "order", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tasks by Assignee",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/assignee/2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "assignee", "2"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tasks by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/status/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "status", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Overdue Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/overdue",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "overdue"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/progress",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "progress"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check if Task Can Delete",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/can-delete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "can-delete"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Assign Tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task_ids\": [1, 2, 3],\n  \"assigned_to\": 5,\n  \"assigned_by\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/bulk-assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "bulk-assign"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Change Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task_ids\": [1, 2, 3],\n  \"status_id\": 3,\n  \"changed_by\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tasks/bulk-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "bulk-status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1/details",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1", "details"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tasks/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tasks", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
