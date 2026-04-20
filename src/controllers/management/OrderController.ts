@@ -27,12 +27,30 @@ export class OrderController {
    */
   async createOrder(req: Request, res: Response): Promise<void> {
     try {
-      const { title, description, desk_id, status_id, priority_id, media_unit_id, created_by, deadline, program_id, episode_id } = req.body;
+      const { title, description, desk_id, status_id, priority_id, media_unit_id, created_by, deadline, program_id, episode_id, new_program, notes } = req.body;
 
       // Validate required fields
       if (!title || !desk_id || !status_id || !priority_id || !media_unit_id || !created_by) {
         this.sendError(res, 'Missing required fields', 400);
         return;
+      }
+
+      let resolvedProgramId = program_id ? BigInt(program_id) : undefined;
+
+      // If new_program is provided, create the program first
+      if (new_program && !program_id) {
+        if (!new_program.title) {
+          this.sendError(res, 'new_program.title is required', 400);
+          return;
+        }
+        const { ProgramModel } = await import('../../models/content/Program');
+        const program = await ProgramModel.create({
+          title: new_program.title,
+          description: new_program.description,
+          media_unit_id: media_unit_id ? BigInt(media_unit_id) : undefined,
+          air_time: new_program.air_time,
+        });
+        resolvedProgramId = program.id;
       }
 
       const order = await this.orderService.createOrder({
@@ -44,8 +62,9 @@ export class OrderController {
         media_unit_id: BigInt(media_unit_id),
         created_by: BigInt(created_by),
         deadline: deadline ? new Date(deadline) : undefined,
-        program_id: program_id ? BigInt(program_id) : undefined,
-        episode_id: episode_id ? BigInt(episode_id) : undefined,
+        program_id: resolvedProgramId,
+        episode_id: (episode_id && episode_id !== 0 && episode_id !== '0') ? BigInt(episode_id) : undefined,
+        notes,
       });
 
       this.sendSuccess(res, order, 201);

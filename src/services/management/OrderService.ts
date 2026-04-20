@@ -1,5 +1,7 @@
 import { OrderModel } from '../../models/management/Order';
 import { TaskModel } from '../../models/management/Task';
+import { EpisodeModel } from '../../models/content/Episode';
+import { ProgramModel } from '../../models/content/Program';
 import { Order, OrderStatus, OrderHistory } from '../../types/management';
 import { OrderValidator } from './validators/OrderValidator';
 import { OrderStatusHelper } from './helpers/OrderStatusHelper';
@@ -9,6 +11,27 @@ export class OrderService {
 
   async createOrder(data: Omit<Order, 'id' | 'created_at'>): Promise<Order> {
     this.validateOrderData(data);
+
+    // Auto-create episode if program_id is provided but episode_id is not
+    if (data.program_id && !data.episode_id) {
+      const program = await ProgramModel.findById(data.program_id);
+      if (!program) {
+        throw new Error(`Program not found: ${data.program_id}`);
+      }
+
+      const lastNumber = await EpisodeModel.getLastEpisodeNumber(data.program_id);
+      const newEpisodeNumber = lastNumber + 1;
+
+      const episode = await EpisodeModel.create({
+        program_id: data.program_id,
+        title: `${program.title} - حلقة ${newEpisodeNumber}`,
+        episode_number: newEpisodeNumber,
+        air_date: data.deadline,
+      });
+
+      data.episode_id = episode.id;
+    }
+
     return await OrderModel.create(data);
   }
 

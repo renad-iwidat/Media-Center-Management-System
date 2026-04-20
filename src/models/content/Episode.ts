@@ -23,6 +23,14 @@ export class EpisodeModel {
     return result.rows;
   }
 
+  static async getLastEpisodeNumber(programId: bigint): Promise<number> {
+    const result = await pool.query(
+      'SELECT COALESCE(MAX(episode_number), 0) as last_number FROM episodes WHERE program_id = $1',
+      [programId]
+    );
+    return parseInt(result.rows[0].last_number);
+  }
+
   static async create(episode: Omit<Episode, 'id' | 'created_at'>): Promise<Episode> {
     const result = await pool.query(
       `INSERT INTO episodes (program_id, title, episode_number, air_date)

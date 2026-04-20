@@ -44,7 +44,7 @@ export class OrderModel {
       `INSERT INTO orders (title, description, desk_id, media_unit_id, program_id, episode_id, status_id, priority_id, deadline, created_by, started_at, completed_at, is_overdue, is_archived, archived_at, quality_score, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING *`,
-      [order.title, order.description, order.desk_id, order.media_unit_id, order.program_id, order.episode_id, order.status_id, order.priority_id, order.deadline, order.created_by, order.started_at, order.completed_at, order.is_overdue, order.is_archived, order.archived_at, order.quality_score, order.notes]
+      [order.title, order.description || null, order.desk_id || null, order.media_unit_id || null, order.program_id || null, order.episode_id || null, order.status_id || null, order.priority_id || null, order.deadline || null, order.created_by || null, order.started_at || null, order.completed_at || null, order.is_overdue ?? false, order.is_archived ?? false, order.archived_at || null, order.quality_score || null, order.notes || null]
     );
     return result.rows[0];
   }
