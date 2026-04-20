@@ -229,6 +229,7 @@ class RSSFetcherService {
 
   /**
    * سحب عدد محدد من المقالات من مصدر واحد
+   * مع تصفية الروابط الموجودة بالفعل
    */
   async fetchArticlesFromSource(
     source: RSSSource,
@@ -251,25 +252,35 @@ class RSSFetcherService {
 
       // استخراج عدد محدد من المقالات
       const items = feed.items.slice(0, limit);
-      const results: RSSFetchResult[] = items.map((item) => {
+      const results: RSSFetchResult[] = [];
+
+      for (const item of items) {
+        const link = this.cleanLink(item.link || '');
+        
+        // تخطي الروابط الفارغة
+        if (!link) {
+          console.log(`⏭️  تخطي مقالة بدون رابط`);
+          continue;
+        }
+
         const article: RSSArticle = {
           title: item.title || 'بدون عنوان',
           description: this.cleanDescription(
             item.content || item.summary || 'بدون وصف'
           ),
-          link: this.cleanLink(item.link || ''),
+          link,
           pubDate: item.pubDate || '',
           source: source.name,
           image_url: this.extractImageUrl(item),
           tags: this.extractTags(item),
         };
 
-        return {
+        results.push({
           source,
           article,
           error: null,
-        };
-      });
+        });
+      }
 
       return results;
     } catch (error) {

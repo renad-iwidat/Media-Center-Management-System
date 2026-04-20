@@ -1,4 +1,5 @@
 import { query } from '../../config/database';
+import { EditorialQueueService } from '../database/database.service';
 
 /**
  * FlowRouterService
@@ -221,6 +222,17 @@ export class FlowRouterService {
     // إرسال الخبر لكل وحدة إعلام نشطة
     for (const unit of mediaUnits) {
       try {
+        // التحقق من عدم وجود نفس الخبر في الطابور بالفعل
+        const existsInQueue = await EditorialQueueService.existsInQueue(
+          article.id,
+          unit.id
+        );
+
+        if (existsInQueue) {
+          console.log(`  ⏭️ الخبر موجود بالفعل في طابور ${unit.name} — تخطي`);
+          continue;
+        }
+
         await query(
           `INSERT INTO editorial_queue 
            (media_unit_id, raw_data_id, policy_id, status, created_at, updated_at)

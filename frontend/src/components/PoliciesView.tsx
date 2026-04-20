@@ -3,6 +3,7 @@ import { Settings, FileEdit, Search, Sparkles, Trash2, Plus, X } from "lucide-re
 import { motion } from "motion/react";
 import { api } from "../services/api";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { Notification, NotificationData } from "./Notification";
 
 export function PoliciesView({ unitId }: { unitId: number | null }) {
   const [policies, setPolicies] = useState<any[]>([]);
@@ -18,11 +19,33 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
     name: "",
     description: "",
     editorInstructions: "",
-    injectedVarsRaw: "",
+    injectedVarsRaw: `{
+  "banned_words": ["كلمة سيئة", "كلمة محظورة"],
+  "replacement_map": {"قديم": "جديد", "خطأ": "صحيح"},
+  "required_phrases": ["يجب أن يتضمن", "ضروري"]
+}`,
     isModifying: true,
   });
   const [createError, setCreateError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [notification, setNotification] = useState<NotificationData | null>(null);
+
+  // تعديل سياسة
+  const [editingPolicyId, setEditingPolicyId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    editorInstructions: "",
+    injectedVarsRaw: "",
+    isModifying: true,
+  });
+  const [editError, setEditError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+
+  // حذف سياسة
+  const [deletingPolicyId, setDeletingPolicyId] = useState<number | null>(null);
+  const [deletingPolicyName, setDeletingPolicyName] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -79,16 +102,116 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
       setPolicies(res.policies || []);
       setShowCreateForm(false);
       setCreateForm({ name: "", description: "", editorInstructions: "", injectedVarsRaw: "", isModifying: true });
+      setNotification({
+        type: "success",
+        message: `✅ تم إنشاء السياسة "${createForm.name}" بنجاح`,
+      });
     } catch (err: any) {
       setCreateError(err?.message || "حدث خطأ أثناء الإنشاء");
+      setNotification({
+        type: "error",
+        message: `❌ حدث خطأ أثناء إنشاء السياسة`,
+      });
     }
     setIsCreating(false);
+  };
+
+  const handleEdit = async (policy: any) => {
+    setIsLoadingEdit(true);
+    try {
+      // جلب تفاصيل السياسة من الـ backend
+      const details = await api.getPolicyDetails(policy.name);
+      const policyData = details.policy;
+      
+      setEditingPolicyId(policy.id);
+      setEditForm({
+        name: policyData.name,
+        description: policyData.description || "",
+        editorInstructions: policyData.editor_instructions || "",
+        injectedVarsRaw: policyData.injected_vars ? JSON.stringify(policyData.injected_vars) : "",
+        isModifying: policyData.is_modifying,
+      });
+      setEditError("");
+    } catch (err) {
+      console.error("خطأ في جلب تفاصيل السياسة:", err);
+      setEditError("حدث خطأ في جلب بيانات السياسة");
+    } finally {
+      setIsLoadingEdit(false);
+    }
+  };
+
+  const handleUpdatePolicy = async () => {
+    setEditError("");
+    if (!editForm.name.trim()) { setEditError("الاسم مطلوب"); return; }
+    if (!editForm.editorInstructions.trim()) { setEditError("تعليمات المحرر مطلوبة"); return; }
+
+    let injectedVars = undefined;
+    if (editForm.injectedVarsRaw.trim()) {
+      try {
+        injectedVars = JSON.parse(editForm.injectedVarsRaw);
+        if (typeof injectedVars !== "object" || Array.isArray(injectedVars)) throw new Error();
+      } catch {
+        setEditError("المتغيرات المحقونة يجب أن تكون JSON object صحيح");
+        return;
+      }
+    }
+
+    setIsEditing(true);
+    try {
+      const policy = policies.find(p => p.id === editingPolicyId);
+      await api.updatePolicy(policy.name, {
+        description: editForm.description.trim() || undefined,
+        editorInstructions: editForm.editorInstructions.trim(),
+        injectedVars,
+      });
+      const res = await api.getPolicies();
+      setPolicies(res.policies || []);
+      setEditingPolicyId(null);
+      setNotification({
+        type: "success",
+        message: `✅ تم تحديث السياسة "${editForm.name}" بنجاح`,
+      });
+    } catch (err: any) {
+      setEditError(err?.message || "حدث خطأ أثناء التحديث");
+      setNotification({
+        type: "error",
+        message: `❌ حدث خطأ أثناء تحديث السياسة`,
+      });
+    }
+    setIsEditing(false);
+  };
+
+  const handleDeletePolicy = async (policyId: number, policyName: string) => {
+    setDeletingPolicyId(policyId);
+    setDeletingPolicyName(policyName);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingPolicyId) return;
+    
+    try {
+      await api.deletePolicy(deletingPolicyName);
+      setNotification({
+        type: "success",
+        message: `✅ تم حذف السياسة "${deletingPolicyName}" بنجاح`,
+      });
+      setPolicies(prev => prev.filter(p => p.id !== deletingPolicyId));
+      setDeletingPolicyId(null);
+      setDeletingPolicyName("");
+    } catch (err) {
+      setNotification({
+        type: "error",
+        message: `❌ حدث خطأ أثناء حذف السياسة`,
+      });
+    }
   };
 
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="space-y-6">
+    <>
+      <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
+      <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-[#0b1224] rounded-3xl p-8 border border-white/5 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
@@ -121,9 +244,25 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                     <div className="text-[10px] text-gray-500">{p.description || (p.isModifying ? 'سياسة تعديل' : 'سياسة فحص')}</div>
                   </div>
                 </div>
-                <span className="text-[10px] uppercase font-black px-2 py-0.5 bg-white/10 rounded-md text-gray-300">
-                  {p.isModifying ? "تعديل" : "فحص"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-black px-2 py-0.5 bg-white/10 rounded-md text-gray-300">
+                    {p.isModifying ? "تعديل" : "فحص"}
+                  </span>
+                  <button
+                    onClick={() => handleEdit(p)}
+                    className="text-gray-500 hover:text-blue-400 transition-colors p-1"
+                    title="تعديل"
+                  >
+                    <FileEdit size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePolicy(p.id, p.name)}
+                    className="text-gray-500 hover:text-rose-400 transition-colors p-1"
+                    title="حذف"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -259,10 +398,13 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
               <textarea
                 value={createForm.injectedVarsRaw}
                 onChange={e => setCreateForm(f => ({ ...f, injectedVarsRaw: e.target.value }))}
-                placeholder={'{"banned_words": ["كلمة1"], "replace_map": {"قديم": "جديد"}}'}
-                rows={3}
+                placeholder=""
+                rows={5}
                 className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600 font-mono"
               />
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                مثال: عدّل القيم حسب احتياجاتك — banned_words (كلمات ممنوعة)، replacement_map (استبدال)، required_phrases (عبارات مطلوبة)
+              </p>
             </div>
 
             {createError && (
@@ -289,6 +431,150 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           </motion.div>
         </div>
       )}
+
+      {/* Modal تعديل سياسة */}
+      {editingPolicyId !== null && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#0b1224] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-white">
+                <FileEdit size={20} className="text-blue-400" />
+                تعديل السياسة
+              </h3>
+              <button onClick={() => setEditingPolicyId(null)} className="text-gray-500 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {isLoadingEdit ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-3 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs text-gray-400 font-bold">الاسم <span className="text-rose-400">*</span></label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="مثال: تنظيف النص"
+                      className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-gray-400 font-bold">الوصف</label>
+                    <input
+                      type="text"
+                      value={editForm.description}
+                      onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                      placeholder="وصف مختصر للسياسة"
+                      className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-400 font-bold">تعليمات المحرر <span className="text-rose-400">*</span></label>
+                  <textarea
+                    value={editForm.editorInstructions}
+                    onChange={e => setEditForm(f => ({ ...f, editorInstructions: e.target.value }))}
+                    placeholder="اكتب التعليمات التفصيلية للـ AI..."
+                    rows={5}
+                    className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-400 font-bold">المتغيرات المحقونة <span className="text-gray-600">(اختياري — JSON)</span></label>
+                  <textarea
+                    value={editForm.injectedVarsRaw}
+                    onChange={e => setEditForm(f => ({ ...f, injectedVarsRaw: e.target.value }))}
+                    placeholder=""
+                    rows={5}
+                    className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600 font-mono"
+                  />
+                  <p className="text-[10px] text-gray-500 leading-relaxed">
+                    مثال: عدّل القيم حسب احتياجاتك — banned_words (كلمات ممنوعة)، replacement_map (استبدال)، required_phrases (عبارات مطلوبة)
+                  </p>
+                </div>
+
+                {editError && (
+                  <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl px-4 py-3 text-sm text-rose-400">
+                    {editError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleUpdatePolicy}
+                    disabled={isEditing}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                  >
+                    {isEditing ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><FileEdit size={16} /> تحديث السياسة</>}
+                  </button>
+                  <button
+                    onClick={() => setEditingPolicyId(null)}
+                    className="bg-white/5 hover:bg-white/10 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal تأكيد الحذف */}
+      {deletingPolicyId !== null && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#0b1224] rounded-3xl p-8 border border-rose-600/20 shadow-2xl w-full max-w-md space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-white">
+                <Trash2 size={20} className="text-rose-400" />
+                تأكيد الحذف
+              </h3>
+              <button onClick={() => setDeletingPolicyId(null)} className="text-gray-500 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-gray-300">هل أنت متأكد من حذف السياسة:</p>
+              <p className="text-lg font-bold text-white bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                {deletingPolicyName}
+              </p>
+              <p className="text-sm text-gray-500">هذا الإجراء لا يمكن التراجع عنه.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={confirmDelete}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+              >
+                <Trash2 size={16} /> حذف
+              </button>
+              <button
+                onClick={() => setDeletingPolicyId(null)}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold text-sm transition-all"
+              >
+                إلغاء
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
+    </>
   );
 }

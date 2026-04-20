@@ -3,7 +3,7 @@
  * خدمة شاملة لسحب وحفظ الأخبار
  */
 
-import { SourceService } from '../database/database.service';
+import { SourceService, RawDataService } from '../database/database.service';
 import { rssFetcherService, RSSSource } from './rss-fetcher.service';
 import { articleSaverService, ArticleWithSource } from './article-saver.service';
 
@@ -15,12 +15,14 @@ export interface PipelineResult {
   totalArticles: number;
   savedCount: number;
   failedCount: number;
+  skippedCount: number;
   duration: number;
   details: {
     source: string;
     articlesCount: number;
     savedCount: number;
     failedCount: number;
+    skippedCount: number;
   }[];
 }
 
@@ -37,6 +39,7 @@ class RSSPipelineService {
     let totalArticles = 0;
     let savedCount = 0;
     let failedCount = 0;
+    let skippedCount = 0;
 
     try {
       console.log('🚀 بدء pipeline سحب وحفظ الأخبار...\n');
@@ -67,7 +70,7 @@ class RSSPipelineService {
           );
 
           // تصفية الأخبار الناجحة
-          const successfulArticles = fetchResults
+          let successfulArticles = fetchResults
             .filter((r) => r.article && !r.error)
             .map((r) => ({
               title: r.article!.title,
@@ -85,10 +88,24 @@ class RSSPipelineService {
 
           console.log(`   📥 تم سحب ${successfulArticles.length} خبر`);
 
-          // 3. حفظ الأخبار
-          if (successfulArticles.length > 0) {
+          // تصفية الروابط الموجودة بالفعل قبل الحفظ
+          const newArticles: ArticleWithSource[] = [];
+          for (const article of successfulArticles) {
+            const exists = await RawDataService.existsByUrl(article.link);
+            if (!exists) {
+              newArticles.push(article);
+            } else {
+              console.log(`   ⏭️  تخطي: ${article.title} (الرابط موجود)`);
+              skippedCount++;
+            }
+          }
+
+          console.log(`   ✅ أخبار جديدة: ${newArticles.length}`);
+
+          // 3. حفظ الأخبار الجديدة فقط
+          if (newArticles.length > 0) {
             const saveResult = await articleSaverService.saveArticles(
-              successfulArticles
+              newArticles
             );
 
             totalArticles += saveResult.totalArticles;
@@ -97,14 +114,23 @@ class RSSPipelineService {
 
             details.push({
               source: source.name,
-              articlesCount: successfulArticles.length,
+              articlesCount: newArticles.length,
               savedCount: saveResult.savedCount,
               failedCount: saveResult.failedCount,
+              skippedCount: 0,
             });
 
             console.log(
-              `   ✅ تم حفظ ${saveResult.savedCount}/${successfulArticles.length}\n`
+              `   ✅ تم حفظ ${saveResult.savedCount}/${newArticles.length}\n`
             );
+          } else {
+            details.push({
+              source: source.name,
+              articlesCount: 0,
+              savedCount: 0,
+              failedCount: 0,
+              skippedCount: successfulArticles.length,
+            });
           }
         } catch (error) {
           console.error(`❌ خطأ في معالجة ${source.name}:`, error);
@@ -113,6 +139,7 @@ class RSSPipelineService {
             articlesCount: 0,
             savedCount: 0,
             failedCount: 0,
+            skippedCount: 0,
           });
         }
       }
@@ -123,6 +150,7 @@ class RSSPipelineService {
       console.log(`   إجمالي المصادر: ${sources.length}`);
       console.log(`   إجمالي الأخبار المسحوبة: ${totalArticles}`);
       console.log(`   ✅ تم حفظها: ${savedCount}`);
+      console.log(`   ⏭️  تم تخطيها (موجودة): ${skippedCount}`);
       console.log(`   ❌ فشل الحفظ: ${failedCount}`);
       console.log(`   ⏱️  الوقت المستغرق: ${(duration / 1000).toFixed(2)} ثانية\n`);
 
@@ -131,6 +159,7 @@ class RSSPipelineService {
         totalArticles,
         savedCount,
         failedCount,
+        skippedCount,
         duration,
         details,
       };

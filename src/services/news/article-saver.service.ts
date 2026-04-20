@@ -87,15 +87,28 @@ class ArticleSaverService {
     const details: SaveResult['details'] = [];
     let savedCount = 0;
     let failedCount = 0;
+    let skippedCount = 0;
 
     console.log(`📰 بدء حفظ ${articles.length} خبر...`);
 
     for (const article of articles) {
       try {
-        // التحقق من وجود الخبر
-        const exists = await RawDataService.existsByUrl(article.link);
-        if (exists) {
-          console.log(`⏭️  تخطي: ${article.title} (موجود بالفعل)`);
+        // التحقق من وجود الخبر بالـ URL أولاً (الفحص الأساسي)
+        const existsByUrl = await RawDataService.existsByUrl(article.link);
+        if (existsByUrl) {
+          console.log(`⏭️  تخطي: ${article.title} (الرابط موجود بالفعل)`);
+          skippedCount++;
+          continue;
+        }
+
+        // التحقق من وجود خبر مكرر بناءً على العنوان والمحتوى
+        const existsBySimilarity = await RawDataService.existsBySimilarity(
+          article.title,
+          article.description
+        );
+        if (existsBySimilarity) {
+          console.log(`⏭️  تخطي: ${article.title} (محتوى مكرر - نفس العنوان/المحتوى)`);
+          skippedCount++;
           continue;
         }
 
@@ -153,6 +166,11 @@ class ArticleSaverService {
         console.error(`❌ فشل حفظ: ${article.title} - ${errorMessage}`);
       }
     }
+
+    console.log(`\n📊 ملخص الحفظ:`);
+    console.log(`   ✅ تم حفظ: ${savedCount}`);
+    console.log(`   ⏭️  تم تخطي (موجود): ${skippedCount}`);
+    console.log(`   ❌ فشل: ${failedCount}`);
 
     return {
       totalArticles: articles.length,

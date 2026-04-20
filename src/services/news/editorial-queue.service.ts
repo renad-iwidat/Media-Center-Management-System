@@ -53,6 +53,8 @@ export class EditorialQueueService {
           eq.updated_at,
           rd.title,
           rd.content,
+          rd.image_url,
+          rd.url,
           c.name as category_name,
           mu.name as media_unit_name,
           COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
@@ -245,8 +247,8 @@ export class EditorialQueueService {
       // إدراج في published_items مع queue_id
       await query(
         `INSERT INTO published_items 
-         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, image_url, tags, is_active, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW())`,
+         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())`,
         [
           item.media_unit_id,
           item.raw_data_id,
@@ -254,10 +256,21 @@ export class EditorialQueueService {
           contentTypeId,
           titleToPublish,
           contentToPublish,
-          imageToPublish,
           item.tags,
         ]
       );
+
+      // محاولة حفظ image_url إذا العمود موجود
+      if (imageToPublish) {
+        try {
+          await query(
+            `UPDATE published_items SET image_url = $1 WHERE queue_id = $2`,
+            [imageToPublish, queueId]
+          );
+        } catch {
+          // العمود غير موجود — يمكن تجاهله
+        }
+      }
 
       console.log(`📤 تم نشر الخبر ${item.raw_data_id} من الطابور`);
     } catch (error) {

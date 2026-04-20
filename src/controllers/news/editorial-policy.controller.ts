@@ -319,6 +319,7 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
       executionTime: number;
       status: 'success' | 'error';
       error?: string;
+      result?: any;
     }> = [];
 
     console.log(`\n${'='.repeat(80)}`);
@@ -353,6 +354,7 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
         executionTime: aiResult.executionTime,
         status: aiResult.status,
         error: aiResult.error,
+        result: aiResult.result || {},
       };
       steps.push(step);
 
@@ -390,6 +392,7 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
         executionTime: s.executionTime,
         status: s.status,
         error: s.error,
+        result: s.result,
       })),
     };
 
@@ -722,6 +725,51 @@ export async function createPolicy(req: Request, res: Response) {
     });
   } catch (error) {
     console.error('❌ خطأ في إنشاء السياسة:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'خطأ غير معروف',
+    });
+  }
+}
+
+
+/**
+ * حذف سياسة تحريرية
+ */
+export async function deletePolicy(req: Request, res: Response) {
+  try {
+    const { policyName } = req.params;
+
+    if (!policyName || typeof policyName !== 'string' || !policyName.trim()) {
+      return res.status(400).json({
+        error: 'policyName مطلوب',
+      });
+    }
+
+    // التحقق من وجود السياسة
+    const checkResult = await db.query(
+      'SELECT id, name FROM editorial_policies WHERE name = $1',
+      [policyName]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'السياسة غير موجودة',
+      });
+    }
+
+    // حذف السياسة
+    const deleteResult = await db.query(
+      'DELETE FROM editorial_policies WHERE name = $1 RETURNING id, name',
+      [policyName]
+    );
+
+    res.json({
+      status: 'success',
+      message: 'تم حذف السياسة بنجاح',
+      policy: deleteResult.rows[0],
+    });
+  } catch (error) {
+    console.error('❌ خطأ في حذف السياسة:', error);
     res.status(500).json({
       error: error instanceof Error ? error.message : 'خطأ غير معروف',
     });

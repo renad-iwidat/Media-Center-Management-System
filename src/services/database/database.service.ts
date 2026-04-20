@@ -212,6 +212,43 @@ export class RawDataService {
   }
 
   /**
+   * التحقق من وجود خبر مكرر بناءً على العنوان والمحتوى
+   * يستخدم similarity للتحقق من الأخبار المتشابهة جداً
+   */
+  static async existsBySimilarity(title: string, content: string): Promise<boolean> {
+    try {
+      // تطبيع النصوص: إزالة المسافات الزائدة وتحويل لأحرف صغيرة
+      const normalizedTitle = title.trim().toLowerCase();
+      const normalizedContent = content.trim().toLowerCase().substring(0, 200); // أول 200 حرف
+
+      // البحث عن أخبار بنفس العنوان تماماً
+      const exactMatch = await query(
+        `SELECT id FROM raw_data 
+         WHERE LOWER(TRIM(title)) = $1 
+         LIMIT 1`,
+        [normalizedTitle]
+      );
+
+      if (exactMatch.rows.length > 0) {
+        return true;
+      }
+
+      // البحث عن أخبار بمحتوى متشابه جداً (نفس أول 200 حرف)
+      const contentMatch = await query(
+        `SELECT id FROM raw_data 
+         WHERE LOWER(TRIM(SUBSTRING(content, 1, 200))) = $1 
+         LIMIT 1`,
+        [normalizedContent]
+      );
+
+      return contentMatch.rows.length > 0;
+    } catch (error) {
+      console.error('❌ خطأ في التحقق من التشابه:', error);
+      return false;
+    }
+  }
+
+  /**
    * تحديث تصنيف الخبر
    */
   static async updateCategory(id: number, category_id: number): Promise<RawData | null> {
@@ -293,6 +330,22 @@ export class EditorialQueueService {
       [status]
     );
     return result.rows;
+  }
+
+  /**
+   * التحقق من وجود خبر في الطابور (غير مرفوض)
+   */
+  static async existsInQueue(
+    raw_data_id: number,
+    media_unit_id: number
+  ): Promise<boolean> {
+    const result = await query(
+      `SELECT id FROM editorial_queue 
+       WHERE raw_data_id = $1 AND media_unit_id = $2 AND status != 'rejected'
+       LIMIT 1`,
+      [raw_data_id, media_unit_id]
+    );
+    return result.rows.length > 0;
   }
 
   /**

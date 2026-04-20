@@ -277,7 +277,7 @@ class EditorialPolicyService {
    * الموديل بيقبل حتى 5000 token كـ prompt، والـ response حده 3000
    */
   private calculateMaxTokens(): number {
-    return 1000;
+    return 600;
   }
 
   /**

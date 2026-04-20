@@ -76,8 +76,11 @@ export const api = {
     request<any>(`/flow/queue/pending${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
   getQueueStats: () => request<any>("/flow/queue/stats"),
   getQueueItem: (id: number) => request<any>(`/flow/queue/${id}`),
-  approveQueueItem: (id: number) =>
-    request<any>(`/flow/queue/${id}/approve`, { method: "POST" }),
+  approveQueueItem: (id: number, data?: any) =>
+    request<any>(`/flow/queue/${id}/approve`, { 
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    }),
   rejectQueueItem: (id: number) =>
     request<any>(`/flow/queue/${id}/reject`, { method: "POST" }),
 
@@ -105,7 +108,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
-  applyPolicy: (data: { text: string; policyName: string; articleId?: number }) =>
+  deletePolicy: (name: string) =>
+    request<any>(`/news/editorial-policies/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    }),
+  applyPolicy: (data: { text: string; policyName?: string; policyId?: number; articleId?: number }) =>
     request<any>("/news/editorial-policies/apply", {
       method: "POST",
       body: JSON.stringify(data),

@@ -13,6 +13,7 @@ import {
   getPolicyDetails,
   updatePolicy,
   createPolicy,
+  deletePolicy,
 } from '../../controllers/news/editorial-policy.controller';
 
 const router = Router();
@@ -64,5 +65,11 @@ router.get('/:policyName', getPolicyDetails);
  * تحديث سياسة
  */
 router.put('/:policyName', updatePolicy);
+
+/**
+ * DELETE /api/news/editorial-policies/:policyName
+ * حذف سياسة
+ */
+router.delete('/:policyName', deletePolicy);
 
 export default router;

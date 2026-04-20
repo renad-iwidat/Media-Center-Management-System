@@ -342,7 +342,7 @@ export class PublishedItemsService {
       let mediaUnitFilter = '';
 
       if (mediaUnitId) {
-        mediaUnitFilter = ` AND media_unit_id = $1`;
+        mediaUnitFilter = ` AND pi.media_unit_id = $1`;
         params.push(mediaUnitId);
       }
 
@@ -350,10 +350,10 @@ export class PublishedItemsService {
       const result = await query(
         `WITH date_range AS (
           SELECT DISTINCT DATE(published_at) as date FROM published_items 
-          WHERE DATE(published_at) >= CURRENT_DATE - INTERVAL '${days} days'${mediaUnitFilter}
+          WHERE DATE(published_at) >= CURRENT_DATE - INTERVAL '${days} days'${mediaUnitId ? ` AND media_unit_id = $1` : ''}
           UNION
           SELECT DISTINCT DATE(updated_at) as date FROM editorial_queue 
-          WHERE status = 'rejected' AND DATE(updated_at) >= CURRENT_DATE - INTERVAL '${days} days'${mediaUnitFilter}
+          WHERE status = 'rejected' AND DATE(updated_at) >= CURRENT_DATE - INTERVAL '${days} days'${mediaUnitId ? ` AND media_unit_id = $${params.length > 0 ? 1 : 1}` : ''}
         )
         SELECT 
           dr.date,
@@ -366,7 +366,7 @@ export class PublishedItemsService {
         FROM date_range dr
         LEFT JOIN published_items pi ON DATE(pi.published_at) = dr.date${mediaUnitFilter}
         LEFT JOIN media_units mu ON pi.media_unit_id = mu.id
-        LEFT JOIN editorial_queue eq ON DATE(eq.updated_at) = dr.date AND eq.status = 'rejected'${mediaUnitFilter}
+        LEFT JOIN editorial_queue eq ON DATE(eq.updated_at) = dr.date AND eq.status = 'rejected' AND eq.media_unit_id = ${mediaUnitId ? '$1' : 'eq.media_unit_id'}
         GROUP BY dr.date, mu.name, mu.id
         ORDER BY dr.date DESC`,
         params

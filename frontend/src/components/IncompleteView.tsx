@@ -200,7 +200,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     return (
       <div className="space-y-6">
         {/* Notification */}
-        <Notification notification={notification} onClose={() => setNotification(null)} position="top-right" />
+        <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
 
         <button 
           onClick={() => setEditingArticle(null)}
