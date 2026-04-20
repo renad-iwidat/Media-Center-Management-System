@@ -1,40 +1,7 @@
 ﻿# 🎬 Media Center Management System
 
-A comprehensive, production-ready system for managing media center operations including orders, tasks, content production, and more.
+A comprehensive, system for managing media center operations including orders, tasks, content production, and more.
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 16+
-- PostgreSQL 12+
-- npm or yarn
-
-### Installation
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd media-center-management
-
-# Install dependencies
-npm install
-
-# Setup environment
-cp .env.example .env
-# Edit .env with your database URL and configuration
-
-# Start server
-npm run dev
-```
-
-### Server Running
-```
-Server is running on port 3000
-Health check: http://localhost:3000/health
-API Base URL: http://localhost:3000/api
-```
-
----
 
 
 ## 🎯 Features
