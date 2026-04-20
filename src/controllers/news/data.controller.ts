@@ -31,25 +31,26 @@ export async function getMediaUnits(req: Request, res: Response): Promise<void> 
  */
 export async function getIncompleteArticles(req: Request, res: Response): Promise<void> {
   try {
-    const maxLength = parseInt(req.query.max_length as string) || 500;
+    const maxLength = parseInt(req.query.max_length as string) || 150;
     const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : null;
     
-    let query_str = `SELECT rd.id, rd.title, rd.content, rd.url, rd.image_url, rd.fetch_status, rd.fetched_at,
+    const params: any[] = [maxLength];
+    let mediaUnitFilter = '';
+    
+    if (mediaUnitId && !isNaN(mediaUnitId)) {
+      mediaUnitFilter = ` AND rd.media_unit_id = $${params.length + 1}`;
+      params.push(mediaUnitId);
+    }
+    
+    const query_str = `SELECT rd.id, rd.title, rd.content, rd.url, rd.image_url, rd.fetch_status, rd.fetched_at,
               rd.category_id, rd.media_unit_id, c.name as category_name, s.name as source_name, mu.name as media_unit_name
        FROM raw_data rd
        LEFT JOIN categories c ON rd.category_id = c.id
        LEFT JOIN sources s ON rd.source_id = s.id
        LEFT JOIN media_units mu ON rd.media_unit_id = mu.id
-       WHERE LENGTH(rd.content) < $1 AND rd.fetch_status IN ('fetched', 'processed')`;
-    
-    const params: any[] = [maxLength];
-    
-    if (mediaUnitId) {
-      query_str += ` AND rd.media_unit_id = $${params.length + 1}`;
-      params.push(mediaUnitId);
-    }
-    
-    query_str += ` ORDER BY rd.fetched_at DESC`;
+       WHERE LENGTH(rd.content) < $1 AND rd.fetch_status IN ('fetched', 'processed')
+       AND NOT EXISTS (SELECT 1 FROM editorial_queue eq WHERE eq.raw_data_id = rd.id)${mediaUnitFilter}
+       ORDER BY rd.fetched_at DESC`;
     
     const result = await query(query_str, params);
     res.status(200).json({
@@ -133,12 +134,12 @@ export async function deleteArticle(req: Request, res: Response): Promise<void> 
 }
 
 /**
- * تحديث محتوى خبر ناقص وإرساله للفلو
+ * تحديث محتوى خبر ناقص وإرساله لطابور التحرير (اختياري)
  */
 export async function updateArticleContent(req: Request, res: Response): Promise<void> {
   try {
     const articleId = parseInt(req.params.id);
-    const { content, title, imageUrl } = req.body;
+    const { content, title, imageUrl, sendToQueue = true } = req.body;
 
     if (isNaN(articleId)) {
       res.status(400).json({ success: false, message: 'معرف الخبر غير صحيح' });
@@ -149,16 +150,32 @@ export async function updateArticleContent(req: Request, res: Response): Promise
       return;
     }
 
-    // تحديث المحتوى
-    const updates: string[] = ['content = $2', 'fetch_status = $3'];
-    const params: any[] = [articleId, content.trim(), 'fetched'];
-    let paramIdx = 4;
+    // تحديد الحالة بناءً على sendToQueue
+    const fetchStatus = sendToQueue ? 'processed' : 'fetched';
 
+    // بناء قائمة التحديثات والمعاملات
+    const updates: string[] = [];
+    const params: any[] = [articleId];
+    let paramIdx = 2;
+
+    // إضافة المحتوى
+    updates.push(`content = $${paramIdx}`);
+    params.push(content.trim());
+    paramIdx++;
+
+    // إضافة حالة الجلب
+    updates.push(`fetch_status = $${paramIdx}`);
+    params.push(fetchStatus);
+    paramIdx++;
+
+    // إضافة العنوان إذا كان موجوداً
     if (title !== undefined) {
       updates.push(`title = $${paramIdx}`);
       params.push(title.trim());
       paramIdx++;
     }
+
+    // إضافة رابط الصورة إذا كان موجوداً
     if (imageUrl !== undefined) {
       updates.push(`image_url = $${paramIdx}`);
       params.push(imageUrl || null);
@@ -175,10 +192,45 @@ export async function updateArticleContent(req: Request, res: Response): Promise
       return;
     }
 
+    const article = result.rows[0];
+
+    // إضافة الخبر لطابور التحرير فقط إذا كان sendToQueue = true
+    if (sendToQueue) {
+      try {
+        const mediaUnitsResult = await query(
+          `SELECT id FROM media_units WHERE is_active = true`
+        );
+
+        for (const unit of mediaUnitsResult.rows) {
+          // التحقق من عدم وجود الخبر في الطابور بالفعل
+          const existsResult = await query(
+            `SELECT id FROM editorial_queue WHERE raw_data_id = $1 AND media_unit_id = $2`,
+            [articleId, unit.id]
+          );
+
+          if (existsResult.rows.length === 0) {
+            await query(
+              `INSERT INTO editorial_queue 
+               (media_unit_id, raw_data_id, policy_id, status, created_at, updated_at)
+               VALUES ($1, $2, NULL, 'pending', NOW(), NOW())`,
+              [unit.id, articleId]
+            );
+          }
+        }
+      } catch (queueError) {
+        console.error('⚠️ تحذير: فشل إضافة الخبر لطابور التحرير:', queueError);
+        // لا نرجع خطأ هنا لأن التحديث نجح
+      }
+    }
+
+    const message = sendToQueue 
+      ? 'تم تحديث الخبر وإرساله لستوديو التحرير'
+      : 'تم حفظ التغييرات في الأخبار الغير مكتملة';
+
     res.status(200).json({
       success: true,
-      message: 'تم تحديث الخبر — شغّل الفلو لتوجيهه للتحرير',
-      data: result.rows[0],
+      message,
+      data: article,
     });
   } catch (error) {
     console.error('❌ خطأ في تحديث الخبر:', error);

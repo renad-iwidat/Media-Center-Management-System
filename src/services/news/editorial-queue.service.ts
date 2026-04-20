@@ -58,7 +58,7 @@ export class EditorialQueueService {
           COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
         WHERE eq.status = 'pending'`;
@@ -106,7 +106,7 @@ export class EditorialQueueService {
           s.name as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
         WHERE eq.id = $1`,

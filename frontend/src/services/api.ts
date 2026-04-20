@@ -48,6 +48,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  saveArticleInIncomplete: (id: number, data: { content: string; title?: string; imageUrl?: string }) =>
+    request<any>(`/data/articles/${id}/content`, {
+      method: "PUT",
+      body: JSON.stringify({ ...data, sendToQueue: false }),
+    }),
+
   deleteArticle: (id: number) =>
     request<any>(`/data/articles/${id}`, {
       method: "DELETE",
