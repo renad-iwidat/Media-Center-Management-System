@@ -51,7 +51,8 @@ async function testManualInput() {
       title: 'قصير', // أقل من 5 أحرف
       content: 'قصير جداً', // أقل من 20 حرف
       fetch_status: 'fetched',
-      created_by: 1
+      created_by: 1,
+      media_unit_id: 1
     };
 
     const invalidValidation = ManualInputService.validateInput(invalidData);
@@ -67,7 +68,8 @@ async function testManualInput() {
       content: 'هذا محتوى تجريبي للاختبار يحتوي على أكثر من 20 حرف لضمان نجاح الـ validation. تم استخدام المصادر الجديدة المنفصلة.',
       tags: ['اختبار', 'تجريبي', 'محدث'],
       fetch_status: 'fetched',
-      created_by: 1
+      created_by: 1,
+      media_unit_id: 1
     };
 
     const validValidation = ManualInputService.validateInput(validData);
