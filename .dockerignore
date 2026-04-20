@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist
+build
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Tests
+**/*.test.ts
+**/*.spec.ts
+coverage
+
+# Frontend folder (not needed in backend image)
+manual-input-frontend
+
+# Misc
+.editorconfig
+.prettierrc

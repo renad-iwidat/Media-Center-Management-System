@@ -19,6 +19,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'API is healthy' });
+});
+
 // Start server
 const PORT = environment.PORT || 3000;
 
