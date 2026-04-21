@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-arabic: "Almarai", sans-serif;
+  
+  --color-brand-bg: #020617;
+  --color-brand-surface: #0b1224;
+  --color-brand-accent: #2563eb;
+  --color-brand-border: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-gray-100 font-sans;
+    direction: rtl;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-white font-arabic font-bold;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-brand-surface/80 backdrop-blur-md border border-brand-border rounded-3xl;
+  }
+  
+  .btn-primary {
+    @apply bg-brand-accent hover:bg-blue-700 text-white font-arabic font-bold py-3 px-6 rounded-2xl transition-all duration-200 shadow-lg shadow-blue-900/20 active:scale-95;
+  }
+
+  .nav-item-active {
+    @apply bg-brand-accent/10 border-r-4 border-brand-accent text-brand-accent;
+  }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
