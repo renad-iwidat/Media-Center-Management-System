@@ -1,0 +1,52 @@
+# ============================================================
+# Backend Dockerfile
+# Node.js + TypeScript API — Port 4000
+# ============================================================
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# تثبيت الـ dependencies
+COPY package*.json ./
+RUN npm ci --prefer-offline --no-audit
+
+# نسخ الكود وبناء TypeScript
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# ============================================================
+# Production image
+# ============================================================
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# إضافة user غير root للأمان
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# تثبيت production dependencies فقط
+COPY package*.json ./
+RUN npm ci --omit=dev --prefer-offline --no-audit && \
+    npm cache clean --force
+
+# نسخ الـ build من المرحلة السابقة
+COPY --from=builder /app/dist ./dist
+
+# تغيير الملكية للـ user الجديد
+RUN chown -R nodejs:nodejs /app
+
+# التبديل للـ user غير root
+USER nodejs
+
+EXPOSE 4000
+
+# إضافة health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+CMD ["node", "dist/index.js"]
