@@ -54,6 +54,28 @@ class RSSFetcherService {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
+      // تسجيل الحقول المخصصة حتى يتعرف عليها rss-parser
+      customFields: {
+        item: [
+          // ── media namespace ──────────────────────────────────────────────
+          ['media:content',   'media:content',   { keepArray: true }],
+          ['media:thumbnail', 'media:thumbnail', { keepArray: true }],
+          ['media:group',     'media:group'],
+          // ── dublin core ──────────────────────────────────────────────────
+          ['dc:creator',  'dc:creator'],
+          ['dc:subject',  'dc:subject'],
+          ['dc:date',     'dc:date'],
+          ['dc:image',    'dc:image'],
+          // ── itunes (بعض الـ feeds الإخبارية تستخدمه) ────────────────────
+          ['itunes:image',   'itunes:image'],
+          ['itunes:summary', 'itunes:summary'],
+          // ── content namespace ────────────────────────────────────────────
+          ['content:encoded', 'content:encoded'],
+          // ── atom / misc ──────────────────────────────────────────────────
+          ['enclosure', 'enclosure'],
+          ['rights',    'rights'],
+        ],
+      },
     });
   }
 
@@ -73,71 +95,126 @@ class RSSFetcherService {
 
   /**
    * استخراج صورة المقالة من جميع الصيغ الممكنة (أول صورة فقط)
+   *
+   * الحالات المدعومة (مرتبة بالأولوية):
+   *
+   * ① media:content url="..."  ← Aawsat / Arab48
+   *    <media:content url="https://..." type="image/jpeg"/>
+   *
+   * ② media:content > media:thumbnail url="..."  ← BBC Arabic
+   *    <media:content>
+   *      <media:thumbnail url="https://..." width="106" height="60"/>
+   *    </media:content>
+   *
+   * ③ media:thumbnail url="..."  ← BBC Arabic Live
+   *    <media:thumbnail width="240" height="135" url="https://..."/>
+   *
+   * ④ media:group > media:content / media:thumbnail  ← YouTube وغيرها
+   *
+   * ⑤ enclosure url="..."  ← Podcast / RSS قديم
+   *
+   * ⑥ <img src="..."> داخل description / content / summary  ← Arab48 وغيرها
+   *
+   * ⑦ dc:image / itunes:image
    */
   private extractImageUrl(item: any): string {
-    // 1. البحث عن media:content (أول صورة)
-    if (item.media && Array.isArray(item.media) && item.media.length > 0) {
-      return item.media[0].url || '';
-    }
 
-    // 2. البحث عن mediaContent (أول صورة)
-    if (item.mediaContent && Array.isArray(item.mediaContent) && item.mediaContent.length > 0) {
-      return item.mediaContent[0].url || '';
-    }
+    // ── ① media:content ──────────────────────────────────────────────────
+    if (item['media:content']) {
+      const mc = item['media:content'];
+      const list = Array.isArray(mc) ? mc : [mc];
 
-    // 3. البحث عن enclosure (للـ podcasts والصور)
-    if (item.enclosure && item.enclosure.url) {
-      if (!item.enclosure.type || item.enclosure.type.startsWith('image/')) {
-        return item.enclosure.url;
-      }
-    }
+      for (const entry of list) {
+        // ① أ. url مباشر على العنصر  ← Aawsat / Arab48
+        if (entry.$ && entry.$.url) return entry.$.url;
+        // ① ب. url كـ string مباشر (بعض الـ parsers)
+        if (typeof entry.url === 'string' && entry.url) return entry.url;
 
-    // 4. البحث عن media:thumbnail في الـ link (أول صورة)
-    if (item.link && typeof item.link === 'object' && Array.isArray(item.link)) {
-      for (const link of item.link) {
-        if (link['media:content'] && link['media:content']['media:thumbnail']) {
-          const thumbnails = link['media:content']['media:thumbnail'];
-          if (Array.isArray(thumbnails) && thumbnails.length > 0) {
-            // اختر أول صورة (الأكبر حجماً)
-            const largest = thumbnails.reduce((max: any, current: any) => {
-              const maxSize = (max.width || 0) * (max.height || 0);
-              const currentSize = (current.width || 0) * (current.height || 0);
-              return currentSize > maxSize ? current : max;
-            });
-            if (largest.url) return largest.url;
-          } else if (thumbnails && thumbnails.url) {
-            return thumbnails.url;
+        // ① ج. media:thumbnail nested داخل media:content  ← BBC Arabic
+        const nested = entry['media:thumbnail'];
+        if (nested) {
+          const nList = Array.isArray(nested) ? nested : [nested];
+          for (const t of nList) {
+            if (t.$ && t.$.url) return t.$.url;
+            if (typeof t.url === 'string' && t.url) return t.url;
           }
         }
       }
     }
 
-    // 5. البحث عن image في الـ content (أول صورة)
-    if (item.content) {
-      const imageMatch = item.content.match(/<img[^>]+src="([^">]+)"/);
-      if (imageMatch) {
-        return imageMatch[1];
+    // ── ② media:thumbnail مستقلة  ← BBC Arabic Live ──────────────────────
+    if (item['media:thumbnail']) {
+      const mt = item['media:thumbnail'];
+      const list = Array.isArray(mt) ? mt : [mt];
+      for (const t of list) {
+        if (t.$ && t.$.url) return t.$.url;
+        if (typeof t.url === 'string' && t.url) return t.url;
       }
     }
 
-    // 6. البحث عن image في الـ summary (أول صورة)
-    if (item.summary) {
-      const imageMatch = item.summary.match(/<img[^>]+src="([^">]+)"/);
-      if (imageMatch) {
-        return imageMatch[1];
+    // ── ③ media:group  ← YouTube وغيرها ──────────────────────────────────
+    if (item['media:group']) {
+      const group = item['media:group'];
+      // media:group > media:content
+      if (group['media:content']) {
+        const mc = Array.isArray(group['media:content']) ? group['media:content'] : [group['media:content']];
+        for (const e of mc) {
+          if (e.$ && e.$.url) return e.$.url;
+        }
+      }
+      // media:group > media:thumbnail
+      if (group['media:thumbnail']) {
+        const mt = Array.isArray(group['media:thumbnail']) ? group['media:thumbnail'] : [group['media:thumbnail']];
+        for (const t of mt) {
+          if (t.$ && t.$.url) return t.$.url;
+        }
       }
     }
 
-    // 7. البحث عن dc:image
-    if (item['dc:image']) {
-      return item['dc:image'];
+    // ── ④ enclosure  ← RSS قديم / Podcast ───────────────────────────────
+    if (item.enclosure) {
+      const enc = Array.isArray(item.enclosure) ? item.enclosure[0] : item.enclosure;
+      if (enc && enc.url && (!enc.type || enc.type.startsWith('image/'))) {
+        return enc.url;
+      }
     }
 
-    // 8. البحث عن image في الـ description (أول صورة)
-    if (item.description) {
-      const imageMatch = item.description.match(/<img[^>]+src="([^">]+)"/);
-      if (imageMatch) {
-        return imageMatch[1];
+    // ── ⑤ rss-parser camelCase aliases ───────────────────────────────────
+    if (item.mediaContent) {
+      const mc = Array.isArray(item.mediaContent) ? item.mediaContent : [item.mediaContent];
+      for (const e of mc) {
+        if (e.url) return e.url;
+        if (e.$ && e.$.url) return e.$.url;
+      }
+    }
+    if (item.media) {
+      const m = Array.isArray(item.media) ? item.media : [item.media];
+      for (const e of m) {
+        if (e.url) return e.url;
+      }
+    }
+
+    // ── ⑥ dc:image / itunes:image ────────────────────────────────────────
+    if (item['dc:image']) return item['dc:image'];
+    if (item['itunes:image']) {
+      const img = item['itunes:image'];
+      if (typeof img === 'string') return img;
+      if (img.$ && img.$.href) return img.$.href;
+    }
+
+    // ── ⑦ <img src="..."> داخل النصوص  ← Arab48 / وغيرها ────────────────
+    // نبحث بالترتيب: content:encoded → content → description → summary
+    const htmlFields = [
+      item['content:encoded'],
+      item.content,
+      item.description,
+      item.summary,
+    ];
+    const imgRegex = /<img[^>]+src=["']([^"']+)["']/i;
+    for (const field of htmlFields) {
+      if (typeof field === 'string' && field) {
+        const m = field.match(imgRegex);
+        if (m && m[1] && m[1].startsWith('http')) return m[1];
       }
     }
 
@@ -170,13 +247,46 @@ class RSSFetcherService {
   }
 
   /**
-   * تنظيف الرابط من HTML encoding
+   * تنظيف الرابط من HTML encoding والروابط المشوهة
+   * يستخرج الرابط الحقيقي من الروابط المشفرة مثل:
+   * https://aawsat.com/%3Ca%20href%3D%22https%3A//aawsat.com/...
    */
   private cleanLink(link: string): string {
+    if (!link) return '';
+    
     try {
-      return decodeURIComponent(link).replace(/<[^>]*>/g, '').trim();
-    } catch {
-      return link;
+      // ── المرحلة 1: فك الترميز الأول ────────────────────────────────────
+      let decoded = decodeURIComponent(link);
+      
+      // ── المرحلة 2: استخراج href من HTML tags ─────────────────────────
+      // البحث عن href="..." أو href='...'
+      const hrefMatch = decoded.match(/href=["']([^"']+)["']/i);
+      if (hrefMatch && hrefMatch[1]) {
+        decoded = hrefMatch[1];
+      }
+      
+      // ── المرحلة 3: فك الترميز الثاني ────────────────────────────────────
+      // لو الرابط لسا فيه %XX encoding
+      if (decoded.includes('%')) {
+        try {
+          decoded = decodeURIComponent(decoded);
+        } catch {
+          // إذا فشل الـ decode، نستخدم الرابط كما هو
+        }
+      }
+      
+      // ── المرحلة 4: إزالة HTML tags المتبقية ──────────────────────────
+      decoded = decoded.replace(/<[^>]*>/g, '').trim();
+      
+      // ── المرحلة 5: التحقق من صحة الرابط ──────────────────────────────
+      if (!decoded.startsWith('http://') && !decoded.startsWith('https://')) {
+        return '';
+      }
+      
+      return decoded;
+    } catch (error) {
+      console.warn(`⚠️  فشل تنظيف الرابط: ${link.substring(0, 100)}`);
+      return '';
     }
   }
   /**
@@ -200,14 +310,27 @@ class RSSFetcherService {
 
       // استخراج بيانات أول مقالة
       const firstItem = feed.items[0];
+      const link = this.cleanLink(firstItem.link || '');
+      
+      // تخطي الروابط الفارغة
+      if (!link) {
+        return {
+          source,
+          article: null,
+          error: 'رابط المقالة فارغ',
+        };
+      }
+
       const article: RSSArticle = {
         title: firstItem.title || 'بدون عنوان',
         description: this.cleanDescription(
           firstItem.content || firstItem.summary || 'بدون وصف'
         ),
-        link: this.cleanLink(firstItem.link || ''),
+        link,
         pubDate: firstItem.pubDate || '',
         source: source.name,
+        image_url: this.extractImageUrl(firstItem),
+        tags: this.extractTags(firstItem),
       };
 
       return {

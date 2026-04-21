@@ -18,6 +18,8 @@ import {
   getArticleById,
   updateArticleContent,
   deleteArticle,
+  deleteIncompleteArticles,
+  deleteAllArticles,
 } from '../../controllers/news/data.controller';
 
 const router = Router();
@@ -30,6 +32,10 @@ router.get('/articles/incomplete', getIncompleteArticles);
 router.get('/articles/:id/detail', getArticleById);
 router.put('/articles/:id/content', updateArticleContent);
 router.delete('/articles/:id', deleteArticle);
+
+// حذف جماعي
+router.delete('/articles/incomplete', deleteIncompleteArticles);
+router.delete('/articles', deleteAllArticles);
 
 /**
  * @swagger
@@ -249,5 +255,69 @@ router.get('/comprehensive', getComprehensiveData);
  *                       type: object
  */
 router.get('/statistics', getStatistics);
+
+/**
+ * @swagger
+ * /data/articles/incomplete:
+ *   delete:
+ *     summary: حذف جميع الأخبار الناقصة
+ *     description: حذف جميع الأخبار التي محتواها ناقص (is_incomplete = true)
+ *     tags:
+ *       - Articles
+ *     responses:
+ *       200:
+ *         description: نجح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedFromQueue:
+ *                       type: number
+ *                     deletedFromPublished:
+ *                       type: number
+ *                     deletedFromRawData:
+ *                       type: number
+ */
+router.delete('/articles/incomplete', deleteIncompleteArticles);
+
+/**
+ * @swagger
+ * /data/articles:
+ *   delete:
+ *     summary: حذف جميع الأخبار (حذف شامل)
+ *     description: حذف جميع الأخبار من النظام (يحذف من editorial_queue, published_items, raw_data)
+ *     tags:
+ *       - Articles
+ *     responses:
+ *       200:
+ *         description: نجح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedFromQueue:
+ *                       type: number
+ *                     deletedFromPublished:
+ *                       type: number
+ *                     deletedFromRawData:
+ *                       type: number
+ */
+router.delete('/articles', deleteAllArticles);
 
 export default router;

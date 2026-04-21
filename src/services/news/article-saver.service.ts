@@ -1,185 +1,97 @@
 /**
  * Article Saver Service
- * خدمة حفظ الأخبار في قاعدة البيانات
+ * حفظ الأخبار الجديدة في الداتابيس — بدون تصنيف AI
+ * 
+ * المسؤولية: فقط حفظ الأخبار بستيتوس 'fetched'
+ * التصنيف والتنظيف والتوجيه = مسؤولية FlowRouterService
  */
 
 import { RawDataService } from '../database/database.service';
-import { aiClassifierService } from './ai-classifier.service';
+import { ArticleToSave } from './rss-pipeline.service';
 
-/**
- * واجهة لخبر RSS مع المصدر
- */
-export interface ArticleWithSource {
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-  image_url?: string;
-  tags?: string[];
-  source: {
-    id: number;
-    source_type_id: number;
-    default_category_id: number | null;
-  };
-}
+export interface ArticleWithSource extends ArticleToSave {}
 
-/**
- * واجهة لنتيجة الحفظ
- */
 export interface SaveResult {
   totalArticles: number;
   savedCount: number;
   failedCount: number;
-  details: Array<{
-    title: string;
-    url: string;
-    categoryId: number;
-    success: boolean;
-    error?: string;
-  }>;
 }
 
-/**
- * فئة Article Saver Service
- */
+/** تحويل pubDate string إلى Date أو null */
+function parsePubDate(pubDate: string): Date | null {
+  if (!pubDate) return null;
+  const d = new Date(pubDate);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** حجم الـ batch لحفظ الداتابيس */
+const DB_SAVE_BATCH = 10;
+
 class ArticleSaverService {
   /**
-   * حفظ مقالة واحدة
+   * حفظ مجموعة من الأخبار في الداتابيس
+   * - فحص التكرار بالعنوان/المحتوى
+   * - حفظ بستيتوس 'fetched' مع category_id الافتراضي (أو null)
+   * - بدون تصنيف AI — التصنيف يصير لاحقاً بمرحلة المعالجة
    */
-  async saveArticle(article: ArticleWithSource): Promise<boolean> {
-    try {
-      // تحديد التصنيف
-      let categoryId = article.source.default_category_id;
-
-      // إذا لم يكن للمصدر تصنيف افتراضي، استخدم AI
-      if (!categoryId) {
-        const classification = await aiClassifierService.classifyArticle(
-          article.title,
-          article.description
-        );
-        categoryId = classification.categoryId;
-      }
-
-      // حفظ في قاعدة البيانات
-      await RawDataService.create({
-        source_id: article.source.id,
-        source_type_id: article.source.source_type_id,
-        category_id: categoryId,
-        url: article.link,
-        title: article.title,
-        content: article.description,
-        image_url: '',
-        tags: [],
-        fetch_status: 'fetched',
-      });
-
-      return true;
-    } catch (error) {
-      console.error('❌ خطأ في حفظ المقالة:', error);
-      return false;
+  async saveArticles(articles: ArticleToSave[]): Promise<SaveResult> {
+    if (articles.length === 0) {
+      return { totalArticles: 0, savedCount: 0, failedCount: 0 };
     }
-  }
 
-  /**
-   * حفظ مجموعة من المقالات مع التصنيف الآلي
-   */
-  async saveArticles(articles: ArticleWithSource[]): Promise<SaveResult> {
-    const details: SaveResult['details'] = [];
+    console.log(`\n💾 بدء حفظ ${articles.length} خبر...`);
+    const startTime = Date.now();
+
+    // ── المرحلة 1: فحص التكرار بالعنوان/المحتوى (similarity) ─────────────
+    const toSave: ArticleToSave[] = [];
+    for (const article of articles) {
+      const similar = await RawDataService.existsBySimilarity(article.title, article.description);
+      if (similar) {
+        console.log(`   ⏭️  تخطي (مكرر): ${article.title.substring(0, 50)}`);
+      } else {
+        toSave.push(article);
+      }
+    }
+
+    // ── المرحلة 2: حفظ DB بـ batches parallel ────────────────────────────
     let savedCount = 0;
     let failedCount = 0;
-    let skippedCount = 0;
 
-    console.log(`📰 بدء حفظ ${articles.length} خبر...`);
+    console.log(`   💾 حفظ ${toSave.length} خبر في DB (batches من ${DB_SAVE_BATCH})...`);
 
-    for (const article of articles) {
-      try {
-        // التحقق من وجود الخبر بالـ URL أولاً (الفحص الأساسي)
-        const existsByUrl = await RawDataService.existsByUrl(article.link);
-        if (existsByUrl) {
-          console.log(`⏭️  تخطي: ${article.title} (الرابط موجود بالفعل)`);
-          skippedCount++;
-          continue;
-        }
+    for (let i = 0; i < toSave.length; i += DB_SAVE_BATCH) {
+      const batch = toSave.slice(i, i + DB_SAVE_BATCH);
 
-        // التحقق من وجود خبر مكرر بناءً على العنوان والمحتوى
-        const existsBySimilarity = await RawDataService.existsBySimilarity(
-          article.title,
-          article.description
-        );
-        if (existsBySimilarity) {
-          console.log(`⏭️  تخطي: ${article.title} (محتوى مكرر - نفس العنوان/المحتوى)`);
-          skippedCount++;
-          continue;
-        }
+      const results = await Promise.allSettled(
+        batch.map((article) => {
+          // نستخدم الـ default_category_id إذا موجود، وإلا null
+          const categoryId = article.source.default_category_id || null;
+          return RawDataService.create({
+            source_id: article.source.id,
+            source_type_id: article.source.source_type_id,
+            category_id: categoryId,
+            url: article.link,
+            title: article.title,
+            content: article.description,
+            image_url: article.image_url || '',
+            tags: article.tags || [],
+            fetch_status: 'fetched',
+            pub_date: parsePubDate(article.pubDate),
+          });
+        })
+      );
 
-        // تحديد التصنيف
-        let categoryId = article.source.default_category_id;
-        let classificationMethod = 'default';
-
-        // إذا لم يكن للمصدر تصنيف افتراضي، استخدم AI
-        if (!categoryId) {
-          console.log(`   🤖 تصنيف: ${article.title.substring(0, 50)}...`);
-          const classification = await aiClassifierService.classifyArticle(
-            article.title,
-            article.description
-          );
-          categoryId = classification.categoryId;
-          classificationMethod = `ai (${classification.category})`;
-        }
-
-        // حفظ في قاعدة البيانات
-        await RawDataService.create({
-          source_id: article.source.id,
-          source_type_id: article.source.source_type_id,
-          category_id: categoryId,
-          url: article.link,
-          title: article.title,
-          content: article.description,
-          image_url: article.image_url || '',
-          tags: article.tags || [],
-          fetch_status: 'fetched',
-        });
-
-        details.push({
-          title: article.title,
-          url: article.link,
-          categoryId,
-          success: true,
-        });
-
-        savedCount++;
-        console.log(
-          `✅ تم حفظ: ${article.title.substring(0, 50)}... (${classificationMethod})`
-        );
-      } catch (error) {
-        failedCount++;
-        const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
-
-        details.push({
-          title: article.title,
-          url: article.link,
-          categoryId: 0,
-          success: false,
-          error: errorMessage,
-        });
-
-        console.error(`❌ فشل حفظ: ${article.title} - ${errorMessage}`);
+      for (const r of results) {
+        if (r.status === 'fulfilled') savedCount++;
+        else failedCount++;
       }
     }
 
-    console.log(`\n📊 ملخص الحفظ:`);
-    console.log(`   ✅ تم حفظ: ${savedCount}`);
-    console.log(`   ⏭️  تم تخطي (موجود): ${skippedCount}`);
-    console.log(`   ❌ فشل: ${failedCount}`);
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`   ✅ تم حفظ ${savedCount} | ❌ فشل ${failedCount} | ⏱️  ${totalTime}s\n`);
 
-    return {
-      totalArticles: articles.length,
-      savedCount,
-      failedCount,
-      details,
-    };
+    return { totalArticles: articles.length, savedCount, failedCount };
   }
 }
 
-// تصدير instance واحد من الخدمة
 export const articleSaverService = new ArticleSaverService();

@@ -40,12 +40,21 @@ export class FlowController {
 
   /**
    * GET /api/flow/queue/pending
-   * جلب العناصر المعلقة في الطابور
+   * جلب العناصر المعلقة في الطابور (pending + in_review)
    */
   static async getPendingQueue(req: Request, res: Response): Promise<void> {
     try {
       const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
-      const pendingItems = await EditorialQueueService.getPendingItems(mediaUnitId);
+      const status = req.query.status as string || undefined;
+      
+      let pendingItems;
+      if (status === 'in_review') {
+        // جلب العناصر قيد المراجعة فقط
+        pendingItems = await EditorialQueueService.getItemsByStatus('in_review', mediaUnitId);
+      } else {
+        // جلب العناصر المعلقة (pending) — السلوك الافتراضي
+        pendingItems = await EditorialQueueService.getPendingItems(mediaUnitId);
+      }
 
       res.status(200).json({
         success: true,

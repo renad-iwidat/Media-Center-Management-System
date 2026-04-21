@@ -29,6 +29,7 @@ export const api = {
   // مصادر
   getSources: () => request<any>("/data/sources"),
   getActiveSources: () => request<any>("/data/sources/active"),
+  getSourcesWithFetchInfo: () => request<any>("/sources/fetch-info/all"),
 
   // وحدات الإعلام
   getMediaUnits: () => request<any>("/data/media-units"),
@@ -56,6 +57,16 @@ export const api = {
 
   deleteArticle: (id: number) =>
     request<any>(`/data/articles/${id}`, {
+      method: "DELETE",
+    }),
+
+  // حذف جماعي
+  deleteIncompleteArticles: () =>
+    request<any>("/data/articles/incomplete", {
+      method: "DELETE",
+    }),
+  deleteAllArticles: () =>
+    request<any>("/data/articles", {
       method: "DELETE",
     }),
 
@@ -137,4 +148,21 @@ export const api = {
   getUnclassified: () => request<any>("/news/classifier/unclassified"),
   classifyArticles: () =>
     request<any>("/news/classifier/process", { method: "POST" }),
+
+  // --- System Settings ---
+  getSystemToggles: () => request<any>("/settings/toggles"),
+  setAutomationEnabled: (enabled: boolean) =>
+    request<any>("/settings/toggles/bulk", {
+      method: "PATCH",
+      body: JSON.stringify({
+        scheduler_enabled: enabled,
+        classifier_enabled: enabled,
+        flow_enabled: enabled,
+      }),
+    }),
+  updateSetting: (key: string, value: string) =>
+    request<any>(`/settings/${key}`, {
+      method: "PATCH",
+      body: JSON.stringify({ value }),
+    }),
 };

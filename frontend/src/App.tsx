@@ -15,7 +15,8 @@ import {
   ChevronRight,
   TrendingUp,
   Search,
-  PenTool
+  PenTool,
+  Settings2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "./services/api.ts";
@@ -25,6 +26,7 @@ import { IncompleteView } from "./components/IncompleteView";
 import { PoliciesView } from "./components/PoliciesView";
 import { PublishedView } from "./components/PublishedView";
 import { QueueView } from "./components/QueueView";
+import { SystemSettingsModal } from "./components/SystemSettingsModal";
 
 // --- Types ---
 export type ViewType = "overview" | "sources" | "incomplete" | "queue" | "policies" | "published";
@@ -66,11 +68,22 @@ export default function App() {
     return saved ? Number(saved) : null;
   });
   const [isSystemOnline, setIsSystemOnline] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // جلب وحدات الإعلام + حالة النظام الآلي من الداتابيس
   useEffect(() => {
     api.getMediaUnits()
       .then((res) => setMediaUnits(res.data || []))
       .catch(() => setMediaUnits([]));
+
+    api.getSystemToggles()
+      .then((res) => {
+        const d = res.data || {};
+        // النظام "شغّال" لو الثلاثة مفعّلين
+        const allOn = d.scheduler_enabled && d.classifier_enabled && d.flow_enabled;
+        setIsSystemOnline(!!allOn);
+      })
+      .catch(() => setIsSystemOnline(false));
   }, []);
 
   // حفظ الصفحة الحالية
@@ -128,45 +141,35 @@ export default function App() {
               </button>
             );
           })}
+
+          {/* زر الإعدادات */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 text-gray-400 hover:bg-white/5 hover:text-white border border-transparent mt-2"
+          >
+            <Settings2 size={22} />
+            {isSidebarOpen && (
+              <motion.span initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="font-medium whitespace-nowrap">
+                إعدادات النظام
+              </motion.span>
+            )}
+          </button>
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-4">
           {isSidebarOpen && (
-            <div className="px-2 space-y-4">
-              <button 
-                onClick={() => setIsSystemOnline(!isSystemOnline)}
-                className={`w-full p-4 rounded-2xl border transition-all duration-300 flex flex-col gap-3 group
-                  ${isSystemOnline ? "bg-emerald-500/10 border-emerald-500/40 shadow-lg shadow-emerald-500/5" : "bg-white/5 border-white/5 hover:border-white/20"}`}
+            <div className="px-2 space-y-2">
+              <label className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 block font-semibold">وحدة الإعلام</label>
+              <select 
+                value={selectedUnitId || ""} 
+                onChange={(e) => setSelectedUnitId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full bg-[#020617] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
               >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isSystemOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'}`} />
-                    <span className="text-[11px] font-bold uppercase tracking-wider">النظام الآلي</span>
-                  </div>
-                  <div className={`w-8 h-4 rounded-full relative transition-colors ${isSystemOnline ? 'bg-emerald-500' : 'bg-white/10'}`}>
-                    <motion.div animate={{ x: isSystemOnline ? 16 : 2 }} className="absolute top-0.5 left-0 w-3 h-3 bg-white rounded-full shadow-sm" />
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`text-[10px] font-medium ${isSystemOnline ? 'text-emerald-400' : 'text-gray-500'}`}>
-                    {isSystemOnline ? "النظام يعمل حالياً بصورة مستقلة" : "النظام متوقف (بانتظار التشغيل)"}
-                  </span>
-                </div>
-              </button>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 block font-semibold">وحدة الإعلام</label>
-                <select 
-                  value={selectedUnitId || ""} 
-                  onChange={(e) => setSelectedUnitId(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full bg-[#020617] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-                >
-                  <option value="">كل الوحدات</option>
-                  {mediaUnits.map(unit => (
-                    <option key={unit.id} value={unit.id}>{unit.name}</option>
-                  ))}
-                </select>
-              </div>
+                <option value="">كل الوحدات</option>
+                {mediaUnits.map(unit => (
+                  <option key={unit.id} value={unit.id}>{unit.name}</option>
+                ))}
+              </select>
             </div>
           )}
           <button 
@@ -227,6 +230,13 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
       `}</style>
+
+      {/* Modal إعدادات النظام */}
+      <SystemSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSystemStatusChange={(enabled) => setIsSystemOnline(enabled)}
+      />
     </div>
   );
 }

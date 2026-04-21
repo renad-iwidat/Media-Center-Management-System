@@ -1,6 +1,6 @@
 /**
  * Start Scheduler
- * سكريبت لبدء الـ scheduler
+ * سكريبت لبدء الـ scheduler — يقرأ الإعدادات من الداتابيس
  */
 
 import { schedulerService } from '../services/news/scheduler.service';
@@ -8,12 +8,11 @@ import { schedulerService } from '../services/news/scheduler.service';
 async function main() {
   try {
     console.log('🎯 بدء خدمة الجدولة...\n');
+    console.log('📡 قراءة الإعدادات من الداتابيس...\n');
 
-    // الحصول على الفاصل الزمني من البيئة (افتراضي: 10 دقائق)
-    const intervalMinutes = parseInt(process.env.SCHEDULER_INTERVAL || '10', 10);
-
-    // بدء الـ scheduler
-    schedulerService.start(intervalMinutes);
+    // start() تقرأ الـ interval من الداتابيس تلقائياً
+    // الـ fallback هو 15 دقيقة لو الداتابيس ما رد
+    await schedulerService.start(15);
 
     // عرض المعلومات
     console.log(schedulerService.getInfo());

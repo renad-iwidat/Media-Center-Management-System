@@ -1,10 +1,14 @@
 /**
  * Unclassified Processor Service
- * خدمة معالجة الأخبار بدون تصنيف
+ * خدمة معالجة الأخبار بدون تصنيف — AI batches parallel
  */
 
 import { RawDataService } from '../database/database.service';
 import { aiClassifierService } from './ai-classifier.service';
+import { SystemSettingsService } from '../database/system-settings.service';
+
+/** حجم الـ batch للـ AI */
+const AI_BATCH_SIZE = 5;
 
 /**
  * واجهة لخبر بدون تصنيف
@@ -31,7 +35,7 @@ export interface ProcessingResult {
     id: number;
     title: string;
     category: string;
-    categoryId: number;
+    categoryId: number | null;
     success: boolean;
     error?: string;
   }>;
@@ -70,60 +74,69 @@ class UnclassifiedProcessorService {
   }
 
   /**
-   * معالجة الأخبار بدون تصنيف
+   * معالجة الأخبار بدون تصنيف — batches parallel
    */
   async processUnclassifiedArticles(): Promise<ProcessingResult> {
+    const classifierEnabled = await SystemSettingsService.getBoolean('classifier_enabled', true);
+    if (!classifierEnabled) {
+      console.log('⏸️  التصنيف الآلي متوقف (classifier_enabled = false)');
+      return { totalUnclassified: 0, processedCount: 0, failedCount: 0, details: [] };
+    }
+
     const unclassified = await this.getUnclassifiedArticles();
+    if (unclassified.length === 0) {
+      console.log('✅ لا توجد أخبار بدون تصنيف');
+      return { totalUnclassified: 0, processedCount: 0, failedCount: 0, details: [] };
+    }
+
+    console.log(`🤖 تصنيف ${unclassified.length} خبر بـ batches من ${AI_BATCH_SIZE}...`);
     const details: ProcessingResult['details'] = [];
     let processedCount = 0;
     let failedCount = 0;
 
-    console.log(`📰 بدء معالجة ${unclassified.length} خبر بدون تصنيف...`);
+    for (let i = 0; i < unclassified.length; i += AI_BATCH_SIZE) {
+      const batch = unclassified.slice(i, i + AI_BATCH_SIZE);
+      const batchNum = Math.floor(i / AI_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(unclassified.length / AI_BATCH_SIZE);
+      console.log(`   🤖 batch ${batchNum}/${totalBatches} (${batch.length} خبر سوا)...`);
 
-    for (const article of unclassified) {
-      try {
-        // تصنيف الخبر
-        const classification = await aiClassifierService.classifyArticle(
-          article.title,
-          article.content
-        );
+      // تصنيف الـ batch كله سوا
+      const classifyResults = await Promise.allSettled(
+        batch.map((a) => aiClassifierService.classifyArticle(a.title, a.content))
+      );
 
-        // تحديث الخبر في قاعدة البيانات
-        await RawDataService.updateCategory(article.id, classification.categoryId);
+      // تحديث الداتابيس — batch parallel
+      const updateResults = await Promise.allSettled(
+        batch.map((article, j) => {
+          const r = classifyResults[j];
+          // إذا فشل التصنيف → categoryId = null (مش 1)
+          const categoryId = r.status === 'fulfilled' ? r.value.categoryId : null;
+          return RawDataService.updateCategory(article.id, categoryId).then(() => ({
+            article,
+            classification: r.status === 'fulfilled' ? r.value : null,
+          }));
+        })
+      );
 
-        details.push({
-          id: article.id,
-          title: article.title,
-          category: classification.category,
-          categoryId: classification.categoryId,
-          success: true,
-        });
+      for (let j = 0; j < batch.length; j++) {
+        const classifyR = classifyResults[j];
+        const updateR = updateResults[j];
 
-        processedCount++;
-        console.log(`✅ تم تصنيف: ${article.title} -> ${classification.category}`);
-      } catch (error) {
-        failedCount++;
-        const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
-        
-        details.push({
-          id: article.id,
-          title: article.title,
-          category: 'محلي',
-          categoryId: 1,
-          success: false,
-          error: errorMessage,
-        });
-
-        console.error(`❌ فشل تصنيف: ${article.title} - ${errorMessage}`);
+        if (updateR.status === 'fulfilled') {
+          const category = classifyR.status === 'fulfilled' ? classifyR.value.category : 'غير مصنف (خطأ)';
+          const categoryId = classifyR.status === 'fulfilled' ? classifyR.value.categoryId : null;
+          details.push({ id: batch[j].id, title: batch[j].title, category, categoryId, success: true });
+          processedCount++;
+          console.log(`   ✅ ${batch[j].title.substring(0, 50)} → ${category}`);
+        } else {
+          details.push({ id: batch[j].id, title: batch[j].title, category: 'غير مصنف (خطأ)', categoryId: null, success: false, error: String(updateR.reason) });
+          failedCount++;
+        }
       }
     }
 
-    return {
-      totalUnclassified: unclassified.length,
-      processedCount,
-      failedCount,
-      details,
-    };
+    console.log(`✅ تصنيف خلص: ${processedCount} نجح | ${failedCount} فشل\n`);
+    return { totalUnclassified: unclassified.length, processedCount, failedCount, details };
   }
 }
 

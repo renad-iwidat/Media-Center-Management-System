@@ -61,9 +61,10 @@ export class PublishedItemsService {
           pi.published_at,
           rd.image_url,
           rd.url as original_url,
+          rd.pub_date,
           c.name as category_name,
           mu.name as media_unit_name,
-          CASE WHEN pi.queue_id IS NULL THEN 'automated' ELSE 'editorial' END as flow_type,
+          c.flow as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
@@ -102,9 +103,10 @@ export class PublishedItemsService {
           pi.published_at,
           rd.image_url,
           rd.url as original_url,
+          rd.pub_date,
           c.name as category_name,
           mu.name as media_unit_name,
-          CASE WHEN pi.queue_id IS NULL THEN 'automated' ELSE 'editorial' END as flow_type,
+          c.flow as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
@@ -142,9 +144,10 @@ export class PublishedItemsService {
           pi.published_at,
           rd.image_url,
           rd.url as original_url,
+          rd.pub_date,
           c.name as category_name,
           mu.name as media_unit_name,
-          CASE WHEN pi.queue_id IS NULL THEN 'automated' ELSE 'editorial' END as flow_type,
+          c.flow as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
@@ -184,9 +187,10 @@ export class PublishedItemsService {
           pi.published_at,
           rd.image_url,
           rd.url as original_url,
+          rd.pub_date,
           c.name as category_name,
           mu.name as media_unit_name,
-          CASE WHEN pi.queue_id IS NULL THEN 'automated' ELSE 'editorial' END as flow_type,
+          c.flow as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
@@ -215,9 +219,6 @@ export class PublishedItemsService {
     limit: number = 50
   ): Promise<PublishedItemWithDetails[]> {
     try {
-      const queueCondition =
-        flowType === 'automated' ? 'IS NULL' : 'IS NOT NULL';
-
       const result = await query(
         `SELECT 
           pi.id,
@@ -232,18 +233,19 @@ export class PublishedItemsService {
           pi.published_at,
           rd.image_url,
           rd.url as original_url,
+          rd.pub_date,
           c.name as category_name,
           mu.name as media_unit_name,
-          CASE WHEN pi.queue_id IS NULL THEN 'automated' ELSE 'editorial' END as flow_type,
+          c.flow as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
         JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
-        WHERE pi.is_active = true AND pi.queue_id ${queueCondition}
+        WHERE pi.is_active = true AND c.flow = $1
         ORDER BY pi.published_at DESC
-        LIMIT $1`,
-        [limit]
+        LIMIT $2`,
+        [flowType, limit]
       );
       return result.rows;
     } catch (error) {
@@ -262,13 +264,15 @@ export class PublishedItemsService {
         `SELECT COUNT(*) as total FROM published_items WHERE is_active = true`
       );
 
-      // عدد المحتوى الأوتوماتيكي والتحريري
+      // عدد المحتوى الأوتوماتيكي والتحريري — بناءً على categories.flow
       const flowResult = await query(
         `SELECT 
-          COUNT(CASE WHEN queue_id IS NULL THEN 1 END) as automated_count,
-          COUNT(CASE WHEN queue_id IS NOT NULL THEN 1 END) as editorial_count
-        FROM published_items 
-        WHERE is_active = true`
+          COUNT(CASE WHEN c.flow = 'automated' THEN 1 END) as automated_count,
+          COUNT(CASE WHEN c.flow = 'editorial' THEN 1 END) as editorial_count
+        FROM published_items pi
+        JOIN raw_data rd ON pi.raw_data_id = rd.id
+        JOIN categories c ON rd.category_id = c.id
+        WHERE pi.is_active = true`
       );
 
       // المحتوى حسب الفئة

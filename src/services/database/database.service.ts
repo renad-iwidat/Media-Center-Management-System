@@ -59,11 +59,11 @@ export class SourceTypeService {
  */
 export class SourceService {
   /**
-   * الحصول على جميع المصادر
+   * الحصول على جميع المصادر مع آخر وقت سحب
    */
   static async getAll(): Promise<Source[]> {
     const result = await query(
-      `SELECT s.*, st.name as source_type_name 
+      `SELECT s.id, s.source_type_id, s.url, s.name, s.is_active, s.created_at, s.default_category_id, s.last_fetched_at, st.name as source_type_name 
        FROM sources s 
        LEFT JOIN source_types st ON s.source_type_id = st.id 
        ORDER BY s.id`
@@ -84,7 +84,7 @@ export class SourceService {
    */
   static async getActive(): Promise<Source[]> {
     const result = await query(
-      `SELECT id, source_type_id, url, name, is_active, created_at, default_category_id 
+      `SELECT id, source_type_id, url, name, is_active, created_at, default_category_id, last_fetched_at 
        FROM sources 
        WHERE is_active = true 
        ORDER BY id`
@@ -143,6 +143,17 @@ export class SourceService {
     );
     return result.rows[0] || null;
   }
+
+  /**
+   * تحديث آخر وقت سحب للمصدر
+   */
+  static async updateLastFetched(id: number): Promise<Source | null> {
+    const result = await query(
+      `UPDATE sources SET last_fetched_at = NOW() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    return result.rows[0] || null;
+  }
 }
 
 /**
@@ -171,8 +182,8 @@ export class RawDataService {
   static async create(data: Omit<RawData, 'id' | 'fetched_at'>): Promise<RawData> {
     const result = await query(
       `INSERT INTO raw_data 
-       (source_id, source_type_id, category_id, url, title, content, image_url, tags, fetch_status, fetched_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) 
+       (source_id, source_type_id, category_id, url, title, content, image_url, tags, fetch_status, pub_date, fetched_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) 
        RETURNING *`,
       [
         data.source_id,
@@ -184,6 +195,7 @@ export class RawDataService {
         data.image_url,
         data.tags,
         data.fetch_status || 'pending',
+        data.pub_date || null,
       ]
     );
     return result.rows[0];
@@ -251,7 +263,7 @@ export class RawDataService {
   /**
    * تحديث تصنيف الخبر
    */
-  static async updateCategory(id: number, category_id: number): Promise<RawData | null> {
+  static async updateCategory(id: number, category_id: number | null): Promise<RawData | null> {
     const result = await query(
       'UPDATE raw_data SET category_id = $1 WHERE id = $2 RETURNING *',
       [category_id, id]

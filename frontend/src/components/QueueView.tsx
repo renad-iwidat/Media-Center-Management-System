@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X } from "lucide-react";
+import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X, Trash } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../services/api";
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -22,6 +22,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const [inspectionResult, setInspectionResult] = useState<any>(null);
   const [policyResults, setPolicyResults] = useState<any[]>([]); // نتائج سياسات التعديل
   const [notification, setNotification] = useState<NotificationData | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Filter states
   const [searchTitle, setSearchTitle] = useState("");
@@ -211,6 +213,26 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       });
       console.error(err);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await api.deleteAllArticles();
+      setQueue([]);
+      setNotification({
+        type: "success",
+        message: `✅ تم حذف جميع الأخبار بنجاح`,
+      });
+    } catch (err) {
+      setNotification({
+        type: "error",
+        message: `❌ حدث خطأ أثناء الحذف الجماعي`,
+      });
+      console.error(err);
+    }
+    setIsBulkDeleting(false);
+    setShowBulkDeleteConfirm(false);
   };
 
   if (loading) return <LoadingSpinner />;
@@ -522,8 +544,16 @@ export function QueueView({ unitId }: { unitId: number | null }) {
               عدد النتائج: <span className="text-white font-bold">{filteredQueue.length}</span> من <span className="text-white font-bold">{queue.length}</span>
             </div>
             {filteredQueue.length > 0 && (
-              <div className="text-sm text-gray-400">
-                الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredQueue.length / itemsPerPage)}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  className="flex items-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                >
+                  <Trash size={14} /> حذف الكل
+                </button>
+                <div className="text-sm text-gray-400">
+                  الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredQueue.length / itemsPerPage)}</span>
+                </div>
               </div>
             )}
           </div>
@@ -572,7 +602,9 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                               </span>
                             </td>
                             <td className="py-4 px-6 text-center text-gray-400 text-xs font-mono">
-                              {new Date(item.created_at).toLocaleDateString('ar-SA')}
+                              {item.pub_date
+                                ? new Date(item.pub_date).toLocaleDateString('ar-SA')
+                                : new Date(item.created_at).toLocaleDateString('ar-SA')}
                             </td>
                             <td className="py-4 px-6 text-center">
                               <div className="flex gap-2 justify-center">

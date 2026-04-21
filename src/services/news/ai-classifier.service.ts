@@ -21,7 +21,7 @@ export interface AIClassificationResponse {
  */
 export interface ClassificationResult {
   category: string;
-  categoryId: number;
+  categoryId: number | null;
   confidence: boolean;
   rawResult: string;
 }
@@ -96,52 +96,83 @@ USER:
   }
 
   /**
-   * تصنيف خبر واحد
+   * تصنيف خبر واحد مع retry mechanism
    */
-  async classifyArticle(title: string, content: string): Promise<ClassificationResult> {
-    try {
-      const articleText = `${title}\n${content}`;
-      
-      // تنظيف الـ prompt من newlines لتفادي 400 من vLLM
-      const rawPrompt = `${this.systemPrompt}\n${articleText}/no_think`;
-      const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  async classifyArticle(title: string, content: string, retryCount: number = 2): Promise<ClassificationResult> {
+    let lastError: Error | null = null;
 
-      const payload = {
-        prompt: cleanPrompt,
-        think: false,
-        max_tokens: 200,
-        temperature: 0,
-      };
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        const articleText = `${title}\n${content}`;
+        
+        // تنظيف الـ prompt من newlines لتفادي 400 من vLLM
+        const rawPrompt = `${this.systemPrompt}\n${articleText}/no_think`;
+        const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
-      const response = await axios.post<AIClassificationResponse>(
-        this.apiUrl,
-        payload,
-        {
-          timeout: 30000,
+        const payload = {
+          prompt: cleanPrompt,
+          think: false,
+          max_tokens: 200,
+          temperature: 0,
+        };
+
+        const response = await axios.post<AIClassificationResponse>(
+          this.apiUrl,
+          payload,
+          {
+            timeout: 30000,
+          }
+        );
+
+        const rawResult = response.data.result || '';
+        const category = this.extractCategory(rawResult);
+        const categoryId = CATEGORY_MAP[category] || 1;
+        // confidence=true إذا الـ AI رجع تصنيف معروف، false إذا رجع "غير مصنف"
+        const confidence = category !== 'غير مصنف';
+
+        return {
+          category,
+          categoryId,
+          confidence,
+          rawResult,
+        };
+      } catch (error) {
+        lastError = error as Error;
+        
+        // إذا كان خطأ اتصال (socket hang up, timeout, etc.) وعندنا محاولات متبقية → retry
+        if (attempt < retryCount && this.isNetworkError(error)) {
+          console.warn(`   ⚠️  محاولة ${attempt + 1}/${retryCount} فشلت (${(error as Error).message}) — إعادة المحاولة...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // exponential backoff
+          continue;
         }
-      );
-
-      const rawResult = response.data.result || '';
-      const category = this.extractCategory(rawResult);
-      const categoryId = CATEGORY_MAP[category] || 1;
-
-      return {
-        category,
-        categoryId,
-        confidence: true,
-        rawResult,
-      };
-    } catch (error) {
-      console.error('❌ خطأ في تصنيف الخبر:', error);
-      
-      // في حالة الخطأ، نرجع تصنيف افتراضي (محلي)
-      return {
-        category: 'غير مصنف',
-        categoryId: 1,
-        confidence: false,
-        rawResult: 'خطأ في التصنيف',
-      };
+        
+        // خطأ غير اتصال أو انتهت المحاولات → break
+        break;
+      }
     }
+
+    // انتهت المحاولات أو خطأ غير اتصال → null
+    console.error(`❌ فشل تصنيف الخبر بعد ${retryCount + 1} محاولات:`, lastError?.message || lastError);
+    return {
+      category: 'غير مصنف',
+      categoryId: null, // null عشان يظهر بتاب "غير مصنف"
+      confidence: false,
+      rawResult: 'فشل التصنيف بعد عدة محاولات',
+    };
+  }
+
+  /**
+   * التحقق مما إذا كان الخطأ من نوع network/timeout
+   */
+  private isNetworkError(error: any): boolean {
+    return (
+      error?.isAxiosError === true &&
+      (error?.code === 'ECONNRESET' ||
+       error?.code === 'ECONNREFUSED' ||
+       error?.code === 'ETIMEDOUT' ||
+       error?.code === 'ESOCKETTIMEDOUT' ||
+       error?.code === 'ECONNABORTED')
+    );
   }
 
   /**

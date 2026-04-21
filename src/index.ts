@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import path from 'path';
 import { environment } from './config/environment';
 import { testConnection } from './config/database';
+import { schedulerService } from './services/news/scheduler.service';
 
 // Routes
 import sourcesRoutes from './routes/database/sources.routes';
@@ -16,6 +17,8 @@ import newsRoutes from './routes/news/news.routes';
 import dataRoutes from './routes/news/data.routes';
 import flowRoutes from './routes/news/flow.routes';
 import editorialPolicyRoutes from './routes/news/editorial-policy.routes';
+import systemSettingsRoutes from './routes/news/system-settings.routes';
+import schedulerRoutes from './routes/news/scheduler.routes';
 
 const app = express();
 
@@ -248,6 +251,8 @@ app.use('/api/flow', (req, res, next) => {
   console.log(`📍 Flow Route: ${req.method} ${req.path}`);
   next();
 }, flowRoutes);
+app.use('/api/settings', systemSettingsRoutes);
+app.use('/api/scheduler', schedulerRoutes);
 
 // 404 Handler
 app.use((req, res) => {
@@ -255,8 +260,8 @@ app.use((req, res) => {
 });
 
 // Start Server
-const PORT = environment.PORT;
-app.listen(PORT, () => {
+const PORT = Number(environment.PORT);
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📝 Environment: ${environment.NODE_ENV}`);
   console.log(`📚 API Routes:`);
@@ -272,4 +277,13 @@ app.listen(PORT, () => {
   console.log(`   - GET /api/data/statistics`);
   console.log(`\n📖 Swagger Documentation:`);
   console.log(`   - http://localhost:${PORT}/api-docs`);
+
+  // 🚀 بدء الـ Scheduler تلقائياً عند تشغيل السيرفر
+  console.log(`\n⏰ بدء الـ Scheduler تلقائياً...`);
+  try {
+    await schedulerService.start(15); // 15 دقيقة
+    console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 15 دقيقة`);
+  } catch (error) {
+    console.error(`❌ خطأ في بدء الـ Scheduler:`, error);
+  }
 });

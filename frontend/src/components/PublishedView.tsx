@@ -250,7 +250,9 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center text-gray-400 text-xs font-mono">
-                          {item.published_at ? new Date(item.published_at).toLocaleDateString('ar-SA') : '—'}
+                          {item.pub_date
+                            ? new Date(item.pub_date).toLocaleDateString('ar-SA')
+                            : item.published_at ? new Date(item.published_at).toLocaleDateString('ar-SA') : '—'}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <button
@@ -345,8 +347,12 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                 </p>
               </div>
               <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
-                <p className="text-xs text-gray-500 mb-1">تاريخ النشر</p>
-                <p className="text-sm font-bold text-white">{selectedItem.published_at ? new Date(selectedItem.published_at).toLocaleDateString('ar-SA') : '—'}</p>
+                <p className="text-xs text-gray-500 mb-1">تاريخ النشر الأصلي</p>
+                <p className="text-sm font-bold text-white">
+                  {selectedItem.pub_date
+                    ? new Date(selectedItem.pub_date).toLocaleDateString('ar-SA')
+                    : selectedItem.published_at ? new Date(selectedItem.published_at).toLocaleDateString('ar-SA') : '—'}
+                </p>
               </div>
               <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
                 <p className="text-xs text-gray-500 mb-1">الوسيط</p>

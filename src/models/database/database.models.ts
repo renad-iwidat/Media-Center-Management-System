@@ -18,6 +18,7 @@ export interface Source {
   is_active: boolean;
   created_at: Date;
   default_category_id: number;
+  last_fetched_at: Date | null;
 }
 
 // Category - التصنيفات
@@ -34,7 +35,7 @@ export interface RawData {
   id: number;
   source_id: number;
   source_type_id: number;
-  category_id: number;
+  category_id: number | null;
   url: string;
   title: string;
   content: string;
@@ -42,6 +43,7 @@ export interface RawData {
   tags: string[];
   fetch_status: string;
   fetched_at: Date;
+  pub_date: Date | null;  // تاريخ نشر الخبر على الموقع الأصلي
 }
 
 // EditorialPolicy - سياسات التحرير

@@ -73,6 +73,44 @@ export class SourcesController {
   }
 
   /**
+   * الحصول على معلومات المصادر مع آخر وقت سحب
+   */
+  static async getSourcesWithFetchInfo(req: Request, res: Response) {
+    try {
+      const sources = await SourceService.getActive();
+      
+      // تنسيق البيانات لتتضمن معلومات واضحة عن آخر سحب
+      const sourcesWithInfo = sources.map(source => ({
+        id: source.id,
+        name: source.name,
+        url: source.url,
+        is_active: source.is_active,
+        source_type_id: source.source_type_id,
+        default_category_id: source.default_category_id,
+        created_at: source.created_at,
+        last_fetched_at: source.last_fetched_at,
+        last_fetched_formatted: source.last_fetched_at 
+          ? new Date(source.last_fetched_at).toLocaleString('ar-SA')
+          : 'لم يتم السحب بعد',
+        is_recently_fetched: source.last_fetched_at 
+          ? (Date.now() - new Date(source.last_fetched_at).getTime()) < 3600000 // آخر ساعة
+          : false,
+      }));
+
+      res.json({
+        success: true,
+        data: sourcesWithInfo,
+        count: sourcesWithInfo.length,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * إنشاء مصدر جديد
    */
   static async createSource(req: Request, res: Response) {

@@ -9,7 +9,7 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getSources()
+    api.getSourcesWithFetchInfo()
       .then((res) => setSources(res.data || []))
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
@@ -50,7 +50,14 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
                 </div>
                 <div className="flex justify-between items-center text-[10px]">
                   <span className="text-gray-500">آخر سحب</span>
-                  <span className="text-gray-300 font-mono">{source.last_fetched_at ? new Date(source.last_fetched_at).toLocaleString('ar') : '—'}</span>
+                  <div className="flex items-center gap-2">
+                    {source.is_recently_fetched && (
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    )}
+                    <span className="text-gray-300 font-mono text-right">
+                      {source.last_fetched_formatted}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

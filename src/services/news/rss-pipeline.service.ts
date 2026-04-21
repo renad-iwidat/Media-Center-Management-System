@@ -1,174 +1,166 @@
 /**
  * RSS Pipeline Service
- * خدمة شاملة لسحب وحفظ الأخبار
+ * خدمة سحب الأخبار — parallel fetch لكل المصادر سوا
  */
 
 import { SourceService, RawDataService } from '../database/database.service';
 import { rssFetcherService, RSSSource } from './rss-fetcher.service';
-import { articleSaverService, ArticleWithSource } from './article-saver.service';
+import { SystemSettingsService } from '../database/system-settings.service';
 
-/**
- * واجهة لنتيجة الـ pipeline
- */
+export interface ArticleToSave {
+  title: string;
+  description: string;
+  link: string;
+  pubDate: string;
+  image_url?: string;
+  tags?: string[];
+  source: {
+    id: number;
+    source_type_id: number;
+    default_category_id: number | null;
+  };
+  sourceName: string;
+}
+
+/** تحويل pubDate string إلى Date أو null */
+function parsePubDate(pubDate: string): Date | null {
+  if (!pubDate) return null;
+  const d = new Date(pubDate);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export interface PipelineResult {
   totalSources: number;
-  totalArticles: number;
-  savedCount: number;
-  failedCount: number;
+  newArticles: ArticleToSave[];   // الأخبار الجديدة جاهزة للتصنيف والحفظ
   skippedCount: number;
   duration: number;
   details: {
     source: string;
-    articlesCount: number;
-    savedCount: number;
-    failedCount: number;
+    fetched: number;
+    newCount: number;
     skippedCount: number;
   }[];
 }
 
-/**
- * فئة RSS Pipeline Service
- */
+/** حجم الـ batch لفحص الروابط الموجودة */
+const URL_CHECK_BATCH = 10;
+
 class RSSPipelineService {
   /**
-   * تشغيل الـ pipeline الكامل
+   * سحب الأخبار من جميع المصادر بشكل parallel
+   * ويرجع الأخبار الجديدة فقط — بدون تصنيف أو حفظ (هاد دور الـ scheduler)
    */
   async runPipeline(articlesPerSource: number = 20): Promise<PipelineResult> {
     const startTime = Date.now();
+
+    // التحقق من إعداد الـ scheduler
+    const schedulerEnabled = await SystemSettingsService.getBoolean('scheduler_enabled', true);
+    if (!schedulerEnabled) {
+      console.log('⏸️  السحب متوقف (scheduler_enabled = false)');
+      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [] };
+    }
+
+    const perSource = await SystemSettingsService.getNumber('articles_per_source', articlesPerSource);
+    console.log(`\n📡 جلب المصادر النشطة...`);
+    const sources = await SourceService.getActive();
+    console.log(`✅ ${sources.length} مصدر — سحب ${perSource} خبر من كل مصدر (parallel)\n`);
+
+    // ── المرحلة 1: سحب كل المصادر سوا ────────────────────────────────────
+    const fetchResults = await Promise.allSettled(
+      sources.map(async (source) => {
+        const rssSource: RSSSource = {
+          id: source.id,
+          name: source.name,
+          url: source.url,
+          source_type_id: source.source_type_id,
+          default_category_id: source.default_category_id,
+        };
+        const results = await rssFetcherService.fetchArticlesFromSource(rssSource, perSource);
+        
+        // تحديث آخر وقت سحب للمصدر
+        if (results.some(r => r.article && !r.error)) {
+          await SourceService.updateLastFetched(source.id);
+        }
+        
+        return { source, results };
+      })
+    );
+
+    // ── المرحلة 2: تجميع الأخبار الناجحة ─────────────────────────────────
+    const allCandidates: ArticleToSave[] = [];
     const details: PipelineResult['details'] = [];
-    let totalArticles = 0;
-    let savedCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
 
-    try {
-      console.log('🚀 بدء pipeline سحب وحفظ الأخبار...\n');
+    for (const settled of fetchResults) {
+      if (settled.status === 'rejected') continue;
+      const { source, results } = settled.value;
 
-      // 1. جلب المصادر النشطة
-      console.log('📡 جلب المصادر النشطة...');
-      const sources = await SourceService.getActive();
-      console.log(`✅ تم جلب ${sources.length} مصدر\n`);
-
-      // 2. سحب الأخبار من كل مصدر
-      for (const source of sources) {
-        try {
-          console.log(`📰 سحب من: ${source.name}`);
-
-          // تحويل المصدر إلى صيغة RSSSource
-          const rssSource: RSSSource = {
+      const successful = results
+        .filter((r) => r.article && !r.error)
+        .map((r) => ({
+          title: r.article!.title,
+          description: r.article!.description,
+          link: r.article!.link,
+          pubDate: r.article!.pubDate,
+          image_url: r.article!.image_url,
+          tags: r.article!.tags,
+          source: {
             id: source.id,
-            name: source.name,
-            url: source.url,
             source_type_id: source.source_type_id,
             default_category_id: source.default_category_id,
-          };
+          },
+          sourceName: source.name,
+        }));
 
-          // سحب الأخبار
-          const fetchResults = await rssFetcherService.fetchArticlesFromSource(
-            rssSource,
-            articlesPerSource
-          );
+      allCandidates.push(...successful);
+      console.log(`   📥 ${source.name}: ${successful.length} خبر`);
+    }
 
-          // تصفية الأخبار الناجحة
-          let successfulArticles = fetchResults
-            .filter((r) => r.article && !r.error)
-            .map((r) => ({
-              title: r.article!.title,
-              description: r.article!.description,
-              link: r.article!.link,
-              pubDate: r.article!.pubDate,
-              image_url: r.article!.image_url,
-              tags: r.article!.tags,
-              source: {
-                id: source.id,
-                source_type_id: source.source_type_id,
-                default_category_id: source.default_category_id,
-              },
-            })) as ArticleWithSource[];
+    // ── المرحلة 3: فلترة الموجودين — batch parallel ───────────────────────
+    console.log(`\n🔍 فحص ${allCandidates.length} خبر (موجود مسبقاً؟) — batches من ${URL_CHECK_BATCH}...`);
 
-          console.log(`   📥 تم سحب ${successfulArticles.length} خبر`);
+    const newArticles: ArticleToSave[] = [];
+    let skippedCount = 0;
 
-          // تصفية الروابط الموجودة بالفعل قبل الحفظ
-          const newArticles: ArticleWithSource[] = [];
-          for (const article of successfulArticles) {
-            const exists = await RawDataService.existsByUrl(article.link);
-            if (!exists) {
-              newArticles.push(article);
-            } else {
-              console.log(`   ⏭️  تخطي: ${article.title} (الرابط موجود)`);
-              skippedCount++;
-            }
-          }
-
-          console.log(`   ✅ أخبار جديدة: ${newArticles.length}`);
-
-          // 3. حفظ الأخبار الجديدة فقط
-          if (newArticles.length > 0) {
-            const saveResult = await articleSaverService.saveArticles(
-              newArticles
-            );
-
-            totalArticles += saveResult.totalArticles;
-            savedCount += saveResult.savedCount;
-            failedCount += saveResult.failedCount;
-
-            details.push({
-              source: source.name,
-              articlesCount: newArticles.length,
-              savedCount: saveResult.savedCount,
-              failedCount: saveResult.failedCount,
-              skippedCount: 0,
-            });
-
-            console.log(
-              `   ✅ تم حفظ ${saveResult.savedCount}/${newArticles.length}\n`
-            );
-          } else {
-            details.push({
-              source: source.name,
-              articlesCount: 0,
-              savedCount: 0,
-              failedCount: 0,
-              skippedCount: successfulArticles.length,
-            });
-          }
-        } catch (error) {
-          console.error(`❌ خطأ في معالجة ${source.name}:`, error);
-          details.push({
-            source: source.name,
-            articlesCount: 0,
-            savedCount: 0,
-            failedCount: 0,
-            skippedCount: 0,
-          });
+    // نقسم الـ candidates على batches ونفحصهم سوا
+    for (let i = 0; i < allCandidates.length; i += URL_CHECK_BATCH) {
+      const batch = allCandidates.slice(i, i + URL_CHECK_BATCH);
+      const existsResults = await Promise.all(
+        batch.map((a) => RawDataService.existsByUrl(a.link))
+      );
+      for (let j = 0; j < batch.length; j++) {
+        if (existsResults[j]) {
+          skippedCount++;
+        } else {
+          newArticles.push(batch[j]);
         }
       }
-
-      const duration = Date.now() - startTime;
-
-      console.log('\n📊 ملخص النتائج:');
-      console.log(`   إجمالي المصادر: ${sources.length}`);
-      console.log(`   إجمالي الأخبار المسحوبة: ${totalArticles}`);
-      console.log(`   ✅ تم حفظها: ${savedCount}`);
-      console.log(`   ⏭️  تم تخطيها (موجودة): ${skippedCount}`);
-      console.log(`   ❌ فشل الحفظ: ${failedCount}`);
-      console.log(`   ⏱️  الوقت المستغرق: ${(duration / 1000).toFixed(2)} ثانية\n`);
-
-      return {
-        totalSources: sources.length,
-        totalArticles,
-        savedCount,
-        failedCount,
-        skippedCount,
-        duration,
-        details,
-      };
-    } catch (error) {
-      console.error('❌ خطأ في الـ pipeline:', error);
-      throw error;
     }
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ ${newArticles.length} خبر جديد | ⏭️  ${skippedCount} موجود مسبقاً | ⏱️  ${(duration / 1000).toFixed(1)}s\n`);
+
+    // تجميع الـ details لكل مصدر
+    for (const settled of fetchResults) {
+      if (settled.status === 'rejected') continue;
+      const { source, results } = settled.value;
+      const fetched = results.filter((r) => r.article && !r.error).length;
+      const sourceNew = newArticles.filter((a) => a.source.id === source.id).length;
+      details.push({
+        source: source.name,
+        fetched,
+        newCount: sourceNew,
+        skippedCount: fetched - sourceNew,
+      });
+    }
+
+    return {
+      totalSources: sources.length,
+      newArticles,
+      skippedCount,
+      duration,
+      details,
+    };
   }
 }
 
-// تصدير instance واحد من الخدمة
 export const rssPipelineService = new RSSPipelineService();

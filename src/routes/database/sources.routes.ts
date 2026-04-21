@@ -19,6 +19,11 @@ router.get('/', SourcesController.getAllSources);
 router.get('/active', SourcesController.getActiveSources);
 
 /**
+ * GET /api/sources/fetch-info - الحصول على معلومات المصادر مع آخر وقت سحب
+ */
+router.get('/fetch-info/all', SourcesController.getSourcesWithFetchInfo);
+
+/**
  * GET /api/sources/:id - الحصول على مصدر بالـ ID
  */
 router.get('/:id', SourcesController.getSourceById);

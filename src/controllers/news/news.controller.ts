@@ -108,6 +108,7 @@ export class NewsController {
         image_url,
         tags: tags || [],
         fetch_status: fetch_status || 'pending',
+        pub_date: null,
       });
 
       res.status(201).json({

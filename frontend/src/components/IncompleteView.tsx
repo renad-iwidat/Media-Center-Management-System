@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AlertTriangle, Search, ArrowRight, Trash2, Save } from "lucide-react";
+import { AlertTriangle, Search, ArrowRight, Trash2, Save, Trash } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../services/api";
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -18,6 +18,8 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   const [notification, setNotification] = useState<NotificationData | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; articleId: number | null }>({ show: false, articleId: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   
   // Filter states
   const [searchTitle, setSearchTitle] = useState("");
@@ -115,7 +117,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     
     setIsSaving(true);
     try {
-      await api.updateArticleContent(editingArticle.id, {
+      const response = await api.updateArticleContent(editingArticle.id, {
         content: editedContent || editingArticle.content,
         title: editedTitle || editingArticle.title,
         imageUrl: editedImageUrl || editingArticle.image_url
@@ -125,8 +127,11 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       setArticles(prev => prev.filter(a => a.id !== editingArticle.id));
       setEditingArticle(null);
       
-      // إظهار رسالة نجاح
-      setNotification({ type: 'success', message: 'تم حفظ الخبر وإرساله لستوديو التحرير' });
+      // إظهار رسالة نجاح حسب نوع الفلو
+      const message = response.flowType === 'automated' 
+        ? 'تم إكمال الخبر ونشره مباشرة ✅'
+        : 'تم حفظ الخبر وإرساله لستوديو التحرير';
+      setNotification({ type: 'success', message });
     } catch (err) {
       setNotification({ type: 'error', message: 'حدث خطأ أثناء الحفظ' });
       console.error(err);
@@ -150,7 +155,64 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     setDeleteConfirm({ show: false, articleId: null });
   };
 
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await api.deleteIncompleteArticles();
+      setArticles([]);
+      setNotification({ type: 'success', message: 'تم حذف جميع الأخبار الناقصة بنجاح' });
+    } catch (err) {
+      console.error('خطأ في الحذف الجماعي:', err);
+      setNotification({ type: 'error', message: 'حدث خطأ أثناء الحذف الجماعي' });
+    }
+    setIsBulkDeleting(false);
+    setShowBulkDeleteConfirm(false);
+  };
+
   if (loading) return <LoadingSpinner />;
+
+  // Bulk Delete Confirmation Modal
+  if (showBulkDeleteConfirm) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-[#0b1224] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
+        >
+          <div className="flex items-center justify-center w-12 h-12 bg-rose-500/10 rounded-full mx-auto">
+            <Trash size={24} className="text-rose-400" />
+          </div>
+          
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-bold text-white">حذف جميع الأخبار الناقصة</h3>
+            <p className="text-sm text-gray-400">هل أنت متأكد من حذف جميع الأخبار الناقصة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowBulkDeleteConfirm(false)}
+              disabled={isBulkDeleting}
+              className="flex-1 bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isBulkDeleting ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <><Trash size={16} /> حذف الكل</>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Delete Confirmation Modal
   if (deleteConfirm.show) {
@@ -290,7 +352,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><Save size={16} /> حفظ وإرسال لستوديو التحرير</>
+                <><Save size={16} /> حفظ وإرسال</>
               )}
             </button>
             <button
@@ -398,8 +460,16 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           عدد النتائج: <span className="text-white font-bold">{filteredArticles.length}</span> من <span className="text-white font-bold">{articles.length}</span>
         </div>
         {filteredArticles.length > 0 && (
-          <div className="text-sm text-gray-400">
-            الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              className="flex items-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            >
+              <Trash size={14} /> حذف الكل
+            </button>
+            <div className="text-sm text-gray-400">
+              الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
+            </div>
           </div>
         )}
       </div>
