@@ -33,8 +33,11 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
     });
   }, [unitId]);
 
-  // إجمالي في الانتظار
-  const totalPending = queueStats.reduce((sum, u) => sum + Number(u.pending_count || 0), 0);
+  // إجمالي في الانتظار (pending + incomplete)
+  const totalPending = queueStats.reduce(
+    (sum, u) => sum + Number(u.pending_count || 0) + Number(u.incomplete_count || 0),
+    0
+  );
 
   if (loading) return <LoadingSpinner />;
 
@@ -62,7 +65,9 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                   <p className="text-sm font-bold text-white truncate">{unit.name}</p>
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="bg-amber-400/5 border border-amber-400/10 rounded-xl p-2 text-center">
-                      <p className="text-amber-400 font-bold text-lg">{unit.pending_count || 0}</p>
+                      <p className="text-amber-400 font-bold text-lg">
+                        {(Number(unit.pending_count || 0) + Number(unit.incomplete_count || 0))}
+                      </p>
                       <p className="text-gray-500">انتظار</p>
                     </div>
                     <div className="bg-emerald-400/5 border border-emerald-400/10 rounded-xl p-2 text-center">
@@ -98,7 +103,9 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-amber-400/5 border border-amber-400/10 rounded-2xl p-4 text-center">
-                <p className="text-amber-400 font-bold text-2xl">{selectedUnit.pending_count || 0}</p>
+                <p className="text-amber-400 font-bold text-2xl">
+                  {(Number(selectedUnit.pending_count || 0) + Number(selectedUnit.incomplete_count || 0))}
+                </p>
                 <p className="text-gray-500 text-xs mt-1">في الانتظار</p>
               </div>
               <div className="bg-emerald-400/5 border border-emerald-400/10 rounded-2xl p-4 text-center">

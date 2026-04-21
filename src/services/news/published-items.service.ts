@@ -338,40 +338,47 @@ export class PublishedItemsService {
   }
 
   /**
+
    * جلب إحصائيات النشر والرفض اليومية
+   * automated_count = أخبار من categories.flow = 'automated'
+   * editorial_count  = أخبار من categories.flow = 'editorial'
    */
   async getDailyStats(mediaUnitId?: number, days: number = 30): Promise<any[]> {
     try {
-      const params: any[] = [];
-      let mediaUnitFilter = '';
+      const params: any[] = [days];
+      if (mediaUnitId) params.push(mediaUnitId);
+      const muFilter = mediaUnitId ? `AND pi.media_unit_id = $2` : '';
+      const muFilterEq = mediaUnitId ? `AND eq_rej.media_unit_id = $2` : '';
 
-      if (mediaUnitId) {
-        mediaUnitFilter = ` AND pi.media_unit_id = $1`;
-        params.push(mediaUnitId);
-      }
-
-      // جلب جميع الأيام من النشر والرفض معاً
       const result = await query(
         `WITH date_range AS (
-          SELECT DISTINCT DATE(published_at) as date FROM published_items 
-          WHERE DATE(published_at) >= CURRENT_DATE - INTERVAL '${days} days'${mediaUnitId ? ` AND media_unit_id = $1` : ''}
+          SELECT DISTINCT DATE(pi.published_at) AS date
+          FROM published_items pi
+          WHERE DATE(pi.published_at) >= CURRENT_DATE - ($1 || ' days')::INTERVAL
+          ${muFilter}
           UNION
-          SELECT DISTINCT DATE(updated_at) as date FROM editorial_queue 
-          WHERE status = 'rejected' AND DATE(updated_at) >= CURRENT_DATE - INTERVAL '${days} days'${mediaUnitId ? ` AND media_unit_id = $${params.length > 0 ? 1 : 1}` : ''}
+          SELECT DISTINCT DATE(eq_rej.updated_at) AS date
+          FROM editorial_queue eq_rej
+          WHERE eq_rej.status = 'rejected'
+            AND DATE(eq_rej.updated_at) >= CURRENT_DATE - ($1 || ' days')::INTERVAL
+          ${muFilterEq}
         )
-        SELECT 
+        SELECT
           dr.date,
-          COALESCE(mu.name, 'Unknown') as media_unit_name,
-          COALESCE(mu.id, 0) as media_unit_id,
-          COALESCE(COUNT(DISTINCT pi.id), 0) as published_count,
-          COALESCE(COUNT(DISTINCT CASE WHEN pi.queue_id IS NOT NULL THEN pi.id END), 0) as editorial_count,
-          COALESCE(COUNT(DISTINCT CASE WHEN pi.queue_id IS NULL THEN pi.id END), 0) as automated_count,
-          COALESCE(COUNT(DISTINCT eq.id), 0) as rejected_count
+          COALESCE(COUNT(DISTINCT pi.id), 0)                                                AS published_count,
+          COALESCE(COUNT(DISTINCT CASE WHEN c.flow = 'editorial'  THEN pi.id END), 0)       AS editorial_count,
+          COALESCE(COUNT(DISTINCT CASE WHEN c.flow = 'automated'  THEN pi.id END), 0)       AS automated_count,
+          COALESCE(COUNT(DISTINCT eq_rej.id), 0)                                            AS rejected_count
         FROM date_range dr
-        LEFT JOIN published_items pi ON DATE(pi.published_at) = dr.date${mediaUnitFilter}
-        LEFT JOIN media_units mu ON pi.media_unit_id = mu.id
-        LEFT JOIN editorial_queue eq ON DATE(eq.updated_at) = dr.date AND eq.status = 'rejected' AND eq.media_unit_id = ${mediaUnitId ? '$1' : 'eq.media_unit_id'}
-        GROUP BY dr.date, mu.name, mu.id
+        LEFT JOIN published_items pi
+               ON DATE(pi.published_at) = dr.date ${muFilter}
+        LEFT JOIN raw_data rd ON pi.raw_data_id = rd.id
+        LEFT JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN editorial_queue eq_rej
+               ON DATE(eq_rej.updated_at) = dr.date
+              AND eq_rej.status = 'rejected'
+              ${muFilterEq}
+        GROUP BY dr.date
         ORDER BY dr.date DESC`,
         params
       );
