@@ -3,7 +3,7 @@
  * سكريبت لتصنيف الأخبار بدون تصنيف
  */
 
-import { unclassifiedProcessorService } from '../services/news/unclassified-processor.service';
+import { unclassifiedProcessorService } from '../../services/news/unclassified-processor.service';
 
 async function main() {
   try {

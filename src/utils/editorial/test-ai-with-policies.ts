@@ -5,7 +5,7 @@
  */
 
 import axios from 'axios';
-import * as db from '../config/database';
+import * as db from '../../config/database';
 
 // ============================================================================
 // TYPES

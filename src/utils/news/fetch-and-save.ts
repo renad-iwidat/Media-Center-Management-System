@@ -3,7 +3,7 @@
  * سكريبت لسحب وحفظ الأخبار
  */
 
-import { rssPipelineService } from '../services/news/rss-pipeline.service';
+import { rssPipelineService } from '../../services/news/rss-pipeline.service';
 
 async function main() {
   try {

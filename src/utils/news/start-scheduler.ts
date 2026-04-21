@@ -3,7 +3,7 @@
  * سكريبت لبدء الـ scheduler — يقرأ الإعدادات من الداتابيس
  */
 
-import { schedulerService } from '../services/news/scheduler.service';
+import { schedulerService } from '../../services/news/scheduler.service';
 
 async function main() {
   try {

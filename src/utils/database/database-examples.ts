@@ -10,7 +10,7 @@ import {
   CategoryService,
   EditorialQueueService,
   PublishedItemService,
-} from '../services/database/database.service';
+} from '../../services/database/database.service';
 
 /**
  * مثال 1: إنشاء أنواع المصادر
@@ -95,6 +95,7 @@ export async function exampleCreateRawData() {
       image_url: 'https://example.com/image.jpg',
       tags: ['سياسة', 'أخبار'],
       fetch_status: 'success',
+      pub_date: new Date(),
     });
 
     console.log('✅ تم إنشاء البيانات الخام:', rawData);
