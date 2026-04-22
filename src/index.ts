@@ -19,6 +19,7 @@ import flowRoutes from './routes/news/flow.routes';
 import editorialPolicyRoutes from './routes/news/editorial-policy.routes';
 import systemSettingsRoutes from './routes/news/system-settings.routes';
 import schedulerRoutes from './routes/news/scheduler.routes';
+import { chatRoutes } from './routes/ai-hub';
 
 const app = express();
 
@@ -243,6 +244,7 @@ app.get('/db-test', async (req, res) => {
 app.use('/api/sources', sourcesRoutes);
 app.use('/api/news/editorial-policies', editorialPolicyRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/ai-hub/chat', chatRoutes);
 app.use('/api/data', (req, res, next) => {
   console.log(`📍 Data Route: ${req.method} ${req.path}`);
   next();

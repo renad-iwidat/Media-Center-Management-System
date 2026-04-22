@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, Loader2, User, Sparkles, Trash2, Paperclip } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { MessageSquare, Send, Loader2, User, Sparkles, Trash2, Paperclip, AlertCircle } from 'lucide-react';
+import { parseNumberedList } from '../../lib/markdown-parser';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+declare const __VITE_API_URL__: string;
 
 interface Message {
   role: 'user' | 'assistant';
@@ -10,12 +10,31 @@ interface Message {
   timestamp: Date;
 }
 
+interface ChatRequest {
+  prompt: string;
+  think?: boolean;
+  max_tokens?: number;
+  temperature?: number;
+}
+
+interface ChatResponse {
+  success: boolean;
+  result?: string;
+  error?: string;
+  remaining?: number;
+  resetTime?: number;
+}
+
+const API_BASE_URL = __VITE_API_URL__ || 'http://localhost:4000/api';
+
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'أهلاً بك! أنا مساعدك الذكي المتخصص في شؤون الإعلام وصناعة المحتوى. كيف يمكنني مساعدتك اليوم؟', timestamp: new Date() }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [resetTime, setResetTime] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,32 +46,74 @@ export default function ChatInterface() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    // Check if user has remaining messages
+    if (remaining === 0) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `عذراً، لقد وصلت إلى الحد الأقصى من الرسائل (3 رسائل يومياً). يرجى المحاولة غداً.`, 
+        timestamp: new Date() 
+      }]);
+      return;
+    }
+
     const userMessage: Message = { role: 'user', content: input, timestamp: new Date() };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      // Build history for context
-      const history = messages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      }));
+      // Build context from conversation history
+      const conversationContext = messages
+        .map(m => `${m.role === 'user' ? 'المستخدم' : 'المساعد'}: ${m.content}`)
+        .join('\n');
 
-      const chat = ai.chats.create({
-        model: "gemini-3-flash-preview",
-        config: {
-            systemInstruction: "أنت خبير إعلامي ذكي ومساعد إبداعي في 'AI HUB'. وظيفتك الإجابة على الأسئلة المتعلقة بالإعلام، التحرير، الإنتاج، واستخدام التكنولوجيا في الصحافة. أسلوبك يجب أن يكون ذكياً ومهنياً ومساعداً للغاية.",
+      // Create the prompt with context
+      const fullPrompt = conversationContext 
+        ? `السياق السابق:\n${conversationContext}\n\nالسؤال الجديد: ${input}`
+        : input;
+
+      // Call the backend API
+      const response = await fetch(`${API_BASE_URL}/ai-hub/chat/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        history: history as any
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          think: false,
+          max_tokens: 800,
+          temperature: 0.3,
+        } as ChatRequest),
       });
 
-      const result = await chat.sendMessage(input);
-      const assistantMessage: Message = { role: 'assistant', content: result.text, timestamp: new Date() };
+      const data: ChatResponse = await response.json();
+
+      // Update remaining messages
+      if (data.remaining !== undefined) {
+        setRemaining(data.remaining);
+      }
+      if (data.resetTime !== undefined) {
+        setResetTime(data.resetTime);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || `API error: ${response.status} ${response.statusText}`);
+      }
+
+      if (!data.success || !data.result) {
+        throw new Error(data.error || 'No result returned from API');
+      }
+
+      const assistantMessage: Message = { role: 'assistant', content: data.result, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (e) {
       console.error(e);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة لاحقاً.', timestamp: new Date() }]);
+      const errorMessage = e instanceof Error ? e.message : 'خطأ غير معروف';
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `عذراً، حدث خطأ أثناء معالجة طلبك: ${errorMessage}. يرجى المحاولة لاحقاً.`, 
+        timestamp: new Date() 
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -69,13 +130,28 @@ export default function ChatInterface() {
           <h2 className="text-3xl font-bold">المساعد الذكي</h2>
           <p className="text-gray-400">دردشة مفتوحة مع ذكاء اصطناعي متخصص في المجال الإعلامي.</p>
         </div>
-        <button 
-          onClick={clearChat}
-          className="p-3 bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
-          title="مسح المحادثة"
-        >
-          <Trash2 size={20} />
-        </button>
+        <div className="flex items-center gap-4">
+          {remaining !== null && (
+            <div className={`px-4 py-2 rounded-lg text-sm font-arabic ${
+              remaining === 0 
+                ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                : remaining === 1 
+                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                : 'bg-green-500/20 text-green-300 border border-green-500/30'
+            }`}>
+              {remaining === 0 
+                ? '❌ انتهت الرسائل' 
+                : `📨 ${remaining} رسائل متبقية`}
+            </div>
+          )}
+          <button 
+            onClick={clearChat}
+            className="p-3 bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
+            title="مسح المحادثة"
+          >
+            <Trash2 size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex gap-8 overflow-hidden">
@@ -102,7 +178,9 @@ export default function ChatInterface() {
                   ? 'bg-blue-600/10 border border-blue-600/20 text-blue-50 rounded-tr-none'
                   : 'bg-white/5 border border-white/10 text-gray-200 rounded-tl-none'
                 }`}>
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="whitespace-pre-wrap">
+                    {msg.role === 'assistant' ? parseNumberedList(msg.content) : msg.content}
+                  </div>
                   <span className="text-[10px] text-gray-500 mt-2 block opacity-50">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>

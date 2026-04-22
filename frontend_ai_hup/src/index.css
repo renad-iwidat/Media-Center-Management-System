@@ -60,6 +60,30 @@
     font-family: "Almarai", sans-serif;
   }
 
+  select {
+    background-color: rgba(11, 18, 36, 0.6);
+    color: #f3f4f6;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.625rem 1rem;
+    font-family: "Almarai", sans-serif;
+  }
+
+  select option {
+    background-color: #0b1224;
+    color: #f3f4f6;
+  }
+
+  select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    border-color: #2563eb;
+  }
+
+  select:hover {
+    background-color: rgba(11, 18, 36, 0.8);
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
