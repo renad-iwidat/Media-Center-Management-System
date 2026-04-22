@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { Newspaper, Loader2, Copy, Check, FileText, LayoutList, Trash2, Search, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Newspaper, Loader2, Copy, Check, FileText, LayoutList,
+  Trash2, Search, Sparkles, RefreshCw, Plus
+} from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
-import { MOCK_NEWS } from '../../lib/mockData';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 type NewsMode = 'SUMMARY' | 'BULLETIN';
 
@@ -10,28 +14,83 @@ interface NewsItem {
   content: string;
   title: string;
   selected: boolean;
-  timestamp: Date;
+  media_unit_id?: number;
+  media_unit_name?: string;
+  category_name?: string;
 }
 
-export default function NewsRoom() {
+export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }) {
   const [activeMode, setActiveMode] = useState<NewsMode>('SUMMARY');
-  const [newsItems, setNewsItems] = useState<NewsItem[]>(
-    MOCK_NEWS.map(n => ({ ...n, selected: true, timestamp: new Date() }))
-  );
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingNews, setIsLoadingNews] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  // Fetch news on mount and when mediaUnitId prop changes
+  useEffect(() => {
+    fetchNews();
+  }, [mediaUnitId]);
+
+  const fetchNews = async () => {
+    setIsLoadingNews(true);
+    setDbError(null);
+    try {
+      const muParam = mediaUnitId ? `&media_unit_id=${mediaUnitId}` : '';
+      const res = await fetch(`${API_URL}/flow/published?limit=50${muParam}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const items: NewsItem[] = (data.data || data.items || []).map((item: any, idx: number) => ({
+        id: String(item.id ?? idx),
+        title: item.title || 'بدون عنوان',
+        content: item.content || item.summary || '',
+        selected: false,
+        media_unit_id: item.media_unit_id,
+        media_unit_name: item.media_unit_name || '',
+        category_name: item.category_name || '',
+      }));
+      setNewsItems(items);
+    } catch {
+      try {
+        const muParam = mediaUnitId ? `&media_unit_id=${mediaUnitId}` : '';
+        const res2 = await fetch(`${API_URL}/data/articles?limit=50${muParam}`);
+        if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
+        const data2 = await res2.json();
+        const items: NewsItem[] = (data2.data || []).map((item: any, idx: number) => ({
+          id: String(item.id ?? idx),
+          title: item.title || 'بدون عنوان',
+          content: item.content || item.summary || '',
+          selected: false,
+          media_unit_id: item.media_unit_id,
+          media_unit_name: item.media_unit_name || '',
+          category_name: item.category_name || '',
+        }));
+        setNewsItems(items);
+      } catch {
+        setDbError('تعذّر جلب الأخبار');
+      }
+    } finally {
+      setIsLoadingNews(false);
+    }
+  };
 
   const toggleSelect = (id: string) =>
     setNewsItems(newsItems.map(item => item.id === id ? { ...item, selected: !item.selected } : item));
+
+  const selectAll = () =>
+    setNewsItems(newsItems.map(item => ({ ...item, selected: true })));
 
   const removeNewsItem = (id: string) =>
     setNewsItems(newsItems.filter(item => item.id !== id));
 
   const filteredItems = newsItems.filter(item =>
-    item.content.includes(searchTerm) || item.title.includes(searchTerm)
+    item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const selectedCount = newsItems.filter(i => i.selected).length;
 
   const handleGenerate = async () => {
     const selectedContent = newsItems.filter(i => i.selected).map(i => i.content).join('\n\n---\n\n');
@@ -73,19 +132,48 @@ export default function NewsRoom() {
         {/* News list */}
         <div className="lg:col-span-5 flex flex-col">
           <div className="glass-panel p-4 space-y-3 flex flex-col flex-1 max-h-[520px]">
-            <div className="flex items-center gap-3 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
-              <Search size={14} className="text-gray-500 shrink-0" />
-              <input
-                type="text"
-                placeholder="ابحث في الأخبار..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-none outline-none w-full text-sm"
-              />
+            {/* Search + refresh */}
+            <div className="flex gap-2">
+              <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/10 flex-1">
+                <Search size={14} className="text-gray-500 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="ابحث في الأخبار..."
+                  value={searchTerm}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                  className="bg-transparent border-none outline-none w-full text-sm"
+                />
+              </div>
+              <button
+                onClick={fetchNews}
+                disabled={isLoadingNews}
+                className="p-2 bg-white/5 border border-white/10 rounded-xl hover:border-white/20 transition-colors text-gray-400 hover:text-white"
+                title="تحديث"
+              >
+                <RefreshCw size={14} className={isLoadingNews ? 'animate-spin' : ''} />
+              </button>
             </div>
 
+            {/* Select all + count */}
+            {filteredItems.length > 0 && (
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <button onClick={selectAll} className="hover:text-white transition-colors flex items-center gap-1">
+                  <Plus size={12} />
+                  تحديد الكل
+                </button>
+                <span>{selectedCount} محدد من {filteredItems.length}</span>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
-              {filteredItems.length === 0 ? (
+              {isLoadingNews ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-500">
+                  <Loader2 size={20} className="animate-spin" />
+                  <span className="text-xs">جاري تحميل الأخبار...</span>
+                </div>
+              ) : dbError ? (
+                <div className="text-center py-8 text-red-400 text-xs">{dbError}</div>
+              ) : filteredItems.length === 0 ? (
                 <div className="text-center py-8 opacity-20 flex flex-col items-center gap-2">
                   <Newspaper size={32} />
                   <p className="text-xs">لا توجد أخبار</p>
@@ -113,6 +201,16 @@ export default function NewsRoom() {
                     </button>
                   </div>
                   <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{item.content}</p>
+                  {(item.media_unit_name || item.category_name) && (
+                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                      {item.media_unit_name && (
+                        <span className="text-[10px] bg-[#2563eb]/10 text-[#2563eb] px-1.5 py-0.5 rounded-full">{item.media_unit_name}</span>
+                      )}
+                      {item.category_name && (
+                        <span className="text-[10px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full">{item.category_name}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -134,10 +232,10 @@ export default function NewsRoom() {
               </div>
               <button
                 onClick={handleGenerate}
-                disabled={isLoading || !newsItems.some(i => i.selected)}
+                disabled={isLoading || selectedCount === 0}
                 className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 disabled:opacity-30 text-sm"
               >
-                {isLoading ? <Loader2 className="animate-spin" size={16} /> : <><Sparkles size={14} /><span>إنشاء المحتوى</span></>}
+                {isLoading ? <Loader2 className="animate-spin" size={16} /> : <><Sparkles size={14} /><span>إنشاء المحتوى ({selectedCount})</span></>}
               </button>
             </div>
           </div>
@@ -172,7 +270,7 @@ export default function NewsRoom() {
               ) : result ? result : (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-10 gap-3">
                   <Newspaper size={40} />
-                  <p className="text-xs">اجمع الأخبار ثم اضغط إنشاء</p>
+                  <p className="text-xs">حدد الأخبار ثم اضغط إنشاء</p>
                 </div>
               )}
             </div>

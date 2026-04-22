@@ -60,7 +60,7 @@ async function fetchEpisodeGuests(episodeId: number): Promise<Guest[]> {
 }
 
 // ─── Component ────────────────────────────────────────────────
-export default function IdeaGeneration() {
+export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | null }) {
   const [activeTool, setActiveTool] = useState<Tool>('IDEAS');
   const [programSearch, setProgramSearch] = useState('');
   const [guestSearch, setGuestSearch] = useState('');
@@ -133,9 +133,11 @@ export default function IdeaGeneration() {
   }, [selectedEpisode]);
 
   // ─── Filter helpers ──────────────────────────────────────────
-  const filteredPrograms = programs.filter((p: Program) =>
-    p.title.toLowerCase().includes(programSearch.toLowerCase())
-  );
+  const filteredPrograms = programs.filter((p: Program) => {
+    const matchesSearch = p.title.toLowerCase().includes(programSearch.toLowerCase());
+    const matchesUnit = mediaUnitId === null || (p as any).media_unit_id === mediaUnitId;
+    return matchesSearch && matchesUnit;
+  });
   const filteredGuests = guests.filter((g: Guest) =>
     g.name.toLowerCase().includes(guestSearch.toLowerCase())
   );
