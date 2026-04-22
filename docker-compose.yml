@@ -48,8 +48,8 @@ services:
   # ============================================================
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./frontend
+      dockerfile: Dockerfile
     image: media-frontend:latest
     container_name: media-frontend
     restart: unless-stopped
