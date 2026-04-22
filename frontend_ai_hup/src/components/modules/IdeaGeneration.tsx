@@ -75,7 +75,7 @@ export default function IdeaGeneration() {
             key={tool.id}
             onClick={() => { setActiveTool(tool.id as Tool); setResult(null); setSearchTerm(''); }}
             className={`px-8 py-3 rounded-xl text-sm font-arabic transition-all flex items-center gap-2 ${
-              activeTool === tool.id ? 'bg-brand-accent text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              activeTool === tool.id ? 'bg-[#2563eb] text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
             <tool.icon size={18} />
@@ -96,7 +96,7 @@ export default function IdeaGeneration() {
                   placeholder={activeTool === 'QUESTIONS' ? "ابحث عن ضيف أو برنامج..." : "ابحث عن برنامج..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pr-11 pl-4 text-sm outline-none focus:ring-2 focus:ring-brand-accent/20"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pr-11 pl-4 text-sm outline-none focus:ring-2 focus:ring-[#2563eb]/20"
                 />
               </div>
 
@@ -109,14 +109,14 @@ export default function IdeaGeneration() {
                         key={p.id}
                         onClick={() => setSelectedProgramId(p.id)}
                         className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                          selectedProgramId === p.id ? 'bg-brand-accent/10 border-brand-accent' : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                          selectedProgramId === p.id ? 'bg-[#2563eb]/10 border-[#2563eb]' : 'bg-white/[0.02] border-white/5 hover:border-white/10'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <Tv size={16} className="text-blue-400" />
                           <span className="text-sm font-bold">{p.name}</span>
                         </div>
-                        {selectedProgramId === p.id && <Check size={14} className="text-brand-accent" />}
+                        {selectedProgramId === p.id && <Check size={14} className="text-[#2563eb]" />}
                       </div>
                     ))}
                   </div>
@@ -131,7 +131,7 @@ export default function IdeaGeneration() {
                           key={g.id}
                           onClick={() => setSelectedGuestId(g.id)}
                           className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                            selectedGuestId === g.id ? 'bg-brand-accent/10 border-brand-accent' : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                            selectedGuestId === g.id ? 'bg-[#2563eb]/10 border-[#2563eb]' : 'bg-white/[0.02] border-white/5 hover:border-white/10'
                           }`}
                         >
                           <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export default function IdeaGeneration() {
                               <span className="text-[10px] text-gray-500">{g.specialty}</span>
                             </div>
                           </div>
-                          {selectedGuestId === g.id && <Check size={14} className="text-brand-accent" />}
+                          {selectedGuestId === g.id && <Check size={14} className="text-[#2563eb]" />}
                         </div>
                       ))}
                     </div>
@@ -156,7 +156,7 @@ export default function IdeaGeneration() {
                   onChange={(e) => setAdditionalContext(e.target.value)}
                   placeholder="مثال: حلقة عن التحديات العقارية في دبي..."
                   rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-brand-accent/20 text-sm resize-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[#2563eb]/20 text-sm resize-none"
                 />
               </div>
             </div>
@@ -174,13 +174,13 @@ export default function IdeaGeneration() {
         {/* Result Panel */}
         <div className="lg:col-span-7">
           <div className="glass-panel p-8 min-h-[550px] flex flex-col justify-center bg-[#0b1224] border-dashed border-white/10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-accent/5 rounded-bl-full blur-2xl" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#2563eb]/5 rounded-bl-full blur-2xl" />
             
             {result ? (
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-brand-accent/10 rounded-lg flex items-center justify-center text-brand-accent">
+                    <div className="w-8 h-8 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">
                        <Lightbulb size={16} />
                     </div>
                     <h3 className="text-lg font-bold">الاقتراحات الإبداعية</h3>

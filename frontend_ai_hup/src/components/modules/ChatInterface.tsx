@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, Loader2, User, Sparkles, Trash2, Globe, Paperclip, FileText } from 'lucide-react';
+import { MessageSquare, Send, Loader2, User, Sparkles, Trash2, Paperclip } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -47,7 +47,7 @@ export default function ChatInterface() {
         history: history as any
       });
 
-      const result = await chat.sendMessage({ message: input });
+      const result = await chat.sendMessage(input);
       const assistantMessage: Message = { role: 'assistant', content: result.text, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (e) {
@@ -80,7 +80,7 @@ export default function ChatInterface() {
 
       <div className="flex-1 flex gap-8 overflow-hidden">
         {/* Chat Main */}
-        <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-brand-surface/40">
+        <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-[#0b1224]/40">
           <div 
             ref={scrollRef}
             className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar"
@@ -93,7 +93,7 @@ export default function ChatInterface() {
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${
                   msg.role === 'user' 
                   ? 'bg-blue-600 text-white' 
-                  : 'bg-brand-accent text-white'
+                  : 'bg-[#2563eb] text-white'
                 }`}>
                   {msg.role === 'user' ? <User size={20} /> : <Sparkles size={20} />}
                 </div>
@@ -111,13 +111,13 @@ export default function ChatInterface() {
             ))}
             {isLoading && (
               <div className="flex gap-4 animate-pulse">
-                <div className="w-10 h-10 rounded-xl bg-brand-accent/20 flex items-center justify-center text-brand-accent">
+                <div className="w-10 h-10 rounded-xl bg-[#2563eb]/20 flex items-center justify-center text-[#2563eb]">
                   <Sparkles size={20} />
                 </div>
                 <div className="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none w-24 flex gap-1 items-center justify-center">
-                   <div className="w-1.5 h-1.5 bg-brand-accent rounded-full animate-bounce" />
-                   <div className="w-1.5 h-1.5 bg-brand-accent rounded-full animate-bounce delay-75" />
-                   <div className="w-1.5 h-1.5 bg-brand-accent rounded-full animate-bounce delay-150" />
+                   <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce" />
+                   <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                   <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 </div>
               </div>
             )}
@@ -136,13 +136,13 @@ export default function ChatInterface() {
                 }}
                 placeholder="اسألني أي شيء عن الإعلام..."
                 rows={2}
-                className="w-full bg-brand-bg/50 border border-white/10 rounded-2xl py-4 pr-6 pl-16 focus:ring-2 focus:ring-brand-accent/20 outline-none transition-all placeholder:text-gray-600 resize-none font-arabic"
+                className="w-full bg-[#020617]/50 border border-white/10 rounded-2xl py-4 pr-6 pl-16 focus:ring-2 focus:ring-[#2563eb]/20 outline-none transition-all placeholder:text-gray-600 resize-none font-arabic"
               />
               <div className="absolute left-4 bottom-4 flex gap-2">
                 <button 
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="w-10 h-10 bg-brand-accent hover:bg-blue-700 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 active:scale-95"
+                  className="w-10 h-10 bg-[#2563eb] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 active:scale-95"
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                 </button>
@@ -152,33 +152,6 @@ export default function ChatInterface() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Sidebar Mini */}
-        <div className="w-72 hidden xl:flex flex-col gap-4">
-           <div className="glass-panel p-6 flex flex-col gap-4">
-              <h4 className="font-bold text-gray-400 text-sm">أدوات مساعدة</h4>
-              <button className="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-sm text-right">
-                <Globe size={16} className="text-blue-400" />
-                <span>البحث في الويب</span>
-              </button>
-              <button className="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-sm text-right">
-                <FileText size={16} className="text-emerald-400" />
-                <span>تحليل الملفات</span>
-              </button>
-           </div>
-           
-           <div className="glass-panel p-6 flex-1 bg-gradient-to-b from-brand-surface to-brand-bg relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                 <Sparkles size={120} />
-              </div>
-              <h4 className="font-bold text-sm mb-4 relative z-10">نصائح الدردشة</h4>
-              <ul className="text-xs text-gray-500 space-y-4 relative z-10 leading-relaxed">
-                <li className="p-2 bg-white/5 rounded-lg border border-white/5 italic">"كيف يمكنني تحويل هذا الخبر إلى سيناريو فيديو قصير؟"</li>
-                <li className="p-2 bg-white/5 rounded-lg border border-white/5 italic">"أقترح عليّ 5 عناوين تشويقية لقصة خبرية عن الاقتصاد."</li>
-                <li className="p-2 bg-white/5 rounded-lg border border-white/5 italic">"ما هي أفضل الممارسات لإجراء مقابلة تلفزيونية مع خبير؟"</li>
-              </ul>
-           </div>
         </div>
       </div>
     </div>

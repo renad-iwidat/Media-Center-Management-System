@@ -1,39 +1,80 @@
 @import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-arabic: "Almarai", sans-serif;
-  
-  --color-brand-bg: #020617;
-  --color-brand-surface: #0b1224;
-  --color-brand-accent: #2563eb;
-  --color-brand-border: rgba(255, 255, 255, 0.05);
-}
-
 @layer base {
+  :root {
+    --color-brand-bg: #020617;
+    --color-brand-surface: #0b1224;
+    --color-brand-accent: #2563eb;
+    --color-brand-border: rgba(255, 255, 255, 0.05);
+  }
+
   body {
-    @apply bg-brand-bg text-gray-100 font-sans;
+    background-color: #020617;
+    color: #f3f4f6;
+    font-family: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
     direction: rtl;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply text-white font-arabic font-bold;
+    color: white;
+    font-weight: bold;
+    font-family: "Almarai", sans-serif;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-brand-surface/80 backdrop-blur-md border border-brand-border rounded-3xl;
+    background-color: rgba(11, 18, 36, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.5rem;
   }
   
   .btn-primary {
-    @apply bg-brand-accent hover:bg-blue-700 text-white font-arabic font-bold py-3 px-6 rounded-2xl transition-all duration-200 shadow-lg shadow-blue-900/20 active:scale-95;
+    background-color: #2563eb;
+    color: white;
+    font-weight: bold;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.2);
+    font-family: "Almarai", sans-serif;
+  }
+
+  .btn-primary:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.95);
   }
 
   .nav-item-active {
-    @apply bg-brand-accent/10 border-r-4 border-brand-accent text-brand-accent;
+    background-color: rgba(37, 99, 235, 0.1);
+    border-right: 4px solid #2563eb;
+    color: #2563eb;
+  }
+
+  .font-arabic {
+    font-family: "Almarai", sans-serif;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #020617;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #334155;
   }
 }
 

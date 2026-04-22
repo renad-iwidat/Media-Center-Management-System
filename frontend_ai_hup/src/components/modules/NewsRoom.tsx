@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Newspaper, Send, Loader2, Copy, Check, FileText, LayoutList, Plus, Trash2, Search, Filter, Sparkles } from 'lucide-react';
 import { generateAIContent } from '../../lib/gemini';
+import { MOCK_NEWS } from '../../lib/mockData';
 
 type NewsMode = 'SUMMARY' | 'BULLETIN';
 
@@ -15,29 +16,11 @@ interface NewsItem {
 
 export default function NewsRoom() {
   const [activeMode, setActiveMode] = useState<NewsMode>('SUMMARY');
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [newNewsContent, setNewNewsContent] = useState('');
-  const [newNewsTitle, setNewNewsTitle] = useState('');
+  const [newsItems, setNewsItems] = useState<NewsItem[]>(MOCK_NEWS.map(n => ({ ...n, selected: true, timestamp: new Date() })));
   const [searchTerm, setSearchTerm] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  const addNewsItem = () => {
-    if (!newNewsContent.trim()) return;
-    const newItem: NewsItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: newNewsTitle || `خبر جديد - ${new Date().toLocaleTimeString()}`,
-      content: newNewsContent,
-      selected: true,
-      timestamp: new Date()
-    };
-    setNewsItems([newItem, ...newsItems]);
-    setNewNewsContent('');
-    setNewNewsTitle('');
-    setShowAddModal(false);
-  };
 
   const toggleSelect = (id: string) => {
     setNewsItems(newsItems.map(item => item.id === id ? { ...item, selected: !item.selected } : item));
@@ -96,13 +79,6 @@ export default function NewsRoom() {
           <h2 className="text-3xl font-bold">غرفة الأخبار الذكية</h2>
           <p className="text-gray-400">اجمع الأخبار، فلترها، وصغ نشرتك الاحترافية في ثوانٍ.</p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          <span>إضافة خبر جديد</span>
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -132,14 +108,14 @@ export default function NewsRoom() {
                     key={item.id} 
                     className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                       item.selected 
-                      ? 'bg-brand-accent/10 border-brand-accent/50' 
+                      ? 'bg-[#2563eb]/10 border-[#2563eb]/50' 
                       : 'bg-white/5 border-white/10 hover:border-white/20'
                     }`}
                     onClick={() => toggleSelect(item.id)}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded border transition-colors ${item.selected ? 'bg-brand-accent border-brand-accent' : 'border-gray-600'}`}>
+                        <div className={`w-4 h-4 rounded border transition-colors ${item.selected ? 'bg-[#2563eb] border-[#2563eb]' : 'border-gray-600'}`}>
                           {item.selected && <Check size={14} className="text-white" />}
                         </div>
                         <h4 className="font-bold text-sm truncate max-w-[200px]">{item.title}</h4>
@@ -164,7 +140,7 @@ export default function NewsRoom() {
                 <button
                   onClick={() => setActiveMode('SUMMARY')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs transition-all ${
-                    activeMode === 'SUMMARY' ? 'bg-brand-accent text-white' : 'text-gray-400 hover:text-white'
+                    activeMode === 'SUMMARY' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   <LayoutList size={14} />
@@ -173,7 +149,7 @@ export default function NewsRoom() {
                 <button
                   onClick={() => setActiveMode('BULLETIN')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs transition-all ${
-                    activeMode === 'BULLETIN' ? 'bg-brand-accent text-white' : 'text-gray-400 hover:text-white'
+                    activeMode === 'BULLETIN' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   <FileText size={14} />
@@ -194,12 +170,12 @@ export default function NewsRoom() {
 
         {/* Result Panel */}
         <div className="lg:col-span-7 flex flex-col h-full">
-          <div className="glass-panel p-8 bg-[#0b1224] border-r-4 border-r-brand-accent flex flex-col relative overflow-hidden flex-1 min-h-[500px]">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-brand-accent/5 rounded-br-full blur-2xl" />
+          <div className="glass-panel p-8 bg-[#0b1224] border-r-4 border-r-[#2563eb] flex flex-col relative overflow-hidden flex-1 min-h-[500px]">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-[#2563eb]/5 rounded-br-full blur-2xl" />
             
             <div className="flex justify-between items-center mb-6 relative z-10">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-brand-accent/10 rounded-lg flex items-center justify-center text-brand-accent">
+                <div className="w-8 h-8 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">
                    <Newspaper size={16} />
                 </div>
                 <h3 className="text-lg font-bold">المنتج النهائي</h3>
@@ -218,7 +194,7 @@ export default function NewsRoom() {
             <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-200 font-arabic whitespace-pre-wrap p-4 bg-white/[0.02] rounded-2xl border border-white/5">
               {isLoading ? (
                 <div className="h-full flex flex-col items-center justify-center gap-4 py-12">
-                   <div className="w-10 h-10 border-2 border-brand-accent/20 border-t-brand-accent rounded-full animate-spin"></div>
+                   <div className="w-10 h-10 border-2 border-[#2563eb]/20 border-t-[#2563eb] rounded-full animate-spin"></div>
                    <p className="text-sm font-bold text-gray-500">جاري الربط والتحرير...</p>
                 </div>
               ) : result ? (
@@ -233,65 +209,6 @@ export default function NewsRoom() {
           </div>
         </div>
       </div>
-
-      {/* Add News Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-brand-surface border border-white/10 rounded-3xl p-8 w-full max-w-2xl shadow-2xl space-y-6"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-bold">إضافة مادة خبرية جديدة</h3>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="p-2 hover:bg-white/5 rounded-xl"
-              >
-                <Trash2 size={20} className="text-gray-500 hover:text-white" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-400">عنوان الخبر (اختياري)</label>
-                <input 
-                  type="text" 
-                  value={newNewsTitle}
-                  onChange={(e) => setNewNewsTitle(e.target.value)}
-                  placeholder="مثال: أسعار النفط العالمية اليوم..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-brand-accent/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-400">محتوى الخبر</label>
-                <textarea 
-                  rows={8}
-                  value={newNewsContent}
-                  onChange={(e) => setNewNewsContent(e.target.value)}
-                  placeholder="انسخ محتوى الخبر هنا..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-brand-accent/20 resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <button 
-                onClick={addNewsItem}
-                className="btn-primary flex-1 py-3"
-              >
-                حفظ وإضافة للمجموعة
-              </button>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all"
-              >
-                إلغاء
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }
