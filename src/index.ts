@@ -13,6 +13,8 @@ import { schedulerService } from './services/news/scheduler.service';
 
 // Routes
 import sourcesRoutes from './routes/database/sources.routes';
+import programsRoutes from './routes/database/programs.routes';
+import guestsRoutes from './routes/database/guests.routes';
 import newsRoutes from './routes/news/news.routes';
 import dataRoutes from './routes/news/data.routes';
 import flowRoutes from './routes/news/flow.routes';
@@ -20,6 +22,7 @@ import editorialPolicyRoutes from './routes/news/editorial-policy.routes';
 import systemSettingsRoutes from './routes/news/system-settings.routes';
 import schedulerRoutes from './routes/news/scheduler.routes';
 import { chatRoutes } from './routes/ai-hub';
+import ideasRoutes from './routes/ai-hub/ideas.routes';
 
 const app = express();
 
@@ -242,9 +245,12 @@ app.get('/db-test', async (req, res) => {
 
 // API Routes — editorial-policies لازم يكون قبل news عشان /:id ما يمسكه
 app.use('/api/sources', sourcesRoutes);
+app.use('/api/programs', programsRoutes);
+app.use('/api/guests', guestsRoutes);
 app.use('/api/news/editorial-policies', editorialPolicyRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/ai-hub/chat', chatRoutes);
+app.use('/api/ai-hub/ideas', ideasRoutes);
 app.use('/api/data', (req, res, next) => {
   console.log(`📍 Data Route: ${req.method} ${req.path}`);
   next();

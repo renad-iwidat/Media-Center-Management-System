@@ -138,74 +138,106 @@ export function parseNumberedList(text: string): React.ReactElement[] {
   let listItems: React.ReactElement[] = [];
 
   lines.forEach((line, index) => {
-    // Check for headings (# ## ### etc)
+    // ─── Horizontal rule ---
+    if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
+      if (inList && listItems.length > 0) {
+        result.push(<ol key={`list-${index}`} className="list-decimal mb-4 mr-6">{listItems}</ol>);
+        listItems = [];
+        inList = false;
+      }
+      result.push(<hr key={`hr-${index}`} className="border-white/10 my-4" />);
+      return;
+    }
+
+    // ─── Headings # ## ###
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
-      // Close any open list
       if (inList && listItems.length > 0) {
-        result.push(
-          <ol key={`list-${index}`} className="list-decimal mb-4">
-            {listItems}
-          </ol>
-        );
+        result.push(<ol key={`list-${index}`} className="list-decimal mb-4 mr-6">{listItems}</ol>);
         listItems = [];
         inList = false;
       }
 
       const level = headingMatch[1].length;
       const headingText = headingMatch[2];
-      const headingClasses = {
-        1: 'text-3xl font-bold text-white mb-4 mt-6',
-        2: 'text-2xl font-bold text-blue-300 mb-3 mt-5',
-        3: 'text-xl font-bold text-blue-200 mb-2 mt-4',
-        4: 'text-lg font-bold text-gray-100 mb-2 mt-3',
-        5: 'text-base font-bold text-gray-200 mb-1 mt-2',
+      const headingClasses: Record<number, string> = {
+        1: 'text-2xl font-bold text-white mb-3 mt-6',
+        2: 'text-xl font-bold text-blue-300 mb-2 mt-5',
+        3: 'text-lg font-bold text-blue-200 mb-2 mt-4',
+        4: 'text-base font-bold text-gray-100 mb-1 mt-3',
+        5: 'text-sm font-bold text-gray-200 mb-1 mt-2',
         6: 'text-sm font-bold text-gray-300 mb-1 mt-2',
       };
 
-      const HeadingTag = `h${level}` as any;
+      const HeadingTag = `h${level}` as keyof React.JSX.IntrinsicElements;
       result.push(
         React.createElement(
           HeadingTag,
-          { key: `heading-${index}`, className: headingClasses[level as keyof typeof headingClasses] },
+          { key: `heading-${index}`, className: headingClasses[level] },
           parseMarkdown(headingText)
         )
       );
       return;
     }
 
-    // Check for numbered lists
-    const match = line.match(/^\d+\.\s+(.+)$/);
-    if (match) {
-      inList = true;
-      listItems.push(
-        <li key={`item-${index}`} className="ml-6 mb-2">
-          {parseMarkdown(match[1])}
-        </li>
-      );
-    } else {
+    // ─── Bullet lists - item
+    const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+    if (bulletMatch) {
       if (inList && listItems.length > 0) {
-        result.push(
-          <ol key={`list-${index}`} className="list-decimal mb-4">
-            {listItems}
-          </ol>
-        );
+        result.push(<ol key={`list-${index}`} className="list-decimal mb-4 mr-6">{listItems}</ol>);
         listItems = [];
         inList = false;
       }
-      if (line.trim()) {
-        result.push(
-          <div key={`text-${index}`} className="mb-2">
-            {parseMarkdown(line)}
-          </div>
-        );
-      }
+      result.push(
+        <div key={`bullet-${index}`} className="flex items-start gap-2 mb-2 mr-2">
+          <span className="text-blue-400 mt-1 shrink-0">•</span>
+          <span>{parseMarkdown(bulletMatch[1])}</span>
+        </div>
+      );
+      return;
     }
+
+    // ─── Numbered lists 1. item
+    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    if (numberedMatch) {
+      inList = true;
+      listItems.push(
+        <li key={`item-${index}`} className="mb-3 leading-relaxed">
+          {parseMarkdown(numberedMatch[1])}
+        </li>
+      );
+      return;
+    }
+
+    // ─── Close list if open
+    if (inList && listItems.length > 0) {
+      result.push(
+        <ol key={`list-${index}`} className="list-decimal mb-4 mr-6 space-y-1">
+          {listItems}
+        </ol>
+      );
+      listItems = [];
+      inList = false;
+    }
+
+    // ─── Empty line → spacer
+    if (!line.trim()) {
+      result.push(<div key={`space-${index}`} className="h-2" />);
+      return;
+    }
+
+    // ─── Regular paragraph
+    result.push(
+      <p key={`text-${index}`} className="mb-2 leading-relaxed text-gray-200">
+        {parseMarkdown(line)}
+      </p>
+    );
   });
 
+  // Close any remaining list
   if (inList && listItems.length > 0) {
     result.push(
-      <ol key="final-list" className="list-decimal mb-4">
+      <ol key="final-list" className="list-decimal mb-4 mr-6 space-y-1">
         {listItems}
       </ol>
     );

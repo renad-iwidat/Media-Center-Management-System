@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Newspaper, Send, Loader2, Copy, Check, FileText, LayoutList, Plus, Trash2, Search, Filter, Sparkles } from 'lucide-react';
-import { generateAIContent } from '../../lib/gemini';
+import { generateAIContent } from '../../lib/ai-clientent';
 import { MOCK_NEWS } from '../../lib/mockData';
 
 type NewsMode = 'SUMMARY' | 'BULLETIN';

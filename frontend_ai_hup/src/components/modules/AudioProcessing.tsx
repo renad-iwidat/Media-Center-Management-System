@@ -1,10 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Volume2, Send, Loader2, Play, Pause, Download, Music, FileText, Search, Check, FileAudio, FileVideo, Newspaper, Sparkles } from 'lucide-react';
-import { generateAIContent } from '../../lib/gemini';
+import { generateAIContent } from '../../lib/ai-client';
 import { MOCK_MEDIA, MOCK_NEWS } from '../../lib/mockData';
-import { GoogleGenAI, Modality } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 type AudioMode = 'STT' | 'TTS';
 
@@ -57,41 +54,13 @@ export default function AudioProcessing() {
     setAudioUrl(null);
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-tts-preview",
-        contents: [{ parts: [{ text: news.content }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voice as any },
-            },
-          },
-        },
-      });
-
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        const audioBlob = base64ToBlob(base64Audio, 'audio/wav');
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-      }
+      // TTS غير مدعوم حالياً عبر الـ backend — نعرض رسالة واضحة
+      alert('ميزة تحويل النص لصوت (TTS) غير متاحة حالياً. يرجى التواصل مع المسؤول لتفعيلها.');
     } catch (e) {
       console.error(e);
-      alert('حدث خطأ في توليد الصوت. يرجى مراجعة إعدادات الـ API.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const base64ToBlob = (base64: string, mime: string) => {
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: mime });
   };
 
   const togglePlayback = () => {

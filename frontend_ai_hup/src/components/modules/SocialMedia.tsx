@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Share2, Send, Loader2, Copy, Check, Hash, Facebook, Instagram, Twitter, Repeat, Newspaper, Sparkles } from 'lucide-react';
-import { generateAIContent } from '../../lib/gemini';
+import { generateAIContent } from '../../lib/ai-clientent';
 
 type SocialTab = 'CAPTION' | 'HASHTAGS' | 'TRANSFORM';
 

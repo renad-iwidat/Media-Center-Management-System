@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Loader2, Copy, Check, Type, AlignLeft, ShieldCheck } from 'lucide-react';
-import { generateAIContent } from '../../lib/gemini';
+import { generateAIContent } from '../../lib/ai-client';
 
 type EditMode = 'REWRITE' | 'SUMMARIZE' | 'GRAMMAR';
 
