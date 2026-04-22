@@ -102,7 +102,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pr-[280px]' : 'pr-[80px]'}`}>
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-40">
+        <header className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center gap-6 flex-1">
             <div className="relative w-full max-w-md group">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#2563eb] transition-colors" size={18} />
@@ -127,7 +127,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="p-8 max-w-7xl mx-auto w-full">
+        <div className="p-5 max-w-7xl mx-auto w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeModule}
@@ -139,7 +139,7 @@ export default function App() {
               {activeModule !== 'DASHBOARD' && (
                 <button 
                   onClick={() => setActiveModule('DASHBOARD')}
-                  className="mb-8 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
+                  className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
                 >
                   <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center group-hover:bg-[#2563eb] group-hover:text-white transition-all">
                     <ChevronLeft size={18} className="rotate-180" />
@@ -173,60 +173,58 @@ function Dashboard({ setActiveModule }: { setActiveModule: (m: ModuleId) => void
   ];
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl text-white">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
-        <p className="text-gray-400 text-lg">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl text-white">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
+        <p className="text-gray-400 text-sm">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((card) => (
           <button
             key={card.id}
             onClick={() => setActiveModule(card.id as ModuleId)}
-            className="glass-panel p-8 text-right group hover:border-[#2563eb] transition-all duration-300 hover:-translate-y-2 flex flex-col gap-6 h-full"
+            className="glass-panel p-5 text-right group hover:border-[#2563eb] transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4 h-full"
           >
-            <div className={`w-14 h-14 ${card.bg} rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110`}>
-              <card.icon className={`${card.color} w-8 h-8`} />
+            <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center transition-transform group-hover:scale-110`}>
+              <card.icon className={`${card.color} w-5 h-5`} />
             </div>
-            <div className="flex flex-col gap-2 flex-1">
-              <h3 className="text-xl">{card.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{card.desc}</p>
+            <div className="flex flex-col gap-1 flex-1">
+              <h3 className="text-base font-bold">{card.title}</h3>
+              <p className="text-gray-400 text-xs leading-relaxed">{card.desc}</p>
             </div>
-            <div className="flex items-center text-[#2563eb] font-bold text-sm gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center text-[#2563eb] font-bold text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <span>ابدأ الآن</span>
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </div>
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1">
-        <div className="glass-panel p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-2xl">آخر النشاطات</h3>
-            <button className="text-[#2563eb] text-sm hover:underline">عرض الكل</button>
+      <div className="glass-panel p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-base font-bold">آخر النشاطات</h3>
+            <button className="text-[#2563eb] text-xs hover:underline">عرض الكل</button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center">
-                    <Sparkles size={18} />
+              <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center">
+                    <Sparkles size={14} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-bold">توليد عناوين لمقالة "مستقبل AI"</span>
+                    <span className="text-sm font-bold">توليد عناوين لمقالة "مستقبل AI"</span>
                     <span className="text-xs text-gray-500">تمت العملية قبل 10 دقائق</span>
                   </div>
                 </div>
-                <button className="p-2 hover:bg-white/5 rounded-lg">
-                  <ChevronLeft size={18} className="translate-x-1" />
+                <button className="p-1.5 hover:bg-white/5 rounded-lg">
+                  <ChevronLeft size={16} className="translate-x-1" />
                 </button>
               </div>
             ))}
           </div>
         </div>
-      </div>
     </div>
   );
 }

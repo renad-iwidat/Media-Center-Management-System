@@ -124,11 +124,11 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="h-[calc(100vh-180px)] flex flex-col gap-6">
+    <div className="h-[calc(100vh-160px)] flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-1 text-right">
-          <h2 className="text-3xl font-bold">المساعد الذكي</h2>
-          <p className="text-gray-400">دردشة مفتوحة مع ذكاء اصطناعي متخصص في المجال الإعلامي.</p>
+          <h2 className="text-xl font-bold">المساعد الذكي</h2>
+          <p className="text-gray-400 text-xs">دردشة مفتوحة مع ذكاء اصطناعي متخصص في المجال الإعلامي.</p>
         </div>
         <div className="flex items-center gap-4">
           {remaining !== null && (
@@ -159,7 +159,7 @@ export default function ChatInterface() {
         <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-[#0b1224]/40">
           <div 
             ref={scrollRef}
-            className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar"
+            className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
           >
             {messages.map((msg, i) => (
               <div 
@@ -173,7 +173,7 @@ export default function ChatInterface() {
                 }`}>
                   {msg.role === 'user' ? <User size={20} /> : <Sparkles size={20} />}
                 </div>
-                <div className={`max-w-[80%] p-4 rounded-3xl font-arabic text-[15px] leading-relaxed ${
+                <div className={`max-w-[80%] p-3 rounded-2xl font-arabic text-sm leading-relaxed ${
                   msg.role === 'user'
                   ? 'bg-blue-600/10 border border-blue-600/20 text-blue-50 rounded-tr-none'
                   : 'bg-white/5 border border-white/10 text-gray-200 rounded-tl-none'
@@ -201,7 +201,7 @@ export default function ChatInterface() {
             )}
           </div>
 
-          <div className="p-6 border-t border-white/5 bg-white/[0.02]">
+          <div className="p-4 border-t border-white/5 bg-white/[0.02]">
             <div className="relative group">
               <textarea
                 value={input}

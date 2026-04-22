@@ -191,14 +191,14 @@ export default function IdeaGeneration() {
 
   // ─── Render ──────────────────────────────────────────────────
   return (
-    <div className="space-y-8 text-right">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-3xl font-bold">وحدة الابتكار الإعلامي</h2>
-        <p className="text-gray-400">ولد أفكاراً ذكية مرتبطة ببرامجك وحلقاتك وضيوفك الفعليين.</p>
+    <div className="space-y-4 text-right">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-xl font-bold">وحدة الابتكار الإعلامي</h2>
+        <p className="text-gray-400 text-xs">ولد أفكاراً ذكية مرتبطة ببرامجك وحلقاتك وضيوفك الفعليين.</p>
       </div>
 
       {/* Tool Tabs */}
-      <div className="flex gap-4 p-1 bg-white/5 rounded-2xl w-fit mr-auto ml-0 flex-row-reverse">
+      <div className="flex gap-2 p-1 bg-white/5 rounded-xl w-fit mr-auto ml-0 flex-row-reverse">
         {[
           { id: 'IDEAS', label: 'تطوير حلقات', icon: Lightbulb },
           { id: 'QUESTIONS', label: 'أسئلة لقاءات', icon: User },
@@ -207,22 +207,22 @@ export default function IdeaGeneration() {
           <button
             key={tool.id}
             onClick={() => { setActiveTool(tool.id as Tool); setResult(null); setProgramSearch(''); setGuestSearch(''); }}
-            className={`px-8 py-3 rounded-xl text-sm font-arabic transition-all flex items-center gap-2 ${
+            className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${
               activeTool === tool.id
                 ? 'bg-[#2563eb] text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <tool.icon size={18} />
+            <tool.icon size={14} />
             {tool.label}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* ── Selector Panel ── */}
-        <div className="lg:col-span-5 space-y-6 flex flex-col">
-          <div className="glass-panel p-6 space-y-6 flex-1 flex flex-col">
+        <div className="lg:col-span-5 flex flex-col">
+          <div className="glass-panel p-4 space-y-3 flex-1 flex flex-col">
             {/* Search — Programs */}
             <div className="relative group">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
@@ -438,21 +438,21 @@ export default function IdeaGeneration() {
             )}
 
             {/* Additional context */}
-            <div className="space-y-2 border-t border-white/5 pt-4">
+            <div className="space-y-1 border-t border-white/5 pt-3">
               <label className="text-xs font-bold text-gray-500">سياق إضافي أو موضوع الحلقة</label>
               <textarea
                 value={additionalContext}
                 onChange={(e) => setAdditionalContext(e.target.value)}
                 placeholder="مثال: حلقة عن التحديات العقارية في دبي..."
-                rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[#2563eb]/20 text-sm resize-none"
+                rows={2}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]/20 text-sm resize-none"
               />
             </div>
 
             <button
               onClick={handleGenerate}
               disabled={isLoading || !canGenerate}
-              className="btn-primary w-full py-4 flex items-center justify-center gap-3 disabled:opacity-30"
+              className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-30 text-sm"
             >
               {isLoading
                 ? <Loader2 className="animate-spin" size={20} />
@@ -464,7 +464,7 @@ export default function IdeaGeneration() {
 
         {/* ── Result Panel ── */}
         <div className="lg:col-span-7">
-          <div className="glass-panel p-8 min-h-[550px] flex flex-col justify-center bg-[#0b1224] border-dashed border-white/10 relative overflow-hidden">
+          <div className="glass-panel p-5 min-h-[480px] flex flex-col justify-center bg-[#0b1224] border-dashed border-white/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#2563eb]/5 rounded-bl-full blur-2xl" />
 
             {result ? (
@@ -484,7 +484,7 @@ export default function IdeaGeneration() {
                     <span className="text-xs">{copied ? 'تم النسخ' : 'نسخ الكل'}</span>
                   </button>
                 </div>
-                <div className="bg-white/[0.02] rounded-3xl p-8 border border-white/10 font-arabic text-gray-200 leading-loose shadow-inner overflow-y-auto">
+                <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/10 font-arabic text-gray-200 leading-loose shadow-inner overflow-y-auto max-h-[420px]">
                   {parseNumberedList(result)}
                 </div>
               </div>
