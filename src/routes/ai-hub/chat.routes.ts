@@ -5,6 +5,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { generateChatResponse } from '../../controllers/ai-hub/chat.controller';
+import { summarizeText, rewriteText } from '../../controllers/ai-hub/text-tools.controller';
 
 const router = Router();
 
@@ -28,5 +29,17 @@ router.use((req: Request, res: Response, next: NextFunction) => {
  * }
  */
 router.post('/generate', generateChatResponse);
+
+/**
+ * POST /api/ai-hub/chat/summarize - تلخيص نص
+ * Request body: { "text": "string", "style": "bullet_points|short_paragraph|headlines" }
+ */
+router.post('/summarize', summarizeText);
+
+/**
+ * POST /api/ai-hub/chat/rewrite - إعادة صياغة نص
+ * Request body: { "text": "string", "style": "radio_broadcast|investigative|social_media|formal|casual" }
+ */
+router.post('/rewrite', rewriteText);
 
 export default router;

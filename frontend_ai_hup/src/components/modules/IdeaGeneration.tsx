@@ -11,6 +11,7 @@ interface Program {
   id: number;
   title: string;
   description?: string;
+  media_unit_id?: number;
   media_unit_name?: string;
 }
 
@@ -135,7 +136,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
   // ─── Filter helpers ──────────────────────────────────────────
   const filteredPrograms = programs.filter((p: Program) => {
     const matchesSearch = p.title.toLowerCase().includes(programSearch.toLowerCase());
-    const matchesUnit = mediaUnitId === null || (p as any).media_unit_id === mediaUnitId;
+    const matchesUnit = mediaUnitId === null || p.media_unit_id === mediaUnitId;
     return matchesSearch && matchesUnit;
   });
   const filteredGuests = guests.filter((g: Guest) =>

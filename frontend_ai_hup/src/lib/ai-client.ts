@@ -5,10 +5,11 @@
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-// ─── Chat feature ─────────────────────────────────────────────
+// ─── Chat / Generate ──────────────────────────────────────────
 export async function generateAIContent(
   prompt: string,
-  systemInstruction: string = ''
+  systemInstruction: string = '',
+  options?: { max_tokens?: number }
 ): Promise<string> {
   const fullPrompt = systemInstruction
     ? `${systemInstruction}\n\n${prompt}`
@@ -17,7 +18,10 @@ export async function generateAIContent(
   const response = await fetch(`${API_URL}/ai-hub/chat/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: fullPrompt }),
+    body: JSON.stringify({
+      prompt: fullPrompt,
+      ...(options?.max_tokens ? { max_tokens: options.max_tokens } : {}),
+    }),
   });
 
   if (!response.ok) {
@@ -27,6 +31,52 @@ export async function generateAIContent(
 
   const data = await response.json();
   if (!data.success) throw new Error(data.error || 'AI request failed');
+  return data.result ?? '';
+}
+
+// ─── Summarize ────────────────────────────────────────────────
+export type SummarizeStyle = 'bullet_points' | 'short_paragraph' | 'headlines';
+
+export async function summarizeContent(
+  text: string,
+  style: SummarizeStyle = 'bullet_points'
+): Promise<string> {
+  const response = await fetch(`${API_URL}/ai-hub/chat/summarize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, style }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success) throw new Error(data.error || 'Summarize request failed');
+  return data.result ?? '';
+}
+
+// ─── Rewrite ──────────────────────────────────────────────────
+export type RewriteStyle = 'radio_broadcast' | 'investigative' | 'social_media' | 'formal' | 'casual';
+
+export async function rewriteContent(
+  text: string,
+  style: RewriteStyle = 'radio_broadcast'
+): Promise<string> {
+  const response = await fetch(`${API_URL}/ai-hub/chat/rewrite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, style }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success) throw new Error(data.error || 'Rewrite request failed');
   return data.result ?? '';
 }
 

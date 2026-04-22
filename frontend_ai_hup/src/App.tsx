@@ -246,7 +246,7 @@ export default function App() {
 
               {activeModule === 'DASHBOARD' && <Dashboard setActiveModule={setActiveModule} />}
               {activeModule === 'IDEAS' && <IdeaGeneration mediaUnitId={selectedMediaUnitId} />}
-              {activeModule === 'EDITING' && <TextEditing />}
+              {activeModule === 'EDITING' && <TextEditing mediaUnitId={selectedMediaUnitId} />}
               {activeModule === 'SOCIAL' && <SocialMedia mediaUnitId={selectedMediaUnitId} />}
               {activeModule === 'AUDIO' && <AudioProcessing />}
               {activeModule === 'NEWS' && <NewsRoom mediaUnitId={selectedMediaUnitId} />}
