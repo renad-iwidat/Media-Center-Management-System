@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   Newspaper, Loader2, Copy, Check, FileText, LayoutList,
-  Trash2, Search, Sparkles, RefreshCw, Plus
+  Trash2, Search, Sparkles, RefreshCw, Plus, Sun, Moon, Hash
 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 type NewsMode = 'SUMMARY' | 'BULLETIN';
+type TimeOfDay = 'MORNING' | 'EVENING';
 
 interface NewsItem {
   id: string;
@@ -19,8 +20,11 @@ interface NewsItem {
   category_name?: string;
 }
 
+const COUNT_PRESETS = [5, 10, 15];
+
 export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }) {
   const [activeMode, setActiveMode] = useState<NewsMode>('SUMMARY');
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('MORNING');
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [result, setResult] = useState<string | null>(null);
@@ -28,6 +32,14 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
   const [isLoadingNews, setIsLoadingNews] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  // News count selection
+  const [countPreset, setCountPreset] = useState<number | 'custom'>(5);
+  const [customCount, setCustomCount] = useState<string>('');
+
+  // Derived: how many items to auto-select
+  const targetCount = countPreset === 'custom'
+    ? (parseInt(customCount) || 0)
+    : countPreset;
 
   // Fetch news on mount and when mediaUnitId prop changes
   useEffect(() => {
@@ -82,6 +94,11 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
   const selectAll = () =>
     setNewsItems(newsItems.map(item => ({ ...item, selected: true })));
 
+  // Select exactly N items from the top
+  const selectCount = (n: number) => {
+    setNewsItems(prev => prev.map((item, idx) => ({ ...item, selected: idx < n })));
+  };
+
   const removeNewsItem = (id: string) =>
     setNewsItems(newsItems.filter(item => item.id !== id));
 
@@ -98,10 +115,20 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
     setIsLoading(true);
     setResult(null);
 
-    const system = 'أنت محرر أخبار محترف. مهمتك تحرير المادة الخبرية بدقة واحترافية.';
+    // Determine media unit name from first selected item
+    const firstSelected = newsItems.find(i => i.selected);
+    const mediaUnitName = firstSelected?.media_unit_name || 'الميديا يونت المختارة';
+
+    const timeLabel = timeOfDay === 'MORNING' ? 'الصباحية' : 'المسائية';
+
+    const bulletinIntro = `أهلاً بكم مستمعينا الكرام في نشرة الأخبار ${timeLabel} من "${mediaUnitName}"، نستهلها بأبرز العناوين`;
+    const summaryIntro = `موجز الأخبار ${timeLabel} من "${mediaUnitName}"، أهلاً بكم`;
+
+    const system = 'أنت محرر أخبار محترف متخصص في الإعلام العربي. مهمتك تحرير المادة الخبرية بدقة واحترافية وأسلوب إذاعي رصين.';
+
     const prompt = activeMode === 'SUMMARY'
-      ? `إليك الأخبار:\n${selectedContent}\n\nلخصها في موجز إخباري بنقاط واضحة.`
-      : `إليك المادة الخبرية:\n${selectedContent}\n\nصغها كنشرة إخبارية كاملة جاهزة للإلقاء.`;
+      ? `ابدأ بهذه المقدمة تماماً:\n"${summaryIntro}"\n\nثم لخّص الأخبار التالية في موجز إخباري بنقاط واضحة ومرقّمة، بأسلوب إذاعي مختصر:\n\n${selectedContent}`
+      : `ابدأ بهذه المقدمة تماماً:\n"${bulletinIntro}"\n\nثم صُغ الأخبار التالية كنشرة إخبارية ${timeLabel} كاملة جاهزة للإلقاء، بأسلوب إذاعي احترافي:\n\n${selectedContent}`;
 
     try {
       const res = await generateAIContent(prompt, system);
@@ -216,6 +243,23 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
             </div>
 
             <div className="border-t border-white/5 pt-3 flex flex-col gap-2">
+              {/* ── Time of Day ── */}
+              <div className="flex gap-1.5 p-1 bg-white/5 rounded-lg">
+                <button
+                  onClick={() => setTimeOfDay('MORNING')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${timeOfDay === 'MORNING' ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <Sun size={12} /> صباحي
+                </button>
+                <button
+                  onClick={() => setTimeOfDay('EVENING')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${timeOfDay === 'EVENING' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <Moon size={12} /> مسائي
+                </button>
+              </div>
+
+              {/* ── Mode: Summary / Bulletin ── */}
               <div className="flex gap-1.5 p-1 bg-white/5 rounded-lg">
                 <button
                   onClick={() => setActiveMode('SUMMARY')}
@@ -230,12 +274,59 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                   <FileText size={12} /> نشرة
                 </button>
               </div>
+
+              {/* ── News Count ── */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] text-gray-500 text-right flex items-center gap-1 justify-end">
+                  <Hash size={10} /> عدد الأخبار
+                </span>
+                <div className="flex gap-1.5">
+                  {COUNT_PRESETS.map(n => (
+                    <button
+                      key={n}
+                      onClick={() => { setCountPreset(n); selectCount(n); }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${countPreset === n ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCountPreset('custom')}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${countPreset === 'custom' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'}`}
+                  >
+                    يدوي
+                  </button>
+                </div>
+                {countPreset === 'custom' && (
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      min={1}
+                      max={newsItems.length}
+                      placeholder="أدخل العدد"
+                      value={customCount}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomCount(e.target.value)}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#2563eb] text-right"
+                    />
+                    <button
+                      onClick={() => selectCount(parseInt(customCount) || 0)}
+                      className="px-3 py-1.5 bg-[#2563eb]/20 text-[#2563eb] rounded-lg text-xs hover:bg-[#2563eb]/30 transition-colors border border-[#2563eb]/30"
+                    >
+                      تطبيق
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={handleGenerate}
                 disabled={isLoading || selectedCount === 0}
                 className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 disabled:opacity-30 text-sm"
               >
-                {isLoading ? <Loader2 className="animate-spin" size={16} /> : <><Sparkles size={14} /><span>إنشاء المحتوى ({selectedCount})</span></>}
+                {isLoading
+                  ? <Loader2 className="animate-spin" size={16} />
+                  : <><Sparkles size={14} /><span>إنشاء {activeMode === 'BULLETIN' ? 'النشرة' : 'الموجز'} ({selectedCount})</span></>
+                }
               </button>
             </div>
           </div>
@@ -249,7 +340,12 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 <div className="w-7 h-7 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">
                   <Newspaper size={14} />
                 </div>
-                <h3 className="text-sm font-bold">المنتج النهائي</h3>
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-bold">المنتج النهائي</h3>
+                  <span className="text-[10px] text-gray-500">
+                    {activeMode === 'BULLETIN' ? 'نشرة' : 'موجز'} {timeOfDay === 'MORNING' ? 'صباحية' : 'مسائية'}
+                  </span>
+                </div>
               </div>
               {result && (
                 <button
