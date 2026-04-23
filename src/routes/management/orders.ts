@@ -158,4 +158,48 @@ router.patch('/:id/auto-status', (req: Request, res: Response) => {
   orderController.updateOrderStatusBasedOnTasks(req, res);
 });
 
+// ============ KPI & Analytics ============
+
+/**
+ * GET /api/orders/:id/kpi
+ * Get order KPI metrics
+ */
+router.get('/:id/kpi', (req: Request, res: Response) => {
+  orderController.getOrderKPI(req, res);
+});
+
+/**
+ * GET /api/orders/:id/statistics
+ * Get order statistics with completion percentage
+ */
+router.get('/:id/statistics', (req: Request, res: Response) => {
+  orderController.getOrderStatistics(req, res);
+});
+
+/**
+ * GET /api/orders/:id/full-details
+ * Get order with all relations, tasks, content, history, and KPI
+ */
+router.get('/:id/full-details', (req: Request, res: Response) => {
+  orderController.getOrderFullDetails(req, res);
+});
+
+// ============ Archive ============
+
+/**
+ * POST /api/orders/:id/archive
+ * Archive an order and its related content
+ */
+router.post('/:id/archive', (req: Request, res: Response) => {
+  orderController.archiveOrder(req, res);
+});
+
+/**
+ * GET /api/orders/all-with-kpi
+ * Get all orders with their KPI data
+ */
+router.get('/all-with-kpi', (req: Request, res: Response) => {
+  orderController.getAllOrdersWithKPI(req, res);
+});
+
 export default router;

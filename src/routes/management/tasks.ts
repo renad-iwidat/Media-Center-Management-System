@@ -247,4 +247,14 @@ router.get('/:id/details', (req: Request, res: Response) => {
   taskController.getTaskWithDetails(req, res);
 });
 
+// ============ KPI ============
+
+/**
+ * GET /api/tasks/:id/kpi
+ * Get task KPI metrics
+ */
+router.get('/:id/kpi', (req: Request, res: Response) => {
+  taskController.getTaskKPI(req, res);
+});
+
 export default router;

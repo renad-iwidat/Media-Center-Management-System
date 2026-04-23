@@ -254,4 +254,165 @@ export class KPIService {
     );
     return result.rows[0] || null;
   }
+
+  /**
+   * Get all users KPI (for dashboard)
+   */
+  static async getAllUsersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT uk.*, u.name as user_name, u.email, r.name as role_name
+       FROM user_kpi uk
+       INNER JOIN users u ON uk.user_id = u.id
+       LEFT JOIN roles r ON u.role_id = r.id
+       ORDER BY uk.on_time_percentage DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Dashboard summary — ملخص عام لكل الـ KPIs
+   */
+  static async getDashboardSummary(): Promise<any> {
+    // إجمالي الأوردرات
+    const ordersResult = await pool.query(
+      `SELECT
+         COUNT(*) as total_orders,
+         SUM(CASE WHEN os.name = 'Done' THEN 1 ELSE 0 END) as completed_orders,
+         SUM(CASE WHEN os.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_orders,
+         SUM(CASE WHEN os.name = 'Pending' OR os.name = 'Created' THEN 1 ELSE 0 END) as pending_orders,
+         SUM(CASE WHEN o.is_overdue = true THEN 1 ELSE 0 END) as overdue_orders
+       FROM orders o
+       LEFT JOIN order_statuses os ON o.status_id = os.id`
+    );
+
+    // إجمالي المهام
+    const tasksResult = await pool.query(
+      `SELECT
+         COUNT(*) as total_tasks,
+         SUM(CASE WHEN ts.name = 'Done' THEN 1 ELSE 0 END) as completed_tasks,
+         SUM(CASE WHEN ts.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_tasks,
+         SUM(CASE WHEN ts.name = 'Pending' THEN 1 ELSE 0 END) as pending_tasks,
+         SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks
+       FROM tasks t
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id`
+    );
+
+    // إجمالي المحتوى
+    const contentResult = await pool.query(
+      `SELECT
+         COUNT(*) as total_content,
+         COALESCE(SUM(file_size), 0) as total_size,
+         SUM(CASE WHEN is_archived = true THEN 1 ELSE 0 END) as archived_content
+       FROM content`
+    );
+
+    // إجمالي المستخدمين
+    const usersResult = await pool.query(
+      `SELECT COUNT(*) as total_users FROM users`
+    );
+
+    // متوسط وقت الإنجاز
+    const avgResult = await pool.query(
+      `SELECT
+         ROUND(AVG(actual_duration)) as avg_task_duration,
+         ROUND(AVG(CASE WHEN is_on_time = true THEN 1.0 ELSE 0.0 END) * 100) as on_time_percentage
+       FROM task_kpi
+       WHERE actual_duration IS NOT NULL`
+    );
+
+    // أفضل 5 موظفين
+    const topUsersResult = await pool.query(
+      `SELECT uk.user_id, u.name, uk.completed_tasks, uk.on_time_percentage
+       FROM user_kpi uk
+       INNER JOIN users u ON uk.user_id = u.id
+       WHERE uk.completed_tasks > 0
+       ORDER BY uk.on_time_percentage DESC, uk.completed_tasks DESC
+       LIMIT 5`
+    );
+
+    const orders = ordersResult.rows[0];
+    const tasks = tasksResult.rows[0];
+    const content = contentResult.rows[0];
+    const avg = avgResult.rows[0];
+
+    return {
+      orders: {
+        total: parseInt(orders.total_orders) || 0,
+        completed: parseInt(orders.completed_orders) || 0,
+        in_progress: parseInt(orders.in_progress_orders) || 0,
+        pending: parseInt(orders.pending_orders) || 0,
+        overdue: parseInt(orders.overdue_orders) || 0,
+        completion_rate: orders.total_orders > 0
+          ? Math.round((parseInt(orders.completed_orders) / parseInt(orders.total_orders)) * 100)
+          : 0,
+      },
+      tasks: {
+        total: parseInt(tasks.total_tasks) || 0,
+        completed: parseInt(tasks.completed_tasks) || 0,
+        in_progress: parseInt(tasks.in_progress_tasks) || 0,
+        pending: parseInt(tasks.pending_tasks) || 0,
+        overdue: parseInt(tasks.overdue_tasks) || 0,
+        completion_rate: tasks.total_tasks > 0
+          ? Math.round((parseInt(tasks.completed_tasks) / parseInt(tasks.total_tasks)) * 100)
+          : 0,
+      },
+      content: {
+        total: parseInt(content.total_content) || 0,
+        total_size_mb: Math.round((parseInt(content.total_size) || 0) / 1024 / 1024),
+        archived: parseInt(content.archived_content) || 0,
+      },
+      users: {
+        total: parseInt(usersResult.rows[0].total_users) || 0,
+      },
+      performance: {
+        avg_task_duration_minutes: parseInt(avg?.avg_task_duration) || 0,
+        on_time_percentage: parseInt(avg?.on_time_percentage) || 0,
+      },
+      top_performers: topUsersResult.rows,
+    };
+  }
+
+  /**
+   * Recalculate all KPIs (manual trigger)
+   */
+  static async recalculateAllKPIs(): Promise<{ tasks: number; orders: number; users: number }> {
+    let taskCount = 0;
+    let orderCount = 0;
+    let userCount = 0;
+
+    // Recalculate all completed tasks
+    const completedTasks = await pool.query(
+      `SELECT id FROM tasks WHERE completed_at IS NOT NULL`
+    );
+    for (const task of completedTasks.rows) {
+      try {
+        await this.calculateTaskKPI(task.id);
+        taskCount++;
+      } catch { /* skip failed */ }
+    }
+
+    // Recalculate all orders
+    const allOrders = await pool.query(`SELECT id FROM orders`);
+    for (const order of allOrders.rows) {
+      try {
+        await this.calculateOrderKPI(order.id);
+        orderCount++;
+      } catch { /* skip failed */ }
+    }
+
+    // Recalculate all users with tasks
+    const usersWithTasks = await pool.query(
+      `SELECT DISTINCT assigned_to as user_id FROM tasks WHERE assigned_to IS NOT NULL`
+    );
+    for (const user of usersWithTasks.rows) {
+      try {
+        await this.calculateUserKPI(user.user_id);
+        userCount++;
+      } catch { /* skip failed */ }
+    }
+
+    return { tasks: taskCount, orders: orderCount, users: userCount };
+  }
 }
