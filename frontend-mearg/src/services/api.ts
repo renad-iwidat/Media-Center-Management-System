@@ -165,4 +165,20 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ value }),
     }),
+
+  // --- Uploaded Files ---
+  getUploadedFiles: () => request<any>("/uploaded-files"),
+  getAudioFiles: () => request<any>("/uploaded-files/audio"),
+  getVideoFiles: () => request<any>("/uploaded-files/video"),
+  getUploadedFileById: (id: number) => request<any>(`/uploaded-files/${id}`),
+  getFilesBySourceType: (sourceTypeId: number) =>
+    request<any>(`/uploaded-files/source-type/${sourceTypeId}`),
+
+  // --- Text-to-Speech ---
+  generateTTS: (text: string, voice: string = 'nova') =>
+    request<any>("/ai-hub/tts/generate", {
+      method: "POST",
+      body: JSON.stringify({ text, voice }),
+    }),
+  getTTSVoices: () => request<any>("/ai-hub/tts/voices"),
 };

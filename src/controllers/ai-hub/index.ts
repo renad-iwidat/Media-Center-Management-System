@@ -4,3 +4,4 @@
  */
 
 export { generateChatResponse } from './chat.controller';
+export { generateTTS, getVoices } from './tts.controller';

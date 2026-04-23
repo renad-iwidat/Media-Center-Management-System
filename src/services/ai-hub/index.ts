@@ -13,3 +13,4 @@ export {
   clearAllLimits,
   getAllLimits,
 } from './rate-limiter.service';
+export { textToSpeech, textToSpeechBase64, getAvailableVoices, type TTSVoice } from './tts.service';

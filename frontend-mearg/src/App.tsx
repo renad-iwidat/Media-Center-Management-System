@@ -406,7 +406,7 @@ export default function App() {
               {activeSection === 'ideas' && <IdeaGeneration mediaUnitId={selectedMediaUnitId} />}
               {activeSection === 'editing' && <TextEditing mediaUnitId={selectedMediaUnitId} />}
               {activeSection === 'social' && <SocialMedia mediaUnitId={selectedMediaUnitId} />}
-              {activeSection === 'audio' && <AudioProcessing />}
+              {activeSection === 'audio' && <AudioProcessing mediaUnitId={selectedMediaUnitId} />}
               {activeSection === 'newsroom' && <NewsRoom mediaUnitId={selectedMediaUnitId} />}
               {activeSection === 'chat' && <ChatInterface />}
             </motion.div>
