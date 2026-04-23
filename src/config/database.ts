@@ -1,6 +1,13 @@
 import { Pool, PoolClient } from 'pg';
 import { environment } from './environment';
 
+// Configure BigInt parsing - PostgreSQL returns BIGINT as string
+const types = require('pg').types;
+types.setTypeParser(20, (val: string | null) => {
+  if (val === null) return null;
+  return String(val);
+});
+
 /**
  * PostgreSQL Connection Pool
  * إدارة الاتصالات مع قاعدة البيانات
@@ -70,5 +77,10 @@ export async function getClient(): Promise<PoolClient> {
 export async function closePool(): Promise<void> {
   await pool.end();
 }
+
+// Aliases for portal-r compatibility
+export const connectDatabase = testConnection;
+export const disconnectDatabase = closePool;
+export const getPool = () => pool;
 
 export default pool;

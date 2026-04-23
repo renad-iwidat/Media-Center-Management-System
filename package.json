@@ -11,7 +11,16 @@
     "lint": "eslint src/**/*.ts",
     "migrate": "ts-node scripts/run-migrations.ts",
     "check-migrations": "ts-node scripts/check-migrations.ts",
-    "validate-migrations": "ts-node scripts/validate-migrations.ts"
+    "validate-migrations": "ts-node scripts/validate-migrations.ts",
+    "cleanup:test": "ts-node src/utils/cleanup-test-data.ts",
+    "rss:fetch": "ts-node src/utils/rss-runner.ts",
+    "rss:insert": "ts-node src/utils/insert-rss-sources.ts",
+    "rss:list": "ts-node src/utils/insert-rss-sources.ts list",
+    "rss:delete": "ts-node src/utils/insert-rss-sources.ts delete",
+    "classify": "ts-node src/utils/classify-articles.ts",
+    "fetch:save": "ts-node src/utils/fetch-and-save.ts",
+    "db:test": "ts-node src/utils/test-db-connection.ts",
+    "scheduler": "ts-node src/utils/start-scheduler.ts"
   },
   "keywords": [
     "media",
@@ -34,6 +43,7 @@
     "pg": "^8.11.3"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",

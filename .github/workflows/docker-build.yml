@@ -1,0 +1,67 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Backend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: media-center-backend:latest
+
+      - name: Build Frontend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./portal-frontend
+          file: ./portal-frontend/Dockerfile
+          push: false
+          tags: media-center-frontend:latest
+
+      - name: Run tests
+        run: |
+          docker-compose -f docker-compose.yml up -d
+          docker-compose exec -T backend npm run test
+          docker-compose down
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Install frontend dependencies
+        run: cd portal-frontend && npm ci
+
+      - name: Run frontend linter
+        run: cd portal-frontend && npm run lint

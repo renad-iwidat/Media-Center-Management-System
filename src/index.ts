@@ -1,6 +1,9 @@
 import express, { Express, Request, Response } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import apiRoutes from './routes';
+import portalRoutes from './routes/portal-r';
 import { testConnection } from './config/database';
 
 // Load environment variables
@@ -10,24 +13,23 @@ dotenv.config();
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
+// Security middleware
+app.use(helmet());
+
 // CORS middleware
-app.use((_req: Request, res: Response, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  if (_req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
+app.use(cors());
 
 // Parse JSON request bodies
 app.use(express.json());
 
 // Parse URL-encoded request bodies
 app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use((req: Request, _res: Response, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -38,8 +40,24 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// API routes
+// Root endpoint
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    message: 'Media Center Management System API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      management: '/api (orders, tasks)',
+      portal: '/api/portal',
+    },
+  });
+});
+
+// Management API routes (Orders, Tasks)
 app.use('/api', apiRoutes);
+
+// Portal API routes (Users, Programs, Desks, etc.)
+app.use('/api/portal', portalRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -78,6 +96,7 @@ app.listen(port, async () => {
 ║   - GET  /health                                           ║
 ║   - GET  /api/orders                                       ║
 ║   - GET  /api/tasks                                        ║
+║   - GET  /api/portal/*                                     ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
@@ -93,6 +112,14 @@ app.listen(port, async () => {
     console.error('2. Database server is running and accessible');
     console.error('3. Network connectivity to the database');
   }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  const { closePool } = await import('./config/database');
+  await closePool();
+  process.exit(0);
 });
 
 export default app;
