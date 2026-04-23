@@ -1,15 +1,23 @@
 /**
- * Portal Models - Barrel Export
- * Exports all models used in the portal
+ * Portal Models - Re-exports from unified types
+ * All types are now centralized in src/types/
  */
 
-export * from './Desk';
-export * from './Team';
-export * from './User';
-export * from './Program';
-export * from './Episode';
-export * from './Guest';
-export * from './ProgramRole';
-export * from './Role';
-export * from './MediaUnit';
-export * from './EpisodeGuest';
+// Re-export from management types
+export type {
+  Desk, CreateDeskDTO, UpdateDeskDTO,
+  Team, CreateTeamDTO, UpdateTeamDTO,
+  TeamUser,
+  User, CreateUserDTO, UpdateUserDTO,
+  Role, CreateRoleDTO, UpdateRoleDTO,
+  MediaUnit, CreateMediaUnitDTO, UpdateMediaUnitDTO,
+  ProgramRole, CreateProgramRoleDTO, UpdateProgramRoleDTO,
+} from '../../types/management';
+
+// Re-export from content types
+export type {
+  Program, CreateProgramDTO, UpdateProgramDTO,
+  Episode, CreateEpisodeDTO, UpdateEpisodeDTO,
+  Guest, CreateGuestDTO, UpdateGuestDTO,
+  EpisodeGuest, CreateEpisodeGuestDTO,
+} from '../../types/content';

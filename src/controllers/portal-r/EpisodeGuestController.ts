@@ -64,10 +64,10 @@ export class EpisodeGuestController {
         return;
       }
 
-      const episodeGuest = await episodeGuestService.createEpisodeGuest({
-        episode_id: BigInt(episode_id),
-        guest_id: BigInt(guest_id),
-      });
+      const episodeGuest = await episodeGuestService.createEpisodeGuest(
+        BigInt(episode_id),
+        BigInt(guest_id),
+      );
 
       res.status(201).json({
         success: true,

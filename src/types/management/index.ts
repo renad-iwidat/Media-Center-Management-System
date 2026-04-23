@@ -140,6 +140,18 @@ export interface Desk {
   created_at?: Date;
 }
 
+export interface CreateDeskDTO {
+  name: string;
+  description?: string;
+  manager_id?: bigint;
+}
+
+export interface UpdateDeskDTO {
+  name?: string;
+  description?: string;
+  manager_id?: bigint;
+}
+
 export interface Team {
   id: bigint;
   desk_id?: bigint;
@@ -148,9 +160,108 @@ export interface Team {
   created_at?: Date;
 }
 
+export interface CreateTeamDTO {
+  desk_id: bigint;
+  name: string;
+  manager_id?: bigint;
+}
+
+export interface UpdateTeamDTO {
+  name?: string;
+  manager_id?: bigint;
+}
+
 export interface TeamUser {
   team_id: bigint;
   user_id: bigint;
+}
+
+// User Types
+export interface User {
+  id: bigint;
+  name: string;
+  email: string;
+  role_id?: bigint;
+  work_days?: string;
+  start_time?: string;
+  end_time?: string;
+  created_at?: Date;
+}
+
+export interface CreateUserDTO {
+  name: string;
+  email: string;
+  role_id?: bigint;
+  work_days?: string;
+  start_time?: string;
+  end_time?: string;
+}
+
+export interface UpdateUserDTO {
+  name?: string;
+  email?: string;
+  role_id?: bigint;
+  work_days?: string;
+  start_time?: string;
+  end_time?: string;
+}
+
+// Role Types
+export interface Role {
+  id: bigint;
+  name: string;
+  description?: string;
+}
+
+export interface CreateRoleDTO {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateRoleDTO {
+  name?: string;
+  description?: string;
+}
+
+// Media Unit Types
+export interface MediaUnit {
+  id: bigint;
+  name: string;
+  description?: string;
+  created_at?: Date;
+}
+
+export interface CreateMediaUnitDTO {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateMediaUnitDTO {
+  name?: string;
+  description?: string;
+}
+
+// Program Role Types (ربط المستخدمين بالبرامج)
+export interface ProgramRole {
+  id: bigint;
+  program_id: bigint;
+  user_id: bigint;
+  role_id: bigint;
+  created_at?: Date;
+  // Joined fields
+  role_name?: string;
+  user_name?: string;
+  program_name?: string;
+}
+
+export interface CreateProgramRoleDTO {
+  program_id: bigint;
+  user_id: bigint;
+  role_id: bigint;
+}
+
+export interface UpdateProgramRoleDTO {
+  role_id?: bigint;
 }
 
 // Priority Types

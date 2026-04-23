@@ -1,8 +1,3 @@
-/**
- * Portal Services - Barrel Export
- * Exports all services used in the portal
- */
-
 export { DeskService } from './DeskService';
 export { TeamService } from './TeamService';
 export { UserService } from './UserService';

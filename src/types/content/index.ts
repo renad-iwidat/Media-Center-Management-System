@@ -79,12 +79,39 @@ export interface Episode {
   created_at?: Date;
 }
 
+export interface CreateEpisodeDTO {
+  program_id: bigint;
+  title: string;
+  episode_number?: number;
+  air_date?: Date;
+}
+
+export interface UpdateEpisodeDTO {
+  title?: string;
+  episode_number?: number;
+  air_date?: Date;
+}
+
 export interface Program {
   id: bigint;
   title: string;
   description?: string;
   media_unit_id?: bigint;
   created_at?: Date;
+  air_time?: string;
+}
+
+export interface CreateProgramDTO {
+  title: string;
+  description?: string;
+  media_unit_id?: bigint;
+  air_time?: string;
+}
+
+export interface UpdateProgramDTO {
+  title?: string;
+  description?: string;
+  media_unit_id?: bigint;
   air_time?: string;
 }
 
@@ -98,7 +125,26 @@ export interface Guest {
   phone?: string;
 }
 
+export interface CreateGuestDTO {
+  name: string;
+  title?: string;
+  bio?: string;
+  phone?: string;
+}
+
+export interface UpdateGuestDTO {
+  name?: string;
+  title?: string;
+  bio?: string;
+  phone?: string;
+}
+
 export interface EpisodeGuest {
+  episode_id: bigint;
+  guest_id: bigint;
+}
+
+export interface CreateEpisodeGuestDTO {
   episode_id: bigint;
   guest_id: bigint;
 }
