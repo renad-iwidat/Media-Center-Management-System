@@ -97,6 +97,8 @@ app.listen(port, async () => {
 ║   - GET  /api/orders                                       ║
 ║   - GET  /api/tasks                                        ║
 ║   - GET  /api/kpi/dashboard                                ║
+║   - GET  /api/shootings                                    ║
+║   - GET  /api/content                                      ║
 ║   - GET  /api/portal/*                                     ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝

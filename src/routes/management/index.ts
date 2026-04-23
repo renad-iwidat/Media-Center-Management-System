@@ -2,6 +2,8 @@ import { Router } from 'express';
 import ordersRouter from './orders';
 import tasksRouter from './tasks';
 import kpiRouter from './kpi';
+import shootingsRouter from './shootings';
+import contentRouter from './content';
 
 /**
  * Management Routes
@@ -10,26 +12,16 @@ import kpiRouter from './kpi';
  * - /api/orders - Order management
  * - /api/tasks - Task management
  * - /api/kpi - KPI & Analytics
+ * - /api/shootings - Shooting management
+ * - /api/content - Content management & Archive
  */
 
 const router = Router();
 
-/**
- * Order routes
- * Base path: /api/orders
- */
 router.use('/orders', ordersRouter);
-
-/**
- * Task routes
- * Base path: /api/tasks
- */
 router.use('/tasks', tasksRouter);
-
-/**
- * KPI routes
- * Base path: /api/kpi
- */
 router.use('/kpi', kpiRouter);
+router.use('/shootings', shootingsRouter);
+router.use('/content', contentRouter);
 
 export default router;

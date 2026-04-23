@@ -12,7 +12,6 @@ export interface Content {
   created_by?: bigint;
   created_at?: Date;
   tags?: string[];
-  // New fields
   task_id?: bigint;
   cloud_url?: string;
   file_size?: number;
@@ -20,6 +19,47 @@ export interface Content {
   version?: number;
   is_archived?: boolean;
   archived_at?: Date;
+  // Joined fields
+  shooting_id?: bigint;
+}
+
+export interface CreateContentDTO {
+  title: string;
+  content_type_id: bigint;
+  task_id?: bigint;
+  shooting_id?: bigint;
+  owner_type?: string;
+  owner_id?: bigint;
+  status_id?: bigint;
+  media_unit_id?: bigint;
+  created_by: bigint;
+  tags?: string[];
+  cloud_url?: string;
+  file_size?: number;
+  duration?: number;
+}
+
+export interface UpdateContentDTO {
+  title?: string;
+  content_type_id?: bigint;
+  status_id?: bigint;
+  is_final?: boolean;
+  tags?: string[];
+  cloud_url?: string;
+  file_size?: number;
+  duration?: number;
+}
+
+export interface CreateContentFromShootingDTO {
+  shooting_id: bigint;
+  title: string;
+  content_type_id: bigint;
+  created_by: bigint;
+  cloud_url?: string;
+  file_size?: number;
+  duration?: number;
+  tags?: string[];
+  output_type: 'report' | 'social' | 'video' | 'archive';
 }
 
 export interface ContentType {

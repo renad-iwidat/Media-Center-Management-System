@@ -131,6 +131,27 @@ export interface Shooting {
   created_at?: Date;
 }
 
+export interface CreateShootingDTO {
+  order_id: bigint;
+  task_id?: bigint;
+  location: string;
+  start_time: Date;
+  end_time?: Date;
+  equipment?: string[];
+  crew?: string[];
+  notes?: string;
+  created_by: bigint;
+}
+
+export interface UpdateShootingDTO {
+  location?: string;
+  start_time?: Date;
+  end_time?: Date;
+  equipment?: string[];
+  crew?: string[];
+  notes?: string;
+}
+
 // Desk & Team Types
 export interface Desk {
   id: bigint;
