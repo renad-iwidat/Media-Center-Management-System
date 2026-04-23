@@ -1,8 +1,0 @@
-{
-  "name": "AI Hub Studio",
-  "description": "منصة متكاملة لأدوات الذكاء الاصطناعي المتخصصة في الإعلام والتحرير وصناعة المحتوى.",
-  "requestFramePermissions": [
-    "microphone"
-  ],
-  "majorCapabilities": []
-}
