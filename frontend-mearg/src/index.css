@@ -14,12 +14,20 @@
     color: #f3f4f6;
     font-family: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
     direction: rtl;
+    overflow-x: hidden;
   }
   
   h1, h2, h3, h4, h5, h6 {
     color: white;
     font-weight: bold;
     font-family: "Almarai", sans-serif;
+  }
+
+  /* Responsive font sizes */
+  @media (max-width: 640px) {
+    body {
+      font-size: 14px;
+    }
   }
 }
 
@@ -67,6 +75,7 @@
     border-radius: 0.75rem;
     padding: 0.625rem 1rem;
     font-family: "Almarai", sans-serif;
+    font-size: clamp(12px, 2vw, 16px);
   }
 
   select option {
@@ -100,6 +109,17 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #334155;
   }
+
+  /* Responsive table */
+  @media (max-width: 640px) {
+    table {
+      font-size: 12px;
+    }
+    
+    th, td {
+      padding: 0.5rem 0.25rem;
+    }
+  }
 }
 
 /* Custom scrollbar for dark theme */
@@ -118,4 +138,11 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

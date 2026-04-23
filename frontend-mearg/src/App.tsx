@@ -157,42 +157,42 @@ export default function App() {
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="bg-[#0b1224] border-l border-white/5 flex flex-col h-screen fixed right-0 z-50 overflow-hidden"
+        className="bg-[#0b1224] border-l border-white/5 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none"
       >
         {/* Logo */}
-        <div className="p-5 flex items-center justify-between shrink-0 border-b border-white/5">
+        <div className="p-3 sm:p-5 flex items-center justify-between shrink-0 border-b border-white/5">
           {isSidebarOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#2563eb] rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <TrendingUp className="text-white w-5 h-5" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#2563eb] rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
+                <TrendingUp className="text-white w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <span className="font-arabic font-bold text-lg tracking-tight">
+              <span className="font-arabic font-bold text-sm sm:text-lg tracking-tight truncate">
                 Media<span className="text-blue-400">Pro</span>
               </span>
             </motion.div>
           )}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+            className="p-2 hover:bg-white/5 rounded-xl transition-colors shrink-0"
           >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-2 sm:px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
           {NAV_GROUPS.map((group) => (
-            <div key={group.label} className="mb-3">
+            <div key={group.label} className="space-y-2">
               {/* Group Header */}
               {isSidebarOpen && (
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between px-3 py-2 mb-1 text-[10px] uppercase tracking-widest text-gray-500 font-semibold hover:text-gray-300 transition-colors"
+                  className="w-full flex items-center justify-between px-2 sm:px-3 py-2.5 text-xs uppercase tracking-widest text-gray-500 font-semibold hover:text-gray-300 transition-colors"
                 >
-                  <span>{group.label}</span>
+                  <span className="truncate">{group.label}</span>
                   <ChevronDown
-                    size={12}
-                    className={`transition-transform ${collapsedGroups[group.label] ? '-rotate-90' : ''}`}
+                    size={14}
+                    className={`transition-transform shrink-0 ${collapsedGroups[group.label] ? '-rotate-90' : ''}`}
                   />
                 </button>
               )}
@@ -205,18 +205,18 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group
+                    className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-xl transition-all duration-200 group
                       ${isActive
                         ? 'bg-blue-600/10 text-blue-400 border border-blue-400/20'
                         : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
                       }`}
                   >
-                    <Icon size={20} className={`shrink-0 ${isActive ? 'text-blue-400' : ''}`} />
+                    <Icon size={18} className={`shrink-0 ${isActive ? 'text-blue-400' : ''}`} />
                     {isSidebarOpen && (
                       <motion.span
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="font-medium text-sm whitespace-nowrap truncate"
+                        className="font-medium text-xs sm:text-sm whitespace-nowrap truncate"
                       >
                         {item.label}
                       </motion.span>
@@ -230,11 +230,11 @@ export default function App() {
           {/* Settings Button */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-gray-400 hover:bg-white/5 hover:text-white border border-transparent mt-2"
+            className="w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-xl transition-all duration-200 text-gray-400 hover:bg-white/5 hover:text-white border border-transparent"
           >
-            <Settings2 size={20} className="shrink-0" />
+            <Settings2 size={18} className="shrink-0" />
             {isSidebarOpen && (
-              <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="font-medium text-sm whitespace-nowrap">
+              <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="font-medium text-xs sm:text-xs whitespace-nowrap truncate">
                 إعدادات النظام
               </motion.span>
             )}
@@ -249,20 +249,20 @@ export default function App() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="mx-3 mb-3 overflow-hidden shrink-0"
+              className="mx-2 sm:mx-3 mb-4 overflow-hidden shrink-0"
             >
               <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
                 <button
                   onClick={() => setIsMediaUnitOpen(!isMediaUnitOpen)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between px-2 sm:px-3 py-2.5 hover:bg-white/5 transition-colors"
                 >
                   <ChevronDown
-                    size={14}
-                    className={`text-gray-500 transition-transform ${isMediaUnitOpen ? 'rotate-180' : ''}`}
+                    size={16}
+                    className={`text-gray-500 transition-transform shrink-0 ${isMediaUnitOpen ? 'rotate-180' : ''}`}
                   />
-                  <div className="flex items-center gap-2">
-                    <Building2 size={14} className="text-[#2563eb]" />
-                    <span className="text-xs font-bold text-gray-300">الوحدة الإعلامية</span>
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <Building2 size={16} className="text-[#2563eb] shrink-0" />
+                    <span className="text-xs font-bold text-gray-300 truncate">الوحدة الإعلامية</span>
                   </div>
                 </button>
 
@@ -274,23 +274,23 @@ export default function App() {
                       exit={{ height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-3 pb-3 space-y-1">
+                      <div className="px-2 sm:px-3 pb-3 space-y-1">
                         <button
                           onClick={() => setSelectedMediaUnitId(null)}
-                          className={`w-full text-right px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
+                          className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
                             selectedMediaUnitId === null
                               ? 'bg-[#2563eb] text-white'
                               : 'text-gray-400 hover:bg-white/5 hover:text-white'
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${selectedMediaUnitId === null ? 'bg-white' : 'bg-transparent'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === null ? 'bg-white' : 'bg-transparent'}`} />
                           <span>الكل</span>
                         </button>
                         {mediaUnits.map((mu: { id: number; name: string }) => (
                           <button
                             key={mu.id}
                             onClick={() => setSelectedMediaUnitId(mu.id)}
-                            className={`w-full text-right px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
+                            className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
                               selectedMediaUnitId === mu.id
                                 ? 'bg-[#2563eb] text-white'
                                 : 'text-gray-400 hover:bg-white/5 hover:text-white'
@@ -310,15 +310,15 @@ export default function App() {
         </AnimatePresence>
 
         {/* User */}
-        <div className="p-4 border-t border-white/5 shrink-0">
-          <div className={`flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 cursor-pointer ${!isSidebarOpen && 'justify-center'}`}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+        <div className="p-2 sm:p-3 border-t border-white/5 shrink-0">
+          <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-2xl hover:bg-white/5 cursor-pointer ${!isSidebarOpen && 'justify-center'}`}>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
               SH
             </div>
             {isSidebarOpen && (
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-sm font-bold truncate">ستوديو التحرير</span>
-                <span className="text-xs text-gray-500">مشترك متميز</span>
+              <div className="flex flex-col overflow-hidden min-w-0">
+                <span className="text-xs sm:text-sm font-bold truncate">ستوديو التحرير</span>
+                <span className="text-xs text-gray-500 truncate">مشترك متميز</span>
               </div>
             )}
           </div>
@@ -328,35 +328,35 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pr-[280px]' : 'pr-[80px]'}`}>
+      <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pr-[280px] sm:pr-[280px]' : 'pr-[80px] sm:pr-[80px]'}`}>
         {/* Header */}
-        <header className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-40">
-          <div className="flex items-center gap-3">
-            <div className="text-gray-500 text-sm flex items-center gap-2">
-              <span>الرئيسية</span>
-              <ChevronRight size={14} />
-              <span className="text-white font-medium">{SECTION_LABELS[activeSection]}</span>
+        <header className="h-14 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-40">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="text-gray-500 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate">
+              <span className="hidden sm:inline">الرئيسية</span>
+              <ChevronRight size={14} className="shrink-0" />
+              <span className="text-white font-medium truncate">{SECTION_LABELS[activeSection]}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Active media unit badge */}
             {selectedMediaUnitId !== null && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-xl">
-                <Building2 size={12} className="text-[#2563eb]" />
-                <span className="text-xs text-[#2563eb] font-medium">
+              <div className="hidden sm:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-xl">
+                <Building2 size={12} className="text-[#2563eb] shrink-0" />
+                <span className="text-xs text-[#2563eb] font-medium truncate max-w-[150px]">
                   {mediaUnits.find((m: { id: number }) => m.id === selectedMediaUnitId)?.name}
                 </span>
                 <button
                   onClick={() => setSelectedMediaUnitId(null)}
-                  className="text-[#2563eb]/60 hover:text-[#2563eb] transition-colors"
+                  className="text-[#2563eb]/60 hover:text-[#2563eb] transition-colors shrink-0"
                 >
                   <X size={12} />
                 </button>
               </div>
             )}
 
-            <div className="relative group">
+            <div className="relative group hidden sm:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={16} />
               <input
                 type="text"
@@ -370,7 +370,7 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
@@ -382,13 +382,13 @@ export default function App() {
             >
               {/* Section Header — for news sections */}
               {!activeSection.startsWith('ai-') && !['ideas', 'editing', 'social', 'audio', 'newsroom', 'chat'].includes(activeSection) && (
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
-                    <ActiveIcon size={24} className="text-blue-400" />
+                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shrink-0">
+                    <ActiveIcon size={20} className="text-blue-400 sm:w-6 sm:h-6" />
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-white">{SECTION_LABELS[activeSection]}</h2>
-                    <p className="text-gray-500 text-sm">نظام الإدارة الموحد لمركز الإعلام</p>
+                  <div className="min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{SECTION_LABELS[activeSection]}</h2>
+                    <p className="text-gray-500 text-xs sm:text-sm hidden sm:block">نظام الإدارة الموحد لمركز الإعلام</p>
                   </div>
                 </div>
               )}
@@ -438,22 +438,22 @@ function AIDashboard({ setActiveSection }: { setActiveSection: (s: SectionId) =>
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl text-white">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
-        <p className="text-gray-400 text-sm">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
+        <h1 className="text-xl sm:text-2xl text-white">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
+        <p className="text-gray-400 text-xs sm:text-sm">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {cards.map((card) => (
           <button
             key={card.id}
             onClick={() => setActiveSection(card.id)}
-            className="glass-panel p-5 text-right group hover:border-[#2563eb] transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4 h-full"
+            className="glass-panel p-4 sm:p-5 text-right group hover:border-[#2563eb] transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4 h-full"
           >
             <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center transition-transform group-hover:scale-110`}>
               <card.icon className={`${card.color} w-5 h-5`} />
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <h3 className="text-base font-bold">{card.title}</h3>
+              <h3 className="text-sm sm:text-base font-bold">{card.title}</h3>
               <p className="text-gray-400 text-xs leading-relaxed">{card.desc}</p>
             </div>
           </button>
