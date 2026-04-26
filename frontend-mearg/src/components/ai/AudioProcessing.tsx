@@ -116,11 +116,52 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     setIsLoading(true);
     setResult(null);
     try {
-      const prompt = `فرّغ محتوى هذا الملف الإخباري (موضوعه: ${mediaTitle}) إلى نص مكتوب دقيق مع علامات الترقيم.`;
-      const res = await generateAIContent(prompt, 'أنت متخصص في تحويل الكلام إلى نص بدقة عالية.');
-      setResult(res);
-    } catch {
-      setResult('حدث خطأ أثناء التفريغ الصوتي.');
+      console.log(`🎙️  Starting STT for file: ${mediaTitle}`);
+      
+      // If it's a video file, extract audio first
+      if (file.file_type === 'video') {
+        console.log('🎬 Video detected - extracting audio first...');
+        const extractRes = await api.extractAudioFromS3(file.id, file.s3_url, 'mp3', '128k');
+        
+        if (!extractRes.success || !extractRes.data?.audioBase64) {
+          throw new Error(extractRes.error || 'Failed to extract audio from video');
+        }
+
+        console.log('✅ Audio extracted successfully');
+        
+        // Convert base64 to blob and create a temporary URL
+        const binaryString = atob(extractRes.data.audioBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // Now transcribe the extracted audio
+        console.log('🎙️  Transcribing extracted audio...');
+        const transcribeRes = await api.transcribeAudioFromUrl(audioUrl, 'ar');
+        
+        if (transcribeRes.success && transcribeRes.data?.transcript) {
+          setResult(transcribeRes.data.transcript);
+          console.log('✅ STT completed successfully');
+        } else {
+          throw new Error(transcribeRes.error || 'Failed to transcribe audio');
+        }
+      } else {
+        // For audio files, transcribe directly
+        const res = await api.transcribeAudioFromFile(file.id, file.s3_url, 'ar');
+        
+        if (res.success && res.data?.transcript) {
+          setResult(res.data.transcript);
+          console.log('✅ STT completed successfully');
+        } else {
+          throw new Error(res.error || 'Failed to transcribe audio');
+        }
+      }
+    } catch (error) {
+      console.error('Error in STT:', error);
+      setResult('حدث خطأ أثناء التفريغ الصوتي: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsLoading(false);
     }

@@ -181,4 +181,40 @@ export const api = {
       body: JSON.stringify({ text, voice }),
     }),
   getTTSVoices: () => request<any>("/ai-hub/tts/voices"),
+
+  // --- Speech-to-Text ---
+  transcribeAudioFromUrl: (audioUrl: string, language: string = 'ar') =>
+    request<any>("/ai-hub/stt/transcribe-url", {
+      method: "POST",
+      body: JSON.stringify({ audioUrl, language }),
+    }),
+  transcribeAudioFromFile: (fileId: number, s3Url: string, language: string = 'ar') =>
+    request<any>("/ai-hub/stt/transcribe-file", {
+      method: "POST",
+      body: JSON.stringify({ fileId, s3Url, language }),
+    }),
+  getSTTLanguages: () => request<any>("/ai-hub/stt/languages"),
+
+  // --- Audio Extraction ---
+  extractAudioFromFile: (videoFilePath: string, outputFormat: string = 'mp3', bitrate: string = '128k') =>
+    request<any>("/ai-hub/audio-extraction/extract-from-file", {
+      method: "POST",
+      body: JSON.stringify({ videoFilePath, outputFormat, bitrate }),
+    }),
+  extractAudioFromUrl: (videoUrl: string, outputFormat: string = 'mp3', bitrate: string = '128k') =>
+    request<any>("/ai-hub/audio-extraction/extract-from-url", {
+      method: "POST",
+      body: JSON.stringify({ videoUrl, outputFormat, bitrate }),
+    }),
+  extractAudioFromS3: (fileId: number, s3Url: string, outputFormat: string = 'mp3', bitrate: string = '128k') =>
+    request<any>("/ai-hub/audio-extraction/extract-from-s3", {
+      method: "POST",
+      body: JSON.stringify({ fileId, s3Url, outputFormat, bitrate }),
+    }),
+  getVideoInfo: (videoFilePath: string) =>
+    request<any>("/ai-hub/audio-extraction/video-info", {
+      method: "POST",
+      body: JSON.stringify({ videoFilePath }),
+    }),
+  getAudioExtractionFormats: () => request<any>("/ai-hub/audio-extraction/formats"),
 };

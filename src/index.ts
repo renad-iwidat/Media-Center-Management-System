@@ -7,6 +7,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
+import fs from 'fs';
+import os from 'os';
 import { environment } from './config/environment';
 import { testConnection } from './config/database';
 import { schedulerService } from './services/news/scheduler.service';
@@ -21,7 +23,7 @@ import flowRoutes from './routes/news/flow.routes';
 import editorialPolicyRoutes from './routes/news/editorial-policy.routes';
 import systemSettingsRoutes from './routes/news/system-settings.routes';
 import schedulerRoutes from './routes/news/scheduler.routes';
-import { chatRoutes, ttsRoutes } from './routes/ai-hub';
+import { chatRoutes, ttsRoutes, sttRoutes, audioExtractionRoutes, videoToTextRoutes } from './routes/ai-hub';
 import ideasRoutes from './routes/ai-hub/ideas.routes';
 import uploadedFilesRoutes from './routes/manual-input/uploaded-files.routes';
 
@@ -33,6 +35,28 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(express.json());
+
+// Serve temporary audio files
+const tempAudioDir = path.join(os.tmpdir(), 'media-center-extracted-audio');
+app.use('/temp-audio', express.static(tempAudioDir));
+
+// Clean up old temporary files (older than 1 hour)
+setInterval(() => {
+  if (fs.existsSync(tempAudioDir)) {
+    const files = fs.readdirSync(tempAudioDir);
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    
+    files.forEach(file => {
+      const filePath = path.join(tempAudioDir, file);
+      const stats = fs.statSync(filePath);
+      
+      if (stats.mtime.getTime() < oneHourAgo) {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️  Cleaned up old temp file: ${file}`);
+      }
+    });
+  }
+}, 30 * 60 * 1000); // Check every 30 minutes
 
 
 
@@ -252,6 +276,9 @@ app.use('/api/news/editorial-policies', editorialPolicyRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/ai-hub/chat', chatRoutes);
 app.use('/api/ai-hub/tts', ttsRoutes);
+app.use('/api/ai-hub/stt', sttRoutes);
+app.use('/api/ai-hub/audio-extraction', audioExtractionRoutes);
+app.use('/api/ai-hub/video-to-text', videoToTextRoutes);
 app.use('/api/ai-hub/ideas', ideasRoutes);
 app.use('/api/uploaded-files', uploadedFilesRoutes);
 app.use('/api/data', (req, res, next) => {
