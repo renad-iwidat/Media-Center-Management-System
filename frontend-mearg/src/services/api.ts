@@ -193,6 +193,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ fileId, s3Url, language }),
     }),
+  transcribeAudioFromBase64: (audioBase64: string, language: string = 'ar') =>
+    request<any>("/ai-hub/stt/transcribe-base64", {
+      method: "POST",
+      body: JSON.stringify({ audioBase64, language }),
+    }),
   getSTTLanguages: () => request<any>("/ai-hub/stt/languages"),
 
   // --- Audio Extraction ---

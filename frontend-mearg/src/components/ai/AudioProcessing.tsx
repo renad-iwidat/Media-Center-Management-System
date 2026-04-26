@@ -129,18 +129,9 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
 
         console.log('✅ Audio extracted successfully');
         
-        // Convert base64 to blob and create a temporary URL
-        const binaryString = atob(extractRes.data.audioBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-
-        // Now transcribe the extracted audio
+        // Now transcribe the extracted audio using base64
         console.log('🎙️  Transcribing extracted audio...');
-        const transcribeRes = await api.transcribeAudioFromUrl(audioUrl, 'ar');
+        const transcribeRes = await api.transcribeAudioFromBase64(extractRes.data.audioBase64, 'ar');
         
         if (transcribeRes.success && transcribeRes.data?.transcript) {
           setResult(transcribeRes.data.transcript);

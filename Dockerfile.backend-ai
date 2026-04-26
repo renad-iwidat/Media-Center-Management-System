@@ -25,6 +25,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# تثبيت ffmpeg (مطلوب لاستخراج الصوت من الفيديو)
+RUN apk add --no-cache ffmpeg
+
 # إضافة user غير root للأمان
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001

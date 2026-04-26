@@ -8,10 +8,15 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
 
-// Set FFmpeg path
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+// Set FFmpeg path - use ffmpeg-static for reliable cross-platform support
+if (ffmpegStatic) {
+  ffmpeg.setFfmpegPath(ffmpegStatic);
+  console.log(`✅ FFmpeg path set to: ${ffmpegStatic}`);
+} else {
+  console.warn('⚠️  ffmpeg-static not found, using system ffmpeg');
+}
 
 // Get the correct temp directory for the OS
 const getTempDir = () => {

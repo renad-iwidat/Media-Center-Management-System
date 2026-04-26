@@ -4,9 +4,36 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import { STTController } from '../../controllers/ai-hub/stt.controller';
 
 const router = Router();
+
+// Configure multer for audio file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept audio files only
+    const allowedMimes = [
+      'audio/mpeg',
+      'audio/wav',
+      'audio/mp4',
+      'audio/ogg',
+      'audio/flac',
+      'audio/webm',
+      'audio/x-m4a',
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: ${allowedMimes.join(', ')}`));
+    }
+  },
+});
 
 // Logging middleware
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -72,5 +99,46 @@ router.post('/transcribe-file', STTController.transcribeFromFile);
  * }
  */
 router.get('/languages', STTController.getSupportedLanguages);
+
+/**
+ * POST /api/ai-hub/stt/transcribe-upload - تفريغ صوتي من ملف مرفوع
+ * Content-Type: multipart/form-data
+ * Form fields:
+ * - file: audio file (required) - mp3, wav, m4a, ogg, flac, webm
+ * - language: language code (optional, default: 'ar')
+ * Response:
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "transcript": "string - The transcribed text",
+ *     "language": "string - The language used",
+ *     "fileName": "string - The uploaded file name",
+ *     "fileSize": "number - The file size in bytes"
+ *   },
+ *   "error": "string (if failed)"
+ * }
+ */
+router.post('/transcribe-upload', upload.single('file'), STTController.transcribeFromUpload);
+
+/**
+ * POST /api/ai-hub/stt/transcribe-base64 - تفريغ صوتي من بيانات base64
+ * Content-Type: application/json
+ * Body:
+ * {
+ *   "audioBase64": "base64 encoded audio data (required)",
+ *   "language": "language code (optional, default: 'ar')"
+ * }
+ * Response:
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "transcript": "string - The transcribed text",
+ *     "language": "string - The language used",
+ *     "audioSize": "number - The audio size in bytes"
+ *   },
+ *   "error": "string (if failed)"
+ * }
+ */
+router.post('/transcribe-base64', STTController.transcribeFromBase64);
 
 export default router;
