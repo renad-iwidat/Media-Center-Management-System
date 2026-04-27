@@ -46,12 +46,12 @@ services:
       - key: VITE_API_URL
         fromService:
           type: web
-          name: media-center-backend
+          name: Automation and AI Hub – Backend
           envVarKey: RENDER_EXTERNAL_URL
       - key: VITE_APP_URL
         fromService:
           type: web
-          name: media-center-frontend
+          name: Automation and AI Hub – Frontend
           envVarKey: RENDER_EXTERNAL_URL
     autoDeploy: true
 
