@@ -8,6 +8,7 @@
 
 ## فهرس الـ Endpoints
 
+### 1. Sources & News — المصادر والأخبار
 | # | Method | Endpoint | الوصف |
 |---|--------|----------|-------|
 | 1 | GET | `/api/sources` | جميع المصادر |
@@ -21,6 +22,10 @@
 | 9 | POST | `/api/news` | إنشاء خبر |
 | 10 | GET | `/api/news/classifier/unclassified` | أخبار بدون تصنيف |
 | 11 | POST | `/api/news/classifier/process` | تشغيل التصنيف الآلي |
+
+### 2. Data — البيانات والإحصائيات
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
 | 12 | GET | `/api/data/sources` | جميع المصادر (data) |
 | 13 | GET | `/api/data/sources/active` | المصادر النشطة (data) |
 | 14 | GET | `/api/data/articles` | جميع الأخبار مع pagination |
@@ -34,6 +39,10 @@
 | 22 | GET | `/api/data/media-units` | وحدات الإعلام |
 | 23 | GET | `/api/data/comprehensive` | بيانات شاملة |
 | 24 | GET | `/api/data/statistics` | إحصائيات النظام |
+
+### 3. Flow — فلو معالجة الأخبار
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
 | 25 | POST | `/api/flow/process` | تشغيل فلو التوجيه |
 | 26 | GET | `/api/flow/queue/pending` | الطابور المعلق |
 | 27 | GET | `/api/flow/queue/stats` | إحصائيات الطابور |
@@ -45,6 +54,10 @@
 | 33 | GET | `/api/flow/published/:id` | منشور واحد |
 | 34 | GET | `/api/flow/published/category/:category` | منشور حسب الفئة |
 | 35 | GET | `/api/flow/daily-stats` | إحصائيات يومية |
+
+### 4. Editorial Policies — السياسات التحريرية
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
 | 36 | GET | `/api/news/editorial-policies` | جميع السياسات |
 | 37 | POST | `/api/news/editorial-policies` | إنشاء سياسة |
 | 38 | GET | `/api/news/editorial-policies/:policyName` | تفاصيل سياسة |
@@ -54,10 +67,76 @@
 | 42 | POST | `/api/news/editorial-policies/sequential` | تطبيق متسلسل |
 | 43 | POST | `/api/news/editorial-policies/pipeline` | pipeline للفرونت |
 | 44 | POST | `/api/news/editorial-policies/save-edited` | حفظ النص المعدّل |
+
+### 5. System Settings — إعدادات النظام
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
 | 45 | GET | `/api/settings` | جميع إعدادات النظام |
 | 46 | GET | `/api/settings/toggles` | حالة الـ toggles |
 | 47 | PATCH | `/api/settings/:key` | تحديث إعداد واحد |
 | 48 | PATCH | `/api/settings/toggles/bulk` | تحديث دفعة |
+
+### 6. AI Hub — المساعد الذكي
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 49 | POST | `/api/ai-hub/chat/generate` | توليد رد من المساعد |
+| 50 | POST | `/api/ai-hub/chat/summarize` | تلخيص نص |
+| 51 | POST | `/api/ai-hub/chat/rewrite` | إعادة صياغة نص |
+| 52 | POST | `/api/ai-hub/ideas/generate` | توليد أفكار |
+
+### 7. Speech-to-Text — تحويل الصوت إلى نص
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 53 | POST | `/api/ai-hub/stt/transcribe-url` | تفريغ من رابط |
+| 54 | POST | `/api/ai-hub/stt/transcribe-file` | تفريغ من S3 |
+| 55 | POST | `/api/ai-hub/stt/transcribe-upload` | تفريغ من ملف مرفوع |
+| 56 | POST | `/api/ai-hub/stt/transcribe-base64` | تفريغ من base64 |
+| 57 | GET | `/api/ai-hub/stt/languages` | اللغات المدعومة |
+
+### 8. Text-to-Speech — تحويل النص إلى صوت
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 58 | POST | `/api/ai-hub/tts/generate` | تحويل نص لصوت |
+| 59 | GET | `/api/ai-hub/tts/voices` | الأصوات المتاحة |
+
+### 9. Audio Extraction — استخراج الصوت
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 60 | POST | `/api/ai-hub/audio-extraction/extract-from-file` | استخراج من ملف محلي |
+| 61 | POST | `/api/ai-hub/audio-extraction/extract-from-url` | استخراج من رابط |
+| 62 | POST | `/api/ai-hub/audio-extraction/extract-from-s3` | استخراج من S3 |
+| 63 | POST | `/api/ai-hub/audio-extraction/video-info` | معلومات الفيديو |
+| 64 | GET | `/api/ai-hub/audio-extraction/formats` | الصيغ المدعومة |
+
+### 10. Video to Text — تحويل الفيديو إلى نص
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 65 | POST | `/api/ai-hub/video-to-text/process` | معالجة فيديو من رابط |
+| 66 | POST | `/api/ai-hub/video-to-text/process-s3` | معالجة فيديو من S3 |
+
+### 11. Programs & Episodes — البرامج والحلقات
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 67 | GET | `/api/programs` | جميع البرامج |
+| 68 | GET | `/api/programs/:id` | برنامج بالـ ID |
+| 69 | GET | `/api/programs/:id/episodes` | حلقات برنامج |
+| 70 | GET | `/api/programs/episodes/:id/details` | حلقة مع ضيوفها |
+| 71 | GET | `/api/programs/episodes/:id/guests` | ضيوف حلقة |
+
+### 12. Guests — الضيوف
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 72 | GET | `/api/guests` | جميع الضيوف / بحث |
+| 73 | GET | `/api/guests/:id` | ضيف بالـ ID |
+
+### 13. Uploaded Files — الملفات المرفوعة
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|-------|
+| 74 | GET | `/api/uploaded-files` | جميع الملفات |
+| 75 | GET | `/api/uploaded-files/audio` | الملفات الصوتية |
+| 76 | GET | `/api/uploaded-files/video` | ملفات الفيديو |
+| 77 | GET | `/api/uploaded-files/source-type/:sourceTypeId` | ملفات حسب نوع المصدر |
+| 78 | GET | `/api/uploaded-files/:id` | ملف بالـ ID |
 
 ---
 
@@ -1345,7 +1424,7 @@
 
 ---
 
-## 7. Scheduler — جدولة المهام
+## 16. Scheduler — جدولة المهام
 
 ### معلومات عامة
 الـ Scheduler يعمل بشكل تلقائي في الخلفية ويقرأ الإعدادات من الداتابيس في كل دورة:
@@ -1371,7 +1450,7 @@
 
 ---
 
-## 8. Incomplete Articles — الأخبار الناقصة
+## 17. Incomplete Articles — الأخبار الناقصة
 
 ### المنطق:
 ```
@@ -1401,7 +1480,7 @@
 
 ---
 
-## 9. Error Responses — أشكال الأخطاء
+## 18. Error Responses — أشكال الأخطاء
 
 كل الـ endpoints بترجع نفس شكل الخطأ:
 
@@ -1437,12 +1516,757 @@
 
 ---
 
-## 10. ملاحظات مهمة
+---
+
+## 7. AI Hub — المساعد الذكي والأدوات
+
+### POST `/api/ai-hub/chat/generate`
+توليد رد من المساعد الذكي.
+
+**Request Body:**
+```json
+{
+  "prompt": "السؤال أو الطلب",
+  "think": false,
+  "max_tokens": 1000,
+  "temperature": 0.7
+}
+```
+> `prompt` — مطلوب. باقي الحقول اختيارية.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "response": "الرد من المساعد الذكي",
+    "tokensUsed": 150
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/chat/summarize`
+تلخيص نص.
+
+**Request Body:**
+```json
+{
+  "text": "النص المراد تلخيصه",
+  "style": "bullet_points"
+}
+```
+> `text` — مطلوب. `style` — اختياري (bullet_points | short_paragraph | headlines).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "summary": "النص الملخص"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/chat/rewrite`
+إعادة صياغة نص.
+
+**Request Body:**
+```json
+{
+  "text": "النص المراد إعادة صياغته",
+  "style": "radio_broadcast"
+}
+```
+> `text` — مطلوب. `style` — اختياري (radio_broadcast | investigative | social_media | formal | casual).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "rewrittenText": "النص المعاد صياغته"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/ideas/generate`
+توليد أفكار / أسئلة / عناوين.
+
+**Request Body:**
+```json
+{
+  "topic": "الموضوع",
+  "type": "questions",
+  "count": 5
+}
+```
+> `topic` — مطلوب. `type` — اختياري (ideas | questions | headlines). `count` — اختياري (افتراضي: 5).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "ideas": [
+      "فكرة 1",
+      "فكرة 2",
+      "فكرة 3"
+    ]
+  }
+}
+```
+
+---
+
+## 8. Speech-to-Text (STT) — تحويل الصوت إلى نص
+
+### POST `/api/ai-hub/stt/transcribe-url`
+تفريغ صوتي من رابط.
+
+**Request Body:**
+```json
+{
+  "audioUrl": "https://example.com/audio.mp3",
+  "language": "ar"
+}
+```
+> `audioUrl` — مطلوب. `language` — اختياري (افتراضي: ar).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "transcript": "النص المفرغ من الصوت",
+    "language": "ar",
+    "audioUrl": "https://example.com/audio.mp3"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/stt/transcribe-file`
+تفريغ صوتي من ملف مرفوع (S3).
+
+**Request Body:**
+```json
+{
+  "fileId": 123,
+  "s3Url": "https://s3.amazonaws.com/bucket/audio.mp3",
+  "language": "ar"
+}
+```
+> `s3Url` — مطلوب. `fileId` و `language` — اختياريان.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "fileId": 123,
+    "transcript": "النص المفرغ",
+    "language": "ar",
+    "s3Url": "https://s3.amazonaws.com/bucket/audio.mp3"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/stt/transcribe-upload`
+تفريغ صوتي من ملف مرفوع مباشرة.
+
+**Content-Type:** `multipart/form-data`
+
+**Form Fields:**
+- `file` — ملف صوتي (mp3, wav, m4a, ogg, flac, webm)
+- `language` — اختياري (افتراضي: ar)
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "transcript": "النص المفرغ",
+    "language": "ar",
+    "fileName": "audio.mp3",
+    "fileSize": 1024000
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/stt/transcribe-base64`
+تفريغ صوتي من بيانات base64.
+
+**Request Body:**
+```json
+{
+  "audioBase64": "base64_encoded_audio_data",
+  "language": "ar"
+}
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "transcript": "النص المفرغ",
+    "language": "ar",
+    "audioSize": 1024000
+  }
+}
+```
+
+---
+
+### GET `/api/ai-hub/stt/languages`
+الحصول على قائمة اللغات المدعومة.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "ar": "Arabic (العربية)",
+    "en": "English",
+    "fr": "French",
+    "es": "Spanish"
+  }
+}
+```
+
+---
+
+## 9. Text-to-Speech (TTS) — تحويل النص إلى صوت
+
+### POST `/api/ai-hub/tts/generate`
+تحويل النص إلى صوت.
+
+**Request Body:**
+```json
+{
+  "text": "النص المراد تحويله لصوت",
+  "voice": "nova"
+}
+```
+> `text` — مطلوب. `voice` — اختياري (alloy | echo | fable | onyx | nova | shimmer).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "audioBase64": "base64_encoded_audio",
+  "mimeType": "audio/mpeg",
+  "remaining": 100,
+  "resetTime": 1234567890
+}
+```
+
+---
+
+### GET `/api/ai-hub/tts/voices`
+الحصول على قائمة الأصوات المتاحة.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "voices": {
+    "alloy": { "name": "Alloy", "description": "صوت متوازن" },
+    "echo": { "name": "Echo", "description": "صوت واضح" },
+    "fable": { "name": "Fable", "description": "صوت قصصي" },
+    "onyx": { "name": "Onyx", "description": "صوت عميق" },
+    "nova": { "name": "Nova", "description": "صوت نسائي" },
+    "shimmer": { "name": "Shimmer", "description": "صوت ناعم" }
+  }
+}
+```
+
+---
+
+## 10. Audio Extraction — استخراج الصوت من الفيديو
+
+### POST `/api/ai-hub/audio-extraction/extract-from-file`
+استخراج الصوت من ملف فيديو محلي.
+
+**Request Body:**
+```json
+{
+  "videoFilePath": "/path/to/video.mp4",
+  "outputFormat": "mp3",
+  "bitrate": "128k"
+}
+```
+> `videoFilePath` — مطلوب. `outputFormat` و `bitrate` — اختياريان.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "audioBase64": "base64_encoded_audio",
+    "audioSize": 1024000,
+    "format": "mp3",
+    "bitrate": "128k"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/audio-extraction/extract-from-url`
+استخراج الصوت من رابط فيديو.
+
+**Request Body:**
+```json
+{
+  "videoUrl": "https://example.com/video.mp4",
+  "outputFormat": "mp3",
+  "bitrate": "128k"
+}
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "audioBase64": "base64_encoded_audio",
+    "audioSize": 1024000,
+    "format": "mp3",
+    "bitrate": "128k",
+    "videoUrl": "https://example.com/video.mp4"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/audio-extraction/extract-from-s3`
+استخراج الصوت من ملف فيديو في S3.
+
+**Request Body:**
+```json
+{
+  "fileId": 123,
+  "s3Url": "https://s3.amazonaws.com/bucket/video.mp4",
+  "outputFormat": "mp3",
+  "bitrate": "128k"
+}
+```
+> `s3Url` — مطلوب. `fileId`, `outputFormat`, `bitrate` — اختياريان.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "fileId": 123,
+    "audioBase64": "base64_encoded_audio",
+    "audioSize": 1024000,
+    "format": "mp3",
+    "bitrate": "128k",
+    "s3Url": "https://s3.amazonaws.com/bucket/video.mp4"
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/audio-extraction/video-info`
+الحصول على معلومات الفيديو.
+
+**Request Body:**
+```json
+{
+  "videoFilePath": "/path/to/video.mp4"
+}
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "format": { "format_name": "mp4", "duration": "120.5" },
+    "streams": [ ... ],
+    "duration": 120.5,
+    "bitrate": 1500000,
+    "hasAudio": true,
+    "hasVideo": true
+  }
+}
+```
+
+---
+
+### GET `/api/ai-hub/audio-extraction/formats`
+الحصول على الصيغ المدعومة.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "videoFormats": ["mp4", "avi", "mov", "mkv", "flv", "wmv"],
+    "audioFormats": ["mp3", "wav", "aac", "flac", "ogg", "m4a"]
+  }
+}
+```
+
+---
+
+## 11. Video to Text — تحويل الفيديو إلى نص
+
+### POST `/api/ai-hub/video-to-text/process`
+استخراج الصوت من الفيديو وتحويله لنص.
+
+**Request Body:**
+```json
+{
+  "videoUrl": "https://example.com/video.mp4",
+  "language": "ar",
+  "outputFormat": "mp3",
+  "bitrate": "128k"
+}
+```
+> `videoUrl` — مطلوب. باقي الحقول اختيارية.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "videoUrl": "https://example.com/video.mp4",
+    "transcript": "النص المفرغ من الفيديو",
+    "language": "ar",
+    "audioSize": 1024000,
+    "audioFormat": "mp3",
+    "bitrate": "128k",
+    "transcriptLength": 500
+  }
+}
+```
+
+---
+
+### POST `/api/ai-hub/video-to-text/process-s3`
+استخراج الصوت من فيديو S3 وتحويله لنص.
+
+**Request Body:**
+```json
+{
+  "fileId": 123,
+  "s3Url": "https://s3.amazonaws.com/bucket/video.mp4",
+  "language": "ar",
+  "outputFormat": "mp3",
+  "bitrate": "128k"
+}
+```
+> `s3Url` — مطلوب. باقي الحقول اختيارية.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "fileId": 123,
+    "s3Url": "https://s3.amazonaws.com/bucket/video.mp4",
+    "transcript": "النص المفرغ",
+    "language": "ar",
+    "audioSize": 1024000,
+    "audioFormat": "mp3",
+    "bitrate": "128k",
+    "transcriptLength": 500
+  }
+}
+```
+
+---
+
+## 12. Programs & Episodes — البرامج والحلقات
+
+### GET `/api/programs`
+جلب جميع البرامج.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 10,
+  "data": [
+    {
+      "id": 1,
+      "name": "برنامج الأخبار",
+      "description": "برنامج إخباري يومي",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/programs/:id`
+جلب برنامج بالـ ID.
+
+**Params:** `id` — رقم البرنامج
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "برنامج الأخبار",
+    "description": "برنامج إخباري يومي",
+    "is_active": true
+  }
+}
+```
+
+---
+
+### GET `/api/programs/:id/episodes`
+جلب حلقات برنامج معين.
+
+**Params:** `id` — رقم البرنامج
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 20,
+  "data": [
+    {
+      "id": 1,
+      "program_id": 1,
+      "episode_number": 1,
+      "title": "الحلقة الأولى",
+      "air_date": "2024-01-01",
+      "duration_minutes": 30
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/programs/episodes/:id/details`
+جلب حلقة بالـ ID مع ضيوفها.
+
+**Params:** `id` — رقم الحلقة
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "episode": {
+      "id": 1,
+      "program_id": 1,
+      "episode_number": 1,
+      "title": "الحلقة الأولى",
+      "air_date": "2024-01-01"
+    },
+    "guests": [
+      {
+        "id": 1,
+        "name": "أحمد محمد",
+        "title": "محلل سياسي",
+        "bio": "خبير في الشؤون السياسية"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET `/api/programs/episodes/:id/guests`
+جلب ضيوف حلقة معينة.
+
+**Params:** `id` — رقم الحلقة
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "id": 1,
+      "name": "أحمد محمد",
+      "title": "محلل سياسي",
+      "bio": "خبير في الشؤون السياسية"
+    }
+  ]
+}
+```
+
+---
+
+## 13. Guests — الضيوف
+
+### GET `/api/guests`
+جلب جميع الضيوف أو البحث عنهم.
+
+**Query Params:**
+| Param | Type | الوصف |
+|-------|------|-------|
+| `search` | string | البحث في الاسم أو اللقب (اختياري) |
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 50,
+  "data": [
+    {
+      "id": 1,
+      "name": "أحمد محمد",
+      "title": "محلل سياسي",
+      "bio": "خبير في الشؤون السياسية",
+      "contact_info": "ahmed@example.com"
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/guests/:id`
+جلب ضيف بالـ ID.
+
+**Params:** `id` — رقم الضيف
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "أحمد محمد",
+    "title": "محلل سياسي",
+    "bio": "خبير في الشؤون السياسية",
+    "contact_info": "ahmed@example.com"
+  }
+}
+```
+
+---
+
+## 14. Uploaded Files — الملفات المرفوعة
+
+### GET `/api/uploaded-files`
+جلب جميع الملفات المرفوعة.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 100,
+  "data": [
+    {
+      "id": 1,
+      "file_name": "audio.mp3",
+      "file_type": "audio/mpeg",
+      "file_size": 1024000,
+      "s3_url": "https://s3.amazonaws.com/bucket/audio.mp3",
+      "source_type_id": 1,
+      "uploaded_at": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/uploaded-files/audio`
+جلب الملفات الصوتية فقط.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 50,
+  "data": [ ... ]
+}
+```
+
+---
+
+### GET `/api/uploaded-files/video`
+جلب ملفات الفيديو فقط.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 30,
+  "data": [ ... ]
+}
+```
+
+---
+
+### GET `/api/uploaded-files/source-type/:sourceTypeId`
+جلب الملفات حسب نوع المصدر.
+
+**Params:** `sourceTypeId` — رقم نوع المصدر
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 20,
+  "data": [ ... ]
+}
+```
+
+---
+
+### GET `/api/uploaded-files/:id`
+جلب ملف بالـ ID.
+
+**Params:** `id` — رقم الملف
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "file_name": "audio.mp3",
+    "file_type": "audio/mpeg",
+    "file_size": 1024000,
+    "s3_url": "https://s3.amazonaws.com/bucket/audio.mp3",
+    "source_type_id": 1,
+    "uploaded_at": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+## 15. ملاحظات مهمة
 
 ### ترتيب الـ Routes في Express
 بعض الـ routes لها أولوية — لازم تنتبه:
 - `/api/flow/published/stats` لازم يُستدعى قبل `/api/flow/published/:id`
 - `/api/news/editorial-policies/apply` لازم يُستدعى قبل `/api/news/editorial-policies/:policyName`
+- `/api/programs/episodes/:id/details` لازم يُستدعى قبل `/api/programs/:id`
 
 ### fetch_status — حالات الخبر
 | القيمة | المعنى |

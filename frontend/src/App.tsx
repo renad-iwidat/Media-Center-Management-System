@@ -116,6 +116,9 @@ export default function App() {
   const [isSystemOnline, setIsSystemOnline] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{ id: SectionId; label: string; group: string }>>([]);
 
   const { mediaUnits } = useMediaUnits();
 
@@ -146,6 +149,40 @@ export default function App() {
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
+  // ── Search functionality ──
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSearchResults([]);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const results: Array<{ id: SectionId; label: string; group: string }> = [];
+
+    NAV_GROUPS.forEach((group) => {
+      group.items.forEach((item) => {
+        if (
+          item.label.toLowerCase().includes(query) ||
+          group.label.toLowerCase().includes(query)
+        ) {
+          results.push({
+            id: item.id,
+            label: item.label,
+            group: group.label,
+          });
+        }
+      });
+    });
+
+    setSearchResults(results);
+  }, [searchQuery]);
+
+  const handleSearchSelect = (sectionId: SectionId) => {
+    setActiveSection(sectionId);
+    setSearchQuery('');
+    setIsSearchOpen(false);
+  };
+
   const showMediaUnitFilter = isSidebarOpen && mediaUnits.length > 0;
   const ActiveIcon = SECTION_ICONS[activeSection] || LayoutDashboard;
 
@@ -156,89 +193,110 @@ export default function App() {
          ══════════════════════════════════════════════════════════ */}
       <motion.aside
         initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 80 }}
+        animate={{ width: isSidebarOpen ? 320 : 80 }}
         className="bg-[#0b1224] border-l border-white/5 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none"
       >
         {/* Logo */}
-        <div className="p-3 sm:p-5 flex items-center justify-between shrink-0 border-b border-white/5">
+        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-gradient-to-b from-[#0b1224] to-[#0b1224]/80">
           {isSidebarOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#2563eb] rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
-                <TrendingUp className="text-white w-4 h-4 sm:w-5 sm:h-5" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/30 shrink-0">
+                <TrendingUp className="text-white w-6 h-6" />
               </div>
-              <span className="font-arabic font-bold text-sm sm:text-lg tracking-tight truncate">
-                Media<span className="text-blue-400">Pro</span>
-              </span>
+              <div className="flex flex-col">
+                <span className="font-arabic font-bold text-lg tracking-tight truncate text-white">
+                  إدارة <span className="text-blue-400">الإعلام</span>
+                </span>
+                <span className="text-xs text-gray-500">نظام متكامل</span>
+              </div>
             </motion.div>
           )}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-white/5 rounded-xl transition-colors shrink-0"
+            className="p-2.5 hover:bg-white/10 rounded-xl transition-all hover:scale-105 shrink-0"
           >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 px-2 sm:px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
-          {NAV_GROUPS.map((group) => (
+        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-6 overflow-y-auto custom-scrollbar">
+          {NAV_GROUPS.map((group, groupIndex) => (
             <div key={group.label} className="space-y-2">
               {/* Group Header */}
               {isSidebarOpen && (
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between px-2 sm:px-3 py-2.5 text-xs uppercase tracking-widest text-gray-500 font-semibold hover:text-gray-300 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-3 text-xs uppercase tracking-wider text-gray-400 font-bold hover:text-white transition-all hover:bg-white/5 rounded-lg"
                 >
                   <span className="truncate">{group.label}</span>
                   <ChevronDown
-                    size={14}
+                    size={16}
                     className={`transition-transform shrink-0 ${collapsedGroups[group.label] ? '-rotate-90' : ''}`}
                   />
                 </button>
               )}
 
               {/* Group Items */}
-              {!collapsedGroups[group.label] && group.items.map((item) => {
-                const isActive = activeSection === item.id;
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-xl transition-all duration-200 group
-                      ${isActive
-                        ? 'bg-blue-600/10 text-blue-400 border border-blue-400/20'
-                        : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
-                      }`}
-                  >
-                    <Icon size={18} className={`shrink-0 ${isActive ? 'text-blue-400' : ''}`} />
-                    {isSidebarOpen && (
-                      <motion.span
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="font-medium text-xs sm:text-sm whitespace-nowrap truncate"
+              {!collapsedGroups[group.label] && (
+                <div className="space-y-1.5">
+                  {group.items.map((item) => {
+                    const isActive = activeSection === item.id;
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveSection(item.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative
+                          ${isActive
+                            ? 'bg-gradient-to-l from-blue-600/20 to-blue-600/10 text-white border-r-4 border-blue-500 shadow-lg shadow-blue-500/10'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white border-r-4 border-transparent hover:border-gray-700'
+                          }`}
                       >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </button>
-                );
-              })}
+                        <Icon size={20} className={`shrink-0 ${isActive ? 'text-blue-400' : 'group-hover:text-blue-400'} transition-colors`} />
+                        {isSidebarOpen && (
+                          <motion.span
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="font-semibold text-sm whitespace-nowrap truncate"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                        {isActive && isSidebarOpen && (
+                          <motion.div
+                            layoutId="activeIndicator"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full"
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* Divider between groups */}
+              {groupIndex < NAV_GROUPS.length - 1 && isSidebarOpen && (
+                <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-4" />
+              )}
             </div>
           ))}
 
           {/* Settings Button */}
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-xl transition-all duration-200 text-gray-400 hover:bg-white/5 hover:text-white border border-transparent"
-          >
-            <Settings2 size={18} className="shrink-0" />
-            {isSidebarOpen && (
-              <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="font-medium text-xs sm:text-xs whitespace-nowrap truncate">
-                إعدادات النظام
-              </motion.span>
-            )}
-          </button>
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 text-gray-400 hover:bg-white/5 hover:text-white border-r-4 border-transparent hover:border-gray-700 group"
+            >
+              <Settings2 size={20} className="shrink-0 group-hover:text-blue-400 transition-colors" />
+              {isSidebarOpen && (
+                <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="font-semibold text-sm whitespace-nowrap truncate">
+                  إعدادات النظام
+                </motion.span>
+              )}
+            </button>
+          </div>
         </nav>
 
         {/* ── Media Unit Filter ── */}
@@ -328,7 +386,7 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pr-[280px] sm:pr-[280px]' : 'pr-[80px] sm:pr-[80px]'}`}>
+      <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pr-[320px] sm:pr-[320px]' : 'pr-[80px] sm:pr-[80px]'}`}>
         {/* Header */}
         <header className="h-14 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -361,8 +419,64 @@ export default function App() {
               <input
                 type="text"
                 placeholder="بحث سريع..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchOpen(true)}
+                onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
                 className="bg-[#0b1224] border border-white/5 rounded-full pl-4 pr-10 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 focus:w-64 transition-all w-48"
               />
+              
+              {/* Search Results Dropdown */}
+              <AnimatePresence>
+                {isSearchOpen && searchResults.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute left-0 top-full mt-2 w-72 bg-[#0b1224] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                  >
+                    <div className="p-2 border-b border-white/5">
+                      <p className="text-xs text-gray-500 px-3 py-1">نتائج البحث ({searchResults.length})</p>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                      {searchResults.map((result) => {
+                        const Icon = SECTION_ICONS[result.id];
+                        return (
+                          <button
+                            key={result.id}
+                            onClick={() => handleSearchSelect(result.id)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-right"
+                          >
+                            <Icon size={18} className="text-blue-400 shrink-0" />
+                            <div className="flex flex-col items-end flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white truncate w-full">{result.label}</span>
+                              <span className="text-xs text-gray-500 truncate w-full">{result.group}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              {/* No Results */}
+              <AnimatePresence>
+                {isSearchOpen && searchQuery.trim() !== '' && searchResults.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute left-0 top-full mt-2 w-72 bg-[#0b1224] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-4"
+                  >
+                    <div className="text-center">
+                      <Search size={32} className="text-gray-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-400">لا توجد نتائج</p>
+                      <p className="text-xs text-gray-600 mt-1">جرب كلمات بحث أخرى</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 shrink-0 border border-white/10 shadow-lg shadow-blue-500/20" />

@@ -8,9 +8,6 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/dashboard/',
     plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -21,7 +18,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:4000',
+          target: 'http://127.0.0.1:7845',
           changeOrigin: true,
         },
       },

@@ -1,0 +1,59 @@
+# ===================================
+# Render Blueprint Configuration
+# ===================================
+# This file defines the infrastructure for deploying on Render
+# Upload this file to your repository and connect it to Render
+
+services:
+  # Backend Service
+  - type: web
+    name: media-center-backend
+    env: docker
+    dockerfilePath: ./Dockerfile.backend
+    plan: starter # Change to 'standard' or 'pro' as needed
+    region: frankfurt # or 'oregon', 'singapore', etc.
+    branch: main # Change to your deployment branch
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 7845
+      - key: DATABASE_URL
+        sync: false # Set this in Render dashboard (secret)
+      - key: AI_MODEL
+        sync: false # Set this in Render dashboard
+      - key: OPENAI_API_KEY
+        sync: false # Set this in Render dashboard (secret)
+    autoDeploy: true
+
+  # Frontend Service
+  - type: web
+    name: media-center-frontend
+    env: docker
+    dockerfilePath: ./Dockerfile.frontend
+    plan: starter
+    region: frankfurt
+    branch: main
+    healthCheckPath: /health
+    dockerCommand: nginx -g 'daemon off;'
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: media-center-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_APP_URL
+        fromService:
+          type: web
+          name: media-center-frontend
+          envVarKey: RENDER_EXTERNAL_URL
+    autoDeploy: true
+
+# Database (Optional - if you want Render to manage PostgreSQL)
+databases:
+  - name: media-center-db
+    plan: starter # Free tier available
+    databaseName: media_center
+    user: media_user
+    region: frankfurt

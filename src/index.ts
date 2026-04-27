@@ -73,7 +73,7 @@ app.get('/api', (req, res) => {
     success: true,
     message: 'Media Center Management System API',
     version: '1.0.0',
-    documentation: 'http://localhost:3000/api-docs',
+    documentation: 'http://localhost:7845/api-docs',
     endpoints: {
       sources: {
         description: 'المصادر - إدارة مصادر الأخبار',
@@ -183,7 +183,7 @@ app.get('/api-docs', (req, res) => {
       <div class="container">
         <h1>📰 Media Center Management System API</h1>
         <p><strong>الإصدار:</strong> 1.0.0</p>
-        <p><strong>Base URL:</strong> <code>http://localhost:3000/api</code></p>
+        <p><strong>Base URL:</strong> <code>http://localhost:7845/api</code></p>
         
         <h2>🔗 المصادر (Sources)</h2>
         <div class="endpoint">
