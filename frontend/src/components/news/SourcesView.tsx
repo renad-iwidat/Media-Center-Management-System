@@ -9,7 +9,7 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getSourcesWithFetchInfo()
+    api.getSources()
       .then((res) => setSources(res.data || []))
       .catch(() => setSources([]))
       .finally(() => setLoading(false));

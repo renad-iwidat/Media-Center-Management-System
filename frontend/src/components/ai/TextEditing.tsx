@@ -7,7 +7,10 @@ import {
 import { generateAIContent, summarizeContent, rewriteContent, SummarizeStyle, RewriteStyle } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
 
-const API_URL = '/api';
+// استخدام VITE_API_URL من environment variables
+const API_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
 
 type EditMode   = 'REWRITE' | 'SUMMARIZE' | 'GRAMMAR';
 type InputMode  = 'MANUAL'  | 'DATABASE';

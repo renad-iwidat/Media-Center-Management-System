@@ -3,7 +3,10 @@
  * يرسل الطلبات للـ backend بدل استدعاء Gemini مباشرة من الفرونت
  */
 
-const API_URL = '/api';
+// استخدام VITE_API_URL من environment variables
+const API_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
 
 // ─── Chat / Generate ──────────────────────────────────────────
 export async function generateAIContent(

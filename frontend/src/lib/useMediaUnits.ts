@@ -4,7 +4,10 @@
  */
 import { useState, useEffect } from 'react';
 
-const API_URL = '/api';
+// استخدام VITE_API_URL من environment variables
+const API_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
 
 export interface MediaUnit {
   id: number;
@@ -29,7 +32,10 @@ export function useMediaUnits() {
         _cache = units;
         setMediaUnits(units);
       })
-      .catch(() => setMediaUnits([]))
+      .catch((err) => {
+        console.error('❌ Error fetching media units:', err);
+        setMediaUnits([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -34,7 +34,6 @@ export const api = {
   // مصادر
   getSources: () => request<any>("/data/sources"),
   getActiveSources: () => request<any>("/data/sources/active"),
-  getSourcesWithFetchInfo: () => request<any>("/sources/fetch-info/all"),
 
   // وحدات الإعلام
   getMediaUnits: () => request<any>("/data/media-units"),
