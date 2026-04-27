@@ -53,6 +53,28 @@ export class SchedulerController {
   }
 
   /**
+   * POST /api/scheduler/restart
+   * إعادة تشغيل الـ scheduler (لتطبيق التغييرات فوراً)
+   */
+  static async restart(req: Request, res: Response): Promise<void> {
+    try {
+      await schedulerService.restart();
+
+      res.status(200).json({
+        success: true,
+        message: '✅ تم إعادة تشغيل الـ scheduler — التغييرات طُبّقت فوراً',
+        data: schedulerService.getStatus(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في إعادة تشغيل الـ scheduler',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * POST /api/scheduler/run-now
    * تشغيل دورة واحدة فوراً (بدون انتظار الـ interval)
    */

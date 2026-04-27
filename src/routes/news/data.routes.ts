@@ -17,6 +17,7 @@ import {
   getIncompleteArticles,
   getArticleById,
   updateArticleContent,
+  updateArticleCategory,
   deleteArticle,
   deleteIncompleteArticles,
   deleteAllArticles,
@@ -31,6 +32,7 @@ router.get('/media-units', getMediaUnits);
 router.get('/articles/incomplete', getIncompleteArticles);
 router.get('/articles/:id/detail', getArticleById);
 router.put('/articles/:id/content', updateArticleContent);
+router.patch('/articles/:id/category', updateArticleCategory);
 router.delete('/articles/:id', deleteArticle);
 
 // حذف جماعي

@@ -53,6 +53,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  updateArticleCategory: (id: number, category_id: number) =>
+    request<any>(`/data/articles/${id}/category`, {
+      method: "PATCH",
+      body: JSON.stringify({ category_id }),
+    }),
+
   saveArticleInIncomplete: (id: number, data: { content: string; title?: string; imageUrl?: string }) =>
     request<any>(`/data/articles/${id}/content`, {
       method: "PUT",

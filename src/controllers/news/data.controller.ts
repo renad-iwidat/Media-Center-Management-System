@@ -607,3 +607,73 @@ export async function getStatistics(_req: Request, res: Response): Promise<void>
     });
   }
 }
+
+
+/**
+ * تحديث تصنيف خبر (Manual Classification)
+ * PATCH /api/data/articles/:id/category
+ * Body: { category_id: number }
+ */
+export async function updateArticleCategory(req: Request, res: Response): Promise<void> {
+  try {
+    const articleId = parseInt(req.params.id);
+    const { category_id } = req.body;
+
+    if (isNaN(articleId)) {
+      res.status(400).json({ success: false, message: 'معرف الخبر غير صحيح' });
+      return;
+    }
+
+    if (!category_id || isNaN(parseInt(category_id))) {
+      res.status(400).json({ success: false, message: 'معرف التصنيف مطلوب ويجب أن يكون رقماً' });
+      return;
+    }
+
+    // التحقق من وجود الخبر
+    const articleCheck = await query(
+      'SELECT id, title, category_id FROM raw_data WHERE id = $1',
+      [articleId]
+    );
+
+    if (articleCheck.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'الخبر غير موجود' });
+      return;
+    }
+
+    // التحقق من وجود التصنيف
+    const categoryCheck = await query(
+      'SELECT id, name FROM categories WHERE id = $1',
+      [category_id]
+    );
+
+    if (categoryCheck.rows.length === 0) {
+      res.status(404).json({ success: false, message: 'التصنيف غير موجود' });
+      return;
+    }
+
+    // تحديث التصنيف
+    await query(
+      'UPDATE raw_data SET category_id = $1 WHERE id = $2',
+      [category_id, articleId]
+    );
+
+    console.log(`✅ تم تحديث تصنيف الخبر ${articleId} إلى ${categoryCheck.rows[0].name}`);
+
+    res.status(200).json({
+      success: true,
+      message: `تم تحديث التصنيف إلى "${categoryCheck.rows[0].name}"`,
+      data: {
+        article_id: articleId,
+        category_id: parseInt(category_id),
+        category_name: categoryCheck.rows[0].name,
+      },
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحديث تصنيف الخبر:', error);
+    res.status(500).json({
+      success: false,
+      message: 'فشل تحديث التصنيف',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}

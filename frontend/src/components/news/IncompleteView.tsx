@@ -14,6 +14,8 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   const [editedContent, setEditedContent] = useState("");
   const [editedTitle, setEditedTitle] = useState("");
   const [editedImageUrl, setEditedImageUrl] = useState("");
+  const [editedCategoryId, setEditedCategoryId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState<NotificationData | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; articleId: number | null }>({ show: false, articleId: null });
@@ -32,11 +34,18 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   const itemsPerPage = 15;
 
   useEffect(() => {
-    api.getIncompleteArticles(unitId)
-      .then((res) => {
-        setArticles(res.data || []);
+    Promise.all([
+      api.getIncompleteArticles(unitId),
+      api.getCategories()
+    ])
+      .then(([articlesRes, categoriesRes]) => {
+        setArticles(articlesRes.data || []);
+        setCategories(categoriesRes.data || []);
       })
-      .catch(() => setArticles([]))
+      .catch(() => {
+        setArticles([]);
+        setCategories([]);
+      })
       .finally(() => setLoading(false));
   }, [unitId]);
 
@@ -81,6 +90,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     setEditedContent(article.content || "");
     setEditedTitle(article.title || "");
     setEditedImageUrl(article.image_url || "");
+    setEditedCategoryId(article.category_id || null);
   };
 
   const handleSaveInIncomplete = async () => {
@@ -88,6 +98,11 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     
     setIsSaving(true);
     try {
+      // تحديث التصنيف إذا تغيّر
+      if (editedCategoryId && editedCategoryId !== editingArticle.category_id) {
+        await api.updateArticleCategory(editingArticle.id, editedCategoryId);
+      }
+
       // تحديث الخبر بدون إرساله للستوديو
       await api.saveArticleInIncomplete(editingArticle.id, {
         content: editedContent || editingArticle.content,
@@ -96,6 +111,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       });
       
       // تحديث البيانات المحلية
+      const updatedCategory = categories.find(c => c.id === editedCategoryId);
       setArticles(prev => prev.map(a => 
         a.id === editingArticle.id 
           ? { ...a, content: editedContent, title: editedTitle, image_url: editedImageUrl }
@@ -317,6 +333,29 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               className="w-full bg-[#020617]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
               placeholder="عنوان الخبر"
             />
+          </div>
+
+          {/* التصنيف */}
+          <div className="space-y-2">
+            <label className="text-xs text-gray-400 font-bold uppercase">التصنيف</label>
+            <select
+              value={editedCategoryId || ""}
+              onChange={(e) => setEditedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full bg-[#020617]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+            >
+              <option value="">-- اختر التصنيف --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            {editedCategoryId && (
+              <p className="text-[10px] text-emerald-400">✓ تم اختيار: {categories.find(c => c.id === editedCategoryId)?.name}</p>
+            )}
+            {!editedCategoryId && (
+              <p className="text-[10px] text-amber-400">⚠️ لم يتم تحديد تصنيف</p>
+            )}
           </div>
 
           {/* المحتوى */}

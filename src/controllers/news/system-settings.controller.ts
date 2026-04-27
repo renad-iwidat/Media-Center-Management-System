@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { SystemSettingsService } from '../../services/database/system-settings.service';
+import { schedulerService } from '../../services/news/scheduler.service';
 
 export class SystemSettingsController {
   /**
@@ -93,6 +94,13 @@ export class SystemSettingsController {
 
       console.log(`⚙️  تم تحديث الإعداد: ${key} = ${value}`);
 
+      // 🔄 إعادة تشغيل الـ Scheduler تلقائياً إذا تغيّر الـ interval
+      if (key === 'scheduler_interval_minutes' && schedulerService.getStatus().isRunning) {
+        console.log('🔄 إعادة تشغيل الـ Scheduler لتطبيق الـ interval الجديد...');
+        await schedulerService.restart();
+        console.log('✅ تم إعادة تشغيل الـ Scheduler بنجاح');
+      }
+
       res.status(200).json({
         success: true,
         message: `تم تحديث ${key} إلى ${value}`,
@@ -157,6 +165,14 @@ export class SystemSettingsController {
       );
 
       console.log(`⚙️  تم تحديث ${updates.length} إعداد دفعة واحدة`);
+
+      // 🔄 إعادة تشغيل الـ Scheduler تلقائياً إذا تغيّر الـ interval
+      const intervalChanged = updates.some(u => u.key === 'scheduler_interval_minutes');
+      if (intervalChanged && schedulerService.getStatus().isRunning) {
+        console.log('🔄 إعادة تشغيل الـ Scheduler لتطبيق الـ interval الجديد...');
+        await schedulerService.restart();
+        console.log('✅ تم إعادة تشغيل الـ Scheduler بنجاح');
+      }
 
       res.status(200).json({
         success: true,

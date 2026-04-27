@@ -119,6 +119,16 @@ class SchedulerService {
   }
 
   /**
+   * إعادة تشغيل الـ scheduler (لتطبيق التغييرات فوراً)
+   */
+  async restart(): Promise<void> {
+    console.log('🔄 إعادة تشغيل الـ scheduler...');
+    this.stop();
+    await this.start();
+    console.log('✅ تم إعادة تشغيل الـ scheduler بنجاح');
+  }
+
+  /**
    * تشغيل المهمة الكاملة: سحب + حفظ → معالجة + توجيه
    */
   private async runJob(): Promise<void> {
