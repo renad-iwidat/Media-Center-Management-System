@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X, Trash } from "lucide-react";
+import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X, Trash, Copy } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -396,6 +396,26 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                           {step.result.changes.length > 3 && (
                             <div className="text-xs text-gray-500 px-2">+{step.result.changes.length - 3} تغييرات أخرى</div>
                           )}
+                        </div>
+                      )}
+                      {step.hasChanges && step.result?.modified_text && (
+                        <div className="space-y-1 pt-2 border-t border-white/5">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-gray-500 font-bold">النص المعدل:</p>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(step.result.modified_text);
+                                setNotification({ type: 'success', message: '✅ تم نسخ النص المعدل' });
+                              }}
+                              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                            >
+                              <Copy size={10} />
+                              نسخ
+                            </button>
+                          </div>
+                          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-3 py-2 max-h-32 overflow-y-auto custom-scrollbar">
+                            <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{step.result.modified_text}</p>
+                          </div>
                         </div>
                       )}
                     </div>

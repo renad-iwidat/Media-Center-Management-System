@@ -77,7 +77,7 @@ class ContentCleanerService {
       const requestBody = {
         prompt,
         think: false,
-        max_tokens: 1500,
+        max_tokens:900,
         temperature: 0,
       };
 

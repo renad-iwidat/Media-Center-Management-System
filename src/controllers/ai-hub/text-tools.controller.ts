@@ -51,7 +51,7 @@ export async function summarizeText(
     console.log(`\n📝 [SUMMARIZE] style=${style} | textLength=${text.length}`);
 
     const result = await generateAIResponse(`${system}\n\n${prompt}`, {
-      max_tokens: 1000,
+      max_tokens: 800,
       temperature: 0.3,
     });
 
