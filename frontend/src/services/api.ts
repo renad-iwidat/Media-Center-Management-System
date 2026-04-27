@@ -2,7 +2,12 @@
  * API Service - ربط الفرونت اند بالباكند
  */
 
-const API_BASE = "/api";
+// استخدام VITE_API_URL من environment variables أو fallback للـ development
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
+
+console.log('🔗 API Base URL:', API_BASE);
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`, {

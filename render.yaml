@@ -41,7 +41,6 @@ services:
     region: frankfurt
     branch: ai-hub
     healthCheckPath: /health
-    dockerCommand: nginx -g 'daemon off;'
     envVars:
       - key: VITE_API_URL
         fromService:
