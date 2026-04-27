@@ -148,64 +148,7 @@ export class ContentController {
     }
   }
 
-  // ============ Filtering ============
-
-  async getContentByType(req: Request, res: Response): Promise<void> {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      const content = await this.contentService.getContentByType(BigInt(req.params.typeId), limit, offset);
-      this.sendSuccess(res, content);
-    } catch (error) {
-      this.sendError(res, error, 400);
-    }
-  }
-
-  async getContentByStatus(req: Request, res: Response): Promise<void> {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      const content = await this.contentService.getContentByStatus(BigInt(req.params.statusId), limit, offset);
-      this.sendSuccess(res, content);
-    } catch (error) {
-      this.sendError(res, error, 400);
-    }
-  }
-
-  async getContentByCreator(req: Request, res: Response): Promise<void> {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      const content = await this.contentService.getContentByCreator(BigInt(req.params.userId), limit, offset);
-      this.sendSuccess(res, content);
-    } catch (error) {
-      this.sendError(res, error, 400);
-    }
-  }
-
-  async getContentByMediaUnit(req: Request, res: Response): Promise<void> {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      const content = await this.contentService.getContentByMediaUnit(BigInt(req.params.mediaUnitId), limit, offset);
-      this.sendSuccess(res, content);
-    } catch (error) {
-      this.sendError(res, error, 400);
-    }
-  }
-
-  async getArchivedContent(req: Request, res: Response): Promise<void> {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-      const content = await this.contentService.getArchivedContent(limit, offset);
-      this.sendSuccess(res, content);
-    } catch (error) {
-      this.sendError(res, error, 400);
-    }
-  }
-
-  // ============ Search ============
+  // ============ Unified Search & Filter ============
 
   async searchContent(req: Request, res: Response): Promise<void> {
     try {
@@ -277,6 +220,45 @@ export class ContentController {
       if (!task_id || !linked_by) { this.sendError(res, 'task_id and linked_by are required', 400); return; }
       await this.contentService.linkToTask(BigInt(req.params.id), BigInt(task_id), BigInt(linked_by), usage_type || 'reference');
       this.sendSuccess(res, { message: 'Content linked to task' }, 201);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  async reuseContent(req: Request, res: Response): Promise<void> {
+    try {
+      const { task_id, reused_by } = req.body;
+      if (!task_id || !reused_by) { this.sendError(res, 'task_id and reused_by are required', 400); return; }
+      await this.contentService.reuseContent(BigInt(req.params.id), BigInt(task_id), BigInt(reused_by));
+      this.sendSuccess(res, { message: 'Content reused successfully' }, 201);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  async getReuseCount(req: Request, res: Response): Promise<void> {
+    try {
+      const count = await this.contentService.getReuseCount(BigInt(req.params.id));
+      this.sendSuccess(res, { content_id: req.params.id, reuse_count: count });
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  async getMostReusedContent(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const content = await this.contentService.getMostReusedContent(limit);
+      this.sendSuccess(res, content);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  async getContentReuseHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const history = await this.contentService.getContentReuseHistory(BigInt(req.params.id));
+      this.sendSuccess(res, history);
     } catch (error) {
       this.sendError(res, error, 400);
     }

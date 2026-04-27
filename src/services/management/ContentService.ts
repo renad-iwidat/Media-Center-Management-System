@@ -26,13 +26,9 @@ export class ContentService {
       duration: data.duration,
     });
 
-    // Auto-link to task and update KPI
     if (data.task_id) {
       await TaskAutomationService.handleContentUpload(
-        content.id,
-        data.task_id,
-        data.created_by,
-        'output'
+        content.id, data.task_id, data.created_by, 'output'
       );
     }
 
@@ -41,9 +37,7 @@ export class ContentService {
 
   async getContent(id: bigint): Promise<Content> {
     const content = await ContentModel.findById(id);
-    if (!content) {
-      throw new Error(`Content not found: ${id}`);
-    }
+    if (!content) throw new Error('Content not found: ' + id);
     return content;
   }
 
@@ -53,13 +47,9 @@ export class ContentService {
 
   async updateContent(id: bigint, data: UpdateContentDTO): Promise<Content> {
     await this.getContent(id);
-
     const updated = await ContentModel.update(id, data as Partial<Content>);
-    if (!updated) {
-      throw new Error(`Failed to update content: ${id}`);
-    }
+    if (!updated) throw new Error('Failed to update content: ' + id);
 
-    // Auto-archive when marked as final
     if (data.is_final === true) {
       await ContentModel.update(id, { is_archived: true, archived_at: new Date() });
     }
@@ -74,18 +64,10 @@ export class ContentService {
 
   // ============ Pipeline: Shooting → Content ============
 
-  /**
-   * إنشاء محتوى من تصوير
-   * هاي الـ API الأهم — بتربط الـ Shooting بالـ Content
-   */
   async createContentFromShooting(data: CreateContentFromShootingDTO): Promise<Content> {
-    // Verify shooting exists
     const shooting = await ShootingModel.findById(data.shooting_id);
-    if (!shooting) {
-      throw new Error(`Shooting not found: ${data.shooting_id}`);
-    }
+    if (!shooting) throw new Error('Shooting not found: ' + data.shooting_id);
 
-    // Create content linked to the shooting's order and task
     const content = await ContentModel.create({
       title: data.title,
       content_type_id: data.content_type_id,
@@ -99,30 +81,21 @@ export class ContentService {
       tags: data.tags,
     });
 
-    // Auto-link to task and update KPI
     if (shooting.task_id) {
       await TaskAutomationService.handleContentUpload(
-        content.id,
-        shooting.task_id,
-        data.created_by,
-        data.output_type
+        content.id, shooting.task_id, data.created_by, data.output_type
       );
     }
 
     return content;
   }
 
-  /**
-   * إنشاء عدة محتويات من تصوير واحد
-   * مثلاً: تصوير واحد → تقرير + سوشال + فيديو
-   */
   async createMultipleFromShooting(
     shootingId: bigint,
     items: Array<{ title: string; content_type_id: bigint; output_type: 'report' | 'social' | 'video' | 'archive'; cloud_url?: string; file_size?: number; duration?: number; tags?: string[] }>,
     createdBy: bigint
   ): Promise<Content[]> {
     const results: Content[] = [];
-
     for (const item of items) {
       const content = await this.createContentFromShooting({
         shooting_id: shootingId,
@@ -137,37 +110,10 @@ export class ContentService {
       });
       results.push(content);
     }
-
     return results;
   }
 
-  // ============ Filtering ============
-
-  async getContentByType(typeId: bigint, limit: number = 10, offset: number = 0): Promise<Content[]> {
-    return ContentModel.findByType(typeId, limit, offset);
-  }
-
-  async getContentByStatus(statusId: bigint, limit: number = 10, offset: number = 0): Promise<Content[]> {
-    return ContentModel.findByStatus(statusId, limit, offset);
-  }
-
-  async getContentByCreator(userId: bigint, limit: number = 10, offset: number = 0): Promise<Content[]> {
-    return ContentModel.findByCreator(userId, limit, offset);
-  }
-
-  async getContentByMediaUnit(mediaUnitId: bigint, limit: number = 10, offset: number = 0): Promise<Content[]> {
-    return ContentModel.findByMediaUnit(mediaUnitId, limit, offset);
-  }
-
-  async getArchivedContent(limit: number = 10, offset: number = 0): Promise<Content[]> {
-    const result = await pool.query(
-      'SELECT * FROM content WHERE is_archived = true ORDER BY archived_at DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
-    );
-    return result.rows;
-  }
-
-  // ============ Search ============
+  // ============ Unified Search & Filter ============
 
   async searchContent(query: {
     keyword?: string;
@@ -181,69 +127,24 @@ export class ContentService {
     limit?: number;
     offset?: number;
   }): Promise<Content[]> {
-    const conditions: string[] = [];
-    const values: any[] = [];
-    let paramCount = 1;
+    const conds: string[] = [];
+    const vals: any[] = [];
+    let p = 1;
 
-    if (query.keyword) {
-      conditions.push(`(title ILIKE $${paramCount} OR tags::text ILIKE $${paramCount})`);
-      values.push(`%${query.keyword}%`);
-      paramCount++;
-    }
+    if (query.keyword) { conds.push('(title ILIKE $' + p + ' OR tags::text ILIKE $' + p + ')'); vals.push('%' + query.keyword + '%'); p++; }
+    if (query.content_type_id) { conds.push('content_type_id = $' + p); vals.push(query.content_type_id); p++; }
+    if (query.status_id) { conds.push('status_id = $' + p); vals.push(query.status_id); p++; }
+    if (query.media_unit_id) { conds.push('media_unit_id = $' + p); vals.push(query.media_unit_id); p++; }
+    if (query.created_by) { conds.push('created_by = $' + p); vals.push(query.created_by); p++; }
+    if (query.from_date) { conds.push('created_at >= $' + p); vals.push(query.from_date); p++; }
+    if (query.to_date) { conds.push('created_at <= $' + p); vals.push(query.to_date); p++; }
+    if (query.is_archived !== undefined) { conds.push('is_archived = $' + p); vals.push(query.is_archived); p++; }
 
-    if (query.content_type_id) {
-      conditions.push(`content_type_id = $${paramCount}`);
-      values.push(query.content_type_id);
-      paramCount++;
-    }
+    const where = conds.length > 0 ? 'WHERE ' + conds.join(' AND ') : '';
+    vals.push(query.limit || 10, query.offset || 0);
 
-    if (query.status_id) {
-      conditions.push(`status_id = $${paramCount}`);
-      values.push(query.status_id);
-      paramCount++;
-    }
-
-    if (query.media_unit_id) {
-      conditions.push(`media_unit_id = $${paramCount}`);
-      values.push(query.media_unit_id);
-      paramCount++;
-    }
-
-    if (query.created_by) {
-      conditions.push(`created_by = $${paramCount}`);
-      values.push(query.created_by);
-      paramCount++;
-    }
-
-    if (query.from_date) {
-      conditions.push(`created_at >= $${paramCount}`);
-      values.push(query.from_date);
-      paramCount++;
-    }
-
-    if (query.to_date) {
-      conditions.push(`created_at <= $${paramCount}`);
-      values.push(query.to_date);
-      paramCount++;
-    }
-
-    if (query.is_archived !== undefined) {
-      conditions.push(`is_archived = $${paramCount}`);
-      values.push(query.is_archived);
-      paramCount++;
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const limit = query.limit || 10;
-    const offset = query.offset || 0;
-
-    values.push(limit, offset);
-
-    const result = await pool.query(
-      `SELECT * FROM content ${whereClause} ORDER BY created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`,
-      values
-    );
-
+    const sql = 'SELECT * FROM content ' + where + ' ORDER BY created_at DESC LIMIT $' + p + ' OFFSET $' + (p + 1);
+    const result = await pool.query(sql, vals);
     return result.rows;
   }
 
@@ -258,7 +159,12 @@ export class ContentService {
     return ContentModel.removeTag(contentId, tagId);
   }
 
-  // ============ Task Linking (Reuse) ============
+  // ============ Reuse (إعادة الاستخدام) ============
+
+  async reuseContent(contentId: bigint, taskId: bigint, reusedBy: bigint): Promise<void> {
+    await this.getContent(contentId);
+    await TaskAutomationService.handleContentLinking(contentId, taskId, 'reuse', reusedBy);
+  }
 
   async linkToTask(contentId: bigint, taskId: bigint, linkedBy: bigint, usageType: string = 'reference'): Promise<void> {
     await this.getContent(contentId);
@@ -267,6 +173,43 @@ export class ContentService {
 
   async unlinkFromTask(contentId: bigint, taskId: bigint): Promise<boolean> {
     return ContentModel.unlinkTask(contentId, taskId);
+  }
+
+  async getReuseCount(contentId: bigint): Promise<number> {
+    const result = await pool.query(
+      "SELECT COUNT(*) as count FROM content_tasks WHERE content_id = $1 AND usage_type = 'reuse'",
+      [contentId]
+    );
+    return parseInt(result.rows[0].count) || 0;
+  }
+
+  async getMostReusedContent(limit: number = 10): Promise<any[]> {
+    const result = await pool.query(
+      "SELECT c.id, c.title, c.content_type_id, ct.name as type_name, c.created_at, " +
+      "COUNT(cta.task_id) as reuse_count " +
+      "FROM content c " +
+      "INNER JOIN content_tasks cta ON c.id = cta.content_id AND cta.usage_type = 'reuse' " +
+      "LEFT JOIN content_types ct ON c.content_type_id = ct.id " +
+      "GROUP BY c.id, c.title, c.content_type_id, ct.name, c.created_at " +
+      "ORDER BY reuse_count DESC " +
+      "LIMIT $1",
+      [limit]
+    );
+    return result.rows;
+  }
+
+  async getContentReuseHistory(contentId: bigint): Promise<any[]> {
+    const result = await pool.query(
+      "SELECT cta.task_id, cta.linked_at, cta.linked_by, " +
+      "t.title as task_title, t.order_id, u.name as reused_by_name " +
+      "FROM content_tasks cta " +
+      "INNER JOIN tasks t ON cta.task_id = t.id " +
+      "LEFT JOIN users u ON cta.linked_by = u.id " +
+      "WHERE cta.content_id = $1 AND cta.usage_type = 'reuse' " +
+      "ORDER BY cta.linked_at DESC",
+      [contentId]
+    );
+    return result.rows;
   }
 
   // ============ Archive ============
@@ -278,33 +221,16 @@ export class ContentService {
 
   // ============ Metadata ============
 
-  async getContentTypes(): Promise<any[]> {
-    return ContentModel.getTypes();
-  }
-
-  async getContentStatuses(): Promise<any[]> {
-    return ContentModel.getStatuses();
-  }
+  async getContentTypes(): Promise<any[]> { return ContentModel.getTypes(); }
+  async getContentStatuses(): Promise<any[]> { return ContentModel.getStatuses(); }
 
   // ============ Validation ============
 
   private validateContentData(data: CreateContentDTO): void {
     const errors: string[] = [];
-
-    if (!data.title || data.title.trim().length < 2) {
-      errors.push('Title is required (min 2 characters)');
-    }
-
-    if (!data.content_type_id) {
-      errors.push('Content type is required');
-    }
-
-    if (!data.created_by) {
-      errors.push('Created by is required');
-    }
-
-    if (errors.length > 0) {
-      throw new Error(`Validation errors: ${errors.join(', ')}`);
-    }
+    if (!data.title || data.title.trim().length < 2) errors.push('Title is required (min 2 characters)');
+    if (!data.content_type_id) errors.push('Content type is required');
+    if (!data.created_by) errors.push('Created by is required');
+    if (errors.length > 0) throw new Error('Validation errors: ' + errors.join(', '));
   }
 }

@@ -1,5 +1,5 @@
 import pool from '../../config/database';
-import { Task, TaskHistory } from '../../types/management';
+import { Task } from '../../types/management';
 import { KPIService } from './KPIService';
 
 export class TaskAutomationService {

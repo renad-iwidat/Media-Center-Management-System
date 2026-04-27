@@ -371,6 +371,27 @@ export class KPIService {
         on_time_percentage: parseInt(avg?.on_time_percentage) || 0,
       },
       top_performers: topUsersResult.rows,
+      reuse: await this.getReuseStats(),
+    };
+  }
+
+  /**
+   * Reuse statistics for dashboard
+   */
+  static async getReuseStats(): Promise<any> {
+    const result = await pool.query(
+      "SELECT COUNT(*) as total_reuses FROM content_tasks WHERE usage_type = 'reuse'"
+    );
+    const topResult = await pool.query(
+      "SELECT c.id, c.title, COUNT(cta.task_id) as reuse_count " +
+      "FROM content c " +
+      "INNER JOIN content_tasks cta ON c.id = cta.content_id AND cta.usage_type = 'reuse' " +
+      "GROUP BY c.id, c.title " +
+      "ORDER BY reuse_count DESC LIMIT 5"
+    );
+    return {
+      total_reuses: parseInt(result.rows[0].total_reuses) || 0,
+      top_reused: topResult.rows,
     };
   }
 
