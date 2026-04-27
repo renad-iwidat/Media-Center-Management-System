@@ -127,6 +127,7 @@ export interface Shooting {
   equipment?: string[];
   crew?: string[];
   notes?: string;
+  source_type?: string;
   created_by?: bigint;
   created_at?: Date;
 }
@@ -140,6 +141,7 @@ export interface CreateShootingDTO {
   equipment?: string[];
   crew?: string[];
   notes?: string;
+  source_type?: string;
   created_by: bigint;
 }
 
@@ -150,6 +152,7 @@ export interface UpdateShootingDTO {
   equipment?: string[];
   crew?: string[];
   notes?: string;
+  source_type?: string;
 }
 
 // Desk & Team Types

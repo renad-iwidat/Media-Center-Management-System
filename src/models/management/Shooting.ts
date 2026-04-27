@@ -41,10 +41,10 @@ export class ShootingModel {
 
   static async create(shooting: Omit<Shooting, 'id' | 'created_at'>): Promise<Shooting> {
     const result = await pool.query(
-      `INSERT INTO shootings (order_id, task_id, location, start_time, end_time, equipment, crew, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO shootings (order_id, task_id, location, start_time, end_time, equipment, crew, notes, source_type, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [shooting.order_id, shooting.task_id, shooting.location, shooting.start_time, shooting.end_time, shooting.equipment, shooting.crew, shooting.notes, shooting.created_by]
+      [shooting.order_id, shooting.task_id, shooting.location, shooting.start_time, shooting.end_time, shooting.equipment, shooting.crew, shooting.notes, shooting.source_type || 'internal', shooting.created_by]
     );
     return result.rows[0];
   }

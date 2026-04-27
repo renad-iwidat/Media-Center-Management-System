@@ -10,7 +10,7 @@ export class ShootingController {
 
   async createShooting(req: Request, res: Response): Promise<void> {
     try {
-      const { order_id, task_id, location, start_time, end_time, equipment, crew, notes, created_by } = req.body;
+      const { order_id, task_id, location, start_time, end_time, equipment, crew, notes, source_type, created_by } = req.body;
 
       if (!order_id || !location || !start_time || !created_by) {
         this.sendError(res, 'order_id, location, start_time, and created_by are required', 400);
@@ -26,6 +26,7 @@ export class ShootingController {
         equipment: equipment || [],
         crew: crew || [],
         notes,
+        source_type: source_type || 'internal',
         created_by: BigInt(created_by),
       });
 
