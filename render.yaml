@@ -7,13 +7,13 @@
 services:
   # Backend Service
   - type: web
-    name: media-center-backend
+    name: Automation and AI Hub – Backend
     env: docker
     dockerfilePath: ./Dockerfile.backend
     dockerContext: .
     plan: starter # Change to 'standard' or 'pro' as needed
     region: frankfurt # or 'oregon', 'singapore', etc.
-    branch: main # Change to your deployment branch
+    branch: ai-hub # Change to your deployment branch
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -34,12 +34,12 @@ services:
 
   # Frontend Service
   - type: web
-    name: media-center-frontend
+    name: Automation and AI Hub – Frontend
     env: docker
     dockerfilePath: ./Dockerfile.frontend
     plan: starter
     region: frankfurt
-    branch: main
+    branch: ai-hub
     healthCheckPath: /health
     dockerCommand: nginx -g 'daemon off;'
     envVars:
