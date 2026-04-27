@@ -273,63 +273,62 @@ export class KPIService {
 
   /**
    * Dashboard summary — ملخص عام لكل الـ KPIs
+   * يدعم فلترة بالفترة الزمنية
    */
-  static async getDashboardSummary(): Promise<any> {
-    // إجمالي الأوردرات
+  static async getDashboardSummary(from?: Date, to?: Date): Promise<any> {
+    const dateFilter = from && to ? ' AND o.created_at BETWEEN $1 AND $2' : '';
+    const taskDateFilter = from && to ? ' AND t.created_at BETWEEN $1 AND $2' : '';
+    const contentDateFilter = from && to ? ' AND created_at BETWEEN $1 AND $2' : '';
+    const dateParams = from && to ? [from, to] : [];
+
     const ordersResult = await pool.query(
-      `SELECT
-         COUNT(*) as total_orders,
-         SUM(CASE WHEN os.name = 'Done' THEN 1 ELSE 0 END) as completed_orders,
-         SUM(CASE WHEN os.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_orders,
-         SUM(CASE WHEN os.name = 'Pending' OR os.name = 'Created' THEN 1 ELSE 0 END) as pending_orders,
-         SUM(CASE WHEN o.is_overdue = true THEN 1 ELSE 0 END) as overdue_orders
-       FROM orders o
-       LEFT JOIN order_statuses os ON o.status_id = os.id`
+      'SELECT' +
+      ' COUNT(*) as total_orders,' +
+      " SUM(CASE WHEN os.name = 'Done' THEN 1 ELSE 0 END) as completed_orders," +
+      " SUM(CASE WHEN os.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_orders," +
+      " SUM(CASE WHEN os.name = 'Pending' OR os.name = 'Created' THEN 1 ELSE 0 END) as pending_orders," +
+      ' SUM(CASE WHEN o.is_overdue = true THEN 1 ELSE 0 END) as overdue_orders' +
+      ' FROM orders o LEFT JOIN order_statuses os ON o.status_id = os.id' +
+      ' WHERE 1=1' + dateFilter,
+      dateParams
     );
 
-    // إجمالي المهام
     const tasksResult = await pool.query(
-      `SELECT
-         COUNT(*) as total_tasks,
-         SUM(CASE WHEN ts.name = 'Done' THEN 1 ELSE 0 END) as completed_tasks,
-         SUM(CASE WHEN ts.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_tasks,
-         SUM(CASE WHEN ts.name = 'Pending' THEN 1 ELSE 0 END) as pending_tasks,
-         SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks
-       FROM tasks t
-       LEFT JOIN task_statuses ts ON t.status_id = ts.id`
+      'SELECT' +
+      ' COUNT(*) as total_tasks,' +
+      " SUM(CASE WHEN ts.name = 'Done' THEN 1 ELSE 0 END) as completed_tasks," +
+      " SUM(CASE WHEN ts.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_tasks," +
+      " SUM(CASE WHEN ts.name = 'Pending' THEN 1 ELSE 0 END) as pending_tasks," +
+      ' SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks' +
+      ' FROM tasks t LEFT JOIN task_statuses ts ON t.status_id = ts.id' +
+      ' WHERE 1=1' + taskDateFilter,
+      dateParams
     );
 
-    // إجمالي المحتوى
     const contentResult = await pool.query(
-      `SELECT
-         COUNT(*) as total_content,
-         COALESCE(SUM(file_size), 0) as total_size,
-         SUM(CASE WHEN is_archived = true THEN 1 ELSE 0 END) as archived_content
-       FROM content`
+      'SELECT' +
+      ' COUNT(*) as total_content,' +
+      ' COALESCE(SUM(file_size), 0) as total_size,' +
+      ' SUM(CASE WHEN is_archived = true THEN 1 ELSE 0 END) as archived_content' +
+      ' FROM content WHERE 1=1' + contentDateFilter,
+      dateParams
     );
 
-    // إجمالي المستخدمين
     const usersResult = await pool.query(
-      `SELECT COUNT(*) as total_users FROM users`
+      'SELECT COUNT(*) as total_users FROM users'
     );
 
-    // متوسط وقت الإنجاز
     const avgResult = await pool.query(
-      `SELECT
-         ROUND(AVG(actual_duration)) as avg_task_duration,
-         ROUND(AVG(CASE WHEN is_on_time = true THEN 1.0 ELSE 0.0 END) * 100) as on_time_percentage
-       FROM task_kpi
-       WHERE actual_duration IS NOT NULL`
+      'SELECT ROUND(AVG(actual_duration)) as avg_task_duration,' +
+      ' ROUND(AVG(CASE WHEN is_on_time = true THEN 1.0 ELSE 0.0 END) * 100) as on_time_percentage' +
+      ' FROM task_kpi WHERE actual_duration IS NOT NULL'
     );
 
-    // أفضل 5 موظفين
     const topUsersResult = await pool.query(
-      `SELECT uk.user_id, u.name, uk.completed_tasks, uk.on_time_percentage
-       FROM user_kpi uk
-       INNER JOIN users u ON uk.user_id = u.id
-       WHERE uk.completed_tasks > 0
-       ORDER BY uk.on_time_percentage DESC, uk.completed_tasks DESC
-       LIMIT 5`
+      'SELECT uk.user_id, u.name, uk.completed_tasks, uk.on_time_percentage' +
+      ' FROM user_kpi uk INNER JOIN users u ON uk.user_id = u.id' +
+      ' WHERE uk.completed_tasks > 0' +
+      ' ORDER BY uk.on_time_percentage DESC, uk.completed_tasks DESC LIMIT 5'
     );
 
     const orders = ordersResult.rows[0];
@@ -396,6 +395,27 @@ export class KPIService {
   }
 
   /**
+   * Monthly trends — مقارنات شهرية
+   */
+  static async getMonthlyTrends(months: number = 6): Promise<any[]> {
+    const result = await pool.query(
+      "SELECT" +
+      " TO_CHAR(DATE_TRUNC('month', o.created_at), 'YYYY-MM') as month," +
+      " COUNT(DISTINCT o.id) as orders," +
+      " COUNT(DISTINCT t.id) as tasks," +
+      " COUNT(DISTINCT c.id) as content" +
+      " FROM orders o" +
+      " LEFT JOIN tasks t ON t.order_id = o.id" +
+      " LEFT JOIN content c ON c.task_id = t.id" +
+      " WHERE o.created_at >= NOW() - ($1 || ' months')::INTERVAL" +
+      " GROUP BY DATE_TRUNC('month', o.created_at)" +
+      " ORDER BY month DESC",
+      [months]
+    );
+    return result.rows;
+  }
+
+  /**
    * Recalculate all KPIs (manual trigger)
    */
   static async recalculateAllKPIs(): Promise<{ tasks: number; orders: number; users: number }> {
@@ -415,7 +435,7 @@ export class KPIService {
     }
 
     // Recalculate all orders
-    const allOrders = await pool.query(`SELECT id FROM orders`);
+    const allOrders = await pool.query('SELECT id FROM orders');
     for (const order of allOrders.rows) {
       try {
         await this.calculateOrderKPI(order.id);
@@ -423,9 +443,8 @@ export class KPIService {
       } catch { /* skip failed */ }
     }
 
-    // Recalculate all users with tasks
     const usersWithTasks = await pool.query(
-      `SELECT DISTINCT assigned_to as user_id FROM tasks WHERE assigned_to IS NOT NULL`
+      'SELECT DISTINCT assigned_to as user_id FROM tasks WHERE assigned_to IS NOT NULL'
     );
     for (const user of usersWithTasks.rows) {
       try {

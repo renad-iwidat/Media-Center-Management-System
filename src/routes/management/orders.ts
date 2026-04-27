@@ -30,6 +30,7 @@ router.get('/:id/history', requirePermission('orders.view'), (req: Request, res:
 router.get('/:id/progress', requirePermission('orders.view'), (req: Request, res: Response) => { orderController.calculateOrderProgress(req, res); });
 router.get('/:id/deadline', requirePermission('orders.view'), (req: Request, res: Response) => { orderController.validateOrderDeadline(req, res); });
 router.get('/:id/can-delete', requirePermission('orders.view'), (req: Request, res: Response) => { orderController.canDeleteOrder(req, res); });
+router.get('/:id/can-close', requirePermission('orders.view'), (req: Request, res: Response) => { orderController.canCloseOrder(req, res); });
 router.get('/:id/details', requirePermission('orders.view'), (req: Request, res: Response) => { orderController.getOrderWithDetails(req, res); });
 
 // KPI

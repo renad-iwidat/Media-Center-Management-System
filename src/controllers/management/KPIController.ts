@@ -12,9 +12,11 @@ export class KPIController {
    * GET /api/kpi/dashboard
    * Get dashboard summary with all KPI metrics
    */
-  async getDashboard(_req: Request, res: Response): Promise<void> {
+  async getDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const summary = await KPIService.getDashboardSummary();
+      const from = req.query.from ? new Date(req.query.from as string) : undefined;
+      const to = req.query.to ? new Date(req.query.to as string) : undefined;
+      const summary = await KPIService.getDashboardSummary(from, to);
       this.sendSuccess(res, summary, 200);
     } catch (error) {
       this.sendError(res, error, 500);
@@ -194,6 +196,18 @@ export class KPIController {
         message: 'KPI recalculation completed',
         recalculated: result,
       }, 200);
+    } catch (error) {
+      this.sendError(res, error, 500);
+    }
+  }
+
+  // ============ Trends ============
+
+  async getMonthlyTrends(req: Request, res: Response): Promise<void> {
+    try {
+      const months = req.query.months ? parseInt(req.query.months as string) : 6;
+      const trends = await KPIService.getMonthlyTrends(months);
+      this.sendSuccess(res, trends, 200);
     } catch (error) {
       this.sendError(res, error, 500);
     }

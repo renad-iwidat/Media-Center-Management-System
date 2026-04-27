@@ -10,6 +10,7 @@ router.use(authenticate);
 router.use(requirePermission('kpi.view'));
 
 router.get('/dashboard', (req: Request, res: Response) => { kpiController.getDashboard(req, res); });
+router.get('/trends', (req: Request, res: Response) => { kpiController.getMonthlyTrends(req, res); });
 router.get('/users', (req: Request, res: Response) => { kpiController.getAllUsersKPI(req, res); });
 router.get('/users/:userId', (req: Request, res: Response) => { kpiController.getUserKPI(req, res); });
 router.post('/users/:userId/recalculate', (req: Request, res: Response) => { kpiController.recalculateUserKPI(req, res); });

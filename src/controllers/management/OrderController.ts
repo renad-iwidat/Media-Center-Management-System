@@ -375,6 +375,17 @@ export class OrderController {
     }
   }
 
+  async canCloseOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id) { this.sendError(res, 'Order ID is required', 400); return; }
+      const result = await this.orderService.canCloseOrder(BigInt(id));
+      this.sendSuccess(res, result, 200);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
   /**
    * GET /api/orders/:id/details
    * Get order with all details (tasks, progress, history)

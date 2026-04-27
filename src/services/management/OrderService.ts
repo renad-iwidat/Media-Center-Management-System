@@ -163,6 +163,28 @@ export class OrderService {
 
   // ============ Business Logic ============
 
+  async canCloseOrder(orderId: bigint): Promise<{ canClose: boolean; reasons: string[] }> {
+    const reasons: string[] = [];
+    const tasks = await TaskModel.findByOrder(orderId, 1000, 0);
+
+    // فحص: هل في مهام لسا ما خلصت
+    const pendingTasks = tasks.filter(t => !['Done', 'Cancelled'].includes(t.status_id?.toString() || ''));
+    if (pendingTasks.length > 0) {
+      reasons.push('في ' + pendingTasks.length + ' مهمة لسا ما خلصت');
+    }
+
+    // فحص: هل في محتوى واحد على الأقل
+    const pool = (await import('../../config/database')).default;
+    const contentResult = await pool.query(
+      'SELECT COUNT(*) as count FROM content WHERE task_id IN (SELECT id FROM tasks WHERE order_id = $1)',
+      [orderId]
+    );
+    if (parseInt(contentResult.rows[0].count) === 0) {
+      reasons.push('ما في أي محتوى مرتبط بالأوردر');
+    }
+
+    return { canClose: reasons.length === 0, reasons };
+  }
   async calculateOrderProgress(orderId: bigint): Promise<{
     total: number;
     completed: number;
