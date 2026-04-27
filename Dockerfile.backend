@@ -11,15 +11,19 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
-COPY . .
+COPY src ./src
 
 # Build TypeScript
 RUN npm run build
+
+# Verify build output
+RUN ls -la dist/ && echo "Build completed successfully"
 
 # ===================================
 # Production Stage
@@ -37,6 +41,9 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
+
+# Verify dist directory exists
+RUN ls -la && ls -la dist/ && echo "Files copied successfully"
 
 # Create uploads directory
 RUN mkdir -p uploads

@@ -5,13 +5,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs
+# Build outputs (will be built inside Docker)
 dist
 frontend/dist
 build
 .next
 
-# Environment files
+# Environment files (will be set via Render)
 .env
 .env.local
 .env.*.local
@@ -20,7 +20,6 @@ frontend/.env.local
 
 # Git
 .git
-.gitignore
 .gitattributes
 
 # IDE
@@ -47,22 +46,12 @@ tmp
 temp
 *.tmp
 
-# Documentation
-docs
-*.md
-README.md
-
-# Docker
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
 # Uploads (will be created at runtime)
 uploads/*
+!uploads/.gitkeep
 
-# SQL scripts
+# SQL scripts (not needed in production)
 sql
 
 # Development scripts
-*.sh
-Makefile
+deploy.sh

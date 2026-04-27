@@ -10,6 +10,7 @@ services:
     name: media-center-backend
     env: docker
     dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
     plan: starter # Change to 'standard' or 'pro' as needed
     region: frankfurt # or 'oregon', 'singapore', etc.
     branch: main # Change to your deployment branch
@@ -25,6 +26,10 @@ services:
         sync: false # Set this in Render dashboard
       - key: OPENAI_API_KEY
         sync: false # Set this in Render dashboard (secret)
+      - key: ARTICLES_PER_SOURCE
+        value: 20
+      - key: SCHEDULER_INTERVAL
+        value: 10
     autoDeploy: true
 
   # Frontend Service
@@ -50,10 +55,4 @@ services:
           envVarKey: RENDER_EXTERNAL_URL
     autoDeploy: true
 
-# Database (Optional - if you want Render to manage PostgreSQL)
-databases:
-  - name: media-center-db
-    plan: starter # Free tier available
-    databaseName: media_center
-    user: media_user
-    region: frankfurt
+
