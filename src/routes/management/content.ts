@@ -1,39 +1,42 @@
 import { Router, Request, Response } from 'express';
 import { ContentController } from '../../controllers/management/ContentController';
+import { authenticate, requirePermission } from '../../middleware/auth';
 
 const router = Router();
 const contentController = new ContentController();
 
-// ============ Metadata (before :id routes) ============
-router.get('/types', (req: Request, res: Response) => { contentController.getContentTypes(req, res); });
-router.get('/statuses', (req: Request, res: Response) => { contentController.getContentStatuses(req, res); });
-router.get('/analytics/most-reused', (req: Request, res: Response) => { contentController.getMostReusedContent(req, res); });
+router.use(authenticate);
 
-// ============ Pipeline: Shooting → Content ============
-router.post('/from-shooting', (req: Request, res: Response) => { contentController.createFromShooting(req, res); });
-router.post('/from-shooting/batch', (req: Request, res: Response) => { contentController.createMultipleFromShooting(req, res); });
+// Metadata
+router.get('/types', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getContentTypes(req, res); });
+router.get('/statuses', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getContentStatuses(req, res); });
+router.get('/analytics/most-reused', requirePermission('kpi.view'), (req: Request, res: Response) => { contentController.getMostReusedContent(req, res); });
 
-// ============ CRUD + Unified Filter ============
-router.post('/', (req: Request, res: Response) => { contentController.createContent(req, res); });
-router.get('/', (req: Request, res: Response) => { contentController.searchContent(req, res); });
-router.get('/:id', (req: Request, res: Response) => { contentController.getContent(req, res); });
-router.put('/:id', (req: Request, res: Response) => { contentController.updateContent(req, res); });
-router.delete('/:id', (req: Request, res: Response) => { contentController.deleteContent(req, res); });
+// Pipeline
+router.post('/from-shooting', requirePermission('content.create'), (req: Request, res: Response) => { contentController.createFromShooting(req, res); });
+router.post('/from-shooting/batch', requirePermission('content.create'), (req: Request, res: Response) => { contentController.createMultipleFromShooting(req, res); });
 
-// ============ Tags ============
-router.post('/:id/tags', (req: Request, res: Response) => { contentController.addTag(req, res); });
-router.delete('/:id/tags/:tagId', (req: Request, res: Response) => { contentController.removeTag(req, res); });
+// CRUD + Filter
+router.post('/', requirePermission('content.create'), (req: Request, res: Response) => { contentController.createContent(req, res); });
+router.get('/', requirePermission('content.view'), (req: Request, res: Response) => { contentController.searchContent(req, res); });
+router.get('/:id', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getContent(req, res); });
+router.put('/:id', requirePermission('content.edit'), (req: Request, res: Response) => { contentController.updateContent(req, res); });
+router.delete('/:id', requirePermission('content.delete'), (req: Request, res: Response) => { contentController.deleteContent(req, res); });
 
-// ============ Reuse ============
-router.post('/:id/reuse', (req: Request, res: Response) => { contentController.reuseContent(req, res); });
-router.get('/:id/reuse-count', (req: Request, res: Response) => { contentController.getReuseCount(req, res); });
-router.get('/:id/reuse-history', (req: Request, res: Response) => { contentController.getContentReuseHistory(req, res); });
+// Tags
+router.post('/:id/tags', requirePermission('content.edit'), (req: Request, res: Response) => { contentController.addTag(req, res); });
+router.delete('/:id/tags/:tagId', requirePermission('content.edit'), (req: Request, res: Response) => { contentController.removeTag(req, res); });
 
-// ============ Task Linking ============
-router.post('/:id/link-task', (req: Request, res: Response) => { contentController.linkToTask(req, res); });
-router.delete('/:id/unlink-task/:taskId', (req: Request, res: Response) => { contentController.unlinkFromTask(req, res); });
+// Reuse
+router.post('/:id/reuse', requirePermission('content.view'), (req: Request, res: Response) => { contentController.reuseContent(req, res); });
+router.get('/:id/reuse-count', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getReuseCount(req, res); });
+router.get('/:id/reuse-history', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getContentReuseHistory(req, res); });
 
-// ============ Archive ============
-router.post('/:id/archive', (req: Request, res: Response) => { contentController.archiveContent(req, res); });
+// Task Linking
+router.post('/:id/link-task', requirePermission('content.edit'), (req: Request, res: Response) => { contentController.linkToTask(req, res); });
+router.delete('/:id/unlink-task/:taskId', requirePermission('content.edit'), (req: Request, res: Response) => { contentController.unlinkFromTask(req, res); });
+
+// Archive
+router.post('/:id/archive', requirePermission('content.archive'), (req: Request, res: Response) => { contentController.archiveContent(req, res); });
 
 export default router;
