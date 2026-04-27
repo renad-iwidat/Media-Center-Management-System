@@ -59,4 +59,21 @@ router.delete('/:id/guests/:guestId', EpisodeController.removeGuestFromEpisode);
  */
 router.get('/:id/guests', EpisodeController.getEpisodeGuests);
 
+// ============ Enriched Views ============
+
+/**
+ * GET /episodes/enriched - All episodes with status, order, counts
+ */
+router.get('/enriched', EpisodeController.getAllEpisodesEnriched);
+
+/**
+ * GET /episodes/:id/enriched - Single episode enriched
+ */
+router.get('/:id/enriched', EpisodeController.getEpisodeEnriched);
+
+/**
+ * GET /episodes/:id/full - Episode with all details (guests, tasks, content)
+ */
+router.get('/:id/full', EpisodeController.getEpisodeFull);
+
 export default router;

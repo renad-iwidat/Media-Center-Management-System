@@ -4,12 +4,19 @@ import { ShootingController } from '../../controllers/management/ShootingControl
 const router = Router();
 const shootingController = new ShootingController();
 
+// Enriched views (before :id to avoid conflict)
+router.get('/enriched', (req: Request, res: Response) => { shootingController.getAllShootingsEnriched(req, res); });
+
 // CRUD
 router.post('/', (req: Request, res: Response) => { shootingController.createShooting(req, res); });
 router.get('/', (req: Request, res: Response) => { shootingController.getAllShootings(req, res); });
 router.get('/:id', (req: Request, res: Response) => { shootingController.getShooting(req, res); });
 router.put('/:id', (req: Request, res: Response) => { shootingController.updateShooting(req, res); });
 router.delete('/:id', (req: Request, res: Response) => { shootingController.deleteShooting(req, res); });
+
+// Enriched single
+router.get('/:id/enriched', (req: Request, res: Response) => { shootingController.getShootingEnriched(req, res); });
+router.get('/:id/full', (req: Request, res: Response) => { shootingController.getShootingFull(req, res); });
 
 // Filtering
 router.get('/order/:orderId', (req: Request, res: Response) => { shootingController.getShootingsByOrder(req, res); });

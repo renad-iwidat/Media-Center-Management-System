@@ -2,6 +2,7 @@ import { ShootingModel } from '../../models/management/Shooting';
 import { OrderModel } from '../../models/management/Order';
 import { TaskModel } from '../../models/management/Task';
 import { Shooting, CreateShootingDTO, UpdateShootingDTO } from '../../types/management';
+import pool from '../../config/database';
 
 export class ShootingService {
 
@@ -108,5 +109,98 @@ export class ShootingService {
     if (errors.length > 0) {
       throw new Error(`Validation errors: ${errors.join(', ')}`);
     }
+  }
+
+  // ============ Enriched Views ============
+
+  /**
+   * Get shooting with full context — single optimized query
+   * Returns: shooting + order title + task status + content produced
+   */
+  async getShootingEnriched(id: bigint): Promise<any> {
+    const result = await pool.query(
+      `SELECT
+         s.*,
+         o.title as order_title,
+         os.name as order_status,
+         t.title as task_title,
+         ts.name as task_status,
+         u.name as created_by_name,
+         (SELECT COUNT(*) FROM content c
+          WHERE c.owner_type = 'shooting' AND c.owner_id = s.id
+         ) as content_count
+       FROM shootings s
+       LEFT JOIN orders o ON s.order_id = o.id
+       LEFT JOIN order_statuses os ON o.status_id = os.id
+       LEFT JOIN tasks t ON s.task_id = t.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       LEFT JOIN users u ON s.created_by = u.id
+       WHERE s.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) return null;
+
+    const row = result.rows[0];
+    return {
+      ...row,
+      status: row.task_status || row.order_status || 'pending',
+      content_count: parseInt(row.content_count) || 0,
+    };
+  }
+
+  /**
+   * Get all shootings enriched — batch optimized
+   */
+  async getAllShootingsEnriched(limit: number = 10, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT
+         s.*,
+         o.title as order_title,
+         os.name as order_status,
+         t.title as task_title,
+         ts.name as task_status,
+         u.name as created_by_name,
+         (SELECT COUNT(*) FROM content c
+          WHERE c.owner_type = 'shooting' AND c.owner_id = s.id
+         ) as content_count
+       FROM shootings s
+       LEFT JOIN orders o ON s.order_id = o.id
+       LEFT JOIN order_statuses os ON o.status_id = os.id
+       LEFT JOIN tasks t ON s.task_id = t.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       LEFT JOIN users u ON s.created_by = u.id
+       ORDER BY s.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    return result.rows.map(row => ({
+      ...row,
+      status: row.task_status || row.order_status || 'pending',
+      content_count: parseInt(row.content_count) || 0,
+    }));
+  }
+
+  /**
+   * Get shooting full details — shooting + content produced from it
+   */
+  async getShootingFull(id: bigint): Promise<any> {
+    const enriched = await this.getShootingEnriched(id);
+    if (!enriched) return null;
+
+    const contentResult = await pool.query(
+      `SELECT c.*, ct.name as type_name
+       FROM content c
+       LEFT JOIN content_types ct ON c.content_type_id = ct.id
+       WHERE c.owner_type = 'shooting' AND c.owner_id = $1
+       ORDER BY c.created_at DESC`,
+      [id]
+    );
+
+    return {
+      ...enriched,
+      content: contentResult.rows,
+    };
   }
 }

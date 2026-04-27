@@ -308,4 +308,64 @@ export class EpisodeController {
       });
     }
   }
+
+  // ============ Enriched Views ============
+
+  /**
+   * GET /episodes/enriched - Get all episodes with status, order, guests count, content count
+   */
+  static async getAllEpisodesEnriched(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const episodes = await episodeService.getAllEpisodesEnriched(limit, offset);
+      res.json({ success: true, data: episodes, count: episodes.length });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch enriched episodes',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * GET /episodes/:id/enriched - Get single episode enriched
+   */
+  static async getEpisodeEnriched(req: Request, res: Response): Promise<void> {
+    try {
+      const episode = await episodeService.getEpisodeEnriched(BigInt(req.params.id));
+      if (!episode) {
+        res.status(404).json({ success: false, error: 'Episode not found' });
+        return;
+      }
+      res.json({ success: true, data: episode });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch enriched episode',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * GET /episodes/:id/full - Get episode with all details (guests, tasks, content)
+   */
+  static async getEpisodeFull(req: Request, res: Response): Promise<void> {
+    try {
+      const episode = await episodeService.getEpisodeFull(BigInt(req.params.id));
+      if (!episode) {
+        res.status(404).json({ success: false, error: 'Episode not found' });
+        return;
+      }
+      res.json({ success: true, data: episode });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch full episode',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
 }

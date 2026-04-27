@@ -118,6 +118,39 @@ export class ShootingController {
     }
   }
 
+  // ============ Enriched Views ============
+
+  async getShootingEnriched(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.shootingService.getShootingEnriched(BigInt(req.params.id));
+      if (!result) { this.sendError(res, 'Shooting not found', 404); return; }
+      this.sendSuccess(res, result);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  async getAllShootingsEnriched(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const result = await this.shootingService.getAllShootingsEnriched(limit, offset);
+      this.sendSuccess(res, result);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  async getShootingFull(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.shootingService.getShootingFull(BigInt(req.params.id));
+      if (!result) { this.sendError(res, 'Shooting not found', 404); return; }
+      this.sendSuccess(res, result);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
   private sendSuccess(res: Response, data: any, statusCode: number = 200): void {
     res.status(statusCode).json({ success: true, data, timestamp: new Date().toISOString() });
   }
