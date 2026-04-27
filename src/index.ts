@@ -1,16 +1,19 @@
 import express, { Express, Request, Response } from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import apiRoutes from './routes';
 import portalRoutes from './routes/portal-r';
 import { testConnection } from './config/database';
+import { SocketService } from './services/management/SocketService';
 
 // Load environment variables
 dotenv.config();
 
-// Create Express app
+// Create Express app + HTTP server
 const app: Express = express();
+const httpServer = createServer(app);
 const port = process.env.PORT || 3000;
 
 // Security middleware
@@ -82,7 +85,9 @@ app.use((err: any, _req: Request, res: Response) => {
 });
 
 // Start the server
-app.listen(port, async () => {
+SocketService.init(httpServer);
+
+httpServer.listen(port, async () => {
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
@@ -90,15 +95,18 @@ app.listen(port, async () => {
 ║   Server is running on port ${port}                          ║
 ║                                                            ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}                          ║
+║   WebSocket: Enabled                                       ║
 ║   Database: Testing connection...                          ║
 ║                                                            ║
 ║   Available Endpoints:                                     ║
 ║   - GET  /health                                           ║
+║   - POST /api/auth/login                                   ║
 ║   - GET  /api/orders                                       ║
 ║   - GET  /api/tasks                                        ║
 ║   - GET  /api/kpi/dashboard                                ║
 ║   - GET  /api/shootings                                    ║
 ║   - GET  /api/content                                      ║
+║   - GET  /api/notifications                                ║
 ║   - GET  /api/portal/*                                     ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝

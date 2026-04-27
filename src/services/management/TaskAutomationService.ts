@@ -1,6 +1,7 @@
 import pool from '../../config/database';
 import { Task } from '../../types/management';
 import { KPIService } from './KPIService';
+import { NotificationService } from './NotificationService';
 
 export class TaskAutomationService {
   /**
@@ -95,6 +96,13 @@ export class TaskAutomationService {
       }
     }
 
+    // إشعار لصاحب المهمة عند تغيير الحالة
+    if (updatedTask.assigned_to && String(updatedTask.assigned_to) !== String(changedBy)) {
+      try {
+        await NotificationService.notifyTaskStatusChanged(taskId, updatedTask.title, newStatusName || '', updatedTask.assigned_to);
+      } catch { /* لا نوقف العملية إذا فشل الإشعار */ }
+    }
+
     return updatedTask;
   }
 
@@ -116,6 +124,15 @@ export class TaskAutomationService {
 
     // Update user KPI
     await KPIService.calculateUserKPI(assignedTo);
+
+    // إشعار للموظف المعيّن
+    try {
+      const taskResult = await pool.query('SELECT title FROM tasks WHERE id = $1', [taskId]);
+      const assignerResult = await pool.query('SELECT name FROM users WHERE id = $1', [assignedBy]);
+      const taskTitle = taskResult.rows[0]?.title || '';
+      const assignerName = assignerResult.rows[0]?.name || '';
+      await NotificationService.notifyTaskAssigned(taskId, taskTitle, assignedTo, assignerName);
+    } catch { /* لا نوقف العملية إذا فشل الإشعار */ }
   }
 
   /**
@@ -165,6 +182,17 @@ export class TaskAutomationService {
       // Update user KPI if task is assigned
       if (task.assigned_to) {
         await KPIService.calculateUserKPI(task.assigned_to);
+      }
+
+      // إشعار لصاحب الأوردر عند رفع محتوى
+      if (task.order_id) {
+        try {
+          const orderResult = await pool.query('SELECT created_by FROM orders WHERE id = $1', [task.order_id]);
+          const contentResult2 = await pool.query('SELECT title FROM content WHERE id = $1', [contentId]);
+          if (orderResult.rows[0]?.created_by) {
+            await NotificationService.notifyContentUploaded(contentId, contentResult2.rows[0]?.title || '', task.order_id, orderResult.rows[0].created_by);
+          }
+        } catch { /* لا نوقف العملية إذا فشل الإشعار */ }
       }
     }
   }

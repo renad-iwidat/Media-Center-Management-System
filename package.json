@@ -31,6 +31,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/socket.io": "^3.0.1",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -40,7 +41,8 @@
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^8.0.0",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
