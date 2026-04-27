@@ -366,28 +366,35 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                     <div key={i} className="bg-white/[0.02] rounded-xl border border-white/5 p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-white">{step.policyName}</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${step.hasChanges ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-400'}`}>
-                          {step.hasChanges ? '✓ تم التعديل' : '— بدون تغيير'}
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${step.hasChanges ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                          {step.hasChanges ? '✓ تم التعديل' : '✓ لا يحتاج تعديل'}
                         </span>
                       </div>
                       {step.result?.total_changes !== undefined && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500">التغييرات:</span>
+                          <span className="text-gray-500">عدد التغييرات:</span>
                           <span className="text-white font-semibold">{step.result.total_changes}</span>
                         </div>
                       )}
                       {step.result?.notes && (
-                        <div className="text-xs text-gray-300 bg-[#020617]/50 rounded px-2 py-1 border border-white/5 leading-relaxed">
-                          {step.result.notes}
+                        <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
+                          <div className="flex items-start gap-2">
+                            <span className="text-blue-400 text-xs shrink-0 mt-0.5">ℹ️</span>
+                            <p className="text-xs text-gray-300 leading-relaxed">{step.result.notes}</p>
+                          </div>
                         </div>
                       )}
                       {step.result?.changes?.length > 0 && (
                         <div className="space-y-1">
-                          {step.result.changes.slice(0, 2).map((change: string, ci: number) => (
-                            <div key={ci} className="text-xs text-gray-300 bg-[#020617]/50 rounded px-2 py-1 border border-white/5 line-clamp-2">{change}</div>
+                          <p className="text-[10px] text-gray-500 font-bold">التغييرات المطبقة:</p>
+                          {step.result.changes.slice(0, 3).map((change: string, ci: number) => (
+                            <div key={ci} className="text-xs text-gray-300 bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-2 py-1.5 line-clamp-2 flex items-start gap-2">
+                              <span className="text-emerald-400 shrink-0">•</span>
+                              <span>{change}</span>
+                            </div>
                           ))}
-                          {step.result.changes.length > 2 && (
-                            <div className="text-xs text-gray-500 px-2">+{step.result.changes.length - 2} تغييرات أخرى</div>
+                          {step.result.changes.length > 3 && (
+                            <div className="text-xs text-gray-500 px-2">+{step.result.changes.length - 3} تغييرات أخرى</div>
                           )}
                         </div>
                       )}

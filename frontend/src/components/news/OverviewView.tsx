@@ -55,7 +55,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
             <TrendingUp size={16} className="text-blue-400 shrink-0" />
             <span className="truncate">إحصائيات جميع الوحدات الإعلامية</span>
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
             {queueStats.map((unit: any) => {
               const unitPublished = publishedStats?.by_media_unit?.find(
                 (u: any) => u.media_unit === unit.name

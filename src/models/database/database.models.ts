@@ -19,6 +19,7 @@ export interface Source {
   created_at: Date;
   default_category_id: number;
   last_fetched_at: Date | null;
+  source_type_name?: string; // من JOIN مع source_types
 }
 
 // Category - التصنيفات

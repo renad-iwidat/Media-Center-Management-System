@@ -6,6 +6,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { STTController } from '../../controllers/ai-hub/stt.controller';
+import { createAILogger } from '../../middleware/ai-usage-logger.middleware';
 
 const router = Router();
 
@@ -62,7 +63,7 @@ router.use((req: Request, res: Response, next: NextFunction) => {
  *   "error": "string (if failed)"
  * }
  */
-router.post('/transcribe-url', STTController.transcribeFromUrl);
+router.post('/transcribe-url', createAILogger('stt', 'transcribe-url'), STTController.transcribeFromUrl);
 
 /**
  * POST /api/ai-hub/stt/transcribe-file - تفريغ صوتي من ملف مرفوع
@@ -84,7 +85,7 @@ router.post('/transcribe-url', STTController.transcribeFromUrl);
  *   "error": "string (if failed)"
  * }
  */
-router.post('/transcribe-file', STTController.transcribeFromFile);
+router.post('/transcribe-file', createAILogger('stt', 'transcribe-file'), STTController.transcribeFromFile);
 
 /**
  * GET /api/ai-hub/stt/languages - الحصول على قائمة اللغات المدعومة
@@ -118,7 +119,7 @@ router.get('/languages', STTController.getSupportedLanguages);
  *   "error": "string (if failed)"
  * }
  */
-router.post('/transcribe-upload', upload.single('file'), STTController.transcribeFromUpload);
+router.post('/transcribe-upload', upload.single('file'), createAILogger('stt', 'transcribe-upload'), STTController.transcribeFromUpload);
 
 /**
  * POST /api/ai-hub/stt/transcribe-base64 - تفريغ صوتي من بيانات base64
@@ -139,6 +140,6 @@ router.post('/transcribe-upload', upload.single('file'), STTController.transcrib
  *   "error": "string (if failed)"
  * }
  */
-router.post('/transcribe-base64', STTController.transcribeFromBase64);
+router.post('/transcribe-base64', createAILogger('stt', 'transcribe-base64'), STTController.transcribeFromBase64);
 
 export default router;

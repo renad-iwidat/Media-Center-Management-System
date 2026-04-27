@@ -32,7 +32,7 @@ export const api = {
   getStatistics: () => request<any>("/data/statistics"),
   
   // مصادر
-  getSources: () => request<any>("/data/sources"),
+  getSources: () => request<any>("/data/sources/fetch-info/all"),
   getActiveSources: () => request<any>("/data/sources/active"),
 
   // وحدات الإعلام

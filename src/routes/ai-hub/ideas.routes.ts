@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { generateIdeas } from '../../controllers/ai-hub/ideas.controller';
+import { createAILogger } from '../../middleware/ai-usage-logger.middleware';
 
 const router = Router();
 
@@ -12,6 +13,6 @@ const router = Router();
  * POST /api/ai-hub/ideas/generate
  * توليد أفكار / أسئلة / عناوين
  */
-router.post('/generate', generateIdeas);
+router.post('/generate', createAILogger('ideas', 'generate'), generateIdeas);
 
 export default router;

@@ -5,6 +5,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { generateTTS, getVoices } from '../../controllers/ai-hub/tts.controller';
+import { createAILogger } from '../../middleware/ai-usage-logger.middleware';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.use((req: Request, res: Response, next: NextFunction) => {
  *   "resetTime": number
  * }
  */
-router.post('/generate', generateTTS);
+router.post('/generate', createAILogger('tts', 'generate'), generateTTS);
 
 /**
  * GET /api/ai-hub/tts/voices - الحصول على قائمة الأصوات المتاحة

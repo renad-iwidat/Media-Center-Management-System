@@ -28,24 +28,34 @@ interface PublishedArticle {
 }
 
 export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number | null }) {
-  const [activeMode, setActiveMode] = useState<AudioMode>('STT');
+  // Load from localStorage
+  const loadFromStorage = (key: string, defaultValue: any) => {
+    try {
+      const saved = localStorage.getItem(`audioProc_${key}`);
+      return saved ? JSON.parse(saved) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  };
+
+  const [activeMode, setActiveMode] = useState<AudioMode>(() => loadFromStorage('activeMode', 'STT'));
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [selectedFileId, setSelectedFileId] = useState<number | null>(() => loadFromStorage('selectedFileId', null));
+  const [result, setResult] = useState<string | null>(() => loadFromStorage('result', null));
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [voice, setVoice] = useState('nova');
+  const [voice, setVoice] = useState(() => loadFromStorage('voice', 'nova'));
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
-  const [fileTypeFilter, setFileTypeFilter] = useState<FileTypeFilter>('all');
+  const [fileTypeFilter, setFileTypeFilter] = useState<FileTypeFilter>(() => loadFromStorage('fileTypeFilter', 'all'));
   const [showPreview, setShowPreview] = useState(false);
   const [previewFileId, setPreviewFileId] = useState<number | null>(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
-  const [ttsSource, setTtsSource] = useState<TTSSource>('paste');
-  const [pastedText, setPastedText] = useState('');
+  const [ttsSource, setTtsSource] = useState<TTSSource>(() => loadFromStorage('ttsSource', 'paste'));
+  const [pastedText, setPastedText] = useState(() => loadFromStorage('pastedText', ''));
   const [publishedArticles, setPublishedArticles] = useState<PublishedArticle[]>([]);
-  const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
+  const [selectedArticleId, setSelectedArticleId] = useState<number | null>(() => loadFromStorage('selectedArticleId', null));
   const [loadingArticles, setLoadingArticles] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -62,6 +72,39 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
       fetchPublishedArticles();
     }
   }, [activeMode, ttsSource, mediaUnitId]);
+
+  // Save to localStorage
+  useEffect(() => {
+    localStorage.setItem('audioProc_activeMode', JSON.stringify(activeMode));
+  }, [activeMode]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_selectedFileId', JSON.stringify(selectedFileId));
+  }, [selectedFileId]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_result', JSON.stringify(result));
+  }, [result]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_voice', JSON.stringify(voice));
+  }, [voice]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_fileTypeFilter', JSON.stringify(fileTypeFilter));
+  }, [fileTypeFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_ttsSource', JSON.stringify(ttsSource));
+  }, [ttsSource]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_pastedText', JSON.stringify(pastedText));
+  }, [pastedText]);
+
+  useEffect(() => {
+    localStorage.setItem('audioProc_selectedArticleId', JSON.stringify(selectedArticleId));
+  }, [selectedArticleId]);
 
   const fetchUploadedFiles = async () => {
     try {

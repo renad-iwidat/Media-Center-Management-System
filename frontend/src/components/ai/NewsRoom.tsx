@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Newspaper, Loader2, Copy, Check, FileText, LayoutList,
-  Trash2, Search, Sparkles, RefreshCw, Plus, Sun, Moon, Hash
+  Trash2, Search, Sparkles, RefreshCw, Plus, Sun, Moon, Hash, X
 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
 
@@ -26,18 +26,29 @@ interface NewsItem {
 const COUNT_PRESETS = [5, 10, 15];
 
 export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }) {
-  const [activeMode, setActiveMode] = useState<NewsMode>('SUMMARY');
-  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('MORNING');
+  // Load from localStorage
+  const loadFromStorage = (key: string, defaultValue: any) => {
+    try {
+      const saved = localStorage.getItem(`newsRoom_${key}`);
+      return saved ? JSON.parse(saved) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  };
+
+  const [activeMode, setActiveMode] = useState<NewsMode>(() => loadFromStorage('activeMode', 'SUMMARY'));
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(() => loadFromStorage('timeOfDay', 'MORNING'));
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [result, setResult] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => loadFromStorage('selectedCategory', ''));
+  const [result, setResult] = useState<string | null>(() => loadFromStorage('result', null));
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingNews, setIsLoadingNews] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   // News count selection
-  const [countPreset, setCountPreset] = useState<number | 'custom'>(5);
-  const [customCount, setCustomCount] = useState<string>('');
+  const [countPreset, setCountPreset] = useState<number | 'custom'>(() => loadFromStorage('countPreset', 5));
+  const [customCount, setCustomCount] = useState<string>(() => loadFromStorage('customCount', ''));
 
   // Derived: how many items to auto-select
   const targetCount = countPreset === 'custom'
@@ -48,6 +59,31 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
   useEffect(() => {
     fetchNews();
   }, [mediaUnitId]);
+
+  // Save to localStorage
+  useEffect(() => {
+    localStorage.setItem('newsRoom_activeMode', JSON.stringify(activeMode));
+  }, [activeMode]);
+
+  useEffect(() => {
+    localStorage.setItem('newsRoom_timeOfDay', JSON.stringify(timeOfDay));
+  }, [timeOfDay]);
+
+  useEffect(() => {
+    localStorage.setItem('newsRoom_result', JSON.stringify(result));
+  }, [result]);
+
+  useEffect(() => {
+    localStorage.setItem('newsRoom_countPreset', JSON.stringify(countPreset));
+  }, [countPreset]);
+
+  useEffect(() => {
+    localStorage.setItem('newsRoom_customCount', JSON.stringify(customCount));
+  }, [customCount]);
+
+  useEffect(() => {
+    localStorage.setItem('newsRoom_selectedCategory', JSON.stringify(selectedCategory));
+  }, [selectedCategory]);
 
   const fetchNews = async () => {
     setIsLoadingNews(true);
@@ -97,6 +133,9 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
   const selectAll = () =>
     setNewsItems(newsItems.map(item => ({ ...item, selected: true })));
 
+  const deselectAll = () =>
+    setNewsItems(newsItems.map(item => ({ ...item, selected: false })));
+
   // Select exactly N items from the top
   const selectCount = (n: number) => {
     setNewsItems(prev => prev.map((item, idx) => ({ ...item, selected: idx < n })));
@@ -106,9 +145,13 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
     setNewsItems(newsItems.filter(item => item.id !== id));
 
   const filteredItems = newsItems.filter(item =>
-    item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.title.toLowerCase().includes(searchTerm.toLowerCase())
+    (item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (selectedCategory === '' || item.category_name === selectedCategory)
   );
+
+  // Get unique categories
+  const categories = [...new Set(newsItems.map(item => item.category_name).filter(Boolean))].sort();
 
   const selectedCount = newsItems.filter(i => i.selected).length;
 
@@ -122,12 +165,23 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
     const firstSelected = newsItems.find(i => i.selected);
     const mediaUnitName = firstSelected?.media_unit_name || 'الميديا يونت المختارة';
 
+    // Get category breakdown
+    const selectedItems = newsItems.filter(i => i.selected);
+    const categoryBreakdown = selectedItems.reduce((acc: Record<string, number>, item) => {
+      const cat = item.category_name || 'غير مصنف';
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {});
+    const categoryInfo = Object.entries(categoryBreakdown)
+      .map(([cat, count]) => `${count} من ${cat}`)
+      .join('، ');
+
     const timeLabel = timeOfDay === 'MORNING' ? 'الصباحية' : 'المسائية';
 
     const bulletinIntro = `أهلاً بكم مستمعينا الكرام في نشرة الأخبار ${timeLabel} من "${mediaUnitName}"، نستهلها بأبرز العناوين`;
     const summaryIntro = `موجز الأخبار ${timeLabel} من "${mediaUnitName}"، أهلاً بكم`;
 
-    const system = 'أنت محرر أخبار محترف متخصص في الإعلام العربي. مهمتك تحرير المادة الخبرية بدقة واحترافية وأسلوب إذاعي رصين.';
+    const system = `أنت محرر أخبار محترف متخصص في الإعلام العربي. مهمتك تحرير المادة الخبرية بدقة واحترافية وأسلوب إذاعي رصين. الأخبار المختارة تشمل: ${categoryInfo}.`;
 
     const prompt = activeMode === 'SUMMARY'
       ? `ابدأ بهذه المقدمة تماماً:\n"${summaryIntro}"\n\nثم لخّص الأخبار التالية في موجز إخباري بنقاط واضحة ومرقّمة، بأسلوب إذاعي مختصر:\n\n${selectedContent}`
@@ -184,14 +238,46 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
               </button>
             </div>
 
-            {/* Select all + count */}
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-gray-500 font-bold">فلتر حسب التصنيف</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                >
+                  <option value="">كل التصنيفات</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Select all + deselect all + count */}
             {filteredItems.length > 0 && (
               <div className="flex items-center justify-between text-xs text-gray-500">
-                <button onClick={selectAll} className="hover:text-white transition-colors flex items-center gap-1">
-                  <Plus size={12} />
-                  تحديد الكل
-                </button>
-                <span>{selectedCount} محدد من {filteredItems.length}</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={selectAll} className="hover:text-white transition-colors flex items-center gap-1">
+                    <Plus size={12} />
+                    تحديد الكل
+                  </button>
+                  {selectedCount > 0 && (
+                    <button onClick={deselectAll} className="hover:text-rose-400 transition-colors flex items-center gap-1">
+                      <X size={12} />
+                      إلغاء الكل
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>{selectedCount} محدد من {filteredItems.length}</span>
+                  {selectedCategory && (
+                    <span className="text-[10px] bg-[#2563eb]/10 text-[#2563eb] px-2 py-0.5 rounded-full">
+                      {selectedCategory}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -320,6 +406,29 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                   </div>
                 )}
               </div>
+
+              {/* Category breakdown of selected items */}
+              {selectedCount > 0 && (() => {
+                const selectedItems = newsItems.filter(i => i.selected);
+                const categoryBreakdown = selectedItems.reduce((acc: Record<string, number>, item) => {
+                  const cat = item.category_name || 'غير مصنف';
+                  acc[cat] = (acc[cat] || 0) + 1;
+                  return acc;
+                }, {});
+                
+                return Object.keys(categoryBreakdown).length > 0 ? (
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5">
+                    <p className="text-[10px] text-gray-500 mb-1.5 font-bold">التصنيفات المختارة:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(categoryBreakdown).map(([cat, count]) => (
+                        <span key={cat} className="text-[10px] bg-[#2563eb]/10 text-[#2563eb] px-2 py-1 rounded-lg font-bold">
+                          {cat}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
 
               <button
                 onClick={handleGenerate}

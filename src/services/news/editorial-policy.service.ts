@@ -274,10 +274,9 @@ function resolveOutputSchema(
 class EditorialPolicyService {
   /**
    * حساب max_tokens للـ completion
-   * الموديل بيقبل حتى 5000 token كـ prompt، والـ response حده 3000
    */
   private calculateMaxTokens(): number {
-    return 600;
+    return 1000;
   }
 
   /**

@@ -226,7 +226,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
               <Plus size={14} /> إضافة سياسة
             </button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
             {policies.length === 0 && <p className="text-gray-500 text-sm">لا توجد سياسات مفعّلة</p>}
             {policies.map((p: any) => (
               <div 

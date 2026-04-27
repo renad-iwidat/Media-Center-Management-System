@@ -51,7 +51,7 @@ async function fetchEpisodes(programId: number): Promise<Episode[]> {
 async function fetchGuests(search?: string): Promise<Guest[]> {
   const url = search && search.trim()
     ? `${API_URL}/guests?search=${encodeURIComponent(search.trim())}`
-    : `${API_URL}/guests?recent=2`;
+    : `${API_URL}/guests?recent=5`;
   const res = await fetch(url);
   const json = await res.json();
   return json.success ? json.data : [];
@@ -65,7 +65,17 @@ async function fetchEpisodeGuests(episodeId: number): Promise<Guest[]> {
 
 // ─── Component ────────────────────────────────────────────────
 export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | null }) {
-  const [activeTool, setActiveTool] = useState<Tool>('IDEAS');
+  // Load from localStorage
+  const loadFromStorage = (key: string, defaultValue: any) => {
+    try {
+      const saved = localStorage.getItem(`ideaGen_${key}`);
+      return saved ? JSON.parse(saved) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  };
+
+  const [activeTool, setActiveTool] = useState<Tool>(() => loadFromStorage('activeTool', 'IDEAS'));
   const [programSearch, setProgramSearch] = useState('');
   const [guestSearch, setGuestSearch] = useState('');
 
@@ -78,16 +88,21 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
   const [loadingGuests, setLoadingGuests] = useState(false);
 
   // Selections
-  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
-  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
-  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(() => loadFromStorage('selectedProgram', null));
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(() => loadFromStorage('selectedEpisode', null));
+  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(() => loadFromStorage('selectedGuest', null));
   const [showEpisodes, setShowEpisodes] = useState(false);
 
   // AI
-  const [additionalContext, setAdditionalContext] = useState('');
-  const [result, setResult] = useState<string | null>(null);
+  const [additionalContext, setAdditionalContext] = useState(() => loadFromStorage('additionalContext', ''));
+  const [result, setResult] = useState<string | null>(() => loadFromStorage('result', null));
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Pagination
+  const [programPage, setProgramPage] = useState(1);
+  const [episodePage, setEpisodePage] = useState(1);
+  const itemsPerPage = 10;
 
   // ─── Load initial data ──────────────────────────────────────
   useEffect(() => {
@@ -100,6 +115,31 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
       .catch(console.error)
       .finally(() => setLoadingData(false));
   }, []);
+
+  // ─── Save to localStorage ───────────────────────────────────
+  useEffect(() => {
+    localStorage.setItem('ideaGen_activeTool', JSON.stringify(activeTool));
+  }, [activeTool]);
+
+  useEffect(() => {
+    localStorage.setItem('ideaGen_selectedProgram', JSON.stringify(selectedProgram));
+  }, [selectedProgram]);
+
+  useEffect(() => {
+    localStorage.setItem('ideaGen_selectedEpisode', JSON.stringify(selectedEpisode));
+  }, [selectedEpisode]);
+
+  useEffect(() => {
+    localStorage.setItem('ideaGen_selectedGuest', JSON.stringify(selectedGuest));
+  }, [selectedGuest]);
+
+  useEffect(() => {
+    localStorage.setItem('ideaGen_additionalContext', JSON.stringify(additionalContext));
+  }, [additionalContext]);
+
+  useEffect(() => {
+    localStorage.setItem('ideaGen_result', JSON.stringify(result));
+  }, [result]);
 
   // ─── Search guests with debounce ─────────────────────────────
   useEffect(() => {
@@ -142,8 +182,24 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
     const matchesUnit = mediaUnitId === null || p.media_unit_id === mediaUnitId;
     return matchesSearch && matchesUnit;
   });
+  
   const filteredGuests = guests.filter((g: Guest) =>
     g.name.toLowerCase().includes(guestSearch.toLowerCase())
+  );
+
+  const filteredEpisodes = episodes;
+
+  // Pagination
+  const totalProgramPages = Math.ceil(filteredPrograms.length / itemsPerPage);
+  const paginatedPrograms = filteredPrograms.slice(
+    (programPage - 1) * itemsPerPage,
+    programPage * itemsPerPage
+  );
+
+  const totalEpisodePages = Math.ceil(filteredEpisodes.length / itemsPerPage);
+  const paginatedEpisodes = filteredEpisodes.slice(
+    (episodePage - 1) * itemsPerPage,
+    episodePage * itemsPerPage
   );
 
   // ─── Generate ────────────────────────────────────────────────
@@ -241,10 +297,10 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
               />
             </div>
 
-            <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[420px]">
               {/* Programs list */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 block">اختر البرنامج</label>
+                <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#0b1224] py-1 z-10">اختر البرنامج</label>
                 {loadingData ? (
                   <div className="flex items-center justify-center py-6 text-gray-500 gap-2">
                     <Loader2 size={16} className="animate-spin" />
@@ -253,8 +309,9 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                 ) : filteredPrograms.length === 0 ? (
                   <p className="text-xs text-gray-500 text-center py-4">لا توجد برامج</p>
                 ) : (
-                  <div className="grid grid-cols-1 gap-2">
-                    {filteredPrograms.map(p => (
+                  <>
+                    <div className="grid grid-cols-1 gap-2">
+                      {paginatedPrograms.map(p => (
                       <div key={p.id}>
                         <div
                           onClick={() => {
@@ -294,7 +351,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
 
                             {showEpisodes && (
                               <div className="mt-1 space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
-                                {episodes.map(ep => (
+                                {paginatedEpisodes.map(ep => (
                                   <div
                                     key={ep.id}
                                     onClick={() => setSelectedEpisode(selectedEpisode?.id === ep.id ? null : ep)}
@@ -320,6 +377,29 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                                     )}
                                   </div>
                                 ))}
+                                
+                                {/* Episode Pagination */}
+                                {totalEpisodePages > 1 && (
+                                  <div className="flex items-center justify-center gap-1 pt-2">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setEpisodePage(p => Math.max(1, p - 1)); }}
+                                      disabled={episodePage === 1}
+                                      className="px-2 py-1 text-xs bg-white/5 border border-white/10 rounded disabled:opacity-30"
+                                    >
+                                      السابق
+                                    </button>
+                                    <span className="text-xs text-gray-500">
+                                      {episodePage} / {totalEpisodePages}
+                                    </span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setEpisodePage(p => Math.min(totalEpisodePages, p + 1)); }}
+                                      disabled={episodePage === totalEpisodePages}
+                                      className="px-2 py-1 text-xs bg-white/5 border border-white/10 rounded disabled:opacity-30"
+                                    >
+                                      التالي
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -327,13 +407,37 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                       </div>
                     ))}
                   </div>
+
+                  {/* Program Pagination */}
+                  {totalProgramPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5">
+                      <button
+                        onClick={() => setProgramPage(p => Math.max(1, p - 1))}
+                        disabled={programPage === 1}
+                        className="px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg disabled:opacity-30 hover:bg-white/10 transition-colors"
+                      >
+                        السابق
+                      </button>
+                      <span className="text-xs text-gray-400">
+                        صفحة {programPage} من {totalProgramPages}
+                      </span>
+                      <button
+                        onClick={() => setProgramPage(p => Math.min(totalProgramPages, p + 1))}
+                        disabled={programPage === totalProgramPages}
+                        className="px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg disabled:opacity-30 hover:bg-white/10 transition-colors"
+                      >
+                        التالي
+                      </button>
+                    </div>
+                  )}
+                </>
                 )}
               </div>
 
               {/* Guests list — only for QUESTIONS */}
               {activeTool === 'QUESTIONS' && (
-                <div className="space-y-2 pt-2">
-                  <label className="text-xs font-bold text-gray-500 block">
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#0b1224] py-1 z-10">
                     اختر الضيف
                     {episodeGuests.length > 0 && (
                       <span className="text-indigo-400 mr-2">(ضيوف الحلقة المختارة مميزون)</span>
@@ -358,7 +462,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                   {/* hint */}
                   {!guestSearch && (
                     <p className="text-[10px] text-gray-600 text-right">
-                      يعرض آخر ضيفين — ابحث لرؤية المزيد
+                      يعرض آخر 5 ضيوف — ابحث لرؤية المزيد
                     </p>
                   )}
 
@@ -367,51 +471,53 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                       <Loader2 size={14} className="animate-spin" />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-2">
-                      {/* Episode guests first */}
-                      {episodeGuests.map(g => (
-                        <div
-                          key={`ep-${g.id}`}
-                          onClick={() => setSelectedGuest(selectedGuest?.id === g.id ? null : g)}
-                          className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                            selectedGuest?.id === g.id
-                              ? 'bg-[#2563eb]/10 border-[#2563eb]'
-                              : 'bg-indigo-500/5 border-indigo-500/20 hover:border-indigo-500/40'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <User size={16} className="text-indigo-400 shrink-0" />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold">{g.name}</span>
-                              <span className="text-[10px] text-indigo-300">ضيف الحلقة</span>
-                            </div>
-                          </div>
-                          {selectedGuest?.id === g.id && <Check size={14} className="text-[#2563eb]" />}
-                        </div>
-                      ))}
-
-                      {/* All other guests */}
-                      {filteredGuests
-                        .filter((g: Guest) => !episodeGuests.find((eg: Guest) => eg.id === g.id))
-                        .map((g: Guest) => (
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+                      <div className="grid grid-cols-1 gap-2">
+                        {/* Episode guests first */}
+                        {episodeGuests.map(g => (
                           <div
-                            key={g.id}
+                            key={`ep-${g.id}`}
                             onClick={() => setSelectedGuest(selectedGuest?.id === g.id ? null : g)}
                             className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                               selectedGuest?.id === g.id
                                 ? 'bg-[#2563eb]/10 border-[#2563eb]'
-                                : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                                : 'bg-indigo-500/5 border-indigo-500/20 hover:border-indigo-500/40'
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <User size={16} className="text-purple-400 shrink-0" />
+                              <User size={16} className="text-indigo-400 shrink-0" />
                               <div className="flex flex-col">
                                 <span className="text-sm font-bold">{g.name}</span>
+                                <span className="text-[10px] text-indigo-300">ضيف الحلقة</span>
                               </div>
                             </div>
                             {selectedGuest?.id === g.id && <Check size={14} className="text-[#2563eb]" />}
                           </div>
                         ))}
+
+                        {/* All other guests */}
+                        {filteredGuests
+                          .filter((g: Guest) => !episodeGuests.find((eg: Guest) => eg.id === g.id))
+                          .map((g: Guest) => (
+                            <div
+                              key={g.id}
+                              onClick={() => setSelectedGuest(selectedGuest?.id === g.id ? null : g)}
+                              className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                                selectedGuest?.id === g.id
+                                  ? 'bg-[#2563eb]/10 border-[#2563eb]'
+                                  : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <User size={16} className="text-purple-400 shrink-0" />
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold">{g.name}</span>
+                                </div>
+                              </div>
+                              {selectedGuest?.id === g.id && <Check size={14} className="text-[#2563eb]" />}
+                            </div>
+                          ))}
+                      </div>
                     </div>
                   )}
                 </div>

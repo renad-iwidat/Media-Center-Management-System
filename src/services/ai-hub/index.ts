@@ -14,3 +14,14 @@ export {
   getAllLimits,
 } from './rate-limiter.service';
 export { textToSpeech, textToSpeechBase64, getAvailableVoices, type TTSVoice } from './tts.service';
+export {
+  logAIUsage,
+  getDailyStats,
+  getUserStats,
+  getOverallStats,
+  getTopUsers,
+  cleanupOldLogs,
+  type AIFeature,
+  type ResponseStatus,
+  type AIUsageLogData,
+} from './ai-usage-logger.service';

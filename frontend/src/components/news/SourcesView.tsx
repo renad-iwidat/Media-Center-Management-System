@@ -52,9 +52,12 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
                   <span className="text-gray-500">آخر سحب</span>
                   <div className="flex items-center gap-2">
                     {source.is_recently_fetched && (
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" title="تم السحب مؤخراً" />
                     )}
-                    <span className="text-gray-300 font-mono text-right">
+                    <span 
+                      className={`font-mono text-right ${source.last_fetched_at ? 'text-gray-300' : 'text-gray-500 italic'}`}
+                      title={source.last_fetched_at ? new Date(source.last_fetched_at).toLocaleString('ar-SA') : 'لم يتم السحب بعد'}
+                    >
                       {source.last_fetched_formatted}
                     </span>
                   </div>
