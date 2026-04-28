@@ -10,11 +10,52 @@ import { query } from '../../config/database';
 /**
  * الحصول على جميع وحدات الإعلام النشطة
  */
-export async function getMediaUnits(_req: Request, res: Response): Promise<void> {
+export async function getMediaUnits(req: Request, res: Response): Promise<void> {
   try {
+    console.log('🏢 [MEDIA-UNITS] طلب جلب وحدات الإعلام من:', req.ip);
+    console.log('🔐 [MEDIA-UNITS] المستخدم:', (req as any).user?.name || 'غير معروف');
+    
+    // التحقق من وجود الجدول أولاً
+    const tableCheck = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'media_units'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('⚠️ [MEDIA-UNITS] جدول media_units غير موجود - إنشاء الجدول');
+      
+      // إنشاء الجدول
+      await query(`
+        CREATE TABLE media_units (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      
+      // إدراج البيانات الأساسية
+      await query(`
+        INSERT INTO media_units (name, description, is_active) VALUES 
+        ('النجاح الإخبارية', 'وحدة الأخبار الرئيسية لمؤسسة النجاح الإخبارية', true),
+        ('هنا غزة', 'وحدة أخبار غزة والأراضي المحتلة', true);
+      `);
+      
+      console.log('✅ [MEDIA-UNITS] تم إنشاء الجدول وإدراج البيانات');
+    }
+    
     const result = await query(
       'SELECT id, name, is_active FROM media_units WHERE is_active = true ORDER BY id'
     );
+    
+    console.log('📋 [MEDIA-UNITS] تم جلب', result.rows.length, 'وحدة إعلامية');
+    console.log('📋 [MEDIA-UNITS] البيانات:', result.rows);
+    
     res.status(200).json({
       success: true,
       count: result.rows.length,
@@ -22,7 +63,11 @@ export async function getMediaUnits(_req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     console.error('❌ خطأ في جلب وحدات الإعلام:', error);
-    res.status(500).json({ success: false, message: 'فشل جلب وحدات الإعلام' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'فشل جلب وحدات الإعلام', 
+      error: error instanceof Error ? error.message : 'خطأ غير معروف'
+    });
   }
 }
 
@@ -206,7 +251,8 @@ export async function deleteAllArticles(_req: Request, res: Response): Promise<v
 export async function updateArticleContent(req: Request, res: Response): Promise<void> {
   try {
     const articleId = parseInt(req.params.id);
-    const { content, title, imageUrl, sendToQueue = true } = req.body;
+    const { content, title, imageUrl, sendToQueue = true, taskId } = req.body;
+    const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
 
     if (isNaN(articleId)) {
       res.status(400).json({ success: false, message: 'معرف الخبر غير صحيح' });
@@ -317,13 +363,13 @@ export async function updateArticleContent(req: Request, res: Response): Promise
 
     if (flowType === 'automated') {
       // أوتوماتيكي: incomplete → approved → published_items
-      console.log(`⚡ الخبر ${articleId} — أوتوماتيكي → auto-approve ونشر`);
+      console.log(`⚡ الخبر ${articleId} — أوتوماتيكي → auto-approve ونشر بواسطة المستخدم ${userId}`);
 
       for (const record of queueRecords.rows) {
         try {
           await query(
-            `UPDATE editorial_queue SET status = 'approved', updated_at = NOW() WHERE id = $1`,
-            [record.id]
+            `UPDATE editorial_queue SET status = 'approved', user_id = $1, task_id = $2, updated_at = NOW() WHERE id = $3`,
+            [userId ? parseInt(userId) : null, taskId || null, record.id]
           );
 
           const existsResult = await query(
@@ -334,11 +380,11 @@ export async function updateArticleContent(req: Request, res: Response): Promise
           if (existsResult.rows.length === 0) {
             await query(
               `INSERT INTO published_items 
-               (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at)
-               VALUES ($1, $2, $3, 1, $4, $5, $6, true, NOW())`,
-              [record.media_unit_id, articleId, record.id, article.title, content.trim(), article.tags || []]
+               (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at, approved_by, task_id)
+               VALUES ($1, $2, $3, 1, $4, $5, $6, true, NOW(), $7, $8)`,
+              [record.media_unit_id, articleId, record.id, article.title, content.trim(), article.tags || [], userId ? parseInt(userId) : null, taskId || null]
             );
-            console.log(`   ✅ نشر في ${record.media_unit_name}`);
+            console.log(`   ✅ نشر في ${record.media_unit_name} بواسطة المستخدم ${userId}`);
           }
         } catch (publishError) {
           console.error(`   ❌ خطأ في النشر في ${record.media_unit_name}:`, publishError);
@@ -360,12 +406,12 @@ export async function updateArticleContent(req: Request, res: Response): Promise
 
     } else {
       // تحريري: incomplete → in_review (ينتظر المحرر)
-      console.log(`📝 الخبر ${articleId} — تحريري → in_review`);
+      console.log(`📝 الخبر ${articleId} — تحريري → in_review بواسطة المستخدم ${userId}`);
 
       await query(
-        `UPDATE editorial_queue SET status = 'in_review', updated_at = NOW()
-         WHERE raw_data_id = $1 AND status = 'incomplete'`,
-        [articleId]
+        `UPDATE editorial_queue SET status = 'in_review', user_id = $1, task_id = $2, updated_at = NOW()
+         WHERE raw_data_id = $3 AND status = 'incomplete'`,
+        [userId ? parseInt(userId) : null, taskId || null, articleId]
       );
 
       await query(

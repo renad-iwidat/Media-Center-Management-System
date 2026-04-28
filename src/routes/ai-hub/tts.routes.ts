@@ -4,10 +4,14 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { generateTTS, getVoices } from '../../controllers/ai-hub/tts.controller';
 import { createAILogger } from '../../middleware/ai-usage-logger.middleware';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // Logging middleware
 router.use((req: Request, res: Response, next: NextFunction) => {

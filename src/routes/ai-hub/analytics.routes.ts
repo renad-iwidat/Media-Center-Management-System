@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import {
   getAnalyticsOverview,
   getDailyAnalytics,
@@ -14,6 +15,9 @@ import {
 } from '../../controllers/ai-hub/index';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 /**
  * @route   GET /api/ai-hub/analytics/overview

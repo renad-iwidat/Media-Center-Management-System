@@ -26,6 +26,10 @@ services:
         sync: false # Set this in Render dashboard
       - key: OPENAI_API_KEY
         sync: false # Set this in Render dashboard (secret)
+      - key: JWT_SECRET
+        sync: false # IMPORTANT: Must match Management API JWT_SECRET
+      - key: JWT_EXPIRES_IN
+        value: 24h
       - key: ARTICLES_PER_SOURCE
         value: 20
       - key: SCHEDULER_INTERVAL
@@ -42,15 +46,12 @@ services:
     branch: ai-hub
     healthCheckPath: /health
     envVars:
+      - key: VITE_MANAGEMENT_API_URL
+        value: https://media-center-management-system.onrender.com
       - key: VITE_API_URL
         fromService:
           type: web
           name: Automation and AI Hub – Backend
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: VITE_APP_URL
-        fromService:
-          type: web
-          name: Automation and AI Hub – Frontend
           envVarKey: RENDER_EXTERNAL_URL
     autoDeploy: true
 

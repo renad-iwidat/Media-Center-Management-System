@@ -4,9 +4,13 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import SchedulerController from '../../controllers/news/scheduler.controller';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // بدء الـ scheduler
 router.post('/start', SchedulerController.start);

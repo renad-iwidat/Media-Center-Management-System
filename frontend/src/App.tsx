@@ -32,6 +32,7 @@ import {
   ChevronDown,
   ChevronRight,
   TrendingUp,
+  LogOut,
 } from 'lucide-react';
 
 // ── News Components ──
@@ -43,6 +44,9 @@ import { PoliciesView } from './components/news/PoliciesView';
 import { PublishedView } from './components/news/PublishedView';
 import { SystemSettingsModal } from './components/shared/SystemSettingsModal';
 
+// ── Auth Components ──
+import { LoginPage } from './components/auth/LoginPage';
+
 // ── AI Components ──
 import IdeaGeneration from './components/ai/IdeaGeneration';
 import TextEditing from './components/ai/TextEditing';
@@ -52,8 +56,8 @@ import NewsRoom from './components/ai/NewsRoom';
 import ChatInterface from './components/ai/ChatInterface';
 
 // ── Services ──
-import { api } from './services/api';
-import { useMediaUnits } from './lib/useMediaUnits';
+import { api, getAuthToken, getCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
+import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
 
 // ─── Types ────────────────────────────────────────────────────
 type SectionId =
@@ -103,16 +107,47 @@ const SECTION_ICONS: Record<SectionId, any> = {} as any;
 NAV_GROUPS.forEach(g => g.items.forEach(i => { (SECTION_ICONS as any)[i.id] = i.icon; }));
 
 export default function App() {
+  // ═══ جميع الـ useState hooks في البداية ═══
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const token = getAuthToken();
+    const user = getCurrentUser();
+    console.log('🔍 [APP] Initial auth check - token:', !!token, 'user:', !!user);
+    return !!(token && user);
+  });
+  
+  const [currentUser, setCurrentUserState] = useState(() => {
+    return getCurrentUser();
+  });
+  
+  const [isCheckingAuth, setIsCheckingAuth] = useState(() => {
+    const token = getAuthToken();
+    const user = getCurrentUser();
+    
+    // فقط نتحقق إذا كان في توكن بس مافيش user، أو مافيش حاجة خالص
+    const shouldCheck = !!(token && !user);
+    console.log('🔍 [APP] Initial checking state:', shouldCheck, 'token:', !!token, 'user:', !!user);
+    
+    // إذا مافيش توكن ولا user، ما نتحققش
+    if (!token && !user) {
+      console.log('🔍 [APP] لا يوجد توكن ولا مستخدم - لا نحتاج للتحقق');
+      return false;
+    }
+    
+    return shouldCheck;
+  });
+  
   const [activeSection, setActiveSection] = useState<SectionId>(() => {
     const saved = localStorage.getItem('activeSection');
     return (saved as SectionId) || 'overview';
   });
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMediaUnitOpen, setIsMediaUnitOpen] = useState(true);
   const [selectedMediaUnitId, setSelectedMediaUnitId] = useState<number | null>(() => {
     const saved = localStorage.getItem('selectedUnitId');
     return saved ? Number(saved) : null;
   });
+  
   const [isSystemOnline, setIsSystemOnline] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -120,13 +155,17 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{ id: SectionId; label: string; group: string }>>([]);
 
-  const { mediaUnits } = useMediaUnits();
+  // ═══ جميع الـ custom hooks بعد useState ═══
+  const { mediaUnits, loading } = useMediaUnits();
 
-  // ── Persist state ──
+  // ═══ جميع الـ useEffect hooks بترتيب ثابت ═══
+  
+  // 1. Persist activeSection
   useEffect(() => {
     localStorage.setItem('activeSection', activeSection);
   }, [activeSection]);
 
+  // 2. Persist selectedMediaUnitId  
   useEffect(() => {
     if (selectedMediaUnitId) {
       localStorage.setItem('selectedUnitId', String(selectedMediaUnitId));
@@ -135,21 +174,128 @@ export default function App() {
     }
   }, [selectedMediaUnitId]);
 
-  // ── Fetch system status ──
+  // 3. Token verification
   useEffect(() => {
+    const verifyToken = async () => {
+      if (!isCheckingAuth) {
+        console.log('⏭️ [APP] تم تخطي التحقق لأن isCheckingAuth = false');
+        return;
+      }
+
+      console.log('🔐 [APP] بدء التحقق من التوكن');
+      
+      try {
+        const token = getAuthToken();
+        
+        if (!token) {
+          console.log('❌ [APP] لا يوجد توكن في localStorage');
+          setIsAuthenticated(false);
+          setIsCheckingAuth(false);
+          return;
+        }
+
+        console.log('✅ [APP] وجدنا توكن:', token.substring(0, 20) + '...');
+
+        const user = getCurrentUser();
+        if (user) {
+          console.log('✅ [APP] وجدنا بيانات المستخدم في localStorage:', user.name);
+          setCurrentUserState(user);
+          setIsAuthenticated(true);
+          setIsCheckingAuth(false);
+          return;
+        }
+
+        console.log('🌐 [APP] جاري التحقق من صحة التوكن...');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const managementApiUrl = import.meta.env.VITE_MANAGEMENT_API_URL || 'https://media-center-management-system.onrender.com';
+
+        try {
+          const response = await fetch(
+            `${managementApiUrl}/api/auth/me`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              signal: controller.signal,
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+              console.log('💾 [APP] حفظ بيانات المستخدم:', data.data.name);
+              setCurrentUserState(data.data);
+              setIsAuthenticated(true);
+            } else {
+              console.error('❌ [APP] لا توجد بيانات في الرد');
+              clearAuthToken();
+              clearCurrentUser();
+              setIsAuthenticated(false);
+            }
+          } else if (response.status === 401) {
+            console.log('⏱️ [APP] التوكن انتهى (401)');
+            clearAuthToken();
+            clearCurrentUser();
+            setIsAuthenticated(false);
+          } else {
+            console.error('❌ [APP] خطأ من السيرفر:', response.status);
+            clearAuthToken();
+            clearCurrentUser();
+            setIsAuthenticated(false);
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          console.error('❌ [APP] خطأ في الاتصال:', fetchError);
+          
+          const savedUser = getCurrentUser();
+          if (savedUser && token) {
+            console.log('⚠️ [APP] فشل التحقق من السيرفر، لكن سنستخدم البيانات المحفوظة');
+            setCurrentUserState(savedUser);
+            setIsAuthenticated(true);
+          } else {
+            clearAuthToken();
+            clearCurrentUser();
+            setIsAuthenticated(false);
+          }
+        }
+      } catch (error) {
+        console.error('❌ [APP] خطأ عام في التحقق:', error);
+        setIsAuthenticated(false);
+      } finally {
+        console.log('🏁 [APP] انتهاء التحقق من التوكن');
+        setIsCheckingAuth(false);
+      }
+    };
+
+    verifyToken();
+
+    const emergencyTimeout = setTimeout(() => {
+      console.warn('⚠️ [APP] Timeout احتياطي - إجبار إنهاء التحقق');
+      setIsCheckingAuth(false);
+    }, 8000);
+
+    return () => clearTimeout(emergencyTimeout);
+  }, []); // بدون dependencies
+
+  // 4. System status
+  useEffect(() => {
+    if (!isAuthenticated) return; // فقط إذا كان مسجل دخول
+    
     api.getSystemToggles()
       .then((res) => {
         const d = res.data || {};
         setIsSystemOnline(!!(d.scheduler_enabled && d.classifier_enabled && d.flow_enabled));
       })
       .catch(() => setIsSystemOnline(false));
-  }, []);
+  }, [isAuthenticated]); // dependency على isAuthenticated
 
-  const toggleGroup = (label: string) => {
-    setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  // ── Search functionality ──
+  // 5. Search functionality
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
@@ -177,14 +323,79 @@ export default function App() {
     setSearchResults(results);
   }, [searchQuery]);
 
+  // ═══ Functions بعد جميع الـ hooks ═══
+  
+  // دالة تسجيل الخروج
+  const handleLogout = () => {
+    console.log('🚪 [LOGOUT] بدء عملية تسجيل الخروج');
+    
+    // تحديث الحالة فوراً قبل مسح البيانات
+    setIsAuthenticated(false);
+    setCurrentUserState(null);
+    setIsCheckingAuth(false);
+    
+    // وضع flag إنه تم عمل logout
+    localStorage.setItem('justLoggedOut', 'true');
+    
+    // مسح التوكن وبيانات المستخدم
+    clearAuthToken();
+    clearCurrentUser();
+    
+    // مسح cache وحدات الإعلام
+    clearMediaUnitsCache();
+    
+    console.log('✅ [LOGOUT] تم تسجيل الخروج بنجاح - العودة لصفحة اللوجين فوراً');
+  };
+  
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
   const handleSearchSelect = (sectionId: SectionId) => {
     setActiveSection(sectionId);
     setSearchQuery('');
     setIsSearchOpen(false);
   };
 
-  const showMediaUnitFilter = isSidebarOpen && mediaUnits.length > 0;
+  const showMediaUnitFilter = isSidebarOpen;
   const ActiveIcon = SECTION_ICONS[activeSection] || LayoutDashboard;
+
+  // ═══ Early returns مع error handling ═══
+  
+  // إذا لم يكن المستخدم مسجل دخول — عرض صفحة تسجيل الدخول
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        onLoginSuccess={() => {
+          console.log('🎉 [APP] تم استدعاء onLoginSuccess');
+          const user = getCurrentUser();
+          console.log('👤 [APP] بيانات المستخدم بعد Login:', user);
+          
+          // تحديث الحالة فوراً
+          setIsAuthenticated(true);
+          setCurrentUserState(user);
+          setIsCheckingAuth(false);
+          
+          console.log('✅ [APP] تم تحديث جميع الحالات بعد Login - دخول فوري للنظام');
+        }}
+      />
+    );
+  }
+
+  // إذا كان التطبيق بيتحقق من التوكن — عرض loading (بس لفترة قصيرة)
+  if (isCheckingAuth) {
+    console.log('⏳ [APP] عرض شاشة التحميل - isCheckingAuth:', isCheckingAuth);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1224] to-[#020617] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] rounded-xl flex items-center justify-center shadow-xl shadow-blue-600/30 mx-auto mb-3 animate-pulse">
+            <TrendingUp className="text-white w-6 h-6" />
+          </div>
+          <p className="text-gray-400 text-sm">جاري التحقق من بيانات الدخول...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex text-gray-100 selection:bg-blue-500/30">
@@ -194,109 +405,187 @@ export default function App() {
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 320 : 80 }}
-        className="bg-[#0b1224] border-l border-white/5 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none"
+        className="bg-gradient-to-b from-[#0b1224] via-[#0f1629] to-[#0b1224] border-l border-white/5 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
       >
-        {/* Logo */}
-        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-gradient-to-b from-[#0b1224] to-[#0b1224]/80">
+        {/* Logo & Header */}
+        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-gradient-to-r from-[#0b1224]/90 to-[#1e293b]/50 backdrop-blur-sm">
           {isSidebarOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/30 shrink-0">
-                <TrendingUp className="text-white w-6 h-6" />
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              transition={{ delay: 0.1 }}
+              className="flex items-center gap-3 min-w-0"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-[#3b82f6] via-[#2563eb] to-[#1d4ed8] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/40 shrink-0 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                <TrendingUp className="text-white w-7 h-7 relative z-10" />
               </div>
               <div className="flex flex-col">
-                <span className="font-arabic font-bold text-lg tracking-tight truncate text-white">
-                  إدارة <span className="text-blue-400">الإعلام</span>
+                <span className="font-arabic font-bold text-xl tracking-tight truncate text-white">
+                  مركز <span className="text-blue-400">الإعلام</span>
                 </span>
-                <span className="text-xs text-gray-500">نظام متكامل</span>
+                <span className="text-xs text-gray-400 font-medium">نظام إدارة متكامل</span>
               </div>
             </motion.div>
           )}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2.5 hover:bg-white/10 rounded-xl transition-all hover:scale-105 shrink-0"
+            className="p-3 hover:bg-white/10 rounded-xl transition-all duration-200 hover:shadow-lg shrink-0 group"
           >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+            <motion.div
+              animate={{ rotate: isSidebarOpen ? 0 : 180 }}
+              transition={{ duration: 0.3 }}
+            >
+              {isSidebarOpen ? <X size={20} className="group-hover:text-blue-400 transition-colors" /> : <Menu size={20} className="group-hover:text-blue-400 transition-colors" />}
+            </motion.div>
+          </motion.button>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-4 overflow-y-auto custom-scrollbar">
           {NAV_GROUPS.map((group, groupIndex) => (
-            <div key={group.label} className="space-y-2">
+            <motion.div 
+              key={group.label} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: groupIndex * 0.1 }}
+              className="space-y-2"
+            >
               {/* Group Header */}
               {isSidebarOpen && (
-                <button
+                <motion.button
+                  whileHover={{ x: 4 }}
                   onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between px-3 py-3 text-xs uppercase tracking-wider text-gray-400 font-bold hover:text-white transition-all hover:bg-white/5 rounded-lg"
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs uppercase tracking-wider text-gray-400 font-bold hover:text-white transition-all hover:bg-white/5 rounded-xl group"
                 >
-                  <span className="truncate">{group.label}</span>
-                  <ChevronDown
-                    size={16}
-                    className={`transition-transform shrink-0 ${collapsedGroups[group.label] ? '-rotate-90' : ''}`}
-                  />
-                </button>
+                  <span className="truncate flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                    {group.label}
+                  </span>
+                  <motion.div
+                    animate={{ rotate: collapsedGroups[group.label] ? -90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown size={16} className="group-hover:text-blue-400 transition-colors" />
+                  </motion.div>
+                </motion.button>
               )}
 
               {/* Group Items */}
-              {!collapsedGroups[group.label] && (
-                <div className="space-y-1.5">
-                  {group.items.map((item) => {
-                    const isActive = activeSection === item.id;
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setActiveSection(item.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative
-                          ${isActive
-                            ? 'bg-gradient-to-l from-blue-600/20 to-blue-600/10 text-white border-r-4 border-blue-500 shadow-lg shadow-blue-500/10'
-                            : 'text-gray-400 hover:bg-white/5 hover:text-white border-r-4 border-transparent hover:border-gray-700'
-                          }`}
-                      >
-                        <Icon size={20} className={`shrink-0 ${isActive ? 'text-blue-400' : 'group-hover:text-blue-400'} transition-colors`} />
-                        {isSidebarOpen && (
-                          <motion.span
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="font-semibold text-sm whitespace-nowrap truncate"
-                          >
-                            {item.label}
-                          </motion.span>
-                        )}
-                        {isActive && isSidebarOpen && (
-                          <motion.div
-                            layoutId="activeIndicator"
-                            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full"
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <AnimatePresence>
+                {!collapsedGroups[group.label] && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-1 overflow-hidden"
+                  >
+                    {group.items.map((item, itemIndex) => {
+                      const isActive = activeSection === item.id;
+                      const Icon = item.icon;
+                      return (
+                        <motion.button
+                          key={item.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: itemIndex * 0.05 }}
+                          whileHover={{ x: 4, scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setActiveSection(item.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden
+                            ${isActive
+                              ? 'bg-gradient-to-r from-blue-600/20 via-blue-500/15 to-blue-600/20 text-white border border-blue-500/30 shadow-lg shadow-blue-500/20'
+                              : 'text-gray-400 hover:bg-gradient-to-r hover:from-white/5 hover:to-white/10 hover:text-white border border-transparent hover:border-white/10'
+                            }`}
+                        >
+                          {/* Background glow effect for active item */}
+                          {isActive && (
+                            <motion.div
+                              layoutId="activeGlow"
+                              className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-xl"
+                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            />
+                          )}
+                          
+                          <div className={`p-2 rounded-lg transition-all duration-300 relative z-10 ${
+                            isActive 
+                              ? 'bg-blue-500/20 shadow-lg' 
+                              : 'group-hover:bg-white/10'
+                          }`}>
+                            <Icon size={18} className={`transition-all duration-300 ${
+                              isActive ? 'text-blue-400' : 'group-hover:text-blue-400'
+                            }`} />
+                          </div>
+                          
+                          {isSidebarOpen && (
+                            <motion.span
+                              initial={{ opacity: 0, x: 10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="font-semibold text-sm whitespace-nowrap truncate relative z-10"
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                          
+                          {/* Active indicator */}
+                          {isActive && (
+                            <motion.div
+                              layoutId="activeIndicator"
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-full shadow-lg shadow-blue-500/50"
+                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            />
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
-              {/* Divider between groups */}
+              {/* Elegant divider between groups */}
               {groupIndex < NAV_GROUPS.length - 1 && isSidebarOpen && (
-                <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-4" />
+                <motion.div 
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent my-6 relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent blur-sm"></div>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
           ))}
 
           {/* Settings Button */}
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <button
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="pt-4 border-t border-white/10"
+          >
+            <motion.button
+              whileHover={{ x: 4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setIsSettingsOpen(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 text-gray-400 hover:bg-white/5 hover:text-white border-r-4 border-transparent hover:border-gray-700 group"
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:bg-gradient-to-r hover:from-white/5 hover:to-white/10 hover:text-white border border-transparent hover:border-white/10 group relative overflow-hidden"
             >
-              <Settings2 size={20} className="shrink-0 group-hover:text-blue-400 transition-colors" />
+              <div className="p-2 rounded-lg transition-all duration-300 group-hover:bg-white/10">
+                <Settings2 size={18} className="group-hover:text-blue-400 transition-colors duration-300" />
+              </div>
               {isSidebarOpen && (
-                <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="font-semibold text-sm whitespace-nowrap truncate">
+                <motion.span 
+                  initial={{ opacity: 0, x: 10 }} 
+                  animate={{ opacity: 1, x: 0 }} 
+                  className="font-semibold text-sm whitespace-nowrap truncate"
+                >
                   إعدادات النظام
                 </motion.span>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </nav>
 
         {/* ── Media Unit Filter ── */}
@@ -344,20 +633,30 @@ export default function App() {
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === null ? 'bg-white' : 'bg-transparent'}`} />
                           <span>الكل</span>
                         </button>
-                        {mediaUnits.map((mu: { id: number; name: string }) => (
-                          <button
-                            key={mu.id}
-                            onClick={() => setSelectedMediaUnitId(mu.id)}
-                            className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
-                              selectedMediaUnitId === mu.id
-                                ? 'bg-[#2563eb] text-white'
-                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === mu.id ? 'bg-white' : 'bg-white/20'}`} />
-                            <span className="truncate">{mu.name}</span>
-                          </button>
-                        ))}
+                        {mediaUnits.length > 0 ? (
+                          mediaUnits.map((mu: { id: number; name: string }) => (
+                            <button
+                              key={mu.id}
+                              onClick={() => setSelectedMediaUnitId(mu.id)}
+                              className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
+                                selectedMediaUnitId === mu.id
+                                  ? 'bg-[#2563eb] text-white'
+                                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === mu.id ? 'bg-white' : 'bg-white/20'}`} />
+                              <span className="truncate">{mu.name}</span>
+                            </button>
+                          ))
+                        ) : loading ? (
+                          <div className="px-2 sm:px-3 py-2 text-xs text-gray-500 text-center">
+                            جاري تحميل الوحدات...
+                          </div>
+                        ) : (
+                          <div className="px-2 sm:px-3 py-2 text-xs text-gray-500 text-center">
+                            لا توجد وحدات إعلامية
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -367,19 +666,35 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* User */}
-        <div className="p-2 sm:p-3 border-t border-white/5 shrink-0">
-          <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-2xl hover:bg-white/5 cursor-pointer ${!isSidebarOpen && 'justify-center'}`}>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
-              SH
+        {/* Logout Section */}
+        <div className="p-3 sm:p-4 border-t border-gradient-to-r from-white/5 via-white/10 to-white/5 shrink-0">
+          <motion.button
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-gray-300 hover:bg-gradient-to-r hover:from-red-500/10 hover:to-red-600/10 hover:text-red-400 border border-white/10 hover:border-red-500/30 group relative overflow-hidden ${!isSidebarOpen && 'justify-center'}`}
+          >
+            {/* Background glow effect */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+              className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-red-600/5 rounded-xl"
+            />
+            
+            <div className="p-2 rounded-lg transition-all duration-300 group-hover:bg-red-500/20 relative z-10">
+              <LogOut size={18} className="shrink-0 transition-all duration-300 group-hover:rotate-12" />
             </div>
+            
             {isSidebarOpen && (
-              <div className="flex flex-col overflow-hidden min-w-0">
-                <span className="text-xs sm:text-sm font-bold truncate">ستوديو التحرير</span>
-                <span className="text-xs text-gray-500 truncate">مشترك متميز</span>
-              </div>
+              <motion.span 
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="font-semibold text-sm whitespace-nowrap relative z-10"
+              >
+                تسجيل الخروج
+              </motion.span>
             )}
-          </div>
+          </motion.button>
         </div>
       </motion.aside>
 
@@ -399,11 +714,11 @@ export default function App() {
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Active media unit badge */}
-            {selectedMediaUnitId !== null && (
+            {selectedMediaUnitId !== null && mediaUnits.length > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-xl">
                 <Building2 size={12} className="text-[#2563eb] shrink-0" />
                 <span className="text-xs text-[#2563eb] font-medium truncate max-w-[150px]">
-                  {mediaUnits.find((m: { id: number }) => m.id === selectedMediaUnitId)?.name}
+                  {mediaUnits.find((m: { id: number }) => m.id === selectedMediaUnitId)?.name || `الوحدة ${selectedMediaUnitId}`}
                 </span>
                 <button
                   onClick={() => setSelectedMediaUnitId(null)}
@@ -479,7 +794,20 @@ export default function App() {
               </AnimatePresence>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 shrink-0 border border-white/10 shadow-lg shadow-blue-500/20" />
+            {/* User Info in Header */}
+            <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer group">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 shrink-0 border border-white/10 shadow-lg shadow-blue-500/20 flex items-center justify-center font-bold text-xs text-white">
+                {currentUser?.name?.charAt(0) || 'U'}
+              </div>
+              <div className="hidden sm:flex flex-col min-w-0">
+                <span className="text-xs font-semibold text-white truncate max-w-[140px]">
+                  {currentUser?.name || 'المستخدم'}
+                </span>
+                <span className="text-xs text-blue-400 truncate max-w-[140px]">
+                  {currentUser?.roles?.[0]?.name || 'موظف'}
+                </span>
+              </div>
+            </div>
           </div>
         </header>
 

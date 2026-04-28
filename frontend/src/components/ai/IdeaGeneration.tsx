@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { generateIdeasContent, IdeasPayload } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
+import { getAuthToken } from '../../services/api';
 
 // ─── Types ────────────────────────────────────────────────────
 interface Program {
@@ -36,14 +37,24 @@ const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
 
+// Helper function to get headers with Authorization
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 async function fetchPrograms(): Promise<Program[]> {
-  const res = await fetch(`${API_URL}/programs`);
+  const res = await fetch(`${API_URL}/programs`, { headers: getHeaders() });
   const json = await res.json();
   return json.success ? json.data : [];
 }
 
 async function fetchEpisodes(programId: number): Promise<Episode[]> {
-  const res = await fetch(`${API_URL}/programs/${programId}/episodes`);
+  const res = await fetch(`${API_URL}/programs/${programId}/episodes`, { headers: getHeaders() });
   const json = await res.json();
   return json.success ? json.data : [];
 }
@@ -52,13 +63,13 @@ async function fetchGuests(search?: string): Promise<Guest[]> {
   const url = search && search.trim()
     ? `${API_URL}/guests?search=${encodeURIComponent(search.trim())}`
     : `${API_URL}/guests?recent=5`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: getHeaders() });
   const json = await res.json();
   return json.success ? json.data : [];
 }
 
 async function fetchEpisodeGuests(episodeId: number): Promise<Guest[]> {
-  const res = await fetch(`${API_URL}/programs/episodes/${episodeId}/guests`);
+  const res = await fetch(`${API_URL}/programs/episodes/${episodeId}/guests`, { headers: getHeaders() });
   const json = await res.json();
   return json.success ? json.data : [];
 }

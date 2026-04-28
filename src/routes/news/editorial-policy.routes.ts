@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import {
   applyPolicy,
   applyPoliciesPipeline,
@@ -17,6 +18,9 @@ import {
 } from '../../controllers/news/editorial-policy.controller';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 /**
  * GET /api/news/editorial-policies

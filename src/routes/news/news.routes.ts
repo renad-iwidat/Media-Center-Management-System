@@ -4,11 +4,15 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { NewsController } from '../../controllers/news/news.controller';
 import { classifyUnclassifiedArticles, getUnclassifiedArticles } from '../../controllers/news/classifier.controller';
 import { getPolicies as getAllPolicies } from '../../controllers/news/editorial-policy.controller';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 /**
  * Specific routes MUST come before /:id route

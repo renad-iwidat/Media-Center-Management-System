@@ -21,7 +21,8 @@ function getEndpointForPolicy(_taskType: string): string {
  */
 export async function applyPolicy(req: Request, res: Response) {
   try {
-    const { policyName, policyId, text, queueId, appliedPolicies: previousPolicies } = req.body;
+    const { policyName, policyId, text, queueId, appliedPolicies: previousPolicies, taskId } = req.body;
+    const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
 
     if (!policyName && !policyId) {
       return res.status(400).json({
@@ -137,7 +138,8 @@ export async function applyPolicy(req: Request, res: Response) {
       policy.output_schema,
       endpoint,
       policy.prompt_template,
-      isModifying
+      isModifying,
+      userId ? parseInt(userId) : undefined // تمرير رقم المستخدم
     );
 
     // 4. بناء الـ response حسب نوع السياسة
@@ -214,7 +216,8 @@ export async function applyPolicy(req: Request, res: Response) {
  */
 export async function applyPoliciesSequential(req: Request, res: Response) {
   try {
-    const { text, queueId, policyIds } = req.body;
+    const { text, queueId, policyIds, taskId } = req.body;
+    const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
 
     if (!policyIds || !Array.isArray(policyIds) || policyIds.length === 0) {
       return res.status(400).json({
@@ -341,7 +344,8 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
         policy.output_schema,
         endpoint,
         policy.prompt_template,
-        true // sequential = always modifying
+        true, // sequential = always modifying
+        userId ? parseInt(userId) : undefined // تمرير رقم المستخدم
       );
 
       const step = {
@@ -464,7 +468,8 @@ export async function saveEditedText(req: Request, res: Response) {
  */
 export async function applyPoliciesPipeline(req: Request, res: Response) {
   try {
-    const { text, policyNames } = req.body;
+    const { text, policyNames, taskId } = req.body;
+    const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
 
     if (!text || !policyNames || !Array.isArray(policyNames)) {
       return res.status(400).json({

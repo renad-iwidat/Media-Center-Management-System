@@ -106,11 +106,10 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     setIsProcessingAI(true);
     setPolicyResults([]);
     try {
-      const res = await fetch("/api/news/editorial-policies/sequential", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: editedContent, queueId: editingItem.id, policyIds: selectedPolicies }),
-      }).then(r => r.json());
+      const res = await api.applyPoliciesSequential({
+        text: editedContent,
+        policyNames: selectedPolicies.map(id => String(id)),
+      });
       
       if (res.finalText) {
         setEditedContent(res.finalText);

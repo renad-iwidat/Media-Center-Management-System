@@ -5,10 +5,14 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import { authenticate } from '../../middleware/auth';
 import { STTController } from '../../controllers/ai-hub/stt.controller';
 import { createAILogger } from '../../middleware/ai-usage-logger.middleware';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // Configure multer for audio file uploads
 const upload = multer({

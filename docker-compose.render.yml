@@ -23,6 +23,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       AI_MODEL: ${AI_MODEL:-http://localhost:8080}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
     ports:
       - "${BACKEND_PORT:-7845}:7845"
     healthcheck:
@@ -39,12 +41,12 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
+        VITE_MANAGEMENT_API_URL: https://media-center-management-system.onrender.com
         VITE_API_URL: http://localhost:7845
-        VITE_APP_URL: http://localhost:7846
     container_name: media-center-frontend
     environment:
+      VITE_MANAGEMENT_API_URL: https://media-center-management-system.onrender.com
       VITE_API_URL: http://localhost:7845
-      VITE_APP_URL: http://localhost:7846
     ports:
       - "${FRONTEND_PORT:-7846}:80"
     depends_on:

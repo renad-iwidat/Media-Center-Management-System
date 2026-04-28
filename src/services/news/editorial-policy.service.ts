@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { logAIUsage } from '../ai-hub/ai-usage-logger.service';
 
 // ============================================================================
 // HELPERS
@@ -301,7 +302,8 @@ class EditorialPolicyService {
     outputSchema: Record<string, any> | null,
     endpoint: string = 'generate',
     promptTemplate: string | null = null,
-    isModifying: boolean = true
+    isModifying: boolean = true,
+    userId?: number // إضافة رقم المستخدم
   ): Promise<{
     policyName: string;
     taskType: string;
@@ -410,6 +412,22 @@ class EditorialPolicyService {
         finalText = result.modified_text;
       }
 
+      // تسجيل استخدام الذكاء الاصطناعي
+      try {
+        await logAIUsage({
+          userIdentifier: userId ? String(userId) : 'unknown', // استخدام user_id مباشرة في user_identifier
+          feature: 'text_tools',
+          action: 'editorial_policy',
+          endpoint: apiUrl,
+          requestData: { policyName, taskType, textLength: text.length },
+          responseStatus: 'success',
+          responseData: { hasChanges: finalText !== text && finalText !== sanitizedOriginal },
+          durationMs: executionTime,
+        });
+      } catch (logError) {
+        console.error('❌ خطأ في تسجيل استخدام الذكاء الاصطناعي:', logError);
+      }
+
       return {
         policyName,
         taskType,
@@ -428,6 +446,22 @@ class EditorialPolicyService {
         console.error(`❌ [${policyName}] detail:`, JSON.stringify(error.response.data.detail));
       }
       console.error(`❌ [${policyName}] error: ${error?.message || error}`);
+
+      // تسجيل استخدام الذكاء الاصطناعي للأخطاء
+      try {
+        await logAIUsage({
+          userIdentifier: userId ? String(userId) : 'unknown', // استخدام user_id مباشرة في user_identifier
+          feature: 'text_tools',
+          action: 'editorial_policy',
+          endpoint: apiUrl,
+          requestData: { policyName, taskType, textLength: text.length },
+          responseStatus: 'error',
+          responseData: { error: error?.message || 'خطأ غير معروف' },
+          durationMs: executionTime,
+        });
+      } catch (logError) {
+        console.error('❌ خطأ في تسجيل استخدام الذكاء الاصطناعي:', logError);
+      }
 
       return {
         policyName,

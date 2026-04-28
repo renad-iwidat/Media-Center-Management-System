@@ -61,6 +61,10 @@ export function aiUsageLogger(options: AILoggerOptions) {
     // Log after response is sent
     res.on('finish', async () => {
       const durationMs = Date.now() - startTime;
+      const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
+      
+      // استخدام رقم المستخدم مباشرة في user_identifier
+      const finalUserIdentifier = userId || userIdentifier;
 
       try {
         // Prepare request data (sanitize sensitive info)
@@ -102,7 +106,7 @@ export function aiUsageLogger(options: AILoggerOptions) {
 
         // Log the usage
         await logAIUsage({
-          userIdentifier,
+          userIdentifier: finalUserIdentifier, // استخدام user_id مباشرة في user_identifier
           userAgent,
           feature: options.feature,
           action: options.action,

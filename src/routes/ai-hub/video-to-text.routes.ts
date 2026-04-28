@@ -4,9 +4,13 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { VideoToTextController } from '../../controllers/ai-hub/video-to-text.controller';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // Logging middleware
 router.use((req: Request, res: Response, next: NextFunction) => {

@@ -2,28 +2,117 @@
  * API Service - ربط الفرونت اند بالباكند
  */
 
-// استخدام VITE_API_URL من environment variables أو fallback للـ development
+// استخدام VITE_MANAGEMENT_API_URL لسيرفر الإدارة و VITE_API_URL لسيرفر الأخبار
+const MANAGEMENT_API_BASE = import.meta.env.VITE_MANAGEMENT_API_URL 
+  ? `${import.meta.env.VITE_MANAGEMENT_API_URL}/api`
+  : "https://media-center-management-system.onrender.com/api";
+
 const API_BASE = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+  : "http://localhost:4000/api";
 
-console.log('🔗 API Base URL:', API_BASE);
+console.log('🔗 Management API Base URL:', MANAGEMENT_API_BASE);
+console.log('🔗 News API Base URL:', API_BASE);
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    let errMsg = `API Error: ${res.status} ${res.statusText}`;
-    try {
-      const body = await res.json();
-      if (body?.error) errMsg = body.error;
-      else if (body?.message) errMsg = body.message;
-    } catch {}
-    throw new Error(errMsg);
+// الحصول على التوكن من localStorage
+export function getAuthToken(): string | null {
+  return localStorage.getItem('authToken');
+}
+
+// حفظ التوكن في localStorage
+export function setAuthToken(token: string): void {
+  localStorage.setItem('authToken', token);
+}
+
+// حذف التوكن من localStorage
+export function clearAuthToken(): void {
+  localStorage.removeItem('authToken');
+}
+
+// الحصول على بيانات المستخدم من localStorage
+export function getCurrentUser(): any {
+  const user = localStorage.getItem('currentUser');
+  return user ? JSON.parse(user) : null;
+}
+
+// حفظ بيانات المستخدم في localStorage
+export function setCurrentUser(user: any): void {
+  localStorage.setItem('currentUser', JSON.stringify(user));
+}
+
+// حذف بيانات المستخدم من localStorage
+export function clearCurrentUser(): void {
+  localStorage.removeItem('currentUser');
+}
+
+async function request<T>(url: string, options?: RequestInit, useManagementAPI: boolean = false): Promise<T> {
+  const baseUrl = useManagementAPI ? MANAGEMENT_API_BASE : API_BASE;
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  
+  // إضافة التوكن إلى الهيدر إذا كان موجوداً
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  return res.json();
+
+  console.log(`🌐 [API] ${options?.method || 'GET'} ${baseUrl}${url}`);
+
+  // إضافة timeout 10 ثواني
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch(`${baseUrl}${url}`, {
+      headers,
+      signal: controller.signal,
+      ...options,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log(`📨 [API] الرد: ${res.status} ${res.statusText}`);
+
+    // إذا كان الرد 401 (Unauthorized) → التوكن انتهى
+    if (res.status === 401) {
+      console.log('⏱️ [API] التوكن انتهى (401) — إعادة توجيه إلى صفحة Login');
+      
+      // وضع flag إنه تم عمل logout تلقائي
+      localStorage.setItem('justLoggedOut', 'true');
+      
+      clearAuthToken();
+      clearCurrentUser();
+      
+      // إعادة تحميل الصفحة فوراً عشان نرجع لصفحة اللوجين
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+      
+      throw new Error('انتهت صلاحية الجلسة - يرجى تسجيل الدخول مرة أخرى');
+    }
+
+    if (!res.ok) {
+      let errMsg = `API Error: ${res.status} ${res.statusText}`;
+      try {
+        const body = await res.json();
+        if (body?.error) errMsg = body.error;
+        else if (body?.message) errMsg = body.message;
+      } catch {}
+      console.error(`❌ [API] خطأ: ${errMsg}`);
+      throw new Error(errMsg);
+    }
+    
+    const data = await res.json();
+    console.log(`✅ [API] الرد بنجاح`);
+    return data;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.error('⏱️ [API] انتهت مهلة الانتظار');
+      throw new Error('انتهت مهلة الانتظار — تحقق من الاتصال بالإنترنت');
+    }
+    console.error(`❌ [API] خطأ:`, error.message);
+    throw error;
+  }
 }
 
 // --- Data / Statistics ---
@@ -36,7 +125,7 @@ export const api = {
   getActiveSources: () => request<any>("/data/sources/active"),
 
   // وحدات الإعلام
-  getMediaUnits: () => request<any>("/data/media-units"),
+  getMediaUnits: () => request<any>("/data/media-units"), // استخدام سيرفر الأخبار (News API)
 
   // أخبار
   getArticles: (limit = 100, offset = 0) =>
@@ -232,4 +321,35 @@ export const api = {
       body: JSON.stringify({ videoFilePath }),
     }),
   getAudioExtractionFormats: () => request<any>("/ai-hub/audio-extraction/formats"),
+
+  // --- Authentication (Management System) ---
+  login: (email: string, password: string) =>
+    request<any>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }, true),
+  
+  getMe: () =>
+    request<any>("/auth/me", {}, true),
+  
+  logout: () => {
+    console.log('🚪 [API] تسجيل الخروج');
+    
+    // وضع flag إنه تم عمل logout
+    localStorage.setItem('justLoggedOut', 'true');
+    
+    // مسح التوكن وبيانات المستخدم
+    clearAuthToken();
+    clearCurrentUser();
+    
+    // مسح cache وحدات الإعلام
+    try {
+      const { clearMediaUnitsCache } = require('../lib/useMediaUnits');
+      clearMediaUnitsCache();
+    } catch (e) {
+      // ignore if not available
+    }
+    
+    console.log('✅ [API] تم تسجيل الخروج من API');
+  },
 };

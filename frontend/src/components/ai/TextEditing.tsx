@@ -6,11 +6,22 @@ import {
 } from 'lucide-react';
 import { generateAIContent, summarizeContent, rewriteContent, SummarizeStyle, RewriteStyle } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
+import { getAuthToken } from '../../services/api';
 
 // استخدام VITE_API_URL من environment variables
 const API_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
+
+// Helper function to get headers with Authorization
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 type EditMode   = 'REWRITE' | 'SUMMARIZE' | 'GRAMMAR';
 type InputMode  = 'MANUAL'  | 'DATABASE';
@@ -77,7 +88,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
     setDbError(null);
     try {
       const muParam = mediaUnitId ? `&media_unit_id=${mediaUnitId}` : '';
-      const res = await fetch(`${API_URL}/flow/published?limit=200${muParam}`);
+      const res = await fetch(`${API_URL}/flow/published?limit=200${muParam}`, { headers: getHeaders() });
       if (!res.ok) throw new Error();
       const data = await res.json();
       const items: Article[] = (data.data || data.items || []).map((item: any) => ({
@@ -92,7 +103,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
     } catch {
       try {
         const muParam = mediaUnitId ? `&media_unit_id=${mediaUnitId}` : '';
-        const res2 = await fetch(`${API_URL}/data/articles?limit=200${muParam}`);
+        const res2 = await fetch(`${API_URL}/data/articles?limit=200${muParam}`, { headers: getHeaders() });
         if (!res2.ok) throw new Error();
         const data2 = await res2.json();
         const items: Article[] = (data2.data || []).map((item: any) => ({

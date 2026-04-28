@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import FlowController from '../../controllers/news/flow.controller';
+import { authenticate } from '../../middleware/auth';
 
 /**
  * Flow Routes
@@ -7,6 +8,9 @@ import FlowController from '../../controllers/news/flow.controller';
  */
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // معالجة الأخبار الجديدة
 router.post('/process', FlowController.processNewArticles);

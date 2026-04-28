@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import {
   getAllSources,
   getActiveSources,
@@ -25,8 +26,15 @@ import {
 
 const router = Router();
 
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
+
 // Media Units
-router.get('/media-units', getMediaUnits);
+router.get('/media-units', (req, res, next) => {
+  console.log('🛣️ [ROUTE] /api/data/media-units - طلب جديد');
+  console.log('🔐 [ROUTE] المستخدم المصادق عليه:', (req as any).user?.name || 'غير موجود');
+  next();
+}, getMediaUnits);
 
 // أخبار ناقصة المحتوى
 router.get('/articles/incomplete', getIncompleteArticles);

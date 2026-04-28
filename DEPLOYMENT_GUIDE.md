@@ -5,8 +5,39 @@
 1. حساب على [Render](https://render.com)
 2. Repository على GitHub/GitLab/Bitbucket
 3. قاعدة بيانات PostgreSQL (يمكن استخدام Render PostgreSQL)
+4. حساب على Management System API (للـ Authentication) - مُنشر مسبقاً على: `https://media-center-management-system.onrender.com`
+
+## 🏗️ معلومات النظام
+
+النظام يتكون من **ثلاثة أجزاء**:
+
+1. **Management API** (مُنشر مسبقاً على Render):
+   - مسؤول عن: Authentication (تسجيل الدخول/الخروج)
+   - الرابط: `https://media-center-management-system.onrender.com`
+   - لا يحتاج إعادة نشر
+
+2. **News API (Backend)**:
+   - مسؤول عن: الأخبار، الوحدات الإعلامية، AI Hub، إلخ
+   - يحتاج نشر على Render
+
+3. **Frontend**:
+   - واجهة المستخدم
+   - يتصل بـ Management API للـ Authentication
+   - يتصل بـ News API لباقي العمليات
 
 ## 🚀 خطوات النشر
+
+### ✅ قبل البدء - Checklist:
+
+- [ ] تأكد من أن `JWT_SECRET` في ملف `.env` مطابق للقيمة في Management API
+- [ ] حدّث `frontend/.env` ليحتوي على:
+  ```
+  VITE_MANAGEMENT_API_URL=https://media-center-management-system.onrender.com
+  VITE_API_URL=http://localhost:7845  # سيتم تغييره بعد النشر
+  ```
+- [ ] تأكد من أن جميع المتغيرات البيئية المطلوبة موجودة
+- [ ] اختبر النظام محلياً قبل النشر
+- [ ] تأكد من أن قاعدة البيانات جاهزة ومتصلة
 
 ### الطريقة 1: استخدام Blueprint (موصى بها)
 
@@ -25,11 +56,16 @@
 
 3. **إعداد المتغيرات البيئية السرية**
    
-   في Backend Service:
+   في Backend Service (News API):
    - `DATABASE_URL`: رابط قاعدة البيانات PostgreSQL
    - `AI_MODEL`: رابط خدمة AI Classifier
+   - `OPENAI_API_KEY`: مفتاح OpenAI API
+   - `JWT_SECRET`: مفتاح سري لتوقيع JWT tokens (يجب أن يكون نفسه في Management API)
+   - `JWT_EXPIRES_IN`: مدة صلاحية التوكن (مثال: `24h`)
+   
    في Frontend Service:
-   - `VITE_API_URL`: رابط Backend API
+   - `VITE_MANAGEMENT_API_URL`: رابط Management API (للـ Authentication)
+   - `VITE_API_URL`: رابط News API (Backend)
 
 4. **Deploy**
    - اضغط "Apply" وانتظر حتى يكتمل النشر
@@ -53,12 +89,17 @@
 3. **Environment Variables**
    ```
    NODE_ENV=production
-   PORT=4000
+   PORT=7845
    DATABASE_URL=postgresql://user:password@host:5432/database
    AI_MODEL=http://your-ai-service-url
+   OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxx
+   JWT_SECRET=your-secret-key-here-must-match-management-api
+   JWT_EXPIRES_IN=24h
    ARTICLES_PER_SOURCE=20
    SCHEDULER_INTERVAL=10
    ```
+   
+   ⚠️ **مهم جداً**: `JWT_SECRET` يجب أن يكون **نفس القيمة** المستخدمة في Management API
 
 4. **Health Check Path**: `/health`
 
@@ -71,9 +112,13 @@
 
 2. **Environment Variables**
    ```
+   VITE_MANAGEMENT_API_URL=https://media-center-management-system.onrender.com
    VITE_API_URL=https://media-center-backend.onrender.com
-   VITE_APP_URL=https://media-center-frontend.onrender.com
    ```
+   
+   📝 **ملاحظة**: 
+   - `VITE_MANAGEMENT_API_URL`: للـ Authentication فقط (تسجيل دخول/خروج)
+   - `VITE_API_URL`: لباقي العمليات (أخبار، وحدات إعلامية، AI Hub)
 
 3. **Health Check Path**: `/health`
 
@@ -92,6 +137,33 @@
 - [Supabase](https://supabase.com) (مجاني)
 - [Neon](https://neon.tech) (مجاني)
 - [ElephantSQL](https://www.elephantsql.com) (مجاني)
+
+## 🔑 المتغيرات البيئية المطلوبة
+
+### Backend (News API):
+
+| المتغير | الوصف | مثال | إلزامي |
+|---------|-------|------|--------|
+| `NODE_ENV` | بيئة التشغيل | `production` | ✅ |
+| `PORT` | رقم البورت | `7845` | ✅ |
+| `DATABASE_URL` | رابط قاعدة البيانات PostgreSQL | `postgresql://user:pass@host:5432/db` | ✅ |
+| `AI_MODEL` | رابط خدمة AI Classifier | `http://93.127.132.59:8080` | ✅ |
+| `OPENAI_API_KEY` | مفتاح OpenAI API | `sk-proj-xxxxx` | ✅ |
+| `JWT_SECRET` | مفتاح سري لتوقيع JWT (يجب أن يطابق Management API) | `e42d385d0a0a1a96449b5f9192bb4894` | ✅ |
+| `JWT_EXPIRES_IN` | مدة صلاحية التوكن | `24h` | ✅ |
+| `ARTICLES_PER_SOURCE` | عدد الأخبار لكل مصدر | `20` | ⚪ |
+| `SCHEDULER_INTERVAL` | فترة تشغيل الـ Scheduler (بالدقائق) | `10` | ⚪ |
+
+### Frontend:
+
+| المتغير | الوصف | مثال | إلزامي |
+|---------|-------|------|--------|
+| `VITE_MANAGEMENT_API_URL` | رابط Management API (للـ Authentication) | `https://media-center-management-system.onrender.com` | ✅ |
+| `VITE_API_URL` | رابط News API (Backend) | `https://your-backend.onrender.com` | ✅ |
+
+⚠️ **تحذير مهم**: 
+- `JWT_SECRET` في News API يجب أن يكون **نفس القيمة** المستخدمة في Management API
+- إذا كانت القيم مختلفة، سيفشل التحقق من التوكن وسيتم رفض جميع الطلبات
 
 ## 🔧 إعدادات إضافية
 
@@ -131,22 +203,38 @@
 
 1. تحقق من Logs
 2. تأكد من `DATABASE_URL` صحيح
-3. تحقق من Health Check endpoint
+3. تحقق من Health Check endpoint (`/health`)
+4. تأكد من `JWT_SECRET` موجود ومطابق للـ Management API
 
 ### Frontend لا يتصل بـ Backend:
 
 1. تحقق من `VITE_API_URL` في Frontend
 2. تأكد من CORS مفعّل في Backend
 3. تحقق من أن Backend يعمل
+4. تأكد من `VITE_MANAGEMENT_API_URL` صحيح
+
+### مشاكل تسجيل الدخول (Authentication):
+
+1. **خطأ "Invalid or expired token"**:
+   - تأكد من أن `JWT_SECRET` في News API **مطابق تماماً** للقيمة في Management API
+   - تحقق من أن التوكن لم تنتهي صلاحيته (`JWT_EXPIRES_IN`)
+
+2. **خطأ "Unauthorized"**:
+   - تأكد من أن التوكن يُرسل في الـ Header بشكل صحيح
+   - تحقق من أن middleware الـ authentication يعمل
+
+3. **لا تظهر الوحدات الإعلامية**:
+   - تأكد من أن Frontend يستدعي `/api/data/media-units` من News API وليس Management API
+   - تحقق من أن جدول `media_units` موجود في قاعدة البيانات
 
 ### Database Connection Issues:
 
 1. تحقق من `DATABASE_URL` format:
    ```
-   postgresql://username:password@host:port/database
+   postgresql://username:password@host:port/database?sslmode=require
    ```
 2. تأكد من أن Database accessible من Render
-3. تحقق من SSL settings
+3. تحقق من SSL settings (أضف `?sslmode=require` في النهاية)
 
 ## 💰 التكاليف المتوقعة
 

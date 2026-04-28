@@ -4,9 +4,13 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { SystemSettingsController } from '../../controllers/news/system-settings.controller';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // GET /api/settings — جميع الإعدادات
 router.get('/', SystemSettingsController.getAll);

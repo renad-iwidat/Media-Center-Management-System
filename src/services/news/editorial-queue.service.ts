@@ -209,7 +209,9 @@ export class EditorialQueueService {
     editorNotes?: string,
     finalContent?: string,
     finalTitle?: string,
-    finalImageUrl?: string
+    finalImageUrl?: string,
+    userId?: number,
+    taskId?: number
   ): Promise<ApprovalResult> {
     try {
       // 1. تحديث الحالة إلى 'in_review' مع اختيار السياسة (اختياري)
@@ -218,12 +220,14 @@ export class EditorialQueueService {
          SET status = 'in_review', 
              policy_id = $1, 
              editor_notes = $2,
+             user_id = $3,
+             task_id = $4,
              updated_at = NOW()
-         WHERE id = $3`,
-        [policyId || null, editorNotes || null, queueId]
+         WHERE id = $5`,
+        [policyId || null, editorNotes || null, userId || null, taskId || null, queueId]
       );
 
-      console.log(`📋 تم تحديث الخبر ${queueId} إلى 'in_review'`);
+      console.log(`📋 تم تحديث الخبر ${queueId} إلى 'in_review' بواسطة المستخدم ${userId}`);
 
       // 2. تحديث الحالة إلى 'approved'
       await query(
@@ -237,7 +241,7 @@ export class EditorialQueueService {
       console.log(`✅ تم الموافقة على الخبر ${queueId}`);
 
       // 3. نشر الخبر في published_items
-      await this.publishApprovedItem(queueId, finalContent, finalTitle, finalImageUrl);
+      await this.publishApprovedItem(queueId, finalContent, finalTitle, finalImageUrl, userId, taskId);
 
       return {
         success: true,
@@ -261,19 +265,23 @@ export class EditorialQueueService {
    */
   async rejectItem(
     queueId: number,
-    editorNotes?: string
+    editorNotes?: string,
+    userId?: number,
+    taskId?: number
   ): Promise<RejectionResult> {
     try {
       await query(
         `UPDATE editorial_queue 
          SET status = 'rejected', 
              editor_notes = $1,
+             user_id = $2,
+             task_id = $3,
              updated_at = NOW()
-         WHERE id = $2`,
-        [editorNotes || null, queueId]
+         WHERE id = $4`,
+        [editorNotes || null, userId || null, taskId || null, queueId]
       );
 
-      console.log(`❌ تم رفض الخبر ${queueId}`);
+      console.log(`❌ تم رفض الخبر ${queueId} بواسطة المستخدم ${userId}`);
 
       return {
         success: true,
@@ -298,7 +306,9 @@ export class EditorialQueueService {
     queueId: number,
     finalContent?: string,
     finalTitle?: string,
-    finalImageUrl?: string
+    finalImageUrl?: string,
+    userId?: number,
+    taskId?: number
   ): Promise<void> {
     try {
       // جلب بيانات الخبر من editorial_queue
@@ -328,11 +338,11 @@ export class EditorialQueueService {
       const contentToPublish = finalContent || item.content;
       const imageToPublish = finalImageUrl !== undefined ? finalImageUrl : item.image_url;
 
-      // إدراج في published_items مع queue_id (دايماً موجود)
+      // إدراج في published_items مع queue_id (دايماً موجود) ومعلومات المستخدم والمهمة
       await query(
         `INSERT INTO published_items 
-         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())`,
+         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at, approved_by, task_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), $8, $9)`,
         [
           item.media_unit_id,
           item.raw_data_id,
@@ -341,6 +351,8 @@ export class EditorialQueueService {
           titleToPublish,
           contentToPublish,
           item.tags,
+          userId || null,
+          taskId || null,
         ]
       );
 

@@ -131,7 +131,8 @@ export class FlowController {
   static async approveQueueItem(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { policyId, editorNotes, finalContent, finalTitle, finalImageUrl } = req.body;
+      const { policyId, editorNotes, finalContent, finalTitle, finalImageUrl, taskId } = req.body;
+      const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
 
       const result = await EditorialQueueService.approveItem(
         parseInt(id),
@@ -139,7 +140,9 @@ export class FlowController {
         editorNotes,
         finalContent,
         finalTitle,
-        finalImageUrl
+        finalImageUrl,
+        userId ? parseInt(userId) : undefined,
+        taskId
       );
 
       res.status(200).json({
@@ -164,11 +167,14 @@ export class FlowController {
   static async rejectQueueItem(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { editorNotes } = req.body;
+      const { editorNotes, taskId } = req.body;
+      const userId = req.user?.user_id; // الحصول على رقم المستخدم من التوكن
 
       const result = await EditorialQueueService.rejectItem(
         parseInt(id),
-        editorNotes
+        editorNotes,
+        userId ? parseInt(userId) : undefined,
+        taskId
       );
 
       res.status(200).json({

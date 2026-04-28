@@ -4,11 +4,15 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { generateChatResponse } from '../../controllers/ai-hub/chat.controller';
 import { summarizeText, rewriteText } from '../../controllers/ai-hub/text-tools.controller';
 import { createAILogger } from '../../middleware/ai-usage-logger.middleware';
 
 const router = Router();
+
+// إضافة المصادقة على جميع routes
+router.use(authenticate);
 
 // Logging middleware
 router.use((req: Request, res: Response, next: NextFunction) => {

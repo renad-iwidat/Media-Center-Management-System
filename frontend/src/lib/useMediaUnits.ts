@@ -3,11 +3,7 @@
  * يجلب قائمة وحدات الإعلام مرة واحدة ويخزنها
  */
 import { useState, useEffect } from 'react';
-
-// استخدام VITE_API_URL من environment variables
-const API_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
+import { api, getAuthToken, getCurrentUser } from '../services/api';
 
 export interface MediaUnit {
   id: number;
@@ -18,26 +14,62 @@ export interface MediaUnit {
 // Simple module-level cache so we don't re-fetch on every mount
 let _cache: MediaUnit[] | null = null;
 
+// دالة لمسح الـ cache عند تسجيل الخروج
+export function clearMediaUnitsCache() {
+  _cache = null;
+  console.log('🧹 [MEDIA-UNITS] تم مسح cache وحدات الإعلام');
+}
+
 export function useMediaUnits() {
   const [mediaUnits, setMediaUnits] = useState<MediaUnit[]>(_cache ?? []);
-  const [loading, setLoading] = useState(!_cache);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (_cache) return;
+    // لا نجلب البيانات إذا كانت محفوظة بالفعل
+    if (_cache) {
+      setMediaUnits(_cache);
+      return;
+    }
+
+    // لا نجلب البيانات إذا لم يكن هناك توكن أو مستخدم
+    const token = getAuthToken();
+    const user = getCurrentUser();
+    
+    if (!token || !user) {
+      console.log('⏭️ [MEDIA-UNITS] لا يوجد توكن أو مستخدم - تخطي جلب البيانات');
+      return;
+    }
+
     setLoading(true);
-    fetch(`${API_URL}/data/media-units`)
-      .then((r) => r.json())
-      .then((json) => {
-        const units: MediaUnit[] = json.success ? json.data : [];
-        _cache = units;
-        setMediaUnits(units);
+    console.log('🌐 [MEDIA-UNITS] جاري جلب وحدات الإعلام من سيرفر الأخبار');
+    console.log('🔗 [MEDIA-UNITS] التوكن:', token ? token.substring(0, 20) + '...' : 'غير موجود');
+
+    api.getMediaUnits()
+      .then((response) => {
+        console.log('✅ [MEDIA-UNITS] البيانات المستلمة:', response);
+        
+        if (response.success && Array.isArray(response.data)) {
+          const units: MediaUnit[] = response.data;
+          console.log('📋 [MEDIA-UNITS] وحدات الإعلام الحقيقية:', units.map(u => `${u.id}: ${u.name}`));
+          _cache = units;
+          setMediaUnits(units);
+        } else {
+          console.warn('⚠️ [MEDIA-UNITS] البيانات المستلمة غير صحيحة:', response);
+          _cache = [];
+          setMediaUnits([]);
+        }
       })
       .catch((err) => {
-        console.error('❌ Error fetching media units:', err);
+        console.error('❌ [MEDIA-UNITS] خطأ في جلب وحدات الإعلام:', err);
+        console.error('🔍 [MEDIA-UNITS] تفاصيل الخطأ:', err.message);
+        
+        // لا نستخدم بيانات وهمية - نترك القائمة فارغة
+        console.log('📭 [MEDIA-UNITS] ترك القائمة فارغة بسبب الخطأ');
+        _cache = [];
         setMediaUnits([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // بدون dependencies عشان ما يعيدش تشغيل
 
   return { mediaUnits, loading };
 }

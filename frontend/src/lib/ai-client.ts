@@ -3,10 +3,22 @@
  * يرسل الطلبات للـ backend بدل استدعاء Gemini مباشرة من الفرونت
  */
 
+import { getAuthToken } from '../services/api';
+
 // استخدام VITE_API_URL من environment variables
 const API_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
+
+// Helper function to get headers with Authorization
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 // ─── Chat / Generate ──────────────────────────────────────────
 export async function generateAIContent(
@@ -20,7 +32,7 @@ export async function generateAIContent(
 
   const response = await fetch(`${API_URL}/ai-hub/chat/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       prompt: fullPrompt,
       ...(options?.max_tokens ? { max_tokens: options.max_tokens } : {}),
@@ -46,7 +58,7 @@ export async function summarizeContent(
 ): Promise<string> {
   const response = await fetch(`${API_URL}/ai-hub/chat/summarize`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ text, style }),
   });
 
@@ -69,7 +81,7 @@ export async function rewriteContent(
 ): Promise<string> {
   const response = await fetch(`${API_URL}/ai-hub/chat/rewrite`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ text, style }),
   });
 
@@ -105,7 +117,7 @@ export interface IdeasPayload {
 export async function generateIdeasContent(payload: IdeasPayload): Promise<string> {
   const response = await fetch(`${API_URL}/ai-hub/ideas/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(payload),
   });
 

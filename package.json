@@ -21,7 +21,8 @@
     "scheduler": "ts-node src/utils/start-scheduler.ts",
     "test:policies": "ts-node src/utils/test-policies-pipeline.ts",
     "test:ai": "ts-node src/utils/test-ai-with-policies.ts",
-    "test:replace": "ts-node src/utils/test-replace-policy-and-flow.ts"
+    "test:replace": "ts-node src/utils/test-replace-policy-and-flow.ts",
+    "setup:media-units": "node setup-media-units.js"
   },
   "keywords": [
     "media",
@@ -56,11 +57,14 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
+    "@types/ffmpeg-static": "^3.0.3",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/jest": "^29.5.8",
-    "@types/multer": "^1.4.11",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^1.4.13",
     "@types/node": "^20.10.0",
     "@types/pg": "^8.20.0",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
