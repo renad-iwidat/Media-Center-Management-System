@@ -162,16 +162,3 @@ npm run build && npm start
 
 ---
 
-## 📚 Documentation
-
-- `docs/FRONTEND-API-GUIDE.md` — Complete API reference for frontend development
-- `docs/AI-STUDIO-PROMPT.md` — Prompt for AI-assisted frontend generation
-- `docs/INTEGRATION-PLAN.md` — Integration plan with News & AI system
-
----
-
-## 👥 Team
-
-- **Management System:** Renad Iwidat
-- **News & AI System:** Raghad Mahmoud
-- **Supervisor:** Ghazi Mortaja

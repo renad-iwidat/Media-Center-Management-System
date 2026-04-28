@@ -180,10 +180,10 @@ export class DependencyHelper {
     }
 
     const statuses = await TaskModel.getStatuses();
-    const doneStatus = statuses.find(s => s.name === 'Done');
+    const doneStatus = statuses.find(s => s.name === 'Done' || s.name === 'منجز');
 
     if (!doneStatus) {
-      throw new Error('Done status not found in database');
+      throw new Error('Done/منجز status not found in database');
     }
 
     this.doneStatusIdCache = doneStatus.id;
