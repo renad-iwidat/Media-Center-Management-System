@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Volume2, Loader2, Play, Pause, Download, Music, FileText, Search, Check, FileAudio, FileVideo, Newspaper, X, Eye, Copy, Trash2 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
 import { api } from '../../services/api';
+import { useLocalStorageBatch } from '../../lib/useLocalStorageBatch';
 
 type AudioMode = 'STT' | 'TTS';
 type FileTypeFilter = 'all' | 'audio' | 'video';
@@ -61,50 +62,43 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // جلب الملفات المرفوعة عند تحميل المكون
+  // جلب الملفات المرفوعة عند تحميل المكون - مع حماية من unmount
   useEffect(() => {
-    fetchUploadedFiles();
+    let isMounted = true;
+    
+    if (isMounted) {
+      fetchUploadedFiles();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // جلب المقالات المنشورة عند تحويل الوضع إلى TTS
+  // جلب المقالات المنشورة عند تحويل الوضع إلى TTS - مع حماية من unmount
   useEffect(() => {
-    if (activeMode === 'TTS' && ttsSource === 'published') {
+    let isMounted = true;
+    
+    if (activeMode === 'TTS' && ttsSource === 'published' && isMounted) {
       fetchPublishedArticles();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [activeMode, ttsSource, mediaUnitId]);
 
-  // Save to localStorage
-  useEffect(() => {
-    localStorage.setItem('audioProc_activeMode', JSON.stringify(activeMode));
-  }, [activeMode]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_selectedFileId', JSON.stringify(selectedFileId));
-  }, [selectedFileId]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_result', JSON.stringify(result));
-  }, [result]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_voice', JSON.stringify(voice));
-  }, [voice]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_fileTypeFilter', JSON.stringify(fileTypeFilter));
-  }, [fileTypeFilter]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_ttsSource', JSON.stringify(ttsSource));
-  }, [ttsSource]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_pastedText', JSON.stringify(pastedText));
-  }, [pastedText]);
-
-  useEffect(() => {
-    localStorage.setItem('audioProc_selectedArticleId', JSON.stringify(selectedArticleId));
-  }, [selectedArticleId]);
+  // Save to localStorage (batched to prevent infinite loops)
+  useLocalStorageBatch([
+    { key: 'audioProc_activeMode', value: activeMode },
+    { key: 'audioProc_selectedFileId', value: selectedFileId },
+    { key: 'audioProc_result', value: result },
+    { key: 'audioProc_voice', value: voice },
+    { key: 'audioProc_fileTypeFilter', value: fileTypeFilter },
+    { key: 'audioProc_ttsSource', value: ttsSource },
+    { key: 'audioProc_pastedText', value: pastedText },
+    { key: 'audioProc_selectedArticleId', value: selectedArticleId },
+  ], 200);
 
   const fetchUploadedFiles = async () => {
     try {

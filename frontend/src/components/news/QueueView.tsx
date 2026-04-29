@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X, Trash, Copy } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
@@ -37,8 +37,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // دالة لتحميل البيانات
-  const loadData = () => {
+  // دالة لتحميل البيانات - مع useCallback لمنع إعادة التصيير
+  const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.getPendingQueue(unitId).catch(() => ({ data: [] })),
@@ -52,12 +52,12 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       setCategories(c.data || []);
       setLoading(false);
     });
-  };
+  }, [unitId]);
 
   // تحميل البيانات عند التحميل الأول أو تغيير unitId
   useEffect(() => {
     loadData();
-  }, [unitId]);
+  }, [loadData]);
 
   // Apply filters
   useEffect(() => {
@@ -95,7 +95,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     setCurrentPage(1);
   }, [queue, searchTitle, selectedCategory, selectedDate, sortBy]);
 
-  const handleOpenEditor = (item: any) => {
+  const handleOpenEditor = useCallback((item: any) => {
     setEditingItem(item);
     // استخدم modified_text إذا كان موجود، وإلا استخدم content
     setEditedContent(item.modified_text || item.content || "");
@@ -106,13 +106,13 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     setSelectedInspectionPolicy(null);
     setInspectionResult(null);
     setPolicyResults([]);
-  };
+  }, []);
 
-  const togglePolicy = (id: number) => {
+  const togglePolicy = useCallback((id: number) => {
     setSelectedPolicies(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
+  }, []);
 
-  const applySequentially = async () => {
+  const applySequentially = useCallback(async () => {
     if (selectedPolicies.length === 0 || !editingItem) return;
     setIsProcessingAI(true);
     setPolicyResults([]);
@@ -147,9 +147,9 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     }
     setIsProcessingAI(false);
     setSelectedPolicies([]);
-  };
+  }, [selectedPolicies, editingItem, editedContent]);
 
-  const applyInspection = async () => {
+  const applyInspection = useCallback(async () => {
     if (!selectedInspectionPolicy || !editingItem) return;
     setIsProcessingAI(true);
     setInspectionResult(null);
@@ -164,7 +164,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       setInspectionResult({ error: "حدث خطأ أثناء الفحص" });
     }
     setIsProcessingAI(false);
-  };
+  }, [selectedInspectionPolicy, editingItem, editedContent]);
 
   const handleApprove = async (id: number) => {
     try {
@@ -254,13 +254,13 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
   // Editor mode
   if (editingItem) {
-    // منع السكرول عند فتح التحرير
+    // منع السكرول عند فتح التحرير - مع cleanup صحيح
     useEffect(() => {
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = 'unset';
       };
-    }, []);
+    }, []); // dependencies فارغة لأنها تعمل مرة واحدة فقط
 
     return (
       <>

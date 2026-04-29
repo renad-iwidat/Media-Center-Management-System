@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AlertTriangle, Search, ArrowRight, Trash2, Save, Trash } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
@@ -33,8 +33,8 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // دالة لتحميل البيانات
-  const loadData = () => {
+  // دالة لتحميل البيانات - مع useCallback لمنع إعادة التصيير
+  const loadData = useCallback(() => {
     Promise.all([
       api.getIncompleteArticles(unitId),
       api.getCategories()
@@ -48,12 +48,12 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
         setCategories([]);
       })
       .finally(() => setLoading(false));
-  };
+  }, [unitId]);
 
   // تحميل البيانات عند التحميل الأول أو تغيير unitId
   useEffect(() => {
     loadData();
-  }, [unitId]);
+  }, [loadData]);
 
   // Apply filters
   useEffect(() => {
@@ -91,15 +91,15 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     setCurrentPage(1); // Reset to first page when filters change
   }, [articles, searchTitle, selectedCategory, sortBy, selectedDate]);
 
-  const handleEdit = (article: any) => {
+  const handleEdit = useCallback((article: any) => {
     setEditingArticle(article);
     setEditedContent(article.content || "");
     setEditedTitle(article.title || "");
     setEditedImageUrl(article.image_url || "");
     setEditedCategoryId(article.category_id || null);
-  };
+  }, []);
 
-  const handleSaveInIncomplete = async () => {
+  const handleSaveInIncomplete = useCallback(async () => {
     if (!editingArticle) return;
     
     setIsSaving(true);
@@ -117,7 +117,6 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       });
       
       // تحديث البيانات المحلية
-      const updatedCategory = categories.find(c => c.id === editedCategoryId);
       setArticles(prev => prev.map(a => 
         a.id === editingArticle.id 
           ? { ...a, content: editedContent, title: editedTitle, image_url: editedImageUrl }
@@ -132,9 +131,9 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       console.error(err);
     }
     setIsSaving(false);
-  };
+  }, [editingArticle, editedContent, editedTitle, editedImageUrl, editedCategoryId]);
 
-  const handleSaveAndSend = async () => {
+  const handleSaveAndSend = useCallback(async () => {
     if (!editingArticle) return;
     
     setIsSaving(true);
@@ -159,7 +158,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       console.error(err);
     }
     setIsSaving(false);
-  };
+  }, [editingArticle, editedContent, editedTitle, editedImageUrl]);
 
   const confirmDelete = async () => {
     if (!deleteConfirm.articleId) return;
@@ -281,13 +280,13 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
 
   // وضع التحرير
   if (editingArticle) {
-    // منع السكرول عند فتح التحرير
+    // منع السكرول عند فتح التحرير - مع cleanup صحيح
     useEffect(() => {
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = 'unset';
       };
-    }, []);
+    }, []); // dependencies فارغة لأنها تعمل مرة واحدة فقط
 
     return (
       <div className="space-y-6">

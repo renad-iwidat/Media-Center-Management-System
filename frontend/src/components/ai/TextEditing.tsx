@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Send, Loader2, Copy, Check, Type, AlignLeft, ShieldCheck,
   PenLine, Database, Search, X, ChevronDown, Plus,
@@ -7,6 +7,7 @@ import {
 import { generateAIContent, summarizeContent, rewriteContent, SummarizeStyle, RewriteStyle } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
 import { getAuthToken } from '../../services/api';
+import { useLocalStorageBatch } from '../../lib/useLocalStorageBatch';
 
 // استخدام VITE_API_URL من environment variables
 const API_URL = import.meta.env.VITE_API_URL 
@@ -82,8 +83,8 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
   const [isLoading, setIsLoading] = useState(false);
   const [copied,    setCopied]    = useState(false);
 
-  // ── fetch articles ──
-  const fetchArticles = async () => {
+  // ── fetch articles - مع useCallback لمنع إعادة التصيير ──
+  const fetchArticles = useCallback(async () => {
     setIsLoadingDB(true);
     setDbError(null);
     try {
@@ -121,45 +122,67 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
     } finally {
       setIsLoadingDB(false);
     }
-  };
+  }, [mediaUnitId]); // dependency على mediaUnitId فقط
 
-  // جلب عند الدخول لوضع DATABASE
+  // جلب عند الدخول لوضع DATABASE - مع حماية من unmount
   useEffect(() => {
-    if (inputMode === 'DATABASE' && articles.length === 0) fetchArticles();
-  }, [inputMode]);
+    let isMounted = true;
+    
+    if (inputMode === 'DATABASE' && articles.length === 0 && isMounted) {
+      fetchArticles();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [inputMode, fetchArticles]);
 
-  // إعادة الجلب عند تغيير الوحدة الإعلامية
+  // إعادة الجلب عند تغيير الوحدة الإعلامية - مع حماية من unmount
   useEffect(() => {
-    if (inputMode === 'DATABASE') {
+    let isMounted = true;
+    
+    if (inputMode === 'DATABASE' && isMounted) {
       setArticles([]);
       setSelectedArticles([]);
       setResult(null);
       fetchArticles();
     }
-  }, [mediaUnitId]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [mediaUnitId, inputMode, fetchArticles]);
 
+  // تصفية المقالات بالبحث - مع debounce
   useEffect(() => {
-    if (!searchQuery.trim()) { setFilteredArticles(articles); return; }
-    const q = searchQuery.toLowerCase();
-    setFilteredArticles(articles.filter(a =>
-      a.title.toLowerCase().includes(q) ||
-      a.category_name?.toLowerCase().includes(q) ||
-      a.media_unit_name?.toLowerCase().includes(q)
-    ));
+    const timeoutId = setTimeout(() => {
+      if (!searchQuery.trim()) { 
+        setFilteredArticles(articles); 
+        return; 
+      }
+      const q = searchQuery.toLowerCase();
+      setFilteredArticles(articles.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        a.category_name?.toLowerCase().includes(q) ||
+        a.media_unit_name?.toLowerCase().includes(q)
+      ));
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [searchQuery, articles]);
 
-  // ── helpers ──
-  const toggleArticle = (article: Article) => {
+  // ── helpers - مع useCallback لمنع إعادة التصيير ──
+  const toggleArticle = useCallback((article: Article) => {
     setSelectedArticles(prev =>
       prev.find(a => a.id === article.id)
         ? prev.filter(a => a.id !== article.id)
         : [...prev, article]
     );
-  };
+  }, []);
 
-  const isSelected = (id: number) => selectedArticles.some(a => a.id === id);
+  const isSelected = useCallback((id: number) => selectedArticles.some(a => a.id === id), [selectedArticles]);
 
-  const getSourceText = (): string => {
+  const getSourceText = useCallback((): string => {
     if (inputMode === 'MANUAL') return manualText.trim();
     if (selectedArticles.length === 0) return '';
     if (selectedArticles.length === 1)
@@ -168,14 +191,14 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
     return selectedArticles
       .map((a, i) => `[${i + 1}] ${a.title}\n${a.content}`)
       .join('\n\n---\n\n');
-  };
+  }, [inputMode, manualText, selectedArticles]);
 
   const hasInput = inputMode === 'MANUAL'
     ? manualText.trim().length > 0
     : selectedArticles.length > 0;
 
-  // ── process ──
-  const handleProcess = async () => {
+  // ── process - مع useCallback لمنع إعادة التصيير ──
+  const handleProcess = useCallback(async () => {
     const sourceText = getSourceText();
     if (!sourceText) return;
     setIsLoading(true);
@@ -205,20 +228,20 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getSourceText, activeMode, rewriteStyle, summarizeStyle, grammarStyle]);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = useCallback(() => {
     if (!result) return;
     navigator.clipboard.writeText(result);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [result]);
 
-  const formatDate = (d: string) => {
+  const formatDate = useCallback((d: string) => {
     if (!d) return '';
     try { return new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short' }); }
     catch { return ''; }
-  };
+  }, []);
 
   // ── render ──
   return (

@@ -6,6 +6,7 @@ import {
 import { generateIdeasContent, IdeasPayload } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
 import { api } from '../../services/api';
+import { useLocalStorageBatch } from '../../lib/useLocalStorageBatch';
 
 // ─── Types ────────────────────────────────────────────────────
 interface Program {
@@ -85,64 +86,82 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
       .finally(() => setLoadingData(false));
   }, []);
 
-  // ─── Save to localStorage ───────────────────────────────────
-  useEffect(() => {
-    localStorage.setItem('ideaGen_activeTool', JSON.stringify(activeTool));
-  }, [activeTool]);
+  // ─── Save to localStorage (batched to prevent infinite loops) ───────────────────────────────────
+  useLocalStorageBatch([
+    { key: 'ideaGen_activeTool', value: activeTool },
+    { key: 'ideaGen_selectedProgram', value: selectedProgram },
+    { key: 'ideaGen_selectedEpisode', value: selectedEpisode },
+    { key: 'ideaGen_selectedGuest', value: selectedGuest },
+    { key: 'ideaGen_additionalContext', value: additionalContext },
+    { key: 'ideaGen_result', value: result },
+  ], 200);
 
+  // ─── Search guests with debounce - مع حماية من unmount ─────────────────────────────
   useEffect(() => {
-    localStorage.setItem('ideaGen_selectedProgram', JSON.stringify(selectedProgram));
-  }, [selectedProgram]);
-
-  useEffect(() => {
-    localStorage.setItem('ideaGen_selectedEpisode', JSON.stringify(selectedEpisode));
-  }, [selectedEpisode]);
-
-  useEffect(() => {
-    localStorage.setItem('ideaGen_selectedGuest', JSON.stringify(selectedGuest));
-  }, [selectedGuest]);
-
-  useEffect(() => {
-    localStorage.setItem('ideaGen_additionalContext', JSON.stringify(additionalContext));
-  }, [additionalContext]);
-
-  useEffect(() => {
-    localStorage.setItem('ideaGen_result', JSON.stringify(result));
-  }, [result]);
-
-  // ─── Search guests with debounce ─────────────────────────────
-  useEffect(() => {
+    let isMounted = true;
+    
     if (activeTool !== 'QUESTIONS') return;
+    
     setLoadingGuests(true);
     const timer = setTimeout(() => {
-      api.getGuests(guestSearch)
-        .then((res) => setGuests(res.data || []))
-        .catch(console.error)
-        .finally(() => setLoadingGuests(false));
+      if (isMounted) {
+        api.getGuests(guestSearch)
+          .then((res) => {
+            if (isMounted) setGuests(res.data || []);
+          })
+          .catch(console.error)
+          .finally(() => {
+            if (isMounted) setLoadingGuests(false);
+          });
+      }
     }, 300);
-    return () => clearTimeout(timer);
-  }, [guestSearch, activeTool]);  // ─── Load episodes when program selected ────────────────────
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [guestSearch, activeTool]);
+
+  // ─── Load episodes when program selected - مع حماية من unmount ────────────────────
   useEffect(() => {
+    let isMounted = true;
+    
     if (!selectedProgram) {
       setEpisodes([]);
       setSelectedEpisode(null);
       setEpisodeGuests([]);
       return;
     }
+    
     api.getProgramEpisodes(selectedProgram.id)
-      .then((res) => setEpisodes(res.data || []))
+      .then((res) => {
+        if (isMounted) setEpisodes(res.data || []);
+      })
       .catch(console.error);
+      
+    return () => {
+      isMounted = false;
+    };
   }, [selectedProgram]);
 
-  // ─── Load episode guests when episode selected ───────────────
+  // ─── Load episode guests when episode selected - مع حماية من unmount ───────────────
   useEffect(() => {
+    let isMounted = true;
+    
     if (!selectedEpisode) {
       setEpisodeGuests([]);
       return;
     }
+    
     api.getEpisodeGuests(selectedEpisode.id)
-      .then((res) => setEpisodeGuests(res.data || []))
+      .then((res) => {
+        if (isMounted) setEpisodeGuests(res.data || []);
+      })
       .catch(console.error);
+      
+    return () => {
+      isMounted = false;
+    };
   }, [selectedEpisode]);
 
   // ─── Filter helpers ──────────────────────────────────────────

@@ -36,9 +36,15 @@ export default function ChatInterface() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    let isMounted = true;
+    
+    if (scrollRef.current && isMounted) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [messages]);
 
   const handleSend = async () => {

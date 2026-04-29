@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
 import { api } from '../../services/api';
+import { useLocalStorageBatch } from '../../lib/useLocalStorageBatch';
 import { getCategoryColor } from '../../lib/categoryColors';
 
 type NewsMode = 'SUMMARY' | 'BULLETIN';
@@ -47,35 +48,28 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
   const [countPreset, setCountPreset] = useState<number | 'custom'>(() => loadFromStorage('countPreset', 5));
   const [customCount, setCustomCount] = useState<string>(() => loadFromStorage('customCount', ''));
 
-  // Fetch news on mount and when mediaUnitId prop changes
+  // Fetch news on mount and when mediaUnitId prop changes - مع حماية من unmount
   useEffect(() => {
-    fetchNews();
+    let isMounted = true;
+    
+    if (isMounted) {
+      fetchNews();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [mediaUnitId]);
 
-  // Save to localStorage
-  useEffect(() => {
-    localStorage.setItem('newsRoom_activeMode', JSON.stringify(activeMode));
-  }, [activeMode]);
-
-  useEffect(() => {
-    localStorage.setItem('newsRoom_timeOfDay', JSON.stringify(timeOfDay));
-  }, [timeOfDay]);
-
-  useEffect(() => {
-    localStorage.setItem('newsRoom_result', JSON.stringify(result));
-  }, [result]);
-
-  useEffect(() => {
-    localStorage.setItem('newsRoom_countPreset', JSON.stringify(countPreset));
-  }, [countPreset]);
-
-  useEffect(() => {
-    localStorage.setItem('newsRoom_customCount', JSON.stringify(customCount));
-  }, [customCount]);
-
-  useEffect(() => {
-    localStorage.setItem('newsRoom_selectedCategory', JSON.stringify(selectedCategory));
-  }, [selectedCategory]);
+  // Save to localStorage (batched to prevent infinite loops)
+  useLocalStorageBatch([
+    { key: 'newsRoom_activeMode', value: activeMode },
+    { key: 'newsRoom_timeOfDay', value: timeOfDay },
+    { key: 'newsRoom_result', value: result },
+    { key: 'newsRoom_countPreset', value: countPreset },
+    { key: 'newsRoom_customCount', value: customCount },
+    { key: 'newsRoom_selectedCategory', value: selectedCategory },
+  ], 200);
 
   const fetchNews = async () => {
     setIsLoadingNews(true);

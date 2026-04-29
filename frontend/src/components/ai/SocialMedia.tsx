@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Share2, Loader2, Copy, Check, Hash, Repeat,
   Newspaper, Sparkles, Database, PenLine, Search, ChevronDown, X
@@ -51,7 +51,7 @@ function HashtagsDisplay({ text }: { text: string }) {
       )}
       {hashtags.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {hashtags.map((tag, i) => (
+          {hashtags.map((tag: string, i: number) => (
             <span
               key={i}
               className="px-3 py-1.5 bg-[#FF9F43]/15 border border-[#FF9F43]/30 text-[#FF9F43] rounded-full text-xs font-medium hover:bg-[#FF9F43]/25 transition-colors cursor-default"
@@ -87,39 +87,8 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
   const [showDropdown, setShowDropdown] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Re-fetch when mediaUnitId prop changes
-  useEffect(() => {
-    if (inputMode === 'DATABASE') {
-      setArticles([]);
-      setSelectedArticle(null);
-      setContent('');
-      fetchArticles();
-    }
-  }, [mediaUnitId]);
-
-  // Fetch articles when switching to DATABASE mode
-  useEffect(() => {
-    if (inputMode === 'DATABASE' && articles.length === 0) {
-      fetchArticles();
-    }
-  }, [inputMode]);
-
-  // Filter articles by search (media unit already filtered server-side)
-  useEffect(() => {
-    let filtered = articles;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = articles.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          a.category_name?.toLowerCase().includes(q) ||
-          a.media_unit_name?.toLowerCase().includes(q)
-      );
-    }
-    setFilteredArticles(filtered);
-  }, [searchQuery, articles]);
-
-  const fetchArticles = async () => {
+  // تعريف fetchArticles قبل استخدامها في useEffect
+  const fetchArticles = useCallback(async () => {
     setIsLoadingArticles(true);
     setDbError(null);
     try {
@@ -159,21 +128,21 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
     } finally {
       setIsLoadingArticles(false);
     }
-  };
+  }, [mediaUnitId]); // dependency على mediaUnitId فقط
 
-  const selectArticle = (article: PublishedArticle) => {
+  const selectArticle = useCallback((article: PublishedArticle) => {
     setSelectedArticle(article);
     setContent(article.content || article.title);
     setShowDropdown(false);
     setSearchQuery('');
-  };
+  }, []);
 
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     setSelectedArticle(null);
     setContent('');
-  };
+  }, []);
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!content.trim()) return;
     setIsLoading(true);
     setResult(null);
@@ -197,24 +166,44 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [content, activeTab, platform, tone]);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = useCallback(() => {
     if (result) {
       navigator.clipboard.writeText(result);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, [result]);
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = useCallback((dateStr: string) => {
     if (!dateStr) return '';
     try {
       return new Date(dateStr).toLocaleDateString('ar', { day: 'numeric', month: 'short' });
     } catch {
       return '';
     }
-  };
+  }, []);
+
+  // تحميل المقالات عند تغيير وضع قاعدة البيانات أو mediaUnitId
+  useEffect(() => {
+    if (inputMode === 'DATABASE') {
+      fetchArticles();
+    }
+  }, [inputMode, fetchArticles]);
+
+  // فلترة المقالات حسب البحث
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const filtered = articles.filter(article =>
+        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        article.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredArticles(filtered);
+    } else {
+      setFilteredArticles(articles);
+    }
+  }, [articles, searchQuery]);
 
   return (
     <div className="space-y-4 text-right">
