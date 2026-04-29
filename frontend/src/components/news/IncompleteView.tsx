@@ -275,17 +275,27 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
 
   // وضع التحرير
   if (editingArticle) {
+    // منع السكرول عند فتح التحرير
+    useEffect(() => {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }, []);
+
     return (
       <div className="space-y-6">
         {/* Notification */}
         <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
 
-        <button 
-          onClick={() => setEditingArticle(null)}
-          className="text-gray-400 hover:text-white text-sm flex items-center gap-2"
-        >
-          <ArrowRight size={16} /> العودة للقائمة
-        </button>
+        <div className="flex items-center justify-between">
+          <button 
+            onClick={() => setEditingArticle(null)}
+            className="text-gray-600 hover:text-gray-900 text-sm flex items-center gap-2 transition-colors"
+          >
+            <ArrowRight size={16} /> العودة للقائمة
+          </button>
+        </div>
 
         <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm space-y-6">
           <h3 className="text-lg font-bold text-gray-900">تكملة الخبر</h3>
@@ -306,10 +316,10 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           )}
           
           {/* الصورة */}
-          {editedImageUrl && (
-            <div className="space-y-2">
-              <label className="text-xs text-gray-700 font-bold uppercase">صورة الخبر</label>
-              <div className="relative w-full h-48 bg-gray-100 rounded-2xl overflow-hidden border border-gray-300">
+          <div className="space-y-2">
+            <label className="text-xs text-gray-700 font-bold uppercase">صورة الخبر</label>
+            {editedImageUrl && (
+              <div className="relative w-full h-80 bg-gray-100 rounded-2xl overflow-hidden border border-gray-300">
                 <img 
                   src={editedImageUrl} 
                   alt="صورة الخبر"
@@ -319,9 +329,23 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                   }}
                 />
               </div>
+            )}
+            {!editedImageUrl && (
+              <div className="w-full h-80 bg-gray-50 rounded-2xl overflow-hidden border border-dashed border-gray-300 flex items-center justify-center">
+                <p className="text-sm text-gray-500">لا توجد صورة</p>
+              </div>
+            )}
+            <input 
+              type="text" 
+              value={editedImageUrl} 
+              onChange={(e) => setEditedImageUrl(e.target.value)}
+              placeholder="أدخل رابط الصورة (URL)"
+              className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-gray-500 font-mono"
+            />
+            {editedImageUrl && (
               <p className="text-[10px] text-gray-600 font-mono truncate">{editedImageUrl}</p>
-            </div>
-          )}
+            )}
+          </div>
           
           {/* العنوان */}
           <div className="space-y-2">
@@ -371,27 +395,27 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           </div>
 
           {/* الأزرار */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 flex-wrap pt-4 border-t border-gray-200">
             <button
               onClick={handleSaveInIncomplete}
               disabled={isSaving}
-              className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-600/20 hover:shadow-amber-600/40"
             >
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><Save size={16} /> حفظ التغيرات</>
+                <><Save size={18} /> حفظ التغيرات</>
               )}
             </button>
             <button
               onClick={handleSaveAndSend}
               disabled={isSaving}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40"
             >
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><Save size={16} /> حفظ وإرسال</>
+                <><Save size={18} /> حفظ وإرسال</>
               )}
             </button>
             <button
@@ -496,7 +520,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       {/* Results count and pagination info */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-400">
-          عدد النتائج: <span className="text-white font-bold">{filteredArticles.length}</span> من <span className="text-white font-bold">{articles.length}</span>
+          عدد النتائج: <span className="text-gray-900 font-bold">{filteredArticles.length}</span> من <span className="text-gray-900 font-bold">{articles.length}</span>
         </div>
         {filteredArticles.length > 0 && (
           <div className="flex items-center gap-2">
@@ -507,7 +531,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               <Trash size={14} /> حذف الكل
             </button>
             <div className="text-sm text-gray-400">
-              الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
+              الصفحة <span className="text-gray-900 font-bold">{currentPage}</span> من <span className="text-gray-900 font-bold">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
             </div>
           </div>
         )}

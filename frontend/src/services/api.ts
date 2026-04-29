@@ -121,7 +121,7 @@ export const api = {
   getStatistics: () => request<any>("/data/statistics"),
   
   // مصادر
-  getSources: () => request<any>("/sources/fetch-info/all"),
+  getSources: () => request<any>("/sources"),
   getActiveSources: () => request<any>("/data/sources/active"),
 
   // وحدات الإعلام
@@ -232,7 +232,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  applyPoliciesSequential: (data: { text: string; policyNames: string[] }) =>
+  applyPoliciesSequential: (data: { text?: string; queueId?: number; policyIds: number[] }) =>
     request<any>("/news/editorial-policies/sequential", {
       method: "POST",
       body: JSON.stringify(data),
@@ -272,6 +272,29 @@ export const api = {
   getUploadedFileById: (id: number) => request<any>(`/uploaded-files/${id}`),
   getFilesBySourceType: (sourceTypeId: number) =>
     request<any>(`/uploaded-files/source-type/${sourceTypeId}`),
+
+  // --- Programs & Episodes ---
+  getPrograms: () => request<any>("/programs"),
+  getProgram: (id: number) => request<any>(`/programs/${id}`),
+  getProgramEpisodes: (id: number) => request<any>(`/programs/${id}/episodes`),
+  getEpisodeDetails: (id: number) => request<any>(`/programs/episodes/${id}/details`),
+  getEpisodeGuests: (id: number) => request<any>(`/programs/episodes/${id}/guests`),
+
+  // --- Guests ---
+  getGuests: (search?: string) => request<any>(`/guests${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  getGuest: (id: number) => request<any>(`/guests/${id}`),
+
+  // --- Video-to-Text ---
+  processVideoToText: (videoUrl: string) =>
+    request<any>("/ai-hub/video-to-text/process", {
+      method: "POST",
+      body: JSON.stringify({ videoUrl }),
+    }),
+  processVideoToTextFromS3: (s3Url: string, fileId: number) =>
+    request<any>("/ai-hub/video-to-text/process-s3", {
+      method: "POST",
+      body: JSON.stringify({ s3Url, fileId }),
+    }),
 
   // --- Text-to-Speech ---
   generateTTS: (text: string, voice: string = 'nova') =>

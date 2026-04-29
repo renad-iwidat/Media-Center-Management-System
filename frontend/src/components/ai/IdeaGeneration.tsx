@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Lightbulb, Loader2, Copy, Check, Sparkles,
   Search, User, Tv, Hash, ChevronDown, ChevronUp, Film
 } from 'lucide-react';
 import { generateIdeasContent, IdeasPayload } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
-import { getAuthToken } from '../../services/api';
+import { api } from '../../services/api';
 
 // ─── Types ────────────────────────────────────────────────────
 interface Program {
@@ -30,49 +30,6 @@ interface Guest {
 }
 
 type Tool = 'IDEAS' | 'QUESTIONS' | 'TITLES';
-
-// ─── API helpers ──────────────────────────────────────────────
-// استخدام VITE_API_URL من environment variables
-const API_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
-
-// Helper function to get headers with Authorization
-function getHeaders(): HeadersInit {
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  const token = getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
-
-async function fetchPrograms(): Promise<Program[]> {
-  const res = await fetch(`${API_URL}/programs`, { headers: getHeaders() });
-  const json = await res.json();
-  return json.success ? json.data : [];
-}
-
-async function fetchEpisodes(programId: number): Promise<Episode[]> {
-  const res = await fetch(`${API_URL}/programs/${programId}/episodes`, { headers: getHeaders() });
-  const json = await res.json();
-  return json.success ? json.data : [];
-}
-
-async function fetchGuests(search?: string): Promise<Guest[]> {
-  const url = search && search.trim()
-    ? `${API_URL}/guests?search=${encodeURIComponent(search.trim())}`
-    : `${API_URL}/guests?recent=5`;
-  const res = await fetch(url, { headers: getHeaders() });
-  const json = await res.json();
-  return json.success ? json.data : [];
-}
-
-async function fetchEpisodeGuests(episodeId: number): Promise<Guest[]> {
-  const res = await fetch(`${API_URL}/programs/episodes/${episodeId}/guests`, { headers: getHeaders() });
-  const json = await res.json();
-  return json.success ? json.data : [];
-}
 
 // ─── Component ────────────────────────────────────────────────
 export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | null }) {
@@ -118,10 +75,10 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
   // ─── Load initial data ──────────────────────────────────────
   useEffect(() => {
     setLoadingData(true);
-    Promise.all([fetchPrograms(), fetchGuests()])
-      .then(([progs, gsts]) => {
-        setPrograms(progs);
-        setGuests(gsts);
+    Promise.all([api.getPrograms(), api.getGuests()])
+      .then(([progsRes, gstsRes]) => {
+        setPrograms(progsRes.data || []);
+        setGuests(gstsRes.data || []);
       })
       .catch(console.error)
       .finally(() => setLoadingData(false));
@@ -157,8 +114,8 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
     if (activeTool !== 'QUESTIONS') return;
     setLoadingGuests(true);
     const timer = setTimeout(() => {
-      fetchGuests(guestSearch)
-        .then(setGuests)
+      api.getGuests(guestSearch)
+        .then((res) => setGuests(res.data || []))
         .catch(console.error)
         .finally(() => setLoadingGuests(false));
     }, 300);
@@ -171,8 +128,8 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
       setEpisodeGuests([]);
       return;
     }
-    fetchEpisodes(selectedProgram.id)
-      .then(setEpisodes)
+    api.getProgramEpisodes(selectedProgram.id)
+      .then((res) => setEpisodes(res.data || []))
       .catch(console.error);
   }, [selectedProgram]);
 
@@ -182,8 +139,8 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
       setEpisodeGuests([]);
       return;
     }
-    fetchEpisodeGuests(selectedEpisode.id)
-      .then(setEpisodeGuests)
+    api.getEpisodeGuests(selectedEpisode.id)
+      .then((res) => setEpisodeGuests(res.data || []))
       .catch(console.error);
   }, [selectedEpisode]);
 

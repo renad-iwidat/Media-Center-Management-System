@@ -194,11 +194,11 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
         {/* Results info */}
         <div className="flex items-center justify-between text-sm text-gray-400">
           <div>
-            عدد النتائج: <span className="text-white font-bold">{filteredItems.length}</span> من <span className="text-white font-bold">{items.length}</span>
+            عدد النتائج: <span className="text-gray-900 font-bold">{filteredItems.length}</span> من <span className="text-gray-900 font-bold">{items.length}</span>
           </div>
           {filteredItems.length > 0 && (
             <div>
-              الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredItems.length / itemsPerPage)}</span>
+              الصفحة <span className="text-gray-900 font-bold">{currentPage}</span> من <span className="text-gray-900 font-bold">{Math.ceil(filteredItems.length / itemsPerPage)}</span>
             </div>
           )}
         </div>

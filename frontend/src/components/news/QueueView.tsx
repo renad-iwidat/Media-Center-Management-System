@@ -14,6 +14,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const [editedContent, setEditedContent] = useState("");
   const [editedTitle, setEditedTitle] = useState("");
   const [editedImageUrl, setEditedImageUrl] = useState("");
+  const [editedCategoryId, setEditedCategoryId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
   const [policies, setPolicies] = useState<any[]>([]);
   const [inspectionPolicies, setInspectionPolicies] = useState<any[]>([]);
   const [selectedPolicies, setSelectedPolicies] = useState<number[]>([]);
@@ -40,11 +42,13 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     Promise.all([
       api.getPendingQueue(unitId).catch(() => ({ data: [] })),
       api.getPolicies().catch(() => ({ policies: [] })),
-    ]).then(([q, p]) => {
+      api.getCategories().catch(() => ({ data: [] })),
+    ]).then(([q, p, c]) => {
       setQueue(q.data || []);
       const allPolicies = p.policies || [];
       setPolicies(allPolicies.filter((pol: any) => pol.isModifying));
       setInspectionPolicies(allPolicies.filter((pol: any) => !pol.isModifying));
+      setCategories(c.data || []);
       setLoading(false);
     });
   }, [unitId]);
@@ -91,6 +95,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     setEditedContent(item.modified_text || item.content || "");
     setEditedTitle(item.title || "");
     setEditedImageUrl(item.image_url || "");
+    setEditedCategoryId(item.category_id || null);
     setSelectedPolicies([]);
     setSelectedInspectionPolicy(null);
     setInspectionResult(null);
@@ -108,7 +113,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     try {
       const res = await api.applyPoliciesSequential({
         text: editedContent,
-        policyNames: selectedPolicies.map(id => String(id)),
+        policyIds: selectedPolicies,
       });
       
       if (res.finalText) {
@@ -157,6 +162,11 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
   const handleApprove = async (id: number) => {
     try {
+      // تحديث التصنيف إذا تغيّر
+      if (editedCategoryId && editedCategoryId !== editingItem.category_id) {
+        await api.updateArticleCategory(editingItem.raw_data_id, editedCategoryId);
+      }
+
       await api.approveQueueItem(id, {
         finalContent: editedContent,
         finalTitle: editedTitle,
@@ -238,22 +248,33 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
   // Editor mode
   if (editingItem) {
+    // منع السكرول عند فتح التحرير
+    useEffect(() => {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }, []);
+
     return (
       <>
         <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
-        <div className="space-y-4">
-          <button onClick={() => setEditingItem(null)} className="text-gray-600 hover:text-gray-900 text-sm flex items-center gap-2">
-            <ArrowRight size={16} /> العودة للطابور
-          </button>
-          <div className="flex gap-2">
-            <button onClick={() => handleApprove(editingItem.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
-              <CheckCircle2 size={15} /> موافقة ونشر
+        <div className="space-y-6 pb-6">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setEditingItem(null)} className="text-gray-600 hover:text-gray-900 text-sm flex items-center gap-2 transition-colors">
+              <ArrowRight size={16} /> العودة للطابور
             </button>
-            <button onClick={() => handleReject(editingItem.id)} className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
-              <XCircle size={15} /> رفض
+          </div>
+          
+          <div className="flex gap-3 flex-wrap">
+            <button onClick={() => handleApprove(editingItem.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40">
+              <CheckCircle2 size={18} /> موافقة ونشر
             </button>
-            <button onClick={() => handleDelete(editingItem.id)} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-xl">
-              <Trash2 size={15} />
+            <button onClick={() => handleReject(editingItem.id)} className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all">
+              <XCircle size={18} /> رفض
+            </button>
+            <button onClick={() => handleDelete(editingItem.id)} className="bg-red-100 hover:bg-red-200 text-red-700 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all">
+              <Trash2 size={18} /> حذف
             </button>
           </div>
         </div>
@@ -262,17 +283,52 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm p-5">
           <div className="flex gap-5 items-start">
             {/* صورة الخبر */}
-            {editedImageUrl && (
-              <div className="w-48 h-32 shrink-0 rounded-xl overflow-hidden border border-gray-300 bg-gray-100">
-                <img src={editedImageUrl} alt="صورة الخبر" className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 130"%3E%3Crect fill="%23e5e7eb" width="200" height="130"/%3E%3Ctext x="50%25" y="50%25" font-size="14" fill="%239ca3af" text-anchor="middle" dy=".3em"%3Eلا توجد صورة%3C/text%3E%3C/svg%3E'; }} />
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="text-xs text-gray-700 font-bold uppercase">صورة الخبر</label>
+              {editedImageUrl && (
+                <div className="w-full h-80 shrink-0 rounded-2xl overflow-hidden border border-gray-300 bg-gray-100">
+                  <img src={editedImageUrl} alt="صورة الخبر" className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%239ca3af" text-anchor="middle" dy=".3em"%3Eلا يمكن تحميل الصورة%3C/text%3E%3C/svg%3E'; }} />
+                </div>
+              )}
+              {!editedImageUrl && (
+                <div className="w-full h-80 shrink-0 rounded-2xl overflow-hidden border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                  <p className="text-sm text-gray-500">لا توجد صورة</p>
+                </div>
+              )}
+              <input 
+                type="text" 
+                value={editedImageUrl} 
+                onChange={(e) => setEditedImageUrl(e.target.value)}
+                placeholder="أدخل رابط الصورة (URL)"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-gray-400 font-mono"
+              />
+              {editedImageUrl && (
+                <p className="text-[10px] text-gray-600 font-mono truncate">{editedImageUrl}</p>
+              )}
+            </div>
             {/* المعلومات */}
             <div className="flex-1 min-w-0 space-y-3">
-              <div className="flex items-center gap-3 text-xs text-gray-600 flex-wrap">
-                <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-semibold">{editingItem.category_name || '—'}</span>
-                <span>{editingItem.media_unit_name || '—'}</span>
+              <div className="space-y-2">
+                <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
+                <select
+                  value={editedCategoryId || ""}
+                  onChange={(e) => setEditedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
+                >
+                  <option value="">-- اختر التصنيف --</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                {editedCategoryId && (
+                  <p className="text-[10px] text-emerald-700">✓ تم اختيار: {categories.find(c => c.id === editedCategoryId)?.name}</p>
+                )}
+                {!editedCategoryId && editingItem.category_name && (
+                  <p className="text-[10px] text-blue-700">التصنيف الحالي: {editingItem.category_name}</p>
+                )}
               </div>
               <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)}
                 className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-gray-500"
@@ -567,7 +623,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
           {/* Results count and pagination info */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-400">
-              عدد النتائج: <span className="text-white font-bold">{filteredQueue.length}</span> من <span className="text-white font-bold">{queue.length}</span>
+              عدد النتائج: <span className="text-gray-900 font-bold">{filteredQueue.length}</span> من <span className="text-gray-900 font-bold">{queue.length}</span>
             </div>
             {filteredQueue.length > 0 && (
               <div className="flex items-center gap-2">
@@ -578,7 +634,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                   <Trash size={14} /> حذف الكل
                 </button>
                 <div className="text-sm text-gray-400">
-                  الصفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{Math.ceil(filteredQueue.length / itemsPerPage)}</span>
+                  الصفحة <span className="text-gray-900 font-bold">{currentPage}</span> من <span className="text-gray-900 font-bold">{Math.ceil(filteredQueue.length / itemsPerPage)}</span>
                 </div>
               </div>
             )}

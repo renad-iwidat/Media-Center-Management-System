@@ -1,26 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Newspaper, Loader2, Copy, Check, FileText, LayoutList,
   Trash2, Search, Sparkles, RefreshCw, Plus, Sun, Moon, Hash, X
 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
-import { getAuthToken } from '../../services/api';
+import { api } from '../../services/api';
 import { getCategoryColor } from '../../lib/categoryColors';
-
-// استخدام VITE_API_URL من environment variables
-const API_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
-
-// Helper function to get headers with Authorization
-function getHeaders(): HeadersInit {
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  const token = getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
 
 type NewsMode = 'SUMMARY' | 'BULLETIN';
 type TimeOfDay = 'MORNING' | 'EVENING';
@@ -96,11 +81,8 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
     setIsLoadingNews(true);
     setDbError(null);
     try {
-      const muParam = mediaUnitId ? `&media_unit_id=${mediaUnitId}` : '';
-      const res = await fetch(`${API_URL}/flow/published?limit=50${muParam}`, { headers: getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const items: NewsItem[] = (data.data || data.items || []).map((item: any, idx: number) => ({
+      const res = await api.getPublished(mediaUnitId);
+      const items: NewsItem[] = (res.data || res.items || []).map((item: any, idx: number) => ({
         id: String(item.id ?? idx),
         title: item.title || 'بدون عنوان',
         content: item.content || item.summary || '',
@@ -112,11 +94,8 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
       setNewsItems(items);
     } catch {
       try {
-        const muParam = mediaUnitId ? `&media_unit_id=${mediaUnitId}` : '';
-        const res2 = await fetch(`${API_URL}/data/articles?limit=50${muParam}`, { headers: getHeaders() });
-        if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
-        const data2 = await res2.json();
-        const items: NewsItem[] = (data2.data || []).map((item: any, idx: number) => ({
+        const res2 = await api.getArticles(50, 0);
+        const items: NewsItem[] = (res2.data || []).map((item: any, idx: number) => ({
           id: String(item.id ?? idx),
           title: item.title || 'بدون عنوان',
           content: item.content || item.summary || '',

@@ -405,7 +405,7 @@ export default function App() {
          ══════════════════════════════════════════════════════════ */}
       <motion.aside
         initial={false}
-        animate={{ width: isSidebarOpen ? 320 : 80 }}
+        animate={{ width: isSidebarOpen ? 260 : 70 }}
         className="bg-gradient-to-b from-[#4A7C9C] via-[#5A8CAC] to-[#4A7C9C] border-l border-white/10 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
       >
         {/* Logo & Header */}
