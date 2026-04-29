@@ -126,15 +126,9 @@ export default function App() {
     const token = getAuthToken();
     const user = getCurrentUser();
     
-    // فقط نتحقق إذا كان في توكن بس مافيش user، أو مافيش حاجة خالص
+    // فقط نتحقق إذا كان في توكن بس مافيش user
     const shouldCheck = !!(token && !user);
     console.log('🔍 [APP] Initial checking state:', shouldCheck, 'token:', !!token, 'user:', !!user);
-    
-    // إذا مافيش توكن ولا user، ما نتحققش
-    if (!token && !user) {
-      console.log('🔍 [APP] لا يوجد توكن ولا مستخدم - لا نحتاج للتحقق');
-      return false;
-    }
     
     return shouldCheck;
   });
@@ -182,15 +176,17 @@ export default function App() {
     }
   }, [selectedMediaUnitId]);
 
-  // 3. Token verification - Fixed to prevent infinite loops
+  // 3. Token verification - CRITICAL: Run only once on mount
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates after unmount
+    let isMounted = true;
+    let hasRun = false; // Prevent multiple runs
     
     const verifyToken = async () => {
-      if (!isCheckingAuth) {
-        console.log('⏭️ [APP] تم تخطي التحقق لأن isCheckingAuth = false');
+      // CRITICAL: Prevent multiple executions
+      if (hasRun || !isCheckingAuth) {
         return;
       }
+      hasRun = true;
 
       console.log('🔐 [APP] بدء التحقق من التوكن');
       
@@ -239,7 +235,7 @@ export default function App() {
 
           clearTimeout(timeoutId);
 
-          if (!isMounted) return; // Prevent state updates if component unmounted
+          if (!isMounted) return;
 
           if (response.ok) {
             const data = await response.json();
@@ -269,7 +265,7 @@ export default function App() {
           clearTimeout(timeoutId);
           console.error('❌ [APP] خطأ في الاتصال:', fetchError);
           
-          if (!isMounted) return; // Prevent state updates if component unmounted
+          if (!isMounted) return;
           
           const savedUser = getCurrentUser();
           if (savedUser && token) {
@@ -295,7 +291,6 @@ export default function App() {
       }
     };
 
-    // Only run verification if we need to check auth
     if (isCheckingAuth) {
       verifyToken();
     }
@@ -308,31 +303,51 @@ export default function App() {
     }, 8000);
 
     return () => {
-      isMounted = false; // Prevent state updates after cleanup
+      isMounted = false;
       clearTimeout(emergencyTimeout);
     };
-  }, [isCheckingAuth]); // Add isCheckingAuth as dependency to prevent unnecessary runs
+  }, []); // CRITICAL: Empty dependency array - run only once on mount
 
-  // 4. System status
+  // 4. System status - Run only once after authentication
   useEffect(() => {
-    if (!isAuthenticated) return; // فقط إذا كان مسجل دخول
+    let isMounted = true;
+    
+    if (!isAuthenticated) return;
     
     api.getSystemToggles()
       .then((res) => {
-        const d = res.data || {};
-        setIsSystemOnline(!!(d.scheduler_enabled && d.classifier_enabled && d.flow_enabled));
+        if (isMounted) {
+          const d = res.data || {};
+          setIsSystemOnline(!!(d.scheduler_enabled && d.classifier_enabled && d.flow_enabled));
+        }
       })
-      .catch(() => setIsSystemOnline(false));
-  }, [isAuthenticated]); // dependency على isAuthenticated
+      .catch(() => {
+        if (isMounted) {
+          setIsSystemOnline(false);
+        }
+      });
+      
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated]);
 
-  // 5. Reload media units when authenticated
+  // 5. Reload media units when authenticated - Run only once
   useEffect(() => {
+    let isMounted = true;
+    
     if (!isAuthenticated) return;
     
     // إعادة تحميل الوحدات الإعلامية عند تسجيل الدخول
     console.log('🔄 [APP] إعادة تحميل الوحدات الإعلامية بعد تسجيل الدخول');
     // نمسح الـ cache عشان يعيد التحميل
-    clearMediaUnitsCache();
+    if (isMounted) {
+      clearMediaUnitsCache();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [isAuthenticated]);
 
   // 6. Search functionality with debounce
