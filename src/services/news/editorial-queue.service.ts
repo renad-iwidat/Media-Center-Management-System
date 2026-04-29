@@ -21,6 +21,8 @@ interface QueueItem {
   policy_id: number | null;
   status: QueueStatus;
   editor_notes: string | null;
+  user_id: number | null;
+  task_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +67,7 @@ export class EditorialQueueService {
   /**
    * جلب جميع العناصر المعلقة في الطابور (pending فقط)
    */
-  async getPendingItems(mediaUnitId?: number): Promise<QueueItemWithDetails[]> {
+  async getPendingItems(mediaUnitId?: number, taskId?: number): Promise<QueueItemWithDetails[]> {
     try {
       let sql = `SELECT 
           eq.id,
@@ -74,6 +76,8 @@ export class EditorialQueueService {
           eq.policy_id,
           eq.status,
           eq.editor_notes,
+          eq.user_id,
+          eq.task_id,
           eq.created_at,
           eq.updated_at,
           rd.title,
@@ -97,6 +101,10 @@ export class EditorialQueueService {
         params.push(mediaUnitId);
         sql += ` AND eq.media_unit_id = $${params.length}`;
       }
+      if (taskId !== undefined) {
+        params.push(taskId);
+        sql += ` AND eq.task_id = $${params.length}`;
+      }
       sql += ` ORDER BY eq.created_at ASC`;
 
       const result = await query(sql, params);
@@ -111,14 +119,14 @@ export class EditorialQueueService {
   /**
    * جلب العناصر الناقصة (incomplete) من الطابور
    */
-  async getIncompleteItems(mediaUnitId?: number): Promise<QueueItemWithDetails[]> {
-    return this.getItemsByStatus('incomplete', mediaUnitId);
+  async getIncompleteItems(mediaUnitId?: number, taskId?: number): Promise<QueueItemWithDetails[]> {
+    return this.getItemsByStatus('incomplete', mediaUnitId, taskId);
   }
 
   /**
    * جلب عناصر الطابور حسب الحالة
    */
-  async getItemsByStatus(status: QueueStatus, mediaUnitId?: number): Promise<QueueItemWithDetails[]> {
+  async getItemsByStatus(status: QueueStatus, mediaUnitId?: number, taskId?: number): Promise<QueueItemWithDetails[]> {
     try {
       let sql = `SELECT 
           eq.id,
@@ -127,6 +135,8 @@ export class EditorialQueueService {
           eq.policy_id,
           eq.status,
           eq.editor_notes,
+          eq.user_id,
+          eq.task_id,
           eq.created_at,
           eq.updated_at,
           rd.title,
@@ -149,6 +159,10 @@ export class EditorialQueueService {
       if (mediaUnitId) {
         params.push(mediaUnitId);
         sql += ` AND eq.media_unit_id = $${params.length}`;
+      }
+      if (taskId !== undefined) {
+        params.push(taskId);
+        sql += ` AND eq.task_id = $${params.length}`;
       }
       sql += ` ORDER BY eq.created_at ASC`;
 
