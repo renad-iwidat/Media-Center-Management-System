@@ -18,6 +18,11 @@ export function serializeBigInt<T>(obj: T): T {
     return Number(obj) as T;
   }
 
+  // Don't convert Date objects
+  if (obj instanceof Date) {
+    return obj;
+  }
+
   if (Array.isArray(obj)) {
     return obj.map(item => serializeBigInt(item)) as T;
   }
@@ -26,7 +31,13 @@ export function serializeBigInt<T>(obj: T): T {
     const serialized: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        serialized[key] = serializeBigInt(obj[key]);
+        const value = obj[key as keyof T];
+        // Don't convert Date objects
+        if (value instanceof Date) {
+          serialized[key] = value;
+        } else {
+          serialized[key] = serializeBigInt(value);
+        }
       }
     }
     return serialized;
@@ -39,9 +50,11 @@ export function serializeBigInt<T>(obj: T): T {
  * Custom JSON.stringify that handles bigint
  */
 export function stringifyWithBigInt(obj: any): string {
-  return JSON.stringify(obj, (_key, value) =>
-    typeof value === 'bigint' ? Number(value) : value
-  );
+  return JSON.stringify(obj, (_key, value) => {
+    if (typeof value === 'bigint') return Number(value);
+    if (value instanceof Date) return value.toISOString();
+    return value;
+  });
 }
 
 /**
