@@ -171,9 +171,10 @@ export class FlowRouterService {
           const category = article.category_id ? categoryMap.get(article.category_id) : null;
           let flowType: 'automated' | 'editorial' = 'editorial'; // افتراضي
 
-          // الإدخال اليدوي → تحرير إجباري
+          // الإدخال اليدوي → تحرير إجباري (دائماً)
           if (USER_INPUT_SOURCE_TYPE_IDS.has(article.source_type_id)) {
             flowType = 'editorial';
+            console.log(`📝 الخبر ${article.id} — إدخال يدوي → تحرير إجباري`);
           } else if (category) {
             flowType = category.flow;
           } else {
@@ -328,6 +329,8 @@ export class FlowRouterService {
   /**
    * Auto-approve للأخبار الأوتوماتيكية المكتملة
    * يحدّث الحالة من pending → approved وينشر في published_items
+   * 
+   * التحقق من التكرار: لا ننشر نفس raw_data_id مع نفس media_unit_id مرتين
    */
   private async autoApproveAndPublish(
     article: RawDataItem,
@@ -335,6 +338,19 @@ export class FlowRouterService {
   ): Promise<void> {
     for (const { queueId, mediaUnitId } of queueItems) {
       try {
+        // ─── التحقق من التكرار ───────────────────────────────────
+        // تحقق من وجود نفس raw_data_id مع نفس media_unit_id في published_items
+        const existsResult = await query(
+          `SELECT id FROM published_items 
+           WHERE raw_data_id = $1 AND media_unit_id = $2`,
+          [article.id, mediaUnitId]
+        );
+
+        if (existsResult.rows.length > 0) {
+          console.log(`  ⚠️ الخبر ${article.id} موجود مسبقاً في published_items للوحدة ${mediaUnitId} — تم تجاهل النشر المكرر`);
+          continue;
+        }
+
         // تحديث الحالة إلى approved
         await query(
           `UPDATE editorial_queue SET status = 'approved', updated_at = NOW() WHERE id = $1`,

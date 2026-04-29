@@ -23,6 +23,7 @@ interface IdeasRequest {
   };
   guest?: {
     name: string;
+    title?: string;
   };
   additional_context?: string;
 }
@@ -88,7 +89,8 @@ export async function generateIdeas(
 
     } else if (tool === 'QUESTIONS') {
       system = 'أنت معد برامج محترف ومحاور متمرس. مهمتك توليد أسئلة مقابلة عميقة وذكية تناسب الضيف والبرنامج.';
-      prompt = `${programCtx}\n\nالضيف: ${guest!.name}${ctx}\n\nاقترح 10 أسئلة ذكية للمقابلة. رتبها من العامة إلى الخاصة، وتنوع بين الأسئلة المفتوحة والاستفزازية والإنسانية.`;
+      const guestInfo = guest!.title ? `${guest!.name} (${guest!.title})` : guest!.name;
+      prompt = `${programCtx}\n\nالضيف: ${guestInfo}${ctx}\n\nاقترح 10 أسئلة ذكية للمقابلة. رتبها من العامة إلى الخاصة، وتنوع بين الأسئلة المفتوحة والاستفزازية والإنسانية.`;
 
     } else {
       system = 'أنت كاتب عناوين إعلامية محترف. مهمتك توليد عناوين جذابة وقوية تشد الجمهور وتعكس مضمون المحتوى.';

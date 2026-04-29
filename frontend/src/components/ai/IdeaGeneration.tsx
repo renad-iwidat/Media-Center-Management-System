@@ -27,6 +27,7 @@ interface Episode {
 interface Guest {
   id: number;
   name: string;
+  title?: string;
 }
 
 type Tool = 'IDEAS' | 'QUESTIONS' | 'TITLES';
@@ -152,7 +153,8 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
   });
   
   const filteredGuests = guests.filter((g: Guest) =>
-    g.name.toLowerCase().includes(guestSearch.toLowerCase())
+    g.name.toLowerCase().includes(guestSearch.toLowerCase()) ||
+    (g.title && g.title.toLowerCase().includes(guestSearch.toLowerCase()))
   );
 
   const filteredEpisodes = episodes;
@@ -191,7 +193,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
         },
       }),
       ...(activeTool === 'QUESTIONS' && selectedGuest && {
-        guest: { name: selectedGuest.name },
+        guest: { name: selectedGuest.name, title: selectedGuest.title },
       }),
       additional_context: additionalContext || undefined,
     };
@@ -456,6 +458,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                               <User size={16} className="text-[#FF9F43] shrink-0" />
                               <div className="flex flex-col">
                                 <span className="text-sm font-bold text-gray-900">{g.name}</span>
+                                {g.title && <span className="text-[10px] text-gray-600">{g.title}</span>}
                                 <span className="text-[10px] text-[#FF9F43]">ضيف الحلقة</span>
                               </div>
                             </div>
@@ -480,6 +483,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                                 <User size={16} className="text-[#1e4a66] shrink-0" />
                                 <div className="flex flex-col">
                                   <span className="text-sm font-bold text-gray-900">{g.name}</span>
+                                  {g.title && <span className="text-[10px] text-gray-600">{g.title}</span>}
                                 </div>
                               </div>
                               {selectedGuest?.id === g.id && <Check size={14} className="text-[#FF9F43]" />}
@@ -511,7 +515,10 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                 {activeTool === 'QUESTIONS' && selectedGuest && (
                   <div className="flex items-center gap-2 mr-4">
                     <User size={12} className="text-[#FF9F43]" />
-                    <span className="text-gray-700">{selectedGuest.name}</span>
+                    <div className="flex flex-col">
+                      <span className="text-gray-700">{selectedGuest.name}</span>
+                      {selectedGuest.title && <span className="text-[10px] text-gray-600">{selectedGuest.title}</span>}
+                    </div>
                   </div>
                 )}
               </div>

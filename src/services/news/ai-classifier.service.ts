@@ -56,9 +56,10 @@ class AIClassifierService {
 مهمتك تصنيف الأخبار وفق المنظور التحريري الفلسطيني وليس فقط الموضوع العام للخبر.
 
 قواعد التصنيف:
-1- إذا كان الخبر يتعلق بالشأن الفلسطيني الداخلي أو أحداث داخل فلسطين أو غزة أو الضفة أو القدس أو المؤسسات الفلسطينية أو العدوان على فلسطين أو تطورات محلية فلسطينية، فالأولوية تكون لتصنيفه: سياسة محلية.
-2- حتى لو احتوى الخبر على عناصر صحية أو اقتصادية أو اجتماعية، إذا كان جوهره مرتبطاً بالوضع الداخلي الفلسطيني فيصنف محلي.
-3- استخدم التصنيفات الأخرى فقط إذا كان الخبر موضوعياً ومتخصصاً بها وليس حدثاً فلسطينياً محلياً.
+1- سياسي: أخبار سياسية وعسكرية والعدوان على فلسطين والاحتلال والمقاومة والصراع الفلسطيني الإسرائيلي والقضايا السياسية الفلسطينية والدولية المتعلقة بفلسطين.
+2- محلي: أخبار محلية فلسطينية عامة (اجتماعية، ثقافية، إنسانية، تنموية) بدون بعد سياسي أو عسكري مباشر.
+3- دولي: أخبار دولية وعالمية بدون علاقة مباشرة بفلسطين.
+4- استخدم التصنيفات الأخرى (اقتصاد، صحة، رياضة، إلخ) فقط إذا كان الخبر متخصصاً بها بشكل واضح.
 
 يجب أن يكون الرد كلمة واحدة فقط من القائمة التالية حصراً:
 غذاء
@@ -82,16 +83,21 @@ USER:
    * استخراج التصنيف من نتيجة الـ API
    */
   private extractCategory(result: string): string {
+    // تنظيف النتيجة من المسافات الزائدة والأحرف الخاصة
+    const cleanResult = result.trim().toLowerCase();
+    
     // البحث عن التصنيف في النتيجة
     const categories = Object.keys(CATEGORY_MAP);
     
     for (const category of categories) {
-      if (result.includes(category)) {
+      // البحث الدقيق: كلمة كاملة أو جزء من النتيجة
+      if (cleanResult.includes(category.toLowerCase())) {
         return category;
       }
     }
 
     // إذا لم نجد تصنيف، نرجع محلي كقيمة افتراضية
+    console.warn(`⚠️  لم يتم العثور على تصنيف معروف في النتيجة: "${result}"`);
     return 'غير مصنف';
   }
 
@@ -126,13 +132,21 @@ USER:
 
         const rawResult = response.data.result || '';
         const category = this.extractCategory(rawResult);
-        const categoryId = CATEGORY_MAP[category] || 1;
+        const categoryId = CATEGORY_MAP[category] || null;
+        
         // confidence=true إذا الـ AI رجع تصنيف معروف، false إذا رجع "غير مصنف"
         const confidence = category !== 'غير مصنف';
 
+        // logging
+        if (categoryId) {
+          console.log(`   ✅ تصنيف: ${category} (ID: ${categoryId})`);
+        } else {
+          console.warn(`   ⚠️  تصنيف غير معروف: "${category}" — سيتم استخدام محلي (ID: 1)`);
+        }
+
         return {
           category,
-          categoryId,
+          categoryId: categoryId || 1, // fallback إلى 1 (محلي) إذا كان null
           confidence,
           rawResult,
         };

@@ -25,6 +25,7 @@ export interface Episode {
 export interface Guest {
   id: number;
   name: string;
+  title?: string;
 }
 
 export interface EpisodeWithGuests extends Episode {
@@ -120,7 +121,7 @@ export class GuestsService {
    */
   static async getAll(): Promise<Guest[]> {
     const result = await query(
-      `SELECT id, name FROM guests ORDER BY name`
+      `SELECT id, name, title FROM guests ORDER BY name`
     );
     return result.rows;
   }
@@ -130,7 +131,7 @@ export class GuestsService {
    */
   static async getById(id: number): Promise<Guest | null> {
     const result = await query(
-      `SELECT id, name FROM guests WHERE id = $1`,
+      `SELECT id, name, title FROM guests WHERE id = $1`,
       [id]
     );
     return result.rows[0] || null;
@@ -141,7 +142,7 @@ export class GuestsService {
    */
   static async getByEpisodeId(episode_id: number): Promise<Guest[]> {
     const result = await query(
-      `SELECT g.id, g.name
+      `SELECT g.id, g.name, g.title
        FROM guests g
        INNER JOIN episode_guests eg ON g.id = eg.guest_id
        WHERE eg.episode_id = $1
@@ -156,18 +157,18 @@ export class GuestsService {
    */
   static async getRecent(limit: number = 2): Promise<Guest[]> {
     const result = await query(
-      `SELECT id, name FROM guests ORDER BY id DESC LIMIT $1`,
+      `SELECT id, name, title FROM guests ORDER BY id DESC LIMIT $1`,
       [limit]
     );
     return result.rows;
   }
 
   /**
-   * البحث عن ضيوف بالاسم
+   * البحث عن ضيوف بالاسم أو التايتل
    */
   static async search(term: string): Promise<Guest[]> {
     const result = await query(
-      `SELECT id, name FROM guests WHERE name ILIKE $1 ORDER BY name LIMIT 20`,
+      `SELECT id, name, title FROM guests WHERE name ILIKE $1 OR title ILIKE $1 ORDER BY name LIMIT 20`,
       [`%${term}%`]
     );
     return result.rows;

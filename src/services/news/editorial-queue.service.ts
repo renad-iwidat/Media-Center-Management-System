@@ -315,6 +315,8 @@ export class EditorialQueueService {
   /**
    * نشر الخبر المعتمد في published_items
    * queue_id دايماً موجود — كل خبر منشور مربوط بسجل editorial_queue
+   * 
+   * التحقق من التكرار: لا ننشر نفس raw_data_id مع نفس media_unit_id مرتين
    */
   private async publishApprovedItem(
     queueId: number,
@@ -346,6 +348,20 @@ export class EditorialQueueService {
       }
 
       const item = queueItem.rows[0];
+
+      // ─── التحقق من التكرار ───────────────────────────────────
+      // تحقق من وجود نفس raw_data_id مع نفس media_unit_id في published_items
+      const existsResult = await query(
+        `SELECT id FROM published_items 
+         WHERE raw_data_id = $1 AND media_unit_id = $2`,
+        [item.raw_data_id, item.media_unit_id]
+      );
+
+      if (existsResult.rows.length > 0) {
+        console.log(`⚠️ الخبر ${item.raw_data_id} موجود مسبقاً في published_items للوحدة ${item.media_unit_id} — تم تجاهل النشر المكرر`);
+        return;
+      }
+
       const contentTypeId = 1; // أخبار
 
       const titleToPublish = finalTitle || item.title;

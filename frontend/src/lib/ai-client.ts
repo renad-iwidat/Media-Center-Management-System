@@ -110,6 +110,7 @@ export interface IdeasPayload {
   };
   guest?: {
     name: string;
+    title?: string;
   };
   additional_context?: string;
 }
