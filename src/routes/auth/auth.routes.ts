@@ -1,7 +1,12 @@
 /**
  * نقاط وصول المصادقة
- * POST /api/auth/login — تسجيل الدخول
- * GET /api/auth/me — جلب بيانات المستخدم الحالي
+ * 
+ * ⚠️ ملاحظة مهمة:
+ * - اللوجين يتم من نظام الإدارة فقط: https://media-center-management-system.onrender.com/api/auth/login
+ * - نظام الأخبار يستقبل التوكن من نظام الإدارة ويستخدمه للتحقق من الصلاحيات
+ * - لا يوجد تسجيل دخول مستقل في نظام الأخبار
+ * 
+ * GET /api/auth/me — جلب بيانات المستخدم الحالي (يتطلب توكن من نظام الإدارة)
  */
 
 import { Router, Request, Response } from 'express';
@@ -11,56 +16,67 @@ import { authenticate } from '../../middleware/auth';
 const router = Router();
 
 /**
- * تسجيل الدخول
- * POST /api/auth/login
+ * ⚠️ تسجيل الدخول معطّل
  * 
- * الجسم:
- * {
- *   "email": "a.moqadi@najah.edu",
- *   "password": "a.mo1234"
- * }
+ * اللوجين يجب أن يكون من نظام الإدارة فقط:
+ * POST https://media-center-management-system.onrender.com/api/auth/login
  * 
- * الرد:
- * {
- *   "success": true,
- *   "data": {
- *     "token": "eyJhbGciOiJIUzI1NiIs...",
- *     "user": {
- *       "id": 57,
- *       "name": "أحمد موقدي",
- *       "email": "a.moqadi@najah.edu",
- *       "roles": [{ "id": 19, "name": "مخرج" }]
- *     }
- *   }
- * }
+ * هذا الـ endpoint معطّل لأن نظام الأخبار يستقبل التوكن من نظام الإدارة فقط
+ * ولا يقوم بتسجيل دخول مستقل.
  */
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body;
+// router.post('/login', async (req: Request, res: Response): Promise<void> => {
+//   // معطّل - استخدم نظام الإدارة للوجين
+// });
 
-    if (!email || !password) {
-      res.status(400).json({
-        success: false,
-        error: 'Email and password are required',
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-
-    const result = await AuthService.login(email, password);
-
-    res.status(200).json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    res.status(401).json({
-      success: false,
-      error: error.message || 'Login failed',
-      timestamp: new Date().toISOString(),
-    });
-  }
+/**
+ * معلومات عن اللوجين
+ * GET /api/auth/login-info
+ * 
+ * يرجع معلومات عن كيفية تسجيل الدخول
+ */
+router.get('/login-info', (_req: Request, res: Response): void => {
+  res.status(200).json({
+    success: true,
+    message: 'اللوجين يتم من نظام الإدارة فقط',
+    loginUrl: 'https://media-center-management-system.onrender.com/api/auth/login',
+    instructions: {
+      step1: 'سجّل الدخول من نظام الإدارة',
+      step2: 'احصل على التوكن من الرد',
+      step3: 'استخدم التوكن في جميع طلبات نظام الأخبار',
+      step4: 'أرسل التوكن في الـ Authorization Header: Bearer <token>'
+    },
+    example: {
+      loginRequest: {
+        method: 'POST',
+        url: 'https://media-center-management-system.onrender.com/api/auth/login',
+        body: {
+          email: 'a.moqadi@najah.edu',
+          password: 'a.mo1234'
+        }
+      },
+      loginResponse: {
+        success: true,
+        data: {
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          user: {
+            id: 57,
+            name: 'أحمد موقدي',
+            email: 'a.moqadi@najah.edu',
+            roles: [{ id: 19, name: 'مخرج' }]
+          }
+        }
+      },
+      newsSystemRequest: {
+        method: 'GET',
+        url: 'https://automation-and-ai-hub-backend.onrender.com/api/ai-hub/analytics/overview',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          'Content-Type': 'application/json'
+        }
+      }
+    },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 /**
