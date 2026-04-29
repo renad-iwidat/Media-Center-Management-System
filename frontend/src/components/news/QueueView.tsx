@@ -59,17 +59,6 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     loadData();
   }, [unitId]);
 
-  // الاستماع لحدث الريفريش التلقائي
-  useEffect(() => {
-    const handleDataRefresh = () => {
-      console.log('🔄 [QueueView] تحديث البيانات بناءً على حدث الريفريش');
-      loadData();
-    };
-
-    window.addEventListener('dataRefresh', handleDataRefresh);
-    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
-  }, []);
-
   // Apply filters
   useEffect(() => {
     let filtered = [...queue];

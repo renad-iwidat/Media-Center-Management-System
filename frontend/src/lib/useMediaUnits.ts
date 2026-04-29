@@ -24,9 +24,10 @@ export function useMediaUnits() {
   const [mediaUnits, setMediaUnits] = useState<MediaUnit[]>(_cache ?? []);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchMediaUnits = () => {
     // لا نجلب البيانات إذا كانت محفوظة بالفعل
-    if (_cache) {
+    if (_cache && _cache.length > 0) {
+      console.log('📋 [MEDIA-UNITS] استخدام البيانات المحفوظة من الـ cache');
       setMediaUnits(_cache);
       return;
     }
@@ -69,6 +70,10 @@ export function useMediaUnits() {
         setMediaUnits([]);
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMediaUnits();
   }, []); // بدون dependencies عشان ما يعيدش تشغيل
 
   return { mediaUnits, loading };

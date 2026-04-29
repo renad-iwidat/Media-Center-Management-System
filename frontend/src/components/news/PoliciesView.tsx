@@ -58,15 +58,6 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
     };
 
     loadData();
-
-    // الاستماع لحدث الريفريش التلقائي
-    const handleDataRefresh = () => {
-      console.log('🔄 [PoliciesView] تحديث البيانات بناءً على حدث الريفريش');
-      loadData();
-    };
-
-    window.addEventListener('dataRefresh', handleDataRefresh);
-    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, [unitId]);
 
   const handleApply = async () => {

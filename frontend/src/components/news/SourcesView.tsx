@@ -22,17 +22,6 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
     loadData();
   }, []);
 
-  // الاستماع لحدث الريفريش التلقائي
-  useEffect(() => {
-    const handleDataRefresh = () => {
-      console.log('🔄 [SourcesView] تحديث البيانات بناءً على حدث الريفريش');
-      loadData();
-    };
-
-    window.addEventListener('dataRefresh', handleDataRefresh);
-    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
-  }, []);
-
   if (loading) return <LoadingSpinner />;
 
   return (

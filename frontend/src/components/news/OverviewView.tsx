@@ -39,17 +39,6 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
     loadData();
   }, [unitId]);
 
-  // الاستماع لحدث الريفريش التلقائي
-  useEffect(() => {
-    const handleDataRefresh = () => {
-      console.log('🔄 [OverviewView] تحديث البيانات بناءً على حدث الريفريش');
-      loadData();
-    };
-
-    window.addEventListener('dataRefresh', handleDataRefresh);
-    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
-  }, []);
-
   // إجمالي في الانتظار (pending + incomplete)
   const totalPending = queueStats.reduce(
     (sum, u) => sum + Number(u.pending_count || 0) + Number(u.incomplete_count || 0),

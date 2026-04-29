@@ -295,7 +295,17 @@ export default function App() {
       .catch(() => setIsSystemOnline(false));
   }, [isAuthenticated]); // dependency على isAuthenticated
 
-  // 5. Search functionality
+  // 5. Reload media units when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    // إعادة تحميل الوحدات الإعلامية عند تسجيل الدخول
+    console.log('🔄 [APP] إعادة تحميل الوحدات الإعلامية بعد تسجيل الدخول');
+    // نمسح الـ cache عشان يعيد التحميل
+    clearMediaUnitsCache();
+  }, [isAuthenticated]);
+
+  // 6. Search functionality
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
@@ -322,37 +332,6 @@ export default function App() {
 
     setSearchResults(results);
   }, [searchQuery]);
-
-  // 6. Auto-refresh every 5 minutes (300000ms)
-  useEffect(() => {
-    if (!isAuthenticated) return; // فقط إذا كان مسجل دخول
-
-    // دالة لتحديث البيانات
-    const refreshData = () => {
-      console.log('🔄 [AUTO-REFRESH] تحديث البيانات تلقائياً...');
-      
-      // تحديث إحصائيات النظام
-      api.getSystemToggles()
-        .then((res) => {
-          const d = res.data || {};
-          setIsSystemOnline(!!(d.scheduler_enabled && d.classifier_enabled && d.flow_enabled));
-        })
-        .catch(() => setIsSystemOnline(false));
-      
-      // إرسال حدث مخصص لتحديث البيانات في المكونات الأخرى
-      window.dispatchEvent(new CustomEvent('dataRefresh', { detail: { timestamp: Date.now() } }));
-    };
-
-    // تشغيل الريفريش الأول بعد 5 دقايق
-    const intervalId = setInterval(refreshData, 5 * 60 * 1000); // 5 دقايق
-
-    console.log('⏰ [AUTO-REFRESH] تم تفعيل الريفريش التلقائي كل 5 دقايق');
-
-    return () => {
-      clearInterval(intervalId);
-      console.log('⏹️ [AUTO-REFRESH] تم إيقاف الريفريش التلقائي');
-    };
-  }, [isAuthenticated]);
   
   // دالة تسجيل الخروج
   const handleLogout = () => {
