@@ -48,7 +48,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
 
     window.addEventListener('dataRefresh', handleDataRefresh);
     return () => window.removeEventListener('dataRefresh', handleDataRefresh);
-  }, [unitId]);
+  }, []);
 
   // إجمالي في الانتظار (pending + incomplete)
   const totalPending = queueStats.reduce(

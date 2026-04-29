@@ -46,7 +46,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
 
     window.addEventListener('dataRefresh', handleDataRefresh);
     return () => window.removeEventListener('dataRefresh', handleDataRefresh);
-  }, [unitId]);
+  }, []);
 
   // Apply filters
   useEffect(() => {
