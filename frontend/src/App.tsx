@@ -425,7 +425,6 @@ export default function App() {
                 <span className="font-arabic font-bold text-xl tracking-tight truncate text-white">
                   مركز <span className="text-[#FF9F43]">الإعلام</span>
                 </span>
-                <span className="text-xs text-white/70 font-medium">جامعة النجاح الوطنية</span>
               </div>
             </motion.div>
           )}

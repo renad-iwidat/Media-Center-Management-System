@@ -182,9 +182,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               <LogIn className="text-white w-8 h-8 relative z-10" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">تسجيل الدخول</h1>
-            <p className="text-gray-600 text-sm">
-              <span className="text-[#FF9F43] font-semibold">مركز الإعلام</span> — جامعة النجاح الوطنية
-            </p>
           </div>
 
           {/* Error Message */}
