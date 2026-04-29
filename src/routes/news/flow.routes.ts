@@ -15,6 +15,9 @@ router.use(authenticate);
 // معالجة الأخبار الجديدة
 router.post('/process', FlowController.processNewArticles);
 
+// ستوديو التحرير - endpoint جديد يدعم task_id
+router.get('/editorial', FlowController.getEditorialStudio);
+
 // طابور التحرير
 router.get('/queue/pending', FlowController.getPendingQueue);
 router.get('/queue/stats', FlowController.getQueueStats);

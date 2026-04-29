@@ -6,137 +6,302 @@
 
 ---
 
+## 🔐 المصادقة والتوكن (Authentication)
+
+**⚠️ ملاحظة مهمة جداً:**
+
+جميع APIs نظام الأخبار **تتطلب توكن مصادقة (JWT Token)** للوصول إليها. النظام يستخدم نظام تسجيل دخول ومصادقة كامل.
+
+### كيفية الحصول على التوكن:
+
+1. **تسجيل الدخول:**
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "your_password"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "name": "اسم المستخدم",
+    "email": "user@example.com"
+  }
+}
+```
+
+2. **استخدام التوكن في الطلبات:**
+
+يجب إرسال التوكن في header كل طلب:
+
+```bash
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**مثال باستخدام cURL:**
+```bash
+curl -X GET http://localhost:3000/api/flow/queue/pending \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json"
+```
+
+**مثال باستخدام Postman:**
+- اذهب إلى تبويب **Authorization**
+- اختر **Type: Bearer Token**
+- الصق التوكن في حقل **Token**
+
+**مثال باستخدام JavaScript (fetch):**
+```javascript
+fetch('http://localhost:3000/api/flow/queue/pending', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+})
+```
+
+### معلومات إضافية عن المصادقة:
+
+- **التوكن يحتوي على:** `user_id`, `email`, `role_id`, `permissions`
+- **صلاحية التوكن:** 24 ساعة (يمكن تجديده)
+- **عند انتهاء التوكن:** ستحصل على خطأ `401 Unauthorized`
+- **الحقول المستخرجة من التوكن:**
+  - `req.user.user_id` — رقم المستخدم
+  - `req.user.email` — البريد الإلكتروني
+  - `req.user.role_id` — رقم الدور
+  - `req.userPermissions` — صلاحيات المستخدم
+
+### APIs لا تتطلب توكن:
+
+فقط endpoint تسجيل الدخول لا يتطلب توكن:
+- `POST /api/auth/login`
+
+**جميع APIs الأخرى تتطلب توكن صالح.**
+
+---
+
 ## فهرس الـ Endpoints
 
+> **🔒 ملاحظة:** جميع الـ Endpoints التالية تتطلب توكن مصادقة في الـ Header ما عدا `/api/auth/login`
+
+### 0. Authentication — المصادقة
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 0 | POST | `/api/auth/login` | تسجيل الدخول | ❌ لا |
+| 0.1 | GET | `/api/auth/me` | معلومات المستخدم الحالي | ✅ نعم |
+
 ### 1. Sources & News — المصادر والأخبار
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 1 | GET | `/api/sources` | جميع المصادر |
-| 2 | GET | `/api/sources/active` | المصادر النشطة |
-| 3 | GET | `/api/sources/:id` | مصدر بالـ ID |
-| 4 | POST | `/api/sources` | إنشاء مصدر |
-| 5 | PUT | `/api/sources/:id` | تحديث مصدر |
-| 6 | GET | `/api/news` | جميع الأخبار الخام |
-| 7 | GET | `/api/news/:id` | خبر بالـ ID |
-| 8 | GET | `/api/news/source/:sourceId` | أخبار مصدر معين |
-| 9 | POST | `/api/news` | إنشاء خبر |
-| 10 | GET | `/api/news/classifier/unclassified` | أخبار بدون تصنيف |
-| 11 | POST | `/api/news/classifier/process` | تشغيل التصنيف الآلي |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 1 | GET | `/api/sources` | جميع المصادر | ✅ نعم |
+| 2 | GET | `/api/sources/active` | المصادر النشطة | ✅ نعم |
+| 3 | GET | `/api/sources/:id` | مصدر بالـ ID | ✅ نعم |
+| 4 | POST | `/api/sources` | إنشاء مصدر | ✅ نعم |
+| 5 | PUT | `/api/sources/:id` | تحديث مصدر | ✅ نعم |
+| 6 | GET | `/api/news` | جميع الأخبار الخام | ✅ نعم |
+| 7 | GET | `/api/news/:id` | خبر بالـ ID | ✅ نعم |
+| 8 | GET | `/api/news/source/:sourceId` | أخبار مصدر معين | ✅ نعم |
+| 9 | POST | `/api/news` | إنشاء خبر | ✅ نعم |
+| 10 | GET | `/api/news/classifier/unclassified` | أخبار بدون تصنيف | ✅ نعم |
+| 11 | POST | `/api/news/classifier/process` | تشغيل التصنيف الآلي | ✅ نعم |
 
 ### 2. Data — البيانات والإحصائيات
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 12 | GET | `/api/data/sources` | جميع المصادر (data) |
-| 13 | GET | `/api/data/sources/active` | المصادر النشطة (data) |
-| 14 | GET | `/api/data/articles` | جميع الأخبار مع pagination |
-| 15 | GET | `/api/data/articles/:id/detail` | خبر واحد بالتفاصيل |
-| 16 | GET | `/api/data/articles/source/:sourceId` | أخبار مصدر |
-| 17 | GET | `/api/data/articles/category/:categoryId` | أخبار تصنيف |
-| 18 | GET | `/api/data/articles/incomplete` | الأخبار الناقصة |
-| 19 | PUT | `/api/data/articles/:id/content` | تحديث محتوى خبر |
-| 20 | DELETE | `/api/data/articles/:id` | حذف خبر |
-| 21 | GET | `/api/data/categories` | جميع التصنيفات |
-| 22 | GET | `/api/data/media-units` | وحدات الإعلام |
-| 23 | GET | `/api/data/comprehensive` | بيانات شاملة |
-| 24 | GET | `/api/data/statistics` | إحصائيات النظام |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 12 | GET | `/api/data/sources` | جميع المصادر (data) | ✅ نعم |
+| 13 | GET | `/api/data/sources/active` | المصادر النشطة (data) | ✅ نعم |
+| 14 | GET | `/api/data/articles` | جميع الأخبار مع pagination | ✅ نعم |
+| 15 | GET | `/api/data/articles/:id/detail` | خبر واحد بالتفاصيل | ✅ نعم |
+| 16 | GET | `/api/data/articles/source/:sourceId` | أخبار مصدر | ✅ نعم |
+| 17 | GET | `/api/data/articles/category/:categoryId` | أخبار تصنيف | ✅ نعم |
+| 18 | GET | `/api/data/articles/incomplete` | الأخبار الناقصة | ✅ نعم |
+| 19 | PUT | `/api/data/articles/:id/content` | تحديث محتوى خبر | ✅ نعم |
+| 20 | DELETE | `/api/data/articles/:id` | حذف خبر | ✅ نعم |
+| 21 | GET | `/api/data/categories` | جميع التصنيفات | ✅ نعم |
+| 22 | GET | `/api/data/media-units` | وحدات الإعلام | ✅ نعم |
+| 23 | GET | `/api/data/comprehensive` | بيانات شاملة | ✅ نعم |
+| 24 | GET | `/api/data/statistics` | إحصائيات النظام | ✅ نعم |
 
 ### 3. Flow — فلو معالجة الأخبار
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 25 | POST | `/api/flow/process` | تشغيل فلو التوجيه |
-| 26 | GET | `/api/flow/queue/pending` | الطابور المعلق |
-| 27 | GET | `/api/flow/queue/stats` | إحصائيات الطابور |
-| 28 | GET | `/api/flow/queue/:id` | عنصر من الطابور |
-| 29 | POST | `/api/flow/queue/:id/approve` | موافقة على خبر |
-| 30 | POST | `/api/flow/queue/:id/reject` | رفض خبر |
-| 31 | GET | `/api/flow/published` | المحتوى المنشور |
-| 32 | GET | `/api/flow/published/stats` | إحصائيات المنشور |
-| 33 | GET | `/api/flow/published/:id` | منشور واحد |
-| 34 | GET | `/api/flow/published/category/:category` | منشور حسب الفئة |
-| 35 | GET | `/api/flow/daily-stats` | إحصائيات يومية |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 25 | POST | `/api/flow/process` | تشغيل فلو التوجيه | ✅ نعم |
+| 25.1 | GET | `/api/flow/editorial` | ستوديو التحرير (يدعم task_id) | ✅ نعم |
+| 26 | GET | `/api/flow/queue/pending` | الطابور المعلق | ✅ نعم |
+| 27 | GET | `/api/flow/queue/stats` | إحصائيات الطابور | ✅ نعم |
+| 28 | GET | `/api/flow/queue/:id` | عنصر من الطابور | ✅ نعم |
+| 29 | POST | `/api/flow/queue/:id/approve` | موافقة على خبر | ✅ نعم |
+| 30 | POST | `/api/flow/queue/:id/reject` | رفض خبر | ✅ نعم |
+| 31 | GET | `/api/flow/published` | المحتوى المنشور | ✅ نعم |
+| 32 | GET | `/api/flow/published/stats` | إحصائيات المنشور | ✅ نعم |
+| 33 | GET | `/api/flow/published/:id` | منشور واحد | ✅ نعم |
+| 34 | GET | `/api/flow/published/category/:category` | منشور حسب الفئة | ✅ نعم |
+| 35 | GET | `/api/flow/daily-stats` | إحصائيات يومية | ✅ نعم |
 
 ### 4. Editorial Policies — السياسات التحريرية
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 36 | GET | `/api/news/editorial-policies` | جميع السياسات |
-| 37 | POST | `/api/news/editorial-policies` | إنشاء سياسة |
-| 38 | GET | `/api/news/editorial-policies/:policyName` | تفاصيل سياسة |
-| 39 | PUT | `/api/news/editorial-policies/:policyName` | تحديث سياسة |
-| 40 | DELETE | `/api/news/editorial-policies/:policyName` | حذف سياسة |
-| 41 | POST | `/api/news/editorial-policies/apply` | تطبيق سياسة واحدة |
-| 42 | POST | `/api/news/editorial-policies/sequential` | تطبيق متسلسل |
-| 43 | POST | `/api/news/editorial-policies/pipeline` | pipeline للفرونت |
-| 44 | POST | `/api/news/editorial-policies/save-edited` | حفظ النص المعدّل |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 36 | GET | `/api/news/editorial-policies` | جميع السياسات | ✅ نعم |
+| 37 | POST | `/api/news/editorial-policies` | إنشاء سياسة | ✅ نعم |
+| 38 | GET | `/api/news/editorial-policies/:policyName` | تفاصيل سياسة | ✅ نعم |
+| 39 | PUT | `/api/news/editorial-policies/:policyName` | تحديث سياسة | ✅ نعم |
+| 40 | DELETE | `/api/news/editorial-policies/:policyName` | حذف سياسة | ✅ نعم |
+| 41 | POST | `/api/news/editorial-policies/apply` | تطبيق سياسة واحدة | ✅ نعم |
+| 42 | POST | `/api/news/editorial-policies/sequential` | تطبيق متسلسل | ✅ نعم |
+| 43 | POST | `/api/news/editorial-policies/pipeline` | pipeline للفرونت | ✅ نعم |
+| 44 | POST | `/api/news/editorial-policies/save-edited` | حفظ النص المعدّل | ✅ نعم |
 
 ### 5. System Settings — إعدادات النظام
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 45 | GET | `/api/settings` | جميع إعدادات النظام |
-| 46 | GET | `/api/settings/toggles` | حالة الـ toggles |
-| 47 | PATCH | `/api/settings/:key` | تحديث إعداد واحد |
-| 48 | PATCH | `/api/settings/toggles/bulk` | تحديث دفعة |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 45 | GET | `/api/settings` | جميع إعدادات النظام | ✅ نعم |
+| 46 | GET | `/api/settings/toggles` | حالة الـ toggles | ✅ نعم |
+| 47 | PATCH | `/api/settings/:key` | تحديث إعداد واحد | ✅ نعم |
+| 48 | PATCH | `/api/settings/toggles/bulk` | تحديث دفعة | ✅ نعم |
 
 ### 6. AI Hub — المساعد الذكي
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 49 | POST | `/api/ai-hub/chat/generate` | توليد رد من المساعد |
-| 50 | POST | `/api/ai-hub/chat/summarize` | تلخيص نص |
-| 51 | POST | `/api/ai-hub/chat/rewrite` | إعادة صياغة نص |
-| 52 | POST | `/api/ai-hub/ideas/generate` | توليد أفكار |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 49 | POST | `/api/ai-hub/chat/generate` | توليد رد من المساعد | ✅ نعم |
+| 50 | POST | `/api/ai-hub/chat/summarize` | تلخيص نص | ✅ نعم |
+| 51 | POST | `/api/ai-hub/chat/rewrite` | إعادة صياغة نص | ✅ نعم |
+| 52 | POST | `/api/ai-hub/ideas/generate` | توليد أفكار | ✅ نعم |
 
 ### 7. Speech-to-Text — تحويل الصوت إلى نص
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 53 | POST | `/api/ai-hub/stt/transcribe-url` | تفريغ من رابط |
-| 54 | POST | `/api/ai-hub/stt/transcribe-file` | تفريغ من S3 |
-| 55 | POST | `/api/ai-hub/stt/transcribe-upload` | تفريغ من ملف مرفوع |
-| 56 | POST | `/api/ai-hub/stt/transcribe-base64` | تفريغ من base64 |
-| 57 | GET | `/api/ai-hub/stt/languages` | اللغات المدعومة |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 53 | POST | `/api/ai-hub/stt/transcribe-url` | تفريغ من رابط | ✅ نعم |
+| 54 | POST | `/api/ai-hub/stt/transcribe-file` | تفريغ من S3 | ✅ نعم |
+| 55 | POST | `/api/ai-hub/stt/transcribe-upload` | تفريغ من ملف مرفوع | ✅ نعم |
+| 56 | POST | `/api/ai-hub/stt/transcribe-base64` | تفريغ من base64 | ✅ نعم |
+| 57 | GET | `/api/ai-hub/stt/languages` | اللغات المدعومة | ✅ نعم |
 
 ### 8. Text-to-Speech — تحويل النص إلى صوت
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 58 | POST | `/api/ai-hub/tts/generate` | تحويل نص لصوت |
-| 59 | GET | `/api/ai-hub/tts/voices` | الأصوات المتاحة |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 58 | POST | `/api/ai-hub/tts/generate` | تحويل نص لصوت | ✅ نعم |
+| 59 | GET | `/api/ai-hub/tts/voices` | الأصوات المتاحة | ✅ نعم |
 
 ### 9. Audio Extraction — استخراج الصوت
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 60 | POST | `/api/ai-hub/audio-extraction/extract-from-file` | استخراج من ملف محلي |
-| 61 | POST | `/api/ai-hub/audio-extraction/extract-from-url` | استخراج من رابط |
-| 62 | POST | `/api/ai-hub/audio-extraction/extract-from-s3` | استخراج من S3 |
-| 63 | POST | `/api/ai-hub/audio-extraction/video-info` | معلومات الفيديو |
-| 64 | GET | `/api/ai-hub/audio-extraction/formats` | الصيغ المدعومة |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 60 | POST | `/api/ai-hub/audio-extraction/extract-from-file` | استخراج من ملف محلي | ✅ نعم |
+| 61 | POST | `/api/ai-hub/audio-extraction/extract-from-url` | استخراج من رابط | ✅ نعم |
+| 62 | POST | `/api/ai-hub/audio-extraction/extract-from-s3` | استخراج من S3 | ✅ نعم |
+| 63 | POST | `/api/ai-hub/audio-extraction/video-info` | معلومات الفيديو | ✅ نعم |
+| 64 | GET | `/api/ai-hub/audio-extraction/formats` | الصيغ المدعومة | ✅ نعم |
 
 ### 10. Video to Text — تحويل الفيديو إلى نص
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 65 | POST | `/api/ai-hub/video-to-text/process` | معالجة فيديو من رابط |
-| 66 | POST | `/api/ai-hub/video-to-text/process-s3` | معالجة فيديو من S3 |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 65 | POST | `/api/ai-hub/video-to-text/process` | معالجة فيديو من رابط | ✅ نعم |
+| 66 | POST | `/api/ai-hub/video-to-text/process-s3` | معالجة فيديو من S3 | ✅ نعم |
 
 ### 11. Programs & Episodes — البرامج والحلقات
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 67 | GET | `/api/programs` | جميع البرامج |
-| 68 | GET | `/api/programs/:id` | برنامج بالـ ID |
-| 69 | GET | `/api/programs/:id/episodes` | حلقات برنامج |
-| 70 | GET | `/api/programs/episodes/:id/details` | حلقة مع ضيوفها |
-| 71 | GET | `/api/programs/episodes/:id/guests` | ضيوف حلقة |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 67 | GET | `/api/programs` | جميع البرامج | ✅ نعم |
+| 68 | GET | `/api/programs/:id` | برنامج بالـ ID | ✅ نعم |
+| 69 | GET | `/api/programs/:id/episodes` | حلقات برنامج | ✅ نعم |
+| 70 | GET | `/api/programs/episodes/:id/details` | حلقة مع ضيوفها | ✅ نعم |
+| 71 | GET | `/api/programs/episodes/:id/guests` | ضيوف حلقة | ✅ نعم |
 
 ### 12. Guests — الضيوف
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 72 | GET | `/api/guests` | جميع الضيوف / بحث |
-| 73 | GET | `/api/guests/:id` | ضيف بالـ ID |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 72 | GET | `/api/guests` | جميع الضيوف / بحث | ✅ نعم |
+| 73 | GET | `/api/guests/:id` | ضيف بالـ ID | ✅ نعم |
 
 ### 13. Uploaded Files — الملفات المرفوعة
-| # | Method | Endpoint | الوصف |
-|---|--------|----------|-------|
-| 74 | GET | `/api/uploaded-files` | جميع الملفات |
-| 75 | GET | `/api/uploaded-files/audio` | الملفات الصوتية |
-| 76 | GET | `/api/uploaded-files/video` | ملفات الفيديو |
-| 77 | GET | `/api/uploaded-files/source-type/:sourceTypeId` | ملفات حسب نوع المصدر |
-| 78 | GET | `/api/uploaded-files/:id` | ملف بالـ ID |
+| # | Method | Endpoint | الوصف | يتطلب توكن؟ |
+|---|--------|----------|-------|-------------|
+| 74 | GET | `/api/uploaded-files` | جميع الملفات | ✅ نعم |
+| 75 | GET | `/api/uploaded-files/audio` | الملفات الصوتية | ✅ نعم |
+| 76 | GET | `/api/uploaded-files/video` | ملفات الفيديو | ✅ نعم |
+| 77 | GET | `/api/uploaded-files/source-type/:sourceTypeId` | ملفات حسب نوع المصدر | ✅ نعم |
+| 78 | GET | `/api/uploaded-files/:id` | ملف بالـ ID | ✅ نعم |
+
+---
+
+## 0. Authentication — المصادقة
+
+### POST `/api/auth/login`
+تسجيل الدخول والحصول على التوكن.
+
+**🔓 لا يتطلب توكن**
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "your_password"
+}
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMSIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsInJvbGVfaWQiOiIyIiwiaWF0IjoxNzA1MzIwMDAwLCJleHAiOjE3MDU0MDY0MDB9.signature",
+  "user": {
+    "id": 1,
+    "name": "اسم المستخدم",
+    "email": "user@example.com",
+    "role": "editor"
+  }
+}
+```
+
+**Response 401 — بيانات خاطئة:**
+```json
+{
+  "success": false,
+  "message": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+}
+```
+
+---
+
+### GET `/api/auth/me`
+الحصول على معلومات المستخدم الحالي من التوكن.
+
+**🔒 يتطلب توكن**
+
+**Headers:**
+```
+Authorization: Bearer YOUR_TOKEN_HERE
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "user": {
+    "id": 1,
+    "name": "اسم المستخدم",
+    "email": "user@example.com",
+    "role": "editor",
+    "permissions": ["read_news", "edit_news", "publish_news"]
+  }
+}
+```
+
+**Response 401 — توكن غير صالح:**
+```json
+{
+  "success": false,
+  "message": "التوكن غير صالح أو منتهي الصلاحية"
+}
+```
 
 ---
 
@@ -144,6 +309,13 @@
 
 ### GET `/api/sources`
 جلب جميع مصادر الأخبار.
+
+**🔒 يتطلب توكن**
+
+**Headers:**
+```
+Authorization: Bearer YOUR_TOKEN_HERE
+```
 
 **Request:** لا يوجد body
 
@@ -269,6 +441,8 @@
 ---
 
 ## 2. News — الأخبار الخام
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### GET `/api/news`
 جلب جميع الأخبار الخام من `raw_data`.
@@ -419,6 +593,8 @@
 ---
 
 ## 3. Data — البيانات والإحصائيات
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### GET `/api/data/sources`
 نفس `/api/sources` — جلب جميع المصادر.
@@ -665,6 +841,8 @@
 
 ## 4. Flow — فلو معالجة الأخبار
 
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
+
 ### POST `/api/flow/process`
 تشغيل فلو التوجيه — يأخذ الأخبار بحالة `fetched` ويوجّهها لـ `published_items` أو `editorial_queue`.
 
@@ -683,6 +861,93 @@
   }
 }
 ```
+
+---
+
+### GET `/api/flow/editorial`
+**جلب جميع الأخبار في ستوديو التحرير** — يدعم الربط مع نظام الإدارة عبر `task_id`.
+
+**🔒 يتطلب توكن**
+
+**الاستخدام:**
+- **بدون task_id:** جلب جميع الأخبار في ستوديو التحرير (pending + in_review + incomplete)
+- **مع task_id:** جلب الأخبار المرتبطة بمهمة معينة فقط
+- **مع task_id=null:** جلب الأخبار غير المرتبطة بأي مهمة
+
+**Query Parameters:**
+| Param | Type | Required | الوصف |
+|-------|------|----------|-------|
+| `task_id` | number | ❌ | رقم المهمة من نظام الإدارة (اختياري) |
+| `media_unit_id` | number | ❌ | فلترة حسب وحدة الإعلام (اختياري) |
+| `status` | string | ❌ | الحالة: `pending` \| `in_review` \| `incomplete` (اختياري) |
+
+**أمثلة الاستخدام:**
+
+**1. جلب جميع الأخبار في ستوديو التحرير:**
+```
+GET /api/flow/editorial
+```
+
+**2. جلب الأخبار المرتبطة بمهمة رقم 45:**
+```
+GET /api/flow/editorial?task_id=45
+```
+
+**3. جلب الأخبار غير المرتبطة بأي مهمة:**
+```
+GET /api/flow/editorial?task_id=null
+```
+
+**4. جلب الأخبار المعلقة فقط لوحدة إعلام معينة:**
+```
+GET /api/flow/editorial?media_unit_id=1&status=pending
+```
+
+**5. جلب الأخبار قيد المراجعة لمهمة معينة:**
+```
+GET /api/flow/editorial?task_id=45&status=in_review
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "count": 12,
+  "data": [
+    {
+      "id": 10,
+      "media_unit_id": 1,
+      "raw_data_id": 55,
+      "policy_id": null,
+      "status": "pending",
+      "editor_notes": null,
+      "user_id": null,
+      "task_id": 45,
+      "created_at": "2024-01-15T10:00:00.000Z",
+      "updated_at": "2024-01-15T10:00:00.000Z",
+      "title": "عنوان الخبر",
+      "content": "محتوى الخبر...",
+      "image_url": "https://...",
+      "url": "https://...",
+      "category_name": "محلي",
+      "category_flow": "editorial",
+      "media_unit_name": "القناة الرئيسية",
+      "source_name": "وكالة وفا"
+    }
+  ],
+  "filters": {
+    "mediaUnitId": 1,
+    "taskId": 45,
+    "status": "all"
+  }
+}
+```
+
+**ملاحظات مهمة:**
+- ✅ **user_id يُحفظ دائماً** عند أي عملية تحرير (موافقة/رفض/تطبيق سياسة)
+- ✅ **task_id اختياري** — يمكن أن يكون `null` إذا فتح المحرر ستوديو التحرير مباشرة
+- ✅ **الربط مع نظام الإدارة:** عند فتح ستوديو التحرير من مهمة، يتم تمرير `task_id` في الرابط
+- ✅ **التتبع:** كل عملية تحرير تُسجل مع `user_id` و `task_id` (إن وجد)
 
 ---
 
@@ -946,6 +1211,8 @@
 ---
 
 ## 5. Editorial Policies — السياسات التحريرية
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### GET `/api/news/editorial-policies`
 جلب جميع السياسات المفعّلة.
@@ -1301,6 +1568,8 @@
 
 ## 6. System Settings — إعدادات النظام
 
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
+
 ### GET `/api/settings`
 جلب جميع إعدادات النظام.
 
@@ -1520,6 +1789,8 @@
 
 ## 7. AI Hub — المساعد الذكي والأدوات
 
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
+
 ### POST `/api/ai-hub/chat/generate`
 توليد رد من المساعد الذكي.
 
@@ -1625,6 +1896,8 @@
 ---
 
 ## 8. Speech-to-Text (STT) — تحويل الصوت إلى نص
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### POST `/api/ai-hub/stt/transcribe-url`
 تفريغ صوتي من رابط.
@@ -1749,6 +2022,8 @@
 
 ## 9. Text-to-Speech (TTS) — تحويل النص إلى صوت
 
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
+
 ### POST `/api/ai-hub/tts/generate`
 تحويل النص إلى صوت.
 
@@ -1795,6 +2070,8 @@
 ---
 
 ## 10. Audio Extraction — استخراج الصوت من الفيديو
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### POST `/api/ai-hub/audio-extraction/extract-from-file`
 استخراج الصوت من ملف فيديو محلي.
@@ -1928,6 +2205,8 @@
 
 ## 11. Video to Text — تحويل الفيديو إلى نص
 
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
+
 ### POST `/api/ai-hub/video-to-text/process`
 استخراج الصوت من الفيديو وتحويله لنص.
 
@@ -1995,6 +2274,8 @@
 ---
 
 ## 12. Programs & Episodes — البرامج والحلقات
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### GET `/api/programs`
 جلب جميع البرامج.
@@ -2119,6 +2400,8 @@
 
 ## 13. Guests — الضيوف
 
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
+
 ### GET `/api/guests`
 جلب جميع الضيوف أو البحث عنهم.
 
@@ -2168,6 +2451,8 @@
 ---
 
 ## 14. Uploaded Files — الملفات المرفوعة
+
+> **🔒 جميع endpoints هذا القسم تتطلب توكن مصادقة في الـ Header**
 
 ### GET `/api/uploaded-files`
 جلب جميع الملفات المرفوعة.
@@ -2261,6 +2546,13 @@
 ---
 
 ## 15. ملاحظات مهمة
+
+### 🔒 المصادقة (Authentication)
+- **جميع APIs تتطلب توكن JWT** ما عدا `/api/auth/login`
+- يجب إرسال التوكن في header: `Authorization: Bearer YOUR_TOKEN`
+- التوكن صالح لمدة 24 ساعة
+- عند انتهاء التوكن، ستحصل على خطأ `401 Unauthorized`
+- التوكن يحتوي على: `user_id`, `email`, `role_id`, `permissions`
 
 ### ترتيب الـ Routes في Express
 بعض الـ routes لها أولوية — لازم تنتبه:

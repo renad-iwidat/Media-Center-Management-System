@@ -4,9 +4,13 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { GuestsController } from '../../controllers/database/programs.controller';
 
 const router = Router();
+
+// تطبيق middleware المصادقة على جميع routes الضيوف
+router.use(authenticate);
 
 /** GET /api/guests?search=... - جميع الضيوف أو بحث */
 router.get('/', GuestsController.getAllGuests);

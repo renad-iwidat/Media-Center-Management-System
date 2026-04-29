@@ -41,31 +41,86 @@ export class FlowController {
   /**
    * GET /api/flow/queue/pending
    * جلب العناصر المعلقة في الطابور (pending + in_review)
+   * يدعم task_id اختياري للربط مع نظام الإدارة
    */
   static async getPendingQueue(req: Request, res: Response): Promise<void> {
     try {
       const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
       const status = req.query.status as string || undefined;
+      const taskId = req.query.task_id ? parseInt(req.query.task_id as string) : undefined;
       
       let pendingItems;
       if (status === 'in_review') {
         // جلب العناصر قيد المراجعة فقط
-        pendingItems = await EditorialQueueService.getItemsByStatus('in_review', mediaUnitId);
+        pendingItems = await EditorialQueueService.getItemsByStatus('in_review', mediaUnitId, taskId);
       } else {
         // جلب العناصر المعلقة (pending) — السلوك الافتراضي
-        pendingItems = await EditorialQueueService.getPendingItems(mediaUnitId);
+        pendingItems = await EditorialQueueService.getPendingItems(mediaUnitId, taskId);
       }
 
       res.status(200).json({
         success: true,
         data: pendingItems,
         count: pendingItems.length,
+        taskId: taskId || null, // إرجاع task_id في الرد
       });
     } catch (error) {
       console.error('❌ خطأ في جلب الطابور:', error);
       res.status(500).json({
         success: false,
         message: 'خطأ في جلب الطابور',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * GET /api/flow/editorial
+   * جلب جميع الأخبار في ستوديو التحرير (pending + in_review + incomplete)
+   * يدعم task_id اختياري للربط مع نظام الإدارة
+   * 
+   * Query Parameters:
+   * - task_id: رقم المهمة (اختياري) - لربط الأخبار بمهمة معينة
+   * - media_unit_id: رقم وحدة الإعلام (اختياري)
+   * - status: الحالة (pending | in_review | incomplete) (اختياري)
+   */
+  static async getEditorialStudio(req: Request, res: Response): Promise<void> {
+    try {
+      const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
+      const taskId = req.query.task_id ? parseInt(req.query.task_id as string) : undefined;
+      const status = req.query.status as string || undefined;
+      
+      console.log(`📰 [Editorial Studio] جلب الأخبار - media_unit_id: ${mediaUnitId}, task_id: ${taskId}, status: ${status}`);
+
+      let editorialItems;
+      
+      if (status) {
+        // جلب حسب الحالة المحددة
+        editorialItems = await EditorialQueueService.getItemsByStatus(
+          status as 'pending' | 'in_review' | 'incomplete',
+          mediaUnitId,
+          taskId
+        );
+      } else {
+        // جلب جميع الأخبار في ستوديو التحرير (pending + in_review + incomplete)
+        editorialItems = await EditorialQueueService.getAllEditorialItems(mediaUnitId, taskId);
+      }
+
+      res.status(200).json({
+        success: true,
+        data: editorialItems,
+        count: editorialItems.length,
+        filters: {
+          mediaUnitId: mediaUnitId || null,
+          taskId: taskId || null,
+          status: status || 'all',
+        },
+      });
+    } catch (error) {
+      console.error('❌ خطأ في جلب ستوديو التحرير:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب ستوديو التحرير',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

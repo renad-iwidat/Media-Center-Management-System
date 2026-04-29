@@ -407,6 +407,59 @@ export class EditorialQueueService {
       throw error;
     }
   }
+
+  /**
+   * جلب جميع الأخبار في ستوديو التحرير (pending + in_review + incomplete)
+   * يدعم task_id اختياري للربط مع نظام الإدارة
+   */
+  async getAllEditorialItems(mediaUnitId?: number, taskId?: number): Promise<QueueItemWithDetails[]> {
+    try {
+      let sql = `SELECT 
+          eq.id,
+          eq.media_unit_id,
+          eq.raw_data_id,
+          eq.policy_id,
+          eq.status,
+          eq.editor_notes,
+          eq.user_id,
+          eq.task_id,
+          eq.created_at,
+          eq.updated_at,
+          rd.title,
+          rd.content,
+          rd.image_url,
+          rd.url,
+          rd.pub_date,
+          c.name as category_name,
+          c.flow as category_flow,
+          mu.name as media_unit_name,
+          COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+        FROM editorial_queue eq
+        JOIN raw_data rd ON eq.raw_data_id = rd.id
+        LEFT JOIN categories c ON rd.category_id = c.id
+        JOIN media_units mu ON eq.media_unit_id = mu.id
+        LEFT JOIN sources s ON rd.source_id = s.id
+        WHERE eq.status IN ('pending', 'in_review', 'incomplete')`;
+      
+      const params: any[] = [];
+      if (mediaUnitId) {
+        params.push(mediaUnitId);
+        sql += ` AND eq.media_unit_id = $${params.length}`;
+      }
+      if (taskId !== undefined) {
+        params.push(taskId);
+        sql += ` AND eq.task_id = $${params.length}`;
+      }
+      sql += ` ORDER BY eq.status, eq.created_at ASC`;
+
+      const result = await query(sql, params);
+      console.log('📊 البيانات المرجعة من getAllEditorialItems:', result.rows.length, 'عنصر');
+      return result.rows;
+    } catch (error) {
+      console.error('❌ خطأ في جلب جميع عناصر ستوديو التحرير:', error);
+      throw error;
+    }
+  }
 }
 
 export default new EditorialQueueService();

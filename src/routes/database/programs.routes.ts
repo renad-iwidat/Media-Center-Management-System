@@ -5,9 +5,13 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { ProgramsController, GuestsController } from '../../controllers/database/programs.controller';
 
 const router = Router();
+
+// تطبيق middleware المصادقة على جميع routes البرامج
+router.use(authenticate);
 
 // ─── Episodes (ثابتة — لازم قبل /:id) ───────────────────────
 /** GET /api/programs/episodes/:id/details - حلقة بالـ ID مع ضيوفها */

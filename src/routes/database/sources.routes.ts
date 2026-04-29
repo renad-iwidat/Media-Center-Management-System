@@ -4,9 +4,13 @@
  */
 
 import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
 import { SourcesController } from '../../controllers/database/sources.controller';
 
 const router = Router();
+
+// تطبيق middleware المصادقة على جميع routes المصادر
+router.use(authenticate);
 
 /**
  * GET /api/sources - الحصول على جميع المصادر

@@ -4,9 +4,13 @@
  */
 
 import express from 'express';
+import { authenticate } from '../../middleware/auth';
 import { UploadedFilesController } from '../../controllers/manual-input/uploaded-files.controller';
 
 const router = express.Router();
+
+// تطبيق middleware المصادقة على جميع routes الملفات المرفوعة
+router.use(authenticate);
 
 // الحصول على جميع الملفات
 router.get('/', UploadedFilesController.getAllFiles);
