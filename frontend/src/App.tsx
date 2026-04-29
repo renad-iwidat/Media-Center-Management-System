@@ -428,7 +428,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex text-gray-100 selection:bg-[#FF9F43]/30 bg-gray-100">
+    <div 
+      className="min-h-screen flex text-gray-100 selection:bg-[#FF9F43]/30 bg-gray-100"
+      style={{ 
+        paddingRight: isSidebarOpen ? '260px' : '70px', 
+        transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
+    >
       {/* ══════════════════════════════════════════════════════════
           SIDEBAR
          ══════════════════════════════════════════════════════════ */}
@@ -704,7 +710,7 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className={`flex-1 flex flex-col transition-all duration-300 bg-gray-50 ml-auto ${isSidebarOpen ? 'w-[calc(100%-260px)]' : 'w-[calc(100%-70px)]'}`}>
+      <main className="flex-1 flex flex-col transition-all duration-300 bg-gray-50">
         {/* Header */}
         <header className="h-14 border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40 shadow-sm">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
