@@ -12,7 +12,8 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
   const [publishedItems, setPublishedItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // دالة لتحميل البيانات
+  const loadData = () => {
     setLoading(true);
     Promise.all([
       api.getStatistics().catch(() => null),
@@ -31,6 +32,22 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
       setDailyStats(daily?.data || []);
       setLoading(false);
     });
+  };
+
+  // تحميل البيانات عند التحميل الأول أو تغيير unitId
+  useEffect(() => {
+    loadData();
+  }, [unitId]);
+
+  // الاستماع لحدث الريفريش التلقائي
+  useEffect(() => {
+    const handleDataRefresh = () => {
+      console.log('🔄 [OverviewView] تحديث البيانات بناءً على حدث الريفريش');
+      loadData();
+    };
+
+    window.addEventListener('dataRefresh', handleDataRefresh);
+    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, [unitId]);
 
   // إجمالي في الانتظار (pending + incomplete)

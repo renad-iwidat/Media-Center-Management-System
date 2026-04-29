@@ -23,12 +23,29 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  useEffect(() => {
+  // دالة لتحميل البيانات
+  const loadData = () => {
     setLoading(true);
     api.getPublished(unitId)
       .then((res) => setItems(res.data || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
+  };
+
+  // تحميل البيانات عند التحميل الأول أو تغيير unitId
+  useEffect(() => {
+    loadData();
+  }, [unitId]);
+
+  // الاستماع لحدث الريفريش التلقائي
+  useEffect(() => {
+    const handleDataRefresh = () => {
+      console.log('🔄 [PublishedView] تحديث البيانات بناءً على حدث الريفريش');
+      loadData();
+    };
+
+    window.addEventListener('dataRefresh', handleDataRefresh);
+    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, [unitId]);
 
   // Apply filters

@@ -33,7 +33,8 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  useEffect(() => {
+  // دالة لتحميل البيانات
+  const loadData = () => {
     Promise.all([
       api.getIncompleteArticles(unitId),
       api.getCategories()
@@ -47,6 +48,22 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
         setCategories([]);
       })
       .finally(() => setLoading(false));
+  };
+
+  // تحميل البيانات عند التحميل الأول أو تغيير unitId
+  useEffect(() => {
+    loadData();
+  }, [unitId]);
+
+  // الاستماع لحدث الريفريش التلقائي
+  useEffect(() => {
+    const handleDataRefresh = () => {
+      console.log('🔄 [IncompleteView] تحديث البيانات بناءً على حدث الريفريش');
+      loadData();
+    };
+
+    window.addEventListener('dataRefresh', handleDataRefresh);
+    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, [unitId]);
 
   // Apply filters

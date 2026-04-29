@@ -48,12 +48,25 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
   const [deletingPolicyName, setDeletingPolicyName] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    const url = unitId ? `/news/editorial-policies?media_unit_id=${unitId}` : undefined;
-    api.getPolicies()
-      .then((res) => setPolicies(res.policies || []))
-      .catch(() => setPolicies([]))
-      .finally(() => setLoading(false));
+    const loadData = () => {
+      setLoading(true);
+      const url = unitId ? `/news/editorial-policies?media_unit_id=${unitId}` : undefined;
+      api.getPolicies()
+        .then((res) => setPolicies(res.policies || []))
+        .catch(() => setPolicies([]))
+        .finally(() => setLoading(false));
+    };
+
+    loadData();
+
+    // الاستماع لحدث الريفريش التلقائي
+    const handleDataRefresh = () => {
+      console.log('🔄 [PoliciesView] تحديث البيانات بناءً على حدث الريفريش');
+      loadData();
+    };
+
+    window.addEventListener('dataRefresh', handleDataRefresh);
+    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, [unitId]);
 
   const handleApply = async () => {

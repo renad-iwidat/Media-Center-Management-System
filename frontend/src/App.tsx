@@ -323,7 +323,36 @@ export default function App() {
     setSearchResults(results);
   }, [searchQuery]);
 
-  // ═══ Functions بعد جميع الـ hooks ═══
+  // 6. Auto-refresh every 5 minutes (300000ms)
+  useEffect(() => {
+    if (!isAuthenticated) return; // فقط إذا كان مسجل دخول
+
+    // دالة لتحديث البيانات
+    const refreshData = () => {
+      console.log('🔄 [AUTO-REFRESH] تحديث البيانات تلقائياً...');
+      
+      // تحديث إحصائيات النظام
+      api.getSystemToggles()
+        .then((res) => {
+          const d = res.data || {};
+          setIsSystemOnline(!!(d.scheduler_enabled && d.classifier_enabled && d.flow_enabled));
+        })
+        .catch(() => setIsSystemOnline(false));
+      
+      // إرسال حدث مخصص لتحديث البيانات في المكونات الأخرى
+      window.dispatchEvent(new CustomEvent('dataRefresh', { detail: { timestamp: Date.now() } }));
+    };
+
+    // تشغيل الريفريش الأول بعد 5 دقايق
+    const intervalId = setInterval(refreshData, 5 * 60 * 1000); // 5 دقايق
+
+    console.log('⏰ [AUTO-REFRESH] تم تفعيل الريفريش التلقائي كل 5 دقايق');
+
+    return () => {
+      clearInterval(intervalId);
+      console.log('⏹️ [AUTO-REFRESH] تم إيقاف الريفريش التلقائي');
+    };
+  }, [isAuthenticated]);
   
   // دالة تسجيل الخروج
   const handleLogout = () => {
@@ -406,7 +435,7 @@ export default function App() {
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 260 : 70 }}
-        className="bg-gradient-to-b from-[#4A7C9C] via-[#5A8CAC] to-[#4A7C9C] border-l border-white/10 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
+        className="bg-gradient-to-b from-[#4A7C9C] via-[#5A8CAC] to-[#4A7C9C] border-l border-white/10 flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
       >
         {/* Logo & Header */}
         <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-[#4A7C9C]/90 backdrop-blur-sm">
@@ -675,7 +704,7 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className={`flex-1 flex flex-col transition-all duration-300 bg-gray-50 ${isSidebarOpen ? 'pr-[320px] sm:pr-[320px]' : 'pr-[80px] sm:pr-[80px]'}`}>
+      <main className={`flex-1 flex flex-col transition-all duration-300 bg-gray-50 ml-auto ${isSidebarOpen ? 'w-[calc(100%-260px)]' : 'w-[calc(100%-70px)]'}`}>
         {/* Header */}
         <header className="h-14 border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40 shadow-sm">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">

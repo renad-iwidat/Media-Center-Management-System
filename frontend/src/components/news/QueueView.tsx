@@ -37,7 +37,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  useEffect(() => {
+  // دالة لتحميل البيانات
+  const loadData = () => {
     setLoading(true);
     Promise.all([
       api.getPendingQueue(unitId).catch(() => ({ data: [] })),
@@ -48,6 +49,26 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       const allPolicies = p.policies || [];
       setPolicies(allPolicies.filter((pol: any) => pol.isModifying));
       setInspectionPolicies(allPolicies.filter((pol: any) => !pol.isModifying));
+      setCategories(c.data || []);
+      setLoading(false);
+    });
+  };
+
+  // تحميل البيانات عند التحميل الأول أو تغيير unitId
+  useEffect(() => {
+    loadData();
+  }, [unitId]);
+
+  // الاستماع لحدث الريفريش التلقائي
+  useEffect(() => {
+    const handleDataRefresh = () => {
+      console.log('🔄 [QueueView] تحديث البيانات بناءً على حدث الريفريش');
+      loadData();
+    };
+
+    window.addEventListener('dataRefresh', handleDataRefresh);
+    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
+  }, [unitId]);
       setCategories(c.data || []);
       setLoading(false);
     });

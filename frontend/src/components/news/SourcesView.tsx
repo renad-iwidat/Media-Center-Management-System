@@ -8,11 +8,29 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   const [sources, setSources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // دالة لتحميل البيانات
+  const loadData = () => {
+    setLoading(true);
     api.getSources()
       .then((res) => setSources(res.data || []))
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
+  };
+
+  // تحميل البيانات عند التحميل الأول
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // الاستماع لحدث الريفريش التلقائي
+  useEffect(() => {
+    const handleDataRefresh = () => {
+      console.log('🔄 [SourcesView] تحديث البيانات بناءً على حدث الريفريش');
+      loadData();
+    };
+
+    window.addEventListener('dataRefresh', handleDataRefresh);
+    return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, []);
 
   if (loading) return <LoadingSpinner />;
