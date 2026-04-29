@@ -457,7 +457,7 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
 
         {/* Result */}
         <div className="lg:col-span-7 flex flex-col">
-          <div className="glass-panel p-4 bg-[#0b1224] border-r-4 border-r-[#2563eb] flex flex-col flex-1 min-h-[460px]">
+          <div className="glass-panel p-4 bg-[#2c5f7f] border-r-4 border-r-[#2563eb] flex flex-col flex-1 min-h-[460px]">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">

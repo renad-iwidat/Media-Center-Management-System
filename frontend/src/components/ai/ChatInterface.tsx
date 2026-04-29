@@ -154,7 +154,7 @@ export default function ChatInterface() {
 
       <div className="flex-1 flex gap-8 overflow-hidden">
         {/* Chat Main */}
-        <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-[#0b1224]/40">
+        <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-[#2c5f7f]/40">
           <div 
             ref={scrollRef}
             className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
@@ -212,7 +212,7 @@ export default function ChatInterface() {
                 }}
                 placeholder="اسألني أي شيء عن الإعلام..."
                 rows={2}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-2xl py-4 pr-6 pl-16 focus:ring-2 focus:ring-[#2563eb]/20 outline-none transition-all placeholder:text-gray-600 resize-none font-arabic"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-2xl py-4 pr-6 pl-16 focus:ring-2 focus:ring-[#2563eb]/20 outline-none transition-all placeholder:text-gray-600 resize-none font-arabic"
               />
               <div className="absolute left-4 bottom-4 flex gap-2">
                 <button 

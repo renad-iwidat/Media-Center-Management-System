@@ -259,7 +259,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         </div>
 
         {/* Meta: صورة + معلومات + عنوان */}
-        <div className="bg-[#0b1224] rounded-2xl border border-white/5 p-5">
+        <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 p-5">
           <div className="flex gap-5 items-start">
             {/* صورة الخبر */}
             {editedImageUrl && (
@@ -275,7 +275,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 <span>{editingItem.media_unit_name || '—'}</span>
               </div>
               <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-600/50 placeholder:text-gray-600"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-600/50 placeholder:text-gray-600"
                 placeholder="عنوان الخبر" />
               {editingItem?.url && (
                 <a href={editingItem.url} target="_blank" rel="noopener noreferrer"
@@ -288,7 +288,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         </div>
 
         {/* شريط السياسات */}
-        <div className="bg-[#0b1224] rounded-2xl border border-white/5 p-4 space-y-3">
+        <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 p-4 space-y-3">
           {/* سطر سياسات التعديل */}
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 shrink-0">
@@ -333,7 +333,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         {/* Main: النص المعدّل | النتائج */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* النص المعدّل */}
-          <div className="bg-[#0b1224] rounded-2xl border border-white/5 overflow-hidden">
+          <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 overflow-hidden">
             <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-300">النص المعدّل</span>
               <span className="text-xs text-gray-500 font-mono">{editedContent.length} حرف</span>
@@ -344,7 +344,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
           </div>
 
           {/* النتائج */}
-          <div className="bg-[#0b1224] rounded-2xl border border-white/5 overflow-hidden">
+          <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 overflow-hidden">
             <div className="px-4 py-3 border-b border-white/5">
               <span className="text-sm font-semibold text-gray-300">نتائج السياسات</span>
             </div>
@@ -451,7 +451,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                             <span className="text-xs text-gray-400 font-semibold">المشاكل ({inspectionResult.issues.length}):</span>
                             <div className="space-y-1 mt-1">
                               {inspectionResult.issues.slice(0, 3).map((issue: any, i: number) => (
-                                <div key={i} className="bg-[#020617]/50 rounded px-2 py-1 text-xs text-gray-300 border border-white/5 line-clamp-2">
+                                <div key={i} className="bg-[#1e4a66]/50 rounded px-2 py-1 text-xs text-gray-300 border border-white/5 line-clamp-2">
                                   {typeof issue === 'string' ? issue : JSON.stringify(issue)}
                                 </div>
                               ))}
@@ -489,7 +489,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       ) : (
         <div className="space-y-6">
           {/* Filters */}
-          <div className="bg-[#0b1224] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
+          <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Search size={16} className="text-blue-400" />
               البحث والفلترة
@@ -504,7 +504,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                   value={searchTitle}
                   onChange={(e) => setSearchTitle(e.target.value)}
                   placeholder="ابحث عن عنوان..."
-                  className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
                 />
               </div>
 
@@ -514,7 +514,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
                 >
                   <option value="">كل التصنيفات</option>
                   {[...new Set(queue.map(item => item.category_name))].map(cat => (
@@ -530,7 +530,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
                 />
               </div>
 
@@ -540,7 +540,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                  className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
                 >
                   <option value="newest">الأحدث أولاً</option>
                   <option value="oldest">الأقدم أولاً</option>
@@ -589,7 +589,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
           ) : (
             <div className="space-y-4">
               {/* Table */}
-              <div className="bg-[#0b1224] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+              <div className="bg-[#2c5f7f] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>

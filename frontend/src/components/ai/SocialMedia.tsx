@@ -471,7 +471,7 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
         </div>
 
         {/* ── Output Panel ── */}
-        <div className="glass-panel p-4 flex flex-col bg-[#0b1224] border-dashed border-white/10 min-h-[300px]">
+        <div className="glass-panel p-4 flex flex-col bg-[#2c5f7f] border-dashed border-white/10 min-h-[300px]">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">

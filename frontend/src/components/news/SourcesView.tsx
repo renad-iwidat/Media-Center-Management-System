@@ -31,7 +31,7 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sources.map((source: any) => (
-            <div key={source.id} className="bg-[#0b1224] rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all group relative overflow-hidden">
+            <div key={source.id} className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-600/10 transition-all" />
               <div className="flex justify-between items-start mb-4 relative z-10">
                 <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-blue-400">

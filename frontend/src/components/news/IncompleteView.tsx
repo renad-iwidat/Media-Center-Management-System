@@ -194,7 +194,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-[#0b1224] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
+          className="bg-[#2c5f7f] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
         >
           <div className="flex items-center justify-center w-12 h-12 bg-rose-500/10 rounded-full mx-auto">
             <Trash size={24} className="text-rose-400" />
@@ -237,7 +237,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-[#0b1224] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
+          className="bg-[#2c5f7f] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
         >
           <div className="flex items-center justify-center w-12 h-12 bg-rose-500/10 rounded-full mx-auto">
             <Trash2 size={24} className="text-rose-400" />
@@ -287,7 +287,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           <ArrowRight size={16} /> العودة للقائمة
         </button>
 
-        <div className="bg-[#0b1224] rounded-3xl p-8 border border-white/5 shadow-2xl space-y-6">
+        <div className="bg-[#2c5f7f] rounded-3xl p-8 border border-white/5 shadow-2xl space-y-6">
           <h3 className="text-lg font-bold text-white">تكملة الخبر</h3>
           
           {/* رابط الخبر */}
@@ -298,7 +298,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                 href={editingArticle.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="block w-full bg-[#020617]/50 border border-blue-500/30 hover:border-blue-500/50 rounded-2xl px-4 py-3 text-sm text-blue-400 hover:text-blue-300 transition-all truncate"
+                className="block w-full bg-[#1e4a66]/50 border border-blue-500/30 hover:border-blue-500/50 rounded-2xl px-4 py-3 text-sm text-blue-400 hover:text-blue-300 transition-all truncate"
               >
                 {editingArticle.url}
               </a>
@@ -330,7 +330,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               type="text"
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
-              className="w-full bg-[#020617]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
               placeholder="عنوان الخبر"
             />
           </div>
@@ -341,7 +341,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <select
               value={editedCategoryId || ""}
               onChange={(e) => setEditedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full bg-[#020617]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white"
             >
               <option value="">-- اختر التصنيف --</option>
               {categories.map((cat) => (
@@ -364,7 +364,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-64 bg-[#020617]/50 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
+              className="w-full h-64 bg-[#1e4a66]/50 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
               placeholder="محتوى الخبر..."
             />
             <p className="text-[10px] text-gray-500">{editedContent.length} حرف</p>
@@ -418,7 +418,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       <Notification notification={notification} onClose={() => setNotification(null)} />
 
       {/* Filters */}
-      <div className="bg-[#0b1224] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
+      <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <Search size={16} className="text-blue-400" />
           البحث والفلترة
@@ -433,7 +433,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
               placeholder="ابحث عن عنوان..."
-              className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
             />
           </div>
 
@@ -443,7 +443,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
             >
               <option value="">كل التصنيفات</option>
               {[...new Set(articles.map(a => a.category_name))].map(cat => (
@@ -459,7 +459,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
             />
           </div>
 
@@ -469,7 +469,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-              className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
             >
               <option value="newest">الأحدث أولاً</option>
               <option value="oldest">الأقدم أولاً</option>
@@ -518,7 +518,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       ) : (
         <div className="space-y-4">
           {/* Table */}
-          <div className="bg-[#0b1224] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+          <div className="bg-[#2c5f7f] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>

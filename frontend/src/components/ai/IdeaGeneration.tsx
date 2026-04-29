@@ -311,7 +311,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
             <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[420px]">
               {/* Programs list */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#0b1224] py-1 z-10">اختر البرنامج</label>
+                <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#2c5f7f] py-1 z-10">اختر البرنامج</label>
                 {loadingData ? (
                   <div className="flex items-center justify-center py-6 text-gray-500 gap-2">
                     <Loader2 size={16} className="animate-spin" />
@@ -448,7 +448,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
               {/* Guests list — only for QUESTIONS */}
               {activeTool === 'QUESTIONS' && (
                 <div className="space-y-2 pt-2 border-t border-white/5">
-                  <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#0b1224] py-1 z-10">
+                  <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#2c5f7f] py-1 z-10">
                     اختر الضيف
                     {episodeGuests.length > 0 && (
                       <span className="text-sky-400 mr-2">(ضيوف الحلقة المختارة مميزون)</span>
@@ -587,7 +587,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
 
         {/* ── Result Panel ── */}
         <div className="lg:col-span-7">
-          <div className="glass-panel p-5 min-h-[480px] flex flex-col justify-center bg-[#0b1224] border-dashed border-white/10 relative overflow-hidden">
+          <div className="glass-panel p-5 min-h-[480px] flex flex-col justify-center bg-[#2c5f7f] border-dashed border-white/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#2563eb]/5 rounded-bl-full blur-2xl" />
 
             {result ? (

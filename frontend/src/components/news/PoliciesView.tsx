@@ -213,7 +213,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
       <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
       <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#0b1224] rounded-3xl p-8 border border-white/5 shadow-2xl">
+        <div className="bg-[#2c5f7f] rounded-3xl p-8 border border-white/5 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold flex items-center gap-2 text-white">
               <Settings size={20} className="text-blue-400" />
@@ -268,7 +268,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           </div>
         </div>
 
-        <div className="bg-[#0b1224] rounded-3xl p-8 border border-white/5 shadow-2xl space-y-6">
+        <div className="bg-[#2c5f7f] rounded-3xl p-8 border border-white/5 shadow-2xl space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 text-white">
             <Sparkles size={20} className="text-blue-400" />
             مختبر تجربة السياسات
@@ -280,7 +280,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                 value={testText}
                 onChange={(e) => setTestText(e.target.value)}
                 placeholder="الصق النص هنا لاختبار السياسات..."
-                className="w-full h-32 bg-[#020617]/50 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-600/50 resize-none font-sans text-white placeholder:text-gray-600"
+                className="w-full h-32 bg-[#1e4a66]/50 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-600/50 resize-none font-sans text-white placeholder:text-gray-600"
               />
             </div>
             
@@ -324,7 +324,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#0b1224] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
+            className="bg-[#2c5f7f] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2 text-white">
@@ -344,7 +344,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                   value={createForm.name}
                   onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="مثال: تنظيف النص"
-                  className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
                 />
               </div>
               <div className="space-y-2">
@@ -354,7 +354,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                   value={createForm.description}
                   onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="وصف مختصر للسياسة"
-                  className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
                 />
               </div>
             </div>
@@ -389,7 +389,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                 onChange={e => setCreateForm(f => ({ ...f, editorInstructions: e.target.value }))}
                 placeholder="اكتب التعليمات التفصيلية للـ AI..."
                 rows={5}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
               />
             </div>
 
@@ -400,7 +400,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                 onChange={e => setCreateForm(f => ({ ...f, injectedVarsRaw: e.target.value }))}
                 placeholder=""
                 rows={5}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600 font-mono"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600 font-mono"
               />
               <p className="text-[10px] text-gray-500 leading-relaxed">
                 مثال: عدّل القيم حسب احتياجاتك — banned_words (كلمات ممنوعة)، replacement_map (استبدال)، required_phrases (عبارات مطلوبة)
@@ -438,7 +438,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#0b1224] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
+            className="bg-[#2c5f7f] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2 text-white">
@@ -464,7 +464,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                       value={editForm.name}
                       onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="مثال: تنظيف النص"
-                      className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                      className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
                     />
                   </div>
                   <div className="space-y-2">
@@ -474,7 +474,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                       value={editForm.description}
                       onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
                       placeholder="وصف مختصر للسياسة"
-                      className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                      className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
                     />
                   </div>
                 </div>
@@ -486,7 +486,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                     onChange={e => setEditForm(f => ({ ...f, editorInstructions: e.target.value }))}
                     placeholder="اكتب التعليمات التفصيلية للـ AI..."
                     rows={5}
-                    className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
+                    className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
                   />
                 </div>
 
@@ -497,7 +497,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                     onChange={e => setEditForm(f => ({ ...f, injectedVarsRaw: e.target.value }))}
                     placeholder=""
                     rows={5}
-                    className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600 font-mono"
+                    className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600 font-mono"
                   />
                   <p className="text-[10px] text-gray-500 leading-relaxed">
                     مثال: عدّل القيم حسب احتياجاتك — banned_words (كلمات ممنوعة)، replacement_map (استبدال)، required_phrases (عبارات مطلوبة)
@@ -537,7 +537,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#0b1224] rounded-3xl p-8 border border-rose-600/20 shadow-2xl w-full max-w-md space-y-6"
+            className="bg-[#2c5f7f] rounded-3xl p-8 border border-rose-600/20 shadow-2xl w-full max-w-md space-y-6"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2 text-white">

@@ -160,7 +160,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1224] to-[#020617] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#1e4a66] via-[#2c5f7f] to-[#1e4a66] flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#4A7C9C]/10 rounded-full blur-3xl" />
@@ -174,7 +174,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         transition={{ duration: 0.5 }}
         className="relative w-full max-w-md"
       >
-        <div className="bg-[#0b1224]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-[#2c5f7f]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/30 mx-auto mb-4 relative overflow-hidden">

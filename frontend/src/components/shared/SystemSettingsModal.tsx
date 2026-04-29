@@ -120,7 +120,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="bg-[#0b1224] border border-white/10 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto"
+              className="bg-[#2c5f7f] border border-white/10 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -233,7 +233,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                           max={1440}
                           value={intervalInput}
                           onChange={(e) => setIntervalInput(e.target.value)}
-                          className="flex-1 bg-[#020617] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors text-center font-mono"
+                          className="flex-1 bg-[#1e4a66] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors text-center font-mono"
                         />
                         <div className="text-xs text-gray-500 shrink-0">
                           {parseInt(intervalInput) >= 60
@@ -255,7 +255,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                         max={100}
                         value={articlesInput}
                         onChange={(e) => setArticlesInput(e.target.value)}
-                        className="w-full bg-[#020617] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors text-center font-mono"
+                        className="w-full bg-[#1e4a66] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors text-center font-mono"
                       />
                     </div>
 

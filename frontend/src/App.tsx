@@ -386,7 +386,7 @@ export default function App() {
   if (isCheckingAuth) {
     console.log('⏳ [APP] عرض شاشة التحميل - isCheckingAuth:', isCheckingAuth);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1224] to-[#020617] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#1e4a66] via-[#2c5f7f] to-[#1e4a66] flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/30 mx-auto mb-3 animate-pulse relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>

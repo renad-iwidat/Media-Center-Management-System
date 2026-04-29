@@ -89,7 +89,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
     <>
       <div className="space-y-6">
         {/* Filters */}
-        <div className="bg-[#0b1224] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
+        <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <Search size={16} className="text-blue-400" />
             البحث والفلترة
@@ -104,7 +104,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                 value={searchTitle}
                 onChange={(e) => setSearchTitle(e.target.value)}
                 placeholder="ابحث عن عنوان..."
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
               />
             </div>
 
@@ -114,7 +114,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
               >
                 <option value="">كل التصنيفات</option>
                 {categories.map(cat => (
@@ -129,7 +129,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
               >
                 <option value="">كل الأنواع</option>
                 {types.map(type => (
@@ -145,7 +145,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
               />
             </div>
 
@@ -156,7 +156,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
               />
             </div>
 
@@ -166,7 +166,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                className="w-full bg-[#020617]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
               >
                 <option value="newest">الأحدث أولاً</option>
                 <option value="oldest">الأقدم أولاً</option>
@@ -207,7 +207,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
         {filteredItems.length === 0 ? (
           <EmptyState icon={CheckCircle} title="لا يوجد محتوى منشور" description="سيظهر هنا المحتوى بعد الموافقة عليه من ستوديو التحرير." />
         ) : (
-          <div className="bg-[#0b1224] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+          <div className="bg-[#2c5f7f] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -310,7 +310,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#0b1224] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-6"
+            className="bg-[#2c5f7f] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-6"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2 text-white">

@@ -2,7 +2,7 @@ export function StatCard({ label, value, icon: Icon, trend, variant = "default" 
   label: string; value: string | number; icon: any; trend?: string; variant?: string;
 }) {
   return (
-    <div className="bg-[#0b1224] rounded-3xl p-6 border border-white/5 shadow-2xl relative overflow-hidden group hover:border-white/10 transition-all">
+    <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl relative overflow-hidden group hover:border-white/10 transition-all">
       <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-blue-600/10 transition-all" />
       <div className="flex justify-between items-start relative z-10">
         <div>

@@ -549,7 +549,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
 
         {/* Result */}
         <div className="lg:col-span-7">
-          <div className="glass-panel p-4 h-[460px] flex flex-col items-center justify-center text-center bg-[#0b1224] border-dashed border-white/10 relative overflow-hidden">
+          <div className="glass-panel p-4 h-[460px] flex flex-col items-center justify-center text-center bg-[#2c5f7f] border-dashed border-white/10 relative overflow-hidden">
             {activeMode === 'STT' ? (
               result ? (
                 <div className="w-full h-full flex flex-col text-right">
@@ -611,7 +611,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
       {/* Video Modal */}
       {showVideoModal && previewFile && previewFile.file_type === 'video' && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0b1224] rounded-2xl border border-white/10 max-w-2xl w-full max-h-[90vh] flex flex-col">
+          <div className="bg-[#2c5f7f] rounded-2xl border border-white/10 max-w-2xl w-full max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h3 className="text-sm font-bold text-white">{previewFile.display_name}</h3>

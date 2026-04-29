@@ -50,7 +50,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
     <div className="space-y-6">
       {/* إحصائيات الوحدات الإعلامية - تظهر فقط عند "كل الوحدات" */}
       {!unitId && (
-        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
+        <div className="bg-gradient-to-br from-[#2c5f7f]/95 to-[#1e4a66]/95 rounded-3xl p-4 sm:p-6 border border-[#4a7c9e]/30 shadow-2xl">
           <h3 className="text-sm sm:text-base font-bold mb-4 sm:mb-5 flex items-center gap-2 text-white">
             <TrendingUp size={16} className="text-sky-400 shrink-0" />
             <span className="truncate">إحصائيات جميع الوحدات الإعلامية</span>
@@ -96,7 +96,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
           (u: any) => u.media_unit === selectedUnit?.name
         );
         return selectedUnit ? (
-          <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
+          <div className="bg-gradient-to-br from-[#2c5f7f]/95 to-[#1e4a66]/95 rounded-3xl p-4 sm:p-6 border border-[#4a7c9e]/30 shadow-2xl">
             <h3 className="text-sm sm:text-base font-bold mb-4 sm:mb-5 flex items-center gap-2 text-white">
               <TrendingUp size={16} className="text-sky-400 shrink-0" />
               <span className="truncate">إحصائيات {selectedUnit.name}</span>
@@ -127,7 +127,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
 
       {/* رسم بياني للنشر اليومي */}
       {unitId && dailyStats.length > 0 && (
-        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-br from-[#2c5f7f]/95 to-[#1e4a66]/95 rounded-3xl p-4 sm:p-6 border border-[#4a7c9e]/30 shadow-2xl overflow-hidden">
           <h3 className="text-sm sm:text-base font-bold mb-4 sm:mb-6 flex items-center gap-2 text-white">
             <TrendingUp size={16} className="text-sky-400 shrink-0" />
             <span className="truncate">إحصائيات النشر والرفض اليومية</span>
@@ -243,7 +243,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
 
       {/* الصف الثاني: آخر الأخبار المنتظرة + آخر المنشورات */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
+        <div className="bg-gradient-to-br from-[#2c5f7f]/95 to-[#1e4a66]/95 rounded-3xl p-4 sm:p-6 border border-[#4a7c9e]/30 shadow-2xl">
           <h3 className="text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 text-white">
             <Clock size={16} className="text-amber-400 shrink-0" />
             <span className="truncate">آخر الأخبار في الانتظار</span>
@@ -262,7 +262,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
           )}
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
+        <div className="bg-gradient-to-br from-[#2c5f7f]/95 to-[#1e4a66]/95 rounded-3xl p-4 sm:p-6 border border-[#4a7c9e]/30 shadow-2xl">
           <h3 className="text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 text-white">
             <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
             <span className="truncate">آخر المنشورات</span>
