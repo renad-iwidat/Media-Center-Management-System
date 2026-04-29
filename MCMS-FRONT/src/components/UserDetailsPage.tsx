@@ -6,7 +6,7 @@ import {
   Check, X
 } from 'lucide-react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, BASE_URL } from '../services/api';
 import { UserWithRoles, Role, UserKPI, UserPermissionGroup } from '../types';
 import { Button, Input, Select } from './ui/Inputs';
 import { Badge } from './ui/Badge';
@@ -30,19 +30,25 @@ export default function UserDetailsPage() {
   const fetchUserDetails = async () => {
     setLoading(true);
     try {
-      const [userRes, userRolesRes, allRolesRes, permsRes, kpiRes] = await Promise.all([
-        api.get<{ success: boolean; data: UserWithRoles }>(`/api/portal/users/${id}/with-role`),
-        api.get<{ success: boolean; data: Role[] }>(`/api/permissions/users/${id}/roles`),
-        api.get<{ success: boolean; data: Role[] }>('/api/portal/roles'),
-        api.get<{ success: boolean; data: UserPermissionGroup[] }>(`/api/permissions/users/${id}/permissions`),
-        api.get<{ success: boolean; data: UserKPI }>(`/api/kpi/users/${id}`)
+      const userRes = await api.get<{ success: boolean; data: UserWithRoles }>(`/api/portal/users/${id}/with-role`);
+      if (userRes.success) setUser(userRes.data);
+
+      const allRolesRes = await api.get<{ success: boolean; data: Role[] }>('/api/portal/roles');
+      if (allRolesRes.success) setAllRoles(allRolesRes.data || []);
+
+      // These require specific permissions - use safe fetch
+      const token = localStorage.getItem('token');
+      const headers: any = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+      const [rolesResp, permsResp, kpiResp] = await Promise.all([
+        fetch(`${BASE_URL}/api/permissions/users/${id}/roles`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BASE_URL}/api/permissions/users/${id}/permissions`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BASE_URL}/api/kpi/users/${id}`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
 
-      if (userRes.success) setUser(userRes.data);
-      if (userRolesRes.success) setUserRoles(userRolesRes.data);
-      if (allRolesRes.success) setAllRoles(allRolesRes.data);
-      if (permsRes.success) setPermissions(permsRes.data);
-      if (kpiRes.success) setKpi(kpiRes.data);
+      if (rolesResp?.success) setUserRoles(rolesResp.data || []);
+      if (permsResp?.success && Array.isArray(permsResp.data)) setPermissions(permsResp.data);
+      if (kpiResp?.success && kpiResp.data) setKpi(kpiResp.data);
 
     } catch (err) {
       console.error(err);
@@ -120,7 +126,7 @@ export default function UserDetailsPage() {
                   key={day}
                   className={cn(
                     "px-4 py-2 rounded-2xl text-sm font-bold border transition-all",
-                    user.work_days.includes(day)
+                    user.work_days?.includes(day)
                       ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm"
                       : "bg-slate-50 border-slate-100 text-slate-400 opacity-50"
                   )}
@@ -158,13 +164,13 @@ export default function UserDetailsPage() {
             </div>
             <div className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {permissions.map((group) => (
+                {(permissions || []).map((group) => (
                   <div key={group.category} className="space-y-4">
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-r-2 border-blue-600 pr-3">
                       {group.category}
                     </h4>
                     <div className="grid grid-cols-1 gap-2">
-                      {group.permissions.map((p) => (
+                      {(group.permissions || []).map((p) => (
                         <div key={p.key} className={cn(
                           "flex items-center justify-between p-3 rounded-2xl border transition-all",
                           p.has ? "bg-blue-50/30 border-blue-100" : "bg-slate-50/50 border-slate-100 opacity-40grayscale"
@@ -192,7 +198,7 @@ export default function UserDetailsPage() {
                </Button>
             </div>
             <div className="space-y-3">
-               {userRoles.map(r => (
+               {(userRoles || []).map(r => (
                  <div key={r.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100 group">
                    <div className="flex items-center gap-3">
                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-xs">
@@ -208,7 +214,7 @@ export default function UserDetailsPage() {
                    </button>
                  </div>
                ))}
-               {userRoles.length === 0 && (
+               {(userRoles || []).length === 0 && (
                  <div className="py-8 text-center text-slate-400 font-bold text-xs">لا توجد أدوار إضافية</div>
                )}
             </div>
@@ -303,7 +309,7 @@ export default function UserDetailsPage() {
       <Modal isOpen={isRoleModalOpen} onClose={() => setIsRoleModalOpen(false)} title="إضافة دور للمستخدم">
          <AddRoleForm 
            userId={user.id} 
-           roles={allRoles.filter(r => !userRoles.some(ur => ur.id === r.id))}
+           roles={allRoles.filter(r => !(userRoles || []).some(ur => ur.id === r.id))}
            onSuccess={() => { setIsRoleModalOpen(false); fetchUserDetails(); }} 
            onCancel={() => setIsRoleModalOpen(false)} 
          />

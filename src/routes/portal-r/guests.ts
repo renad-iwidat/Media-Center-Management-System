@@ -14,14 +14,14 @@ const router = Router();
 router.get('/', GuestController.getAllGuests);
 
 /**
+ * GET /guests/search - Search guests by name (MUST be before :id)
+ */
+router.get('/search', GuestController.searchGuests);
+
+/**
  * GET /guests/:id - Get guest by ID
  */
 router.get('/:id', GuestController.getGuestById);
-
-/**
- * GET /guests/search - Search guests by name
- */
-router.get('/search', GuestController.searchGuests);
 
 /**
  * POST /guests - Create a new guest

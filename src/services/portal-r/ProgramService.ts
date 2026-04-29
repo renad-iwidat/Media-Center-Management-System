@@ -6,7 +6,8 @@ import pool from '../../config/database';
 export class ProgramService {
   async getAllPrograms(): Promise<any[]> {
     const result = await pool.query(
-      `SELECT p.*, m.name as media_unit_name
+      `SELECT p.*, m.name as media_unit_name,
+       (SELECT COUNT(*) FROM episodes e WHERE e.program_id = p.id) as episode_count
        FROM programs p LEFT JOIN media_units m ON p.media_unit_id = m.id
        ORDER BY p.created_at DESC`
     );

@@ -243,19 +243,21 @@ export default function TasksPage() {
             <span className="text-sm font-medium">
               عرض <span className="font-bold text-[#FF9F4A]">{tasks.length}</span> من أصل <span className="font-bold text-[#FF9F4A]">{pagination.total}</span> مهمة
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button 
                 disabled={pagination.offset === 0}
                 onClick={() => setPagination(p => ({ ...p, offset: p.offset - p.limit }))}
-                className="p-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none"
+                className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
               >
                 <ChevronRight size={18} />
+                السابق
               </button>
               <button 
                 disabled={pagination.offset + pagination.limit >= pagination.total}
                 onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
-                className="p-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none"
+                className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
               >
+                التالي
                 <ChevronLeft size={18} />
               </button>
             </div>

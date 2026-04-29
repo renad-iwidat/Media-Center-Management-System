@@ -19,6 +19,13 @@ router.get('/', (req, res) => {
   return EpisodeController.getAllEpisodes(req, res);
 });
 
+// ============ Enriched Views (MUST be before :id routes) ============
+
+/**
+ * GET /episodes/enriched - All episodes with status, order, counts
+ */
+router.get('/enriched', EpisodeController.getAllEpisodesEnriched);
+
 /**
  * GET /episodes/:id - Get episode by ID
  */
@@ -28,6 +35,16 @@ router.get('/:id', EpisodeController.getEpisodeById);
  * GET /episodes/:id/with-guests - Get episode with guests
  */
 router.get('/:id/with-guests', EpisodeController.getEpisodeWithGuests);
+
+/**
+ * GET /episodes/:id/enriched - Single episode enriched
+ */
+router.get('/:id/enriched', EpisodeController.getEpisodeEnriched);
+
+/**
+ * GET /episodes/:id/full - Episode with all details (guests, tasks, content)
+ */
+router.get('/:id/full', EpisodeController.getEpisodeFull);
 
 /**
  * POST /episodes - Create a new episode
@@ -58,22 +75,5 @@ router.delete('/:id/guests/:guestId', EpisodeController.removeGuestFromEpisode);
  * GET /episodes/:id/guests - Get episode guests
  */
 router.get('/:id/guests', EpisodeController.getEpisodeGuests);
-
-// ============ Enriched Views ============
-
-/**
- * GET /episodes/enriched - All episodes with status, order, counts
- */
-router.get('/enriched', EpisodeController.getAllEpisodesEnriched);
-
-/**
- * GET /episodes/:id/enriched - Single episode enriched
- */
-router.get('/:id/enriched', EpisodeController.getEpisodeEnriched);
-
-/**
- * GET /episodes/:id/full - Episode with all details (guests, tasks, content)
- */
-router.get('/:id/full', EpisodeController.getEpisodeFull);
 
 export default router;

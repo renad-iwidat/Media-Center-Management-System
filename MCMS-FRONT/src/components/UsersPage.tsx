@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, UserPlus, Search, MoreHorizontal, 
   Eye, Calendar, Clock, Mail, Shield,
-  ChevronLeft, Filter
+  ChevronLeft, ChevronRight, Filter
 } from 'lucide-react';
 import { api } from '../services/api';
 import { UserWithRoles, Role } from '../types';
@@ -21,6 +21,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [search, setSearch] = useState('');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const USERS_PER_PAGE = 8;
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -60,7 +62,7 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold text-slate-900 mb-1">إدارة المستخدمين</h1>
           <p className="text-slate-500 font-bold">إضافة الموظفين وتعيين أدوارهم الأساسية وإدارة صيانة الحسابات</p>
         </div>
-        <Button onClick={() => setIsRegisterModalOpen(true)} className="gap-2">
+        <Button onClick={() => setIsRegisterModalOpen(true)} className="gap-2 bg-[#3d6a8a] hover:bg-[#2d5570] text-white shadow-lg hover:shadow-xl">
           <UserPlus size={20} />
           مستخدم جديد
         </Button>
@@ -74,7 +76,7 @@ export default function UsersPage() {
               placeholder="بحث باسم الموظف أو البريد الإلكتروني..." 
               className="pr-12 h-12 text-base bg-slate-50 border-slate-200 focus:bg-white shadow-sm"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setPage(0); }}
             />
           </div>
           <div className="flex items-center gap-2 text-xs font-bold text-white bg-[#3d6a8a] px-3 py-2 rounded-lg">
@@ -95,7 +97,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredUsers.map((u, index) => (
+              {filteredUsers.slice(page * USERS_PER_PAGE, (page + 1) * USERS_PER_PAGE).map((u, index) => (
                 <tr 
                   key={u.id} 
                   className={cn(
@@ -129,9 +131,14 @@ export default function UsersPage() {
                     </p>
                   </td>
                   <td className="px-6 py-5 border-r border-slate-200">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-orange-50 px-2.5 py-1 rounded-lg inline-block">
+                    <div className="flex items-center gap-2">
                       <Clock size={14} className="text-[#FF9F4A]" />
-                      <span>{u.start_time} - {u.end_time}</span>
+                      <span className="text-xs font-bold text-slate-600 bg-orange-50 px-2.5 py-1 rounded-lg">
+                        {formatTime12(u.start_time)} - {formatTime12(u.end_time)}
+                      </span>
+                      <Badge variant={getShiftType(u.start_time) === 'صباحي' ? 'blue' : 'purple'}>
+                        {getShiftType(u.start_time)}
+                      </Badge>
                     </div>
                   </td>
                   <td className="px-6 py-5 border-r border-slate-200">
@@ -161,6 +168,24 @@ export default function UsersPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {filteredUsers.length > 0 && (
+          <div className="px-6 py-4 bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] border-t-4 border-[#FF9F4A] flex items-center justify-between">
+            <span className="text-sm text-white font-medium">
+              عرض <span className="font-bold text-[#FF9F4A]">{Math.min(USERS_PER_PAGE, filteredUsers.length - page * USERS_PER_PAGE)}</span> من أصل <span className="font-bold text-[#FF9F4A]">{filteredUsers.length}</span> موظف
+            </span>
+            <div className="flex items-center gap-3">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2">
+                <ChevronRight size={18} /> السابق
+              </button>
+              <span className="text-white text-sm font-bold">{page + 1} / {Math.ceil(filteredUsers.length / USERS_PER_PAGE)}</span>
+              <button disabled={page >= Math.ceil(filteredUsers.length / USERS_PER_PAGE) - 1} onClick={() => setPage(p => p + 1)} className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2">
+                التالي <ChevronLeft size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Register Modal */}
@@ -169,6 +194,23 @@ export default function UsersPage() {
       </Modal>
     </div>
   );
+}
+
+function getShiftType(startTime?: string): string {
+  if (!startTime) return 'غير محدد';
+  const hour = parseInt(startTime.split(':')[0]);
+  if (hour < 12) return 'صباحي';
+  return 'مسائي';
+}
+
+function formatTime12(time?: string): string {
+  if (!time) return '';
+  const [h, m] = time.split(':');
+  let hour = parseInt(h);
+  const period = hour >= 12 ? 'مساءً' : 'صباحاً';
+  if (hour === 0) hour = 12;
+  else if (hour > 12) hour -= 12;
+  return `${hour}:${m} ${period}`;
 }
 
 function RegisterForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel: () => void }) {

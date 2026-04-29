@@ -29,10 +29,11 @@ export class ProgramRoleModel {
 
   static async findByProgram(programId: bigint): Promise<ProgramRole[]> {
     const result = await pool.query(
-      `SELECT pr.*, r.name as role_name, u.name as user_name, u.email
+      `SELECT pr.*, r.name as role_name, u.name as user_name, u.email, p.title as program_name
        FROM program_roles pr
        INNER JOIN roles r ON pr.role_id = r.id
        INNER JOIN users u ON pr.user_id = u.id
+       INNER JOIN programs p ON pr.program_id = p.id
        WHERE pr.program_id = $1
        ORDER BY r.name, u.name`,
       [programId]
