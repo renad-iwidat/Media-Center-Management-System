@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --background: #ffffff;
+  --surface: #0b1224;
+  --primary: #7BA5C1;
+  --primary-dark: #4A7C9E;
+  --primary-hover: #6B95B1;
+  --accent: #FF9F4A;
+  --border: rgba(0, 0, 0, 0.05);
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  direction: rtl;
+  font-family: var(--font-sans);
+  margin: 0;
+}
+
+/* Glass effect utility adjusted for light/dark mix */
+.glass {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+}
+
+.glass-dark {
+  background: rgba(11, 18, 36, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-item-active {
+  background: rgba(37, 99, 235, 0.1);
+  color: #ffffff;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Select dropdown fix - force dark text on white background */
+select {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}
+
+select option {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  padding: 10px 8px !important;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #3d6a8a !important;
+  color: #ffffff !important;
+}
