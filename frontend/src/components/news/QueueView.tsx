@@ -242,44 +242,44 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       <>
         <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
         <div className="space-y-4">
-          <button onClick={() => setEditingItem(null)} className="text-gray-400 hover:text-white text-sm flex items-center gap-2">
+          <button onClick={() => setEditingItem(null)} className="text-gray-600 hover:text-gray-900 text-sm flex items-center gap-2">
             <ArrowRight size={16} /> العودة للطابور
           </button>
           <div className="flex gap-2">
             <button onClick={() => handleApprove(editingItem.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
               <CheckCircle2 size={15} /> موافقة ونشر
             </button>
-            <button onClick={() => handleReject(editingItem.id)} className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
+            <button onClick={() => handleReject(editingItem.id)} className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
               <XCircle size={15} /> رفض
             </button>
-            <button onClick={() => handleDelete(editingItem.id)} className="bg-red-600/10 hover:bg-red-600/20 text-red-400 px-3 py-2 rounded-xl">
+            <button onClick={() => handleDelete(editingItem.id)} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-xl">
               <Trash2 size={15} />
             </button>
           </div>
         </div>
 
         {/* Meta: صورة + معلومات + عنوان */}
-        <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 p-5">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm p-5">
           <div className="flex gap-5 items-start">
             {/* صورة الخبر */}
             {editedImageUrl && (
-              <div className="w-48 h-32 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-black/50">
+              <div className="w-48 h-32 shrink-0 rounded-xl overflow-hidden border border-gray-300 bg-gray-100">
                 <img src={editedImageUrl} alt="صورة الخبر" className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 130"%3E%3Crect fill="%23222" width="200" height="130"/%3E%3Ctext x="50%25" y="50%25" font-size="14" fill="%23555" text-anchor="middle" dy=".3em"%3Eلا توجد صورة%3C/text%3E%3C/svg%3E'; }} />
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 130"%3E%3Crect fill="%23e5e7eb" width="200" height="130"/%3E%3Ctext x="50%25" y="50%25" font-size="14" fill="%239ca3af" text-anchor="middle" dy=".3em"%3Eلا توجد صورة%3C/text%3E%3C/svg%3E'; }} />
               </div>
             )}
             {/* المعلومات */}
             <div className="flex-1 min-w-0 space-y-3">
-              <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-                <span className="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-lg font-semibold">{editingItem.category_name || '—'}</span>
+              <div className="flex items-center gap-3 text-xs text-gray-600 flex-wrap">
+                <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-semibold">{editingItem.category_name || '—'}</span>
                 <span>{editingItem.media_unit_name || '—'}</span>
               </div>
               <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-600/50 placeholder:text-gray-600"
+                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-gray-500"
                 placeholder="عنوان الخبر" />
               {editingItem?.url && (
                 <a href={editingItem.url} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-blue-400 hover:text-blue-300 truncate block">
+                  className="text-xs text-blue-600 hover:text-blue-700 truncate block">
                   {editingItem.url}
                 </a>
               )}
@@ -288,16 +288,16 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         </div>
 
         {/* شريط السياسات */}
-        <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 p-4 space-y-3">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           {/* سطر سياسات التعديل */}
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 shrink-0">
-              <FileEdit size={13} className="text-blue-400" /> تعديل:
+            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 shrink-0">
+              <FileEdit size={13} className="text-blue-600" /> تعديل:
             </span>
             {policies.map((p: any) => (
               <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all text-xs
-                ${selectedPolicies.includes(p.id) ? "bg-blue-600/15 border-blue-500/50 text-blue-300" : "bg-white/[0.02] border-white/5 text-gray-400 hover:border-white/15"}`}>
-                <input type="checkbox" checked={selectedPolicies.includes(p.id)} onChange={() => togglePolicy(p.id)} className="accent-blue-500 w-3 h-3" />
+                ${selectedPolicies.includes(p.id) ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"}`}>
+                <input type="checkbox" checked={selectedPolicies.includes(p.id)} onChange={() => togglePolicy(p.id)} className="accent-blue-600 w-3 h-3" />
                 {p.name}
               </label>
             ))}
@@ -311,18 +311,18 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
           {/* سطر سياسات الفحص */}
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 shrink-0">
-              <Eye size={13} className="text-amber-400" /> فحص:
+            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 shrink-0">
+              <Eye size={13} className="text-orange-600" /> فحص:
             </span>
             {inspectionPolicies.map((p: any) => (
               <button key={p.id} onClick={() => setSelectedInspectionPolicy(selectedInspectionPolicy === p.id ? null : p.id)}
                 className={`px-3 py-1.5 rounded-lg border text-xs transition-all
-                  ${selectedInspectionPolicy === p.id ? "bg-amber-600/15 border-amber-500/50 text-amber-300" : "bg-white/[0.02] border-white/5 text-gray-400 hover:border-white/15"}`}>
+                  ${selectedInspectionPolicy === p.id ? "bg-orange-100 border-orange-300 text-orange-700" : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"}`}>
                 {p.name}
               </button>
             ))}
             <button onClick={applyInspection} disabled={isProcessingAI || !selectedInspectionPolicy}
-              className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0">
+              className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0">
               {isProcessingAI && selectedInspectionPolicy
                 ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 : <><Eye size={13} /> فحص</>}
@@ -333,20 +333,20 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         {/* Main: النص المعدّل | النتائج */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* النص المعدّل */}
-          <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-300">النص المعدّل</span>
-              <span className="text-xs text-gray-500 font-mono">{editedContent.length} حرف</span>
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-900">النص المعدّل</span>
+              <span className="text-xs text-gray-600 font-mono">{editedContent.length} حرف</span>
             </div>
             <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-[500px] bg-transparent p-4 text-sm text-white focus:outline-none resize-none leading-relaxed placeholder:text-gray-600"
+              className="w-full h-[500px] bg-white p-4 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none leading-relaxed placeholder:text-gray-500"
               placeholder="محتوى الخبر..." />
           </div>
 
           {/* النتائج */}
-          <div className="bg-[#2c5f7f] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/5">
-              <span className="text-sm font-semibold text-gray-300">نتائج السياسات</span>
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-semibold text-gray-900">نتائج السياسات</span>
             </div>
             <div className="p-4 h-[500px] overflow-y-auto space-y-4">
               {policyResults.length === 0 && !inspectionResult && (
@@ -358,62 +358,62 @@ export function QueueView({ unitId }: { unitId: number | null }) {
               {policyResults.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-blue-400">📝 نتائج التعديل</span>
-                    <button onClick={() => setPolicyResults([])} className="text-gray-500 hover:text-white"><X size={14} /></button>
+                    <span className="text-sm font-semibold text-blue-700">📝 نتائج التعديل</span>
+                    <button onClick={() => setPolicyResults([])} className="text-gray-600 hover:text-gray-900"><X size={14} /></button>
                   </div>
                   {policyResults.map((step: any, i: number) => (
-                    <div key={i} className="bg-white/[0.02] rounded-xl border border-white/5 p-3 space-y-2">
+                    <div key={i} className="bg-gray-50 rounded-xl border border-gray-300 p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white">{step.policyName}</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${step.hasChanges ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                        <span className="text-xs font-semibold text-gray-900">{step.policyName}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${step.hasChanges ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                           {step.hasChanges ? '✓ تم التعديل' : '✓ لا يحتاج تعديل'}
                         </span>
                       </div>
                       {step.result?.total_changes !== undefined && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500">عدد التغييرات:</span>
-                          <span className="text-white font-semibold">{step.result.total_changes}</span>
+                          <span className="text-gray-600">عدد التغييرات:</span>
+                          <span className="text-gray-900 font-semibold">{step.result.total_changes}</span>
                         </div>
                       )}
                       {step.result?.notes && (
-                        <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-2">
+                        <div className="bg-blue-50 border border-blue-300 rounded-lg px-3 py-2">
                           <div className="flex items-start gap-2">
-                            <span className="text-blue-400 text-xs shrink-0 mt-0.5">ℹ️</span>
-                            <p className="text-xs text-gray-300 leading-relaxed">{step.result.notes}</p>
+                            <span className="text-blue-700 text-xs shrink-0 mt-0.5">ℹ️</span>
+                            <p className="text-xs text-gray-700 leading-relaxed">{step.result.notes}</p>
                           </div>
                         </div>
                       )}
                       {step.result?.changes?.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-[10px] text-gray-500 font-bold">التغييرات المطبقة:</p>
+                          <p className="text-[10px] text-gray-600 font-bold">التغييرات المطبقة:</p>
                           {step.result.changes.slice(0, 3).map((change: string, ci: number) => (
-                            <div key={ci} className="text-xs text-gray-300 bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-2 py-1.5 line-clamp-2 flex items-start gap-2">
-                              <span className="text-emerald-400 shrink-0">•</span>
+                            <div key={ci} className="text-xs text-gray-700 bg-emerald-50 border border-emerald-300 rounded-lg px-2 py-1.5 line-clamp-2 flex items-start gap-2">
+                              <span className="text-emerald-700 shrink-0">•</span>
                               <span>{change}</span>
                             </div>
                           ))}
                           {step.result.changes.length > 3 && (
-                            <div className="text-xs text-gray-500 px-2">+{step.result.changes.length - 3} تغييرات أخرى</div>
+                            <div className="text-xs text-gray-600 px-2">+{step.result.changes.length - 3} تغييرات أخرى</div>
                           )}
                         </div>
                       )}
                       {step.hasChanges && step.result?.modified_text && (
-                        <div className="space-y-1 pt-2 border-t border-white/5">
+                        <div className="space-y-1 pt-2 border-t border-gray-300">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-gray-500 font-bold">النص المعدل:</p>
+                            <p className="text-[10px] text-gray-600 font-bold">النص المعدل:</p>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(step.result.modified_text);
                                 setNotification({ type: 'success', message: '✅ تم نسخ النص المعدل' });
                               }}
-                              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              className="text-[10px] text-blue-600 hover:text-blue-700 flex items-center gap-1"
                             >
                               <Copy size={10} />
                               نسخ
                             </button>
                           </div>
-                          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-3 py-2 max-h-32 overflow-y-auto custom-scrollbar">
-                            <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{step.result.modified_text}</p>
+                          <div className="bg-emerald-50 border border-emerald-300 rounded-lg px-3 py-2 max-h-32 overflow-y-auto custom-scrollbar">
+                            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{step.result.modified_text}</p>
                           </div>
                         </div>
                       )}
@@ -425,38 +425,38 @@ export function QueueView({ unitId }: { unitId: number | null }) {
               {inspectionResult && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-amber-400">🔍 نتيجة الفحص</span>
-                    <button onClick={() => setInspectionResult(null)} className="text-gray-500 hover:text-white"><X size={14} /></button>
+                    <span className="text-sm font-semibold text-orange-700">🔍 نتيجة الفحص</span>
+                    <button onClick={() => setInspectionResult(null)} className="text-gray-600 hover:text-gray-900"><X size={14} /></button>
                   </div>
-                  <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 space-y-2">
+                  <div className="bg-gray-50 rounded-xl border border-gray-300 p-3 space-y-2">
                     {inspectionResult.error ? (
-                      <p className="text-rose-400 text-xs">{inspectionResult.error}</p>
+                      <p className="text-rose-700 text-xs">{inspectionResult.error}</p>
                     ) : (
                       <>
                         {inspectionResult.status && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">الحالة:</span>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${['pass','clean','ok'].includes(inspectionResult.status) ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                            <span className="text-xs text-gray-600">الحالة:</span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${['pass','clean','ok'].includes(inspectionResult.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                               {['pass','clean','ok'].includes(inspectionResult.status) ? '✓ ' : '✗ '}{inspectionResult.status}
                             </span>
                           </div>
                         )}
                         {inspectionResult.summary && (
                           <div>
-                            <p className="text-xs text-gray-300 leading-relaxed">{inspectionResult.summary}</p>
+                            <p className="text-xs text-gray-700 leading-relaxed">{inspectionResult.summary}</p>
                           </div>
                         )}
                         {inspectionResult.issues?.length > 0 && (
                           <div>
-                            <span className="text-xs text-gray-400 font-semibold">المشاكل ({inspectionResult.issues.length}):</span>
+                            <span className="text-xs text-gray-600 font-semibold">المشاكل ({inspectionResult.issues.length}):</span>
                             <div className="space-y-1 mt-1">
                               {inspectionResult.issues.slice(0, 3).map((issue: any, i: number) => (
-                                <div key={i} className="bg-[#1e4a66]/50 rounded px-2 py-1 text-xs text-gray-300 border border-white/5 line-clamp-2">
+                                <div key={i} className="bg-gray-100 rounded px-2 py-1 text-xs text-gray-700 border border-gray-300 line-clamp-2">
                                   {typeof issue === 'string' ? issue : JSON.stringify(issue)}
                                 </div>
                               ))}
                               {inspectionResult.issues.length > 3 && (
-                                <div className="text-xs text-gray-500 px-2">+{inspectionResult.issues.length - 3} مشاكل أخرى</div>
+                                <div className="text-xs text-gray-600 px-2">+{inspectionResult.issues.length - 3} مشاكل أخرى</div>
                               )}
                             </div>
                           </div>
@@ -480,7 +480,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       <div className="flex justify-between items-end mb-2">
         <div>
           <h3 className="text-xl font-bold mb-1">ستوديو التحرير</h3>
-          <p className="text-gray-500 text-sm">الأخبار المعلقة بانتظار مراجعة المحرر.</p>
+          <p className="text-gray-600 text-sm">الأخبار المعلقة بانتظار مراجعة المحرر.</p>
         </div>
       </div>
 
@@ -489,32 +489,32 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       ) : (
         <div className="space-y-6">
           {/* Filters */}
-          <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Search size={16} className="text-blue-400" />
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Search size={16} className="text-blue-600" />
               البحث والفلترة
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search by title */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-400 font-bold uppercase">البحث عن عنوان</label>
+                <label className="text-xs text-gray-700 font-bold uppercase">البحث عن عنوان</label>
                 <input
                   type="text"
                   value={searchTitle}
                   onChange={(e) => setSearchTitle(e.target.value)}
                   placeholder="ابحث عن عنوان..."
-                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
                 />
               </div>
 
               {/* Filter by category */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-400 font-bold uppercase">التصنيف</label>
+                <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
                 >
                   <option value="">كل التصنيفات</option>
                   {[...new Set(queue.map(item => item.category_name))].map(cat => (
@@ -525,22 +525,22 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
               {/* Filter by date */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-400 font-bold uppercase">التاريخ</label>
+                <label className="text-xs text-gray-700 font-bold uppercase">التاريخ</label>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
                 />
               </div>
 
               {/* Sort */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-400 font-bold uppercase">الترتيب</label>
+                <label className="text-xs text-gray-700 font-bold uppercase">الترتيب</label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                  className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
                 >
                   <option value="newest">الأحدث أولاً</option>
                   <option value="oldest">الأقدم أولاً</option>
@@ -557,7 +557,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                   setSelectedDate("");
                   setSortBy("newest");
                 }}
-                className="text-xs text-blue-400 hover:text-blue-300 font-bold"
+                className="text-xs text-blue-600 hover:text-blue-700 font-bold"
               >
                 مسح الفلاتر
               </button>
@@ -589,45 +589,45 @@ export function QueueView({ unitId }: { unitId: number | null }) {
           ) : (
             <div className="space-y-4">
               {/* Table */}
-              <div className="bg-[#2c5f7f] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-white/10 bg-white/[0.02]">
-                        <th className="text-right py-4 px-6 text-gray-400 font-semibold">#</th>
-                        <th className="text-right py-4 px-6 text-gray-400 font-semibold">العنوان</th>
-                        <th className="text-right py-4 px-6 text-gray-400 font-semibold">التصنيف</th>
-                        <th className="text-right py-4 px-6 text-gray-400 font-semibold">المصدر</th>
-                        <th className="text-right py-4 px-6 text-gray-400 font-semibold">الحالة</th>
-                        <th className="text-center py-4 px-6 text-gray-400 font-semibold">التاريخ</th>
-                        <th className="text-center py-4 px-6 text-gray-400 font-semibold">الإجراءات</th>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">#</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">العنوان</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">التصنيف</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">المصدر</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">الحالة</th>
+                        <th className="text-center py-4 px-6 text-gray-700 font-semibold">التاريخ</th>
+                        <th className="text-center py-4 px-6 text-gray-700 font-semibold">الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredQueue
                         .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                         .map((item: any, idx: number) => (
-                          <tr key={item.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                            <td className="py-4 px-6 text-gray-400 font-mono text-xs">
+                          <tr key={item.id} className="border-b border-gray-200 hover:bg-blue-50 transition-colors">
+                            <td className="py-4 px-6 text-gray-600 font-mono text-xs">
                               {(currentPage - 1) * itemsPerPage + idx + 1}
                             </td>
-                            <td className="py-4 px-6 text-gray-200 max-w-xs truncate">
+                            <td className="py-4 px-6 text-gray-900 max-w-xs truncate">
                               {item.title || 'بدون عنوان'}
                             </td>
-                            <td className="py-4 px-6 text-gray-400">
-                              <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded text-xs font-bold">
+                            <td className="py-4 px-6 text-gray-700">
+                              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">
                                 {item.category_name || '—'}
                               </span>
                             </td>
-                            <td className="py-4 px-6 text-gray-400 text-xs">
+                            <td className="py-4 px-6 text-gray-600 text-xs">
                               {item.source_name || '—'}
                             </td>
-                            <td className="py-4 px-6 text-gray-400">
-                              <span className="bg-amber-500/10 text-amber-400 px-2 py-1 rounded text-xs font-bold">
+                            <td className="py-4 px-6 text-gray-700">
+                              <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">
                                 {item.status || 'pending'}
                               </span>
                             </td>
-                            <td className="py-4 px-6 text-center text-gray-400 text-xs font-mono">
+                            <td className="py-4 px-6 text-center text-gray-600 text-xs font-mono">
                               {item.pub_date
                                 ? new Date(item.pub_date).toLocaleDateString('ar-SA')
                                 : new Date(item.created_at).toLocaleDateString('ar-SA')}
@@ -636,14 +636,14 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                               <div className="flex gap-2 justify-center">
                                 <button
                                   onClick={() => handleOpenEditor(item)}
-                                  className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
                                   title="فتح المحرر"
                                 >
                                   تحرير
                                 </button>
                                 <button
                                   onClick={() => handleDelete(item.id)}
-                                  className="bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                                  className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
                                   title="حذف الخبر"
                                 >
                                   حذف
@@ -671,7 +671,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                      className="bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 px-4 py-2 rounded-lg font-bold text-sm transition-all"
                     >
                       السابق
                     </button>
@@ -684,7 +684,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                           className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
                             currentPage === page
                               ? 'bg-blue-600 text-white'
-                              : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900'
                           }`}
                         >
                           {page}
@@ -695,7 +695,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                     {endPage < totalPages && (
                       <button
                         onClick={() => setCurrentPage(endPage + 1)}
-                        className="bg-white/5 hover:bg-white/10 text-white px-3 py-2 rounded-lg font-bold text-sm transition-all"
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold text-sm transition-all"
                       >
                         ...
                       </button>
@@ -704,7 +704,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className="bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                      className="bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 px-4 py-2 rounded-lg font-bold text-sm transition-all"
                     >
                       التالي
                     </button>

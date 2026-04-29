@@ -160,11 +160,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1e4a66] via-[#2c5f7f] to-[#1e4a66] flex items-center justify-center p-4">
-      {/* Background decoration */}
+    <div className="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#ffffff] to-[#f0f4f8] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decoration - subtle gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#4A7C9C]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#FF9F43]/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-[#4A7C9C]/5 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-br from-[#FF9F43]/5 to-transparent rounded-full blur-3xl" />
       </div>
 
       {/* Login Card */}
@@ -174,15 +174,15 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         transition={{ duration: 0.5 }}
         className="relative w-full max-w-md"
       >
-        <div className="bg-[#2c5f7f]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-white/95 backdrop-blur-xl border border-gray-200 rounded-3xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/30 mx-auto mb-4 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
               <LogIn className="text-white w-8 h-8 relative z-10" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">تسجيل الدخول</h1>
-            <p className="text-gray-400 text-sm">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">تسجيل الدخول</h1>
+            <p className="text-gray-600 text-sm">
               <span className="text-[#FF9F43] font-semibold">مركز الإعلام</span> — جامعة النجاح الوطنية
             </p>
           </div>
@@ -192,10 +192,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3"
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3"
             >
-              <AlertCircle className="text-red-400 w-5 h-5 shrink-0 mt-0.5" />
-              <p className="text-red-400 text-sm">{error}</p>
+              <AlertCircle className="text-red-600 w-5 h-5 shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{error}</p>
             </motion.div>
           )}
 
@@ -203,21 +203,21 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Input */}
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">البريد الإلكتروني</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
               <input
                 type="email"
                 value={email}
                 onChange={handleEmailChange}
                 placeholder="example@domain.com"
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-[#FF9F43] focus:ring-2 focus:ring-[#FF9F43]/20 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 required
               />
             </div>
 
             {/* Password Input */}
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">كلمة المرور</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">كلمة المرور</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -225,14 +225,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={isLoading}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-[#FF9F43] focus:ring-2 focus:ring-[#FF9F43]/20 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF9F43] transition-colors disabled:opacity-50"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-[#FF9F43] transition-colors disabled:opacity-50"
                 >
                   {showPassword ? '🙈' : '👁️'}
                 </button>
@@ -261,7 +261,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 pt-6 border-t border-white/10">
+          <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-gray-500 text-xs">
               هذا النظام مخصص للموظفين المصرح لهم فقط
             </p>

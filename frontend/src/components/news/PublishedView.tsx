@@ -89,32 +89,32 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
     <>
       <div className="space-y-6">
         {/* Filters */}
-        <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Search size={16} className="text-blue-400" />
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+          <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <Search size={16} className="text-blue-600" />
             البحث والفلترة
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Search by title */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">البحث عن عنوان</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">البحث عن عنوان</label>
               <input
                 type="text"
                 value={searchTitle}
                 onChange={(e) => setSearchTitle(e.target.value)}
                 placeholder="ابحث عن عنوان..."
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
               />
             </div>
 
             {/* Filter by category */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">التصنيف</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
               >
                 <option value="">كل التصنيفات</option>
                 {categories.map(cat => (
@@ -125,11 +125,11 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
 
             {/* Filter by type */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">النوع</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">النوع</label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
               >
                 <option value="">كل الأنواع</option>
                 {types.map(type => (
@@ -140,33 +140,33 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
 
             {/* Date from */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">من التاريخ</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">من التاريخ</label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
               />
             </div>
 
             {/* Date to */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">إلى التاريخ</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">إلى التاريخ</label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
               />
             </div>
 
             {/* Sort */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">الترتيب</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">الترتيب</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
               >
                 <option value="newest">الأحدث أولاً</option>
                 <option value="oldest">الأقدم أولاً</option>
@@ -184,7 +184,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                 setDateFrom("");
                 setDateTo("");
               }}
-              className="text-xs text-blue-400 hover:text-blue-300 font-bold"
+              className="text-xs text-blue-600 hover:text-blue-700 font-bold"
             >
               مسح الفلاتر
             </button>
@@ -207,40 +207,40 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
         {filteredItems.length === 0 ? (
           <EmptyState icon={CheckCircle} title="لا يوجد محتوى منشور" description="سيظهر هنا المحتوى بعد الموافقة عليه من ستوديو التحرير." />
         ) : (
-          <div className="bg-[#2c5f7f] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.02]">
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">#</th>
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">العنوان</th>
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">التصنيف</th>
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">النوع</th>
-                    <th className="text-center py-4 px-6 text-gray-400 font-semibold">التاريخ</th>
-                    <th className="text-center py-4 px-6 text-gray-400 font-semibold">الإجراء</th>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">#</th>
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">العنوان</th>
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">التصنيف</th>
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">النوع</th>
+                    <th className="text-center py-4 px-6 text-gray-700 font-semibold">التاريخ</th>
+                    <th className="text-center py-4 px-6 text-gray-700 font-semibold">الإجراء</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems
                     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                     .map((item: any, idx: number) => (
-                      <tr key={item.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 px-6 text-gray-400 font-mono text-xs">
+                      <tr key={item.id} className="border-b border-gray-200 hover:bg-blue-50 transition-colors">
+                        <td className="py-4 px-6 text-gray-600 font-mono text-xs">
                           {(currentPage - 1) * itemsPerPage + idx + 1}
                         </td>
-                        <td className="py-4 px-6 text-gray-200 max-w-xs truncate">
+                        <td className="py-4 px-6 text-gray-900 max-w-xs truncate">
                           {item.title || 'بدون عنوان'}
                         </td>
                         <td className="py-4 px-6">
-                          <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded text-xs font-bold">
+                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">
                             {item.category_name || '—'}
                           </span>
                         </td>
                         <td className="py-4 px-6">
                           <span className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 w-fit ${
                             (item.publish_type || (item.policy_id ? "تحريري" : "أوتوماتيكي")) === "أوتوماتيكي"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-amber-500/10 text-amber-400"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
                           }`}>
                             {(item.publish_type || (item.policy_id ? "تحريري" : "أوتوماتيكي")) === "أوتوماتيكي" ? (
                               <><Zap size={12} /> أوتوماتيكي</>
@@ -249,7 +249,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                             )}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-center text-gray-400 text-xs font-mono">
+                        <td className="py-4 px-6 text-center text-gray-600 text-xs font-mono">
                           {item.pub_date
                             ? new Date(item.pub_date).toLocaleDateString('ar-SA')
                             : item.published_at ? new Date(item.published_at).toLocaleDateString('ar-SA') : '—'}
@@ -257,7 +257,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                         <td className="py-4 px-6 text-center">
                           <button
                             onClick={() => setSelectedItem(item)}
-                            className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
                           >
                             عرض التفاصيل
                           </button>
@@ -270,11 +270,11 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
 
             {/* Pagination */}
             {Math.ceil(filteredItems.length / itemsPerPage) > 1 && (
-              <div className="flex items-center justify-center gap-2 p-4 border-t border-white/5">
+              <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-200">
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded text-xs font-bold transition-all"
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700 rounded text-xs font-bold transition-all"
                 >
                   السابق
                 </button>
@@ -285,7 +285,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                     className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
                       currentPage === page
                         ? "bg-blue-600 text-white"
-                        : "bg-white/5 hover:bg-white/10 text-white"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                     }`}
                   >
                     {page}
@@ -294,7 +294,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                 <button
                   onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredItems.length / itemsPerPage), p + 1))}
                   disabled={currentPage === Math.ceil(filteredItems.length / itemsPerPage)}
-                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded text-xs font-bold transition-all"
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700 rounded text-xs font-bold transition-all"
                 >
                   التالي
                 </button>
@@ -306,79 +306,79 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
 
       {/* Details Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#2c5f7f] rounded-3xl p-8 border border-blue-600/20 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-6"
+            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-6"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-white">
-                <CheckCircle size={20} className="text-blue-400" />
+              <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
+                <CheckCircle size={20} className="text-blue-600" />
                 تفاصيل الخبر المنشور
               </h3>
-              <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-white transition-colors">
+              <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-gray-700 transition-colors">
                 <X size={20} />
               </button>
             </div>
 
             {/* Image */}
             {selectedItem.image_url && (
-              <div className="w-full h-64 rounded-2xl overflow-hidden border border-white/10 bg-black/50">
+              <div className="w-full h-64 rounded-2xl overflow-hidden border border-gray-300 bg-gray-100">
                 <img src={selectedItem.image_url} alt="صورة الخبر" className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23222" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%23555" text-anchor="middle" dy=".3em"%3Eلا توجد صورة%3C/text%3E%3C/svg%3E'; }} />
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%239ca3af" text-anchor="middle" dy=".3em"%3Eلا توجد صورة%3C/text%3E%3C/svg%3E'; }} />
               </div>
             )}
 
             {/* Meta info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
-                <p className="text-xs text-gray-500 mb-1">التصنيف</p>
-                <p className="text-sm font-bold text-white">{selectedItem.category_name || '—'}</p>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-600 mb-1">التصنيف</p>
+                <p className="text-sm font-bold text-gray-900">{selectedItem.category_name || '—'}</p>
               </div>
-              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
-                <p className="text-xs text-gray-500 mb-1">النوع</p>
-                <p className="text-sm font-bold text-white flex items-center gap-1">
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-600 mb-1">النوع</p>
+                <p className="text-sm font-bold text-gray-900 flex items-center gap-1">
                   {(selectedItem.publish_type || (selectedItem.policy_id ? "تحريري" : "أوتوماتيكي")) === "أوتوماتيكي" ? (
-                    <><Zap size={14} className="text-emerald-400" /> أوتوماتيكي</>
+                    <><Zap size={14} className="text-emerald-600" /> أوتوماتيكي</>
                   ) : (
-                    <><Eye size={14} className="text-amber-400" /> تحريري</>
+                    <><Eye size={14} className="text-amber-600" /> تحريري</>
                   )}
                 </p>
               </div>
-              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
-                <p className="text-xs text-gray-500 mb-1">تاريخ النشر الأصلي</p>
-                <p className="text-sm font-bold text-white">
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-600 mb-1">تاريخ النشر الأصلي</p>
+                <p className="text-sm font-bold text-gray-900">
                   {selectedItem.pub_date
                     ? new Date(selectedItem.pub_date).toLocaleDateString('ar-SA')
                     : selectedItem.published_at ? new Date(selectedItem.published_at).toLocaleDateString('ar-SA') : '—'}
                 </p>
               </div>
-              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
-                <p className="text-xs text-gray-500 mb-1">الوسيط</p>
-                <p className="text-sm font-bold text-white">{selectedItem.media_unit_name || '—'}</p>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-600 mb-1">الوسيط</p>
+                <p className="text-sm font-bold text-gray-900">{selectedItem.media_unit_name || '—'}</p>
               </div>
             </div>
 
             {/* Title */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold">العنوان</label>
-              <p className="text-lg font-bold text-white leading-relaxed">{selectedItem.title || 'بدون عنوان'}</p>
+              <label className="text-xs text-gray-700 font-bold">العنوان</label>
+              <p className="text-lg font-bold text-gray-900 leading-relaxed">{selectedItem.title || 'بدون عنوان'}</p>
             </div>
 
             {/* Content */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold">المحتوى</label>
-              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4 max-h-64 overflow-y-auto">
-                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{selectedItem.content || 'بدون محتوى'}</p>
+              <label className="text-xs text-gray-700 font-bold">المحتوى</label>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 max-h-64 overflow-y-auto">
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedItem.content || 'بدون محتوى'}</p>
               </div>
             </div>
 
             {/* URL */}
             {selectedItem.url && (
               <div className="space-y-2">
-                <label className="text-xs text-gray-400 font-bold">الرابط الأصلي</label>
-                <a href={selectedItem.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 break-all">
+                <label className="text-xs text-gray-700 font-bold">الرابط الأصلي</label>
+                <a href={selectedItem.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 break-all">
                   {selectedItem.url}
                 </a>
               </div>
@@ -387,7 +387,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
             {/* Close button */}
             <button
               onClick={() => setSelectedItem(null)}
-              className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold text-sm transition-all"
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-sm transition-all"
             >
               إغلاق
             </button>

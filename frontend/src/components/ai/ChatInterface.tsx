@@ -125,17 +125,17 @@ export default function ChatInterface() {
     <div className="h-[calc(100vh-160px)] flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-1 text-right">
-          <h2 className="text-xl font-bold">المساعد الذكي</h2>
-          <p className="text-gray-400 text-xs">دردشة مفتوحة مع ذكاء اصطناعي متخصص في المجال الإعلامي.</p>
+          <h2 className="text-xl font-bold text-gray-900">المساعد الذكي</h2>
+          <p className="text-gray-600 text-xs">دردشة مفتوحة مع ذكاء اصطناعي متخصص في المجال الإعلامي.</p>
         </div>
         <div className="flex items-center gap-4">
           {remaining !== null && (
             <div className={`px-4 py-2 rounded-lg text-sm font-arabic ${
               remaining === 0 
-                ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                ? 'bg-red-100 text-red-700 border border-red-300' 
                 : remaining === 1 
-                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                : 'bg-green-500/20 text-green-300 border border-green-500/30'
+                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                : 'bg-green-100 text-green-700 border border-green-300'
             }`}>
               {remaining === 0 
                 ? '❌ انتهت الرسائل' 
@@ -144,7 +144,7 @@ export default function ChatInterface() {
           )}
           <button 
             onClick={clearChat}
-            className="p-3 bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
+            className="p-3 bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded-2xl transition-all"
             title="مسح المحادثة"
           >
             <Trash2 size={20} />
@@ -154,7 +154,7 @@ export default function ChatInterface() {
 
       <div className="flex-1 flex gap-8 overflow-hidden">
         {/* Chat Main */}
-        <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-[#2c5f7f]/40">
+        <div className="flex-1 glass-panel flex flex-col overflow-hidden bg-white border border-gray-200">
           <div 
             ref={scrollRef}
             className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
@@ -173,13 +173,13 @@ export default function ChatInterface() {
                 </div>
                 <div className={`max-w-[80%] p-3 rounded-2xl font-arabic text-sm leading-relaxed ${
                   msg.role === 'user'
-                  ? 'bg-blue-600/10 border border-blue-600/20 text-blue-50 rounded-tr-none'
-                  : 'bg-white/5 border border-white/10 text-gray-200 rounded-tl-none'
+                  ? 'bg-blue-100 border border-blue-300 text-blue-900 rounded-tr-none'
+                  : 'bg-gray-100 border border-gray-300 text-gray-900 rounded-tl-none'
                 }`}>
                   <div className="whitespace-pre-wrap">
                     {msg.role === 'assistant' ? parseNumberedList(msg.content) : msg.content}
                   </div>
-                  <span className="text-[10px] text-gray-500 mt-2 block opacity-50">
+                  <span className="text-[10px] text-gray-600 mt-2 block opacity-60">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -187,19 +187,19 @@ export default function ChatInterface() {
             ))}
             {isLoading && (
               <div className="flex gap-4 animate-pulse">
-                <div className="w-10 h-10 rounded-xl bg-[#2563eb]/20 flex items-center justify-center text-[#2563eb]">
+                <div className="w-10 h-10 rounded-xl bg-blue-200 flex items-center justify-center text-blue-600">
                   <Sparkles size={20} />
                 </div>
-                <div className="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none w-24 flex gap-1 items-center justify-center">
-                   <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce" />
-                   <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                   <div className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="bg-gray-100 border border-gray-300 p-4 rounded-3xl rounded-tl-none w-24 flex gap-1 items-center justify-center">
+                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" />
+                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t border-white/5 bg-white/[0.02]">
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
             <div className="relative group">
               <textarea
                 value={input}
@@ -212,7 +212,7 @@ export default function ChatInterface() {
                 }}
                 placeholder="اسألني أي شيء عن الإعلام..."
                 rows={2}
-                className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-2xl py-4 pr-6 pl-16 focus:ring-2 focus:ring-[#2563eb]/20 outline-none transition-all placeholder:text-gray-600 resize-none font-arabic"
+                className="w-full bg-white border border-gray-300 rounded-2xl py-4 pr-6 pl-16 focus:ring-2 focus:ring-[#2563eb]/20 outline-none transition-all placeholder:text-gray-500 resize-none font-arabic text-gray-900"
               />
               <div className="absolute left-4 bottom-4 flex gap-2">
                 <button 
@@ -223,8 +223,8 @@ export default function ChatInterface() {
                   {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                 </button>
               </div>
-              <div className="absolute right-4 bottom-4 text-gray-500">
-                <Paperclip size={18} className="cursor-pointer hover:text-white transition-colors" />
+              <div className="absolute right-4 bottom-4 text-gray-600">
+                <Paperclip size={18} className="cursor-pointer hover:text-[#FF9F43] transition-colors" />
               </div>
             </div>
           </div>

@@ -271,7 +271,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
       </div>
 
       {/* Tool Tabs */}
-      <div className="flex gap-2 p-1 bg-white/5 rounded-xl w-fit mr-auto ml-0 flex-row-reverse">
+      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit mr-auto ml-0 flex-row-reverse">
         {[
           { id: 'IDEAS', label: 'تطوير حلقات', icon: Lightbulb },
           { id: 'QUESTIONS', label: 'أسئلة لقاءات', icon: User },
@@ -282,8 +282,8 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
             onClick={() => { setActiveTool(tool.id as Tool); setResult(null); setProgramSearch(''); setGuestSearch(''); }}
             className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${
               activeTool === tool.id
-                ? 'bg-[#2563eb] text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                ? 'bg-[#FF9F43] text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
             }`}
           >
             <tool.icon size={14} />
@@ -295,7 +295,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* ── Selector Panel ── */}
         <div className="lg:col-span-5 flex flex-col">
-          <div className="glass-panel p-4 space-y-3 flex-1 flex flex-col">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-4 space-y-3 flex-1 flex flex-col border border-gray-200">
             {/* Search — Programs */}
             <div className="relative group">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
@@ -304,14 +304,14 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                 placeholder="ابحث عن برنامج..."
                 value={programSearch}
                 onChange={(e) => setProgramSearch(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pr-11 pl-4 text-sm outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                className="w-full bg-white border border-gray-300 rounded-xl py-3 pr-11 pl-4 text-sm outline-none focus:ring-2 focus:ring-[#FF9F43]/20 text-gray-900"
               />
             </div>
 
             <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[420px]">
               {/* Programs list */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#2c5f7f] py-1 z-10">اختر البرنامج</label>
+                <label className="text-xs font-bold text-gray-600 block sticky top-0 bg-white py-1 z-10">اختر البرنامج</label>
                 {loadingData ? (
                   <div className="flex items-center justify-center py-6 text-gray-500 gap-2">
                     <Loader2 size={16} className="animate-spin" />
@@ -332,20 +332,20 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                           }}
                           className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                             selectedProgram?.id === p.id
-                              ? 'bg-[#2563eb]/10 border-[#2563eb]'
-                              : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                              ? 'bg-[#FF9F43]/10 border-[#FF9F43]'
+                              : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <Tv size={16} className="text-blue-400 shrink-0" />
+                            <Tv size={16} className="text-[#1e4a66] shrink-0" />
                             <div className="flex flex-col">
-                              <span className="text-sm font-bold">{p.title}</span>
+                              <span className="text-sm font-bold text-gray-900">{p.title}</span>
                               {p.media_unit_name && (
-                                <span className="text-[10px] text-gray-500">{p.media_unit_name}</span>
+                                <span className="text-[10px] text-gray-600">{p.media_unit_name}</span>
                               )}
                             </div>
                           </div>
-                          {selectedProgram?.id === p.id && <Check size={14} className="text-[#2563eb]" />}
+                          {selectedProgram?.id === p.id && <Check size={14} className="text-[#FF9F43]" />}
                         </div>
 
                         {/* Episodes dropdown */}
@@ -353,7 +353,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                           <div className="mt-1 mr-4">
                             <button
                               onClick={() => setShowEpisodes(!showEpisodes)}
-                              className="flex items-center gap-2 text-xs text-gray-400 hover:text-white py-1 px-2 transition-colors"
+                              className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-900 py-1 px-2 transition-colors"
                             >
                               <Film size={12} />
                               <span>{episodes.length} حلقة</span>
@@ -368,23 +368,23 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                                     onClick={() => setSelectedEpisode(selectedEpisode?.id === ep.id ? null : ep)}
                                     className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
                                       selectedEpisode?.id === ep.id
-                                        ? 'bg-sky-500/10 border-sky-500/50'
-                                        : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                                        ? 'bg-[#FF9F43]/10 border-[#FF9F43]'
+                                        : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                                     }`}
                                   >
                                     <div className="flex items-center gap-2">
-                                      <Film size={12} className="text-sky-400 shrink-0" />
+                                      <Film size={12} className="text-[#1e4a66] shrink-0" />
                                       <div className="flex flex-col">
-                                        <span className="text-xs font-medium">{ep.title}</span>
+                                        <span className="text-xs font-medium text-gray-900">{ep.title}</span>
                                         {ep.air_date && (
-                                          <span className="text-[10px] text-gray-500">
+                                          <span className="text-[10px] text-gray-600">
                                             {new Date(ep.air_date).toLocaleDateString('ar')}
                                           </span>
                                         )}
                                       </div>
                                     </div>
                                     {selectedEpisode?.id === ep.id && (
-                                      <Check size={12} className="text-sky-400" />
+                                      <Check size={12} className="text-[#FF9F43]" />
                                     )}
                                   </div>
                                 ))}
@@ -395,17 +395,17 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setEpisodePage(p => Math.max(1, p - 1)); }}
                                       disabled={episodePage === 1}
-                                      className="px-2 py-1 text-xs bg-white/5 border border-white/10 rounded disabled:opacity-30"
+                                      className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded disabled:opacity-30 text-gray-900"
                                     >
                                       السابق
                                     </button>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-600">
                                       {episodePage} / {totalEpisodePages}
                                     </span>
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setEpisodePage(p => Math.min(totalEpisodePages, p + 1)); }}
                                       disabled={episodePage === totalEpisodePages}
-                                      className="px-2 py-1 text-xs bg-white/5 border border-white/10 rounded disabled:opacity-30"
+                                      className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded disabled:opacity-30 text-gray-900"
                                     >
                                       التالي
                                     </button>
@@ -421,21 +421,21 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
 
                   {/* Program Pagination */}
                   {totalProgramPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-200">
                       <button
                         onClick={() => setProgramPage(p => Math.max(1, p - 1))}
                         disabled={programPage === 1}
-                        className="px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg disabled:opacity-30 hover:bg-white/10 transition-colors"
+                        className="px-3 py-1.5 text-xs bg-gray-100 border border-gray-300 rounded-lg disabled:opacity-30 hover:bg-gray-200 transition-colors text-gray-900"
                       >
                         السابق
                       </button>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-600">
                         صفحة {programPage} من {totalProgramPages}
                       </span>
                       <button
                         onClick={() => setProgramPage(p => Math.min(totalProgramPages, p + 1))}
                         disabled={programPage === totalProgramPages}
-                        className="px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg disabled:opacity-30 hover:bg-white/10 transition-colors"
+                        className="px-3 py-1.5 text-xs bg-gray-100 border border-gray-300 rounded-lg disabled:opacity-30 hover:bg-gray-200 transition-colors text-gray-900"
                       >
                         التالي
                       </button>
@@ -447,11 +447,11 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
 
               {/* Guests list — only for QUESTIONS */}
               {activeTool === 'QUESTIONS' && (
-                <div className="space-y-2 pt-2 border-t border-white/5">
-                  <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#2c5f7f] py-1 z-10">
+                <div className="space-y-2 pt-2 border-t border-gray-200">
+                  <label className="text-xs font-bold text-gray-600 block sticky top-0 bg-white py-1 z-10">
                     اختر الضيف
                     {episodeGuests.length > 0 && (
-                      <span className="text-sky-400 mr-2">(ضيوف الحلقة المختارة مميزون)</span>
+                      <span className="text-[#FF9F43] mr-2">(ضيوف الحلقة المختارة مميزون)</span>
                     )}
                   </label>
 
@@ -463,7 +463,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                       placeholder="ابحث عن ضيف..."
                       value={guestSearch}
                       onChange={(e) => setGuestSearch(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                      className="w-full bg-white border border-gray-300 rounded-xl py-2.5 pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-[#FF9F43]/20 text-gray-900"
                     />
                     {loadingGuests && (
                       <Loader2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />
@@ -491,18 +491,18 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                             onClick={() => setSelectedGuest(selectedGuest?.id === g.id ? null : g)}
                             className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                               selectedGuest?.id === g.id
-                                ? 'bg-[#2563eb]/10 border-[#2563eb]'
-                                : 'bg-sky-500/5 border-sky-500/20 hover:border-sky-500/40'
+                                ? 'bg-[#FF9F43]/10 border-[#FF9F43]'
+                                : 'bg-orange-50 border-orange-200 hover:border-orange-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <User size={16} className="text-sky-400 shrink-0" />
+                              <User size={16} className="text-[#FF9F43] shrink-0" />
                               <div className="flex flex-col">
-                                <span className="text-sm font-bold">{g.name}</span>
-                                <span className="text-[10px] text-sky-300">ضيف الحلقة</span>
+                                <span className="text-sm font-bold text-gray-900">{g.name}</span>
+                                <span className="text-[10px] text-[#FF9F43]">ضيف الحلقة</span>
                               </div>
                             </div>
-                            {selectedGuest?.id === g.id && <Check size={14} className="text-[#2563eb]" />}
+                            {selectedGuest?.id === g.id && <Check size={14} className="text-[#FF9F43]" />}
                           </div>
                         ))}
 
@@ -515,17 +515,17 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                               onClick={() => setSelectedGuest(selectedGuest?.id === g.id ? null : g)}
                               className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                                 selectedGuest?.id === g.id
-                                  ? 'bg-[#2563eb]/10 border-[#2563eb]'
-                                  : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                                  ? 'bg-[#FF9F43]/10 border-[#FF9F43]'
+                                  : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                               }`}
                             >
                               <div className="flex items-center gap-3">
-                                <User size={16} className="text-amber-400 shrink-0" />
+                                <User size={16} className="text-[#1e4a66] shrink-0" />
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-bold">{g.name}</span>
+                                  <span className="text-sm font-bold text-gray-900">{g.name}</span>
                                 </div>
                               </div>
-                              {selectedGuest?.id === g.id && <Check size={14} className="text-[#2563eb]" />}
+                              {selectedGuest?.id === g.id && <Check size={14} className="text-[#FF9F43]" />}
                             </div>
                           ))}
                       </div>
@@ -537,15 +537,15 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
 
             {/* Context summary badge */}
             {selectedProgram && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-xs text-gray-400 space-y-1">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-600 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Tv size={12} className="text-blue-400" />
-                  <span className="text-white font-medium">{selectedProgram.title}</span>
+                  <Tv size={12} className="text-[#1e4a66]" />
+                  <span className="text-gray-900 font-medium">{selectedProgram.title}</span>
                 </div>
                 {selectedEpisode && (
                   <div className="flex items-center gap-2 mr-4">
-                    <Film size={12} className="text-sky-400" />
-                    <span>{selectedEpisode.title}</span>
+                    <Film size={12} className="text-[#FF9F43]" />
+                    <span className="text-gray-700">{selectedEpisode.title}</span>
                     {episodeGuests.length > 0 && (
                       <span className="text-gray-500">· {episodeGuests.map(g => g.name).join('، ')}</span>
                     )}
@@ -553,29 +553,29 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                 )}
                 {activeTool === 'QUESTIONS' && selectedGuest && (
                   <div className="flex items-center gap-2 mr-4">
-                    <User size={12} className="text-amber-400" />
-                    <span>{selectedGuest.name}</span>
+                    <User size={12} className="text-[#FF9F43]" />
+                    <span className="text-gray-700">{selectedGuest.name}</span>
                   </div>
                 )}
               </div>
             )}
 
             {/* Additional context */}
-            <div className="space-y-1 border-t border-white/5 pt-3">
-              <label className="text-xs font-bold text-gray-500">سياق إضافي أو موضوع الحلقة</label>
+            <div className="space-y-1 border-t border-gray-200 pt-3">
+              <label className="text-xs font-bold text-gray-600">سياق إضافي أو موضوع الحلقة</label>
               <textarea
                 value={additionalContext}
                 onChange={(e) => setAdditionalContext(e.target.value)}
                 placeholder="مثال: حلقة عن التحديات العقارية في دبي..."
                 rows={2}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]/20 text-sm resize-none"
+                className="w-full bg-white border border-gray-300 rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-[#FF9F43]/20 text-sm resize-none text-gray-900"
               />
             </div>
 
             <button
               onClick={handleGenerate}
               disabled={isLoading || !canGenerate}
-              className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-30 text-sm"
+              className="w-full py-3 flex items-center justify-center gap-2 disabled:opacity-30 text-sm bg-[#FF9F43] hover:bg-[#FF8C2E] text-white font-bold rounded-xl transition-colors"
             >
               {isLoading
                 ? <Loader2 className="animate-spin" size={20} />
@@ -587,34 +587,34 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
 
         {/* ── Result Panel ── */}
         <div className="lg:col-span-7">
-          <div className="glass-panel p-5 min-h-[480px] flex flex-col justify-center bg-[#2c5f7f] border-dashed border-white/10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#2563eb]/5 rounded-bl-full blur-2xl" />
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-5 min-h-[480px] flex flex-col justify-center border border-gray-200 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF9F43]/5 rounded-bl-full blur-2xl" />
 
             {result ? (
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">
+                    <div className="w-8 h-8 bg-[#FF9F43]/10 rounded-lg flex items-center justify-center text-[#FF9F43]">
                       <Lightbulb size={16} />
                     </div>
-                    <h3 className="text-lg font-bold">الاقتراحات الإبداعية</h3>
+                    <h3 className="text-lg font-bold text-gray-900">الاقتراحات الإبداعية</h3>
                   </div>
                   <button
                     onClick={copyToClipboard}
-                    className="p-2 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-white flex items-center gap-2 border border-white/5"
+                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-600 hover:text-gray-900 flex items-center gap-2 border border-gray-300"
                   >
-                    {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
+                    {copied ? <Check size={18} className="text-green-600" /> : <Copy size={18} />}
                     <span className="text-xs">{copied ? 'تم النسخ' : 'نسخ الكل'}</span>
                   </button>
                 </div>
-                <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/10 font-arabic text-gray-200 leading-loose shadow-inner overflow-y-auto max-h-[420px]">
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 font-arabic text-gray-900 leading-loose shadow-inner overflow-y-auto max-h-[420px]">
                   {parseNumberedList(result)}
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center opacity-10 gap-4 py-20">
+              <div className="h-full flex flex-col items-center justify-center text-center opacity-20 gap-4 py-20">
                 <Sparkles size={80} />
-                <p className="text-xl">اختر برنامجاً وسنولد لك أفكاراً مذهلة</p>
+                <p className="text-xl text-gray-900">اختر برنامجاً وسنولد لك أفكاراً مذهلة</p>
               </div>
             )}
           </div>

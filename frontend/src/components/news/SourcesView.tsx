@@ -31,31 +31,31 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sources.map((source: any) => (
-            <div key={source.id} className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-600/10 transition-all" />
+            <div key={source.id} className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 border border-gray-200 hover:border-gray-300 transition-all group relative overflow-hidden shadow-sm hover:shadow-md">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-100/50 transition-all" />
               <div className="flex justify-between items-start mb-4 relative z-10">
-                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-blue-400">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
                   <Rss size={20} />
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide ${source.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide ${source.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
                   {source.is_active ? 'نشط' : 'متوقف'}
                 </span>
               </div>
-              <h4 className="font-bold text-gray-100 mb-1 group-hover:text-blue-400 transition-colors">{source.name}</h4>
-              <p className="text-[10px] text-gray-500 font-mono mb-4 truncate italic">{source.url || source.rss_url || '—'}</p>
-              <div className="space-y-3 pt-4 border-t border-white/5 relative z-10">
+              <h4 className="font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">{source.name}</h4>
+              <p className="text-[10px] text-gray-600 font-mono mb-4 truncate italic">{source.url || source.rss_url || '—'}</p>
+              <div className="space-y-3 pt-4 border-t border-gray-200 relative z-10">
                 <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-gray-500">نوع المصدر</span>
-                  <span className="text-gray-300 font-bold">{source.type || 'RSS'}</span>
+                  <span className="text-gray-600">نوع المصدر</span>
+                  <span className="text-gray-900 font-bold">{source.type || 'RSS'}</span>
                 </div>
                 <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-gray-500">آخر سحب</span>
+                  <span className="text-gray-600">آخر سحب</span>
                   <div className="flex items-center gap-2">
                     {source.is_recently_fetched && (
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" title="تم السحب مؤخراً" />
                     )}
                     <span 
-                      className={`font-mono text-right ${source.last_fetched_at ? 'text-gray-300' : 'text-gray-500 italic'}`}
+                      className={`font-mono text-right ${source.last_fetched_at ? 'text-gray-700' : 'text-gray-500 italic'}`}
                       title={source.last_fetched_at ? new Date(source.last_fetched_at).toLocaleString('ar-SA') : 'لم يتم السحب بعد'}
                     >
                       {source.last_fetched_formatted}
@@ -69,9 +69,9 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
       )}
 
       {autoEnabled && (
-        <div className="bg-blue-600/5 border border-blue-600/10 rounded-2xl p-4 flex items-center gap-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
           <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping" />
-          <span className="text-xs text-blue-400 font-bold">النظام الآلي يقوم حالياً بمراقبة جميع المصادر وسحب المحتوى دورياً.</span>
+          <span className="text-xs text-blue-700 font-bold">النظام الآلي يقوم حالياً بمراقبة جميع المصادر وسحب المحتوى دورياً.</span>
         </div>
       )}
     </div>

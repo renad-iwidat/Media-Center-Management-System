@@ -230,7 +230,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
       </div>
 
       {/* Edit Mode Tabs */}
-      <div className="flex gap-2 p-1 bg-white/5 rounded-xl w-fit">
+      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
         {[
           { id: 'REWRITE',   label: 'إعادة صياغة', icon: Type        },
           { id: 'SUMMARIZE', label: 'تلخيص',        icon: AlignLeft   },
@@ -241,8 +241,8 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
             onClick={() => { setActiveMode(mode.id as EditMode); setResult(null); }}
             className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${
               activeMode === mode.id
-                ? 'bg-[#2563eb] text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                ? 'bg-[#FF9F43] text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
             }`}
           >
             <mode.icon size={14} />
@@ -253,10 +253,10 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* ══ Input Panel ══ */}
-        <div className="glass-panel p-4 space-y-3">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-4 space-y-3 border border-gray-200">
 
           {/* Input Mode Toggle */}
-          <div className="flex gap-2 p-1 bg-white/5 rounded-xl w-full">
+          <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-full">
             {[
               { id: 'MANUAL',   label: 'كتابة يدوية',       icon: PenLine  },
               { id: 'DATABASE', label: 'من قاعدة البيانات',  icon: Database },
@@ -271,8 +271,8 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
                 }}
                 className={`flex-1 px-3 py-2 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
                   inputMode === m.id
-                    ? 'bg-[#2563eb] text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-[#FF9F43] text-white shadow-lg'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                 }`}
               >
                 <m.icon size={13} />
@@ -284,13 +284,13 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
           {/* ── MANUAL ── */}
           {inputMode === 'MANUAL' && (
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400">النص الأصلي</label>
+              <label className="text-xs font-bold text-gray-600">النص الأصلي</label>
               <textarea
                 value={manualText}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManualText(e.target.value)}
                 rows={10}
                 placeholder="ضع نصك هنا للمعالجة..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#2563eb]/20 outline-none transition-all placeholder:text-gray-600 resize-none leading-relaxed text-sm"
+                className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#FF9F43]/20 outline-none transition-all placeholder:text-gray-500 resize-none leading-relaxed text-sm text-gray-900"
               />
             </div>
           )}
@@ -302,11 +302,11 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
               {/* Search dropdown */}
               <div className="relative">
                 <div
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 flex items-center gap-2 cursor-pointer hover:border-[#2563eb]/40 transition-all"
+                  className="w-full bg-white border border-gray-300 rounded-xl py-2.5 px-4 flex items-center gap-2 cursor-pointer hover:border-[#FF9F43]/40 transition-all text-gray-900"
                   onClick={() => { setShowDropdown(!showDropdown); if (!showDropdown && articles.length === 0) fetchArticles(); }}
                 >
-                  <ChevronDown size={14} className={`text-gray-400 transition-transform flex-shrink-0 ${showDropdown ? 'rotate-180' : ''}`} />
-                  <span className="text-sm text-gray-500 flex-1 text-right">
+                  <ChevronDown size={14} className={`text-gray-600 transition-transform flex-shrink-0 ${showDropdown ? 'rotate-180' : ''}`} />
+                  <span className="text-sm text-gray-700 flex-1 text-right">
                     {selectedArticles.length > 0
                       ? `${selectedArticles.length} خبر محدد`
                       : 'اختر خبراً أو أكثر...'}
@@ -314,19 +314,19 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={(e) => { e.stopPropagation(); fetchArticles(); }}
-                      className="p-1 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
+                      className="p-1 hover:bg-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-colors"
                       title="تحديث"
                     >
                       <RefreshCw size={12} className={isLoadingDB ? 'animate-spin' : ''} />
                     </button>
-                    <Database size={14} className="text-gray-500 flex-shrink-0" />
+                    <Database size={14} className="text-gray-600 flex-shrink-0" />
                   </div>
                 </div>
 
                 {showDropdown && (
-                  <div className="absolute top-full mt-1 right-0 left-0 z-50 bg-[#0f1a2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                  <div className="absolute top-full mt-1 right-0 left-0 z-50 bg-white border border-gray-300 rounded-xl shadow-2xl overflow-hidden">
                     {/* Search */}
-                    <div className="p-2 border-b border-white/5">
+                    <div className="p-2 border-b border-gray-200">
                       <div className="relative">
                         <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
                         <input
@@ -334,7 +334,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="ابحث في الأخبار..."
-                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pr-8 pl-3 text-xs outline-none focus:border-[#2563eb]/40 text-right"
+                          className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 pr-8 pl-3 text-xs outline-none focus:border-[#FF9F43]/40 text-right text-gray-900"
                           autoFocus
                         />
                       </div>
@@ -342,39 +342,39 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
 
                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
                       {isLoadingDB ? (
-                        <div className="flex items-center justify-center gap-2 py-6 text-gray-400 text-xs">
+                        <div className="flex items-center justify-center gap-2 py-6 text-gray-600 text-xs">
                           <Loader2 size={14} className="animate-spin" />
                           <span>جاري التحميل...</span>
                         </div>
                       ) : dbError ? (
-                        <div className="py-6 text-center text-xs text-red-400 px-4">{dbError}</div>
+                        <div className="py-6 text-center text-xs text-red-600 px-4">{dbError}</div>
                       ) : filteredArticles.length === 0 ? (
-                        <div className="py-6 text-center text-xs text-gray-500">لا توجد نتائج</div>
+                        <div className="py-6 text-center text-xs text-gray-600">لا توجد نتائج</div>
                       ) : filteredArticles.map((article) => (
                         <button
                           key={article.id}
                           onClick={() => toggleArticle(article)}
-                          className={`w-full text-right px-4 py-3 transition-colors border-b border-white/5 last:border-0 flex items-start gap-3 ${
-                            isSelected(article.id) ? 'bg-[#2563eb]/10' : 'hover:bg-white/5'
+                          className={`w-full text-right px-4 py-3 transition-colors border-b border-gray-200 last:border-0 flex items-start gap-3 ${
+                            isSelected(article.id) ? 'bg-[#FF9F43]/10' : 'hover:bg-gray-50'
                           }`}
                         >
                           {/* checkbox */}
                           <div className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
-                            isSelected(article.id) ? 'bg-[#2563eb] border-[#2563eb]' : 'border-gray-600'
+                            isSelected(article.id) ? 'bg-[#FF9F43] border-[#FF9F43]' : 'border-gray-400'
                           }`}>
                             {isSelected(article.id) && <Check size={10} className="text-white" />}
                           </div>
                           <div className="flex flex-col gap-1 flex-1 min-w-0">
-                            <span className="text-xs font-bold text-white leading-snug line-clamp-2">{article.title}</span>
+                            <span className="text-xs font-bold text-gray-900 leading-snug line-clamp-2">{article.title}</span>
                             <div className="flex items-center gap-2 flex-wrap">
                               {article.category_name && (
-                                <span className="text-[10px] text-[#2563eb]">{article.category_name}</span>
+                                <span className="text-[10px] text-[#FF9F43]">{article.category_name}</span>
                               )}
                               {article.media_unit_name && (
-                                <span className="text-[10px] text-gray-500">{article.media_unit_name}</span>
+                                <span className="text-[10px] text-gray-600">{article.media_unit_name}</span>
                               )}
                               {article.published_at && (
-                                <span className="text-[10px] text-gray-600">{formatDate(article.published_at)}</span>
+                                <span className="text-[10px] text-gray-500">{formatDate(article.published_at)}</span>
                               )}
                             </div>
                           </div>
@@ -384,16 +384,16 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
 
                     {/* Footer */}
                     {selectedArticles.length > 0 && (
-                      <div className="p-2 border-t border-white/5 flex items-center justify-between">
+                      <div className="p-2 border-t border-gray-200 flex items-center justify-between">
                         <button
                           onClick={() => setShowDropdown(false)}
-                          className="px-3 py-1.5 bg-[#2563eb] text-white rounded-lg text-xs hover:bg-[#2563eb]/80 transition-colors"
+                          className="px-3 py-1.5 bg-[#FF9F43] text-white rounded-lg text-xs hover:bg-[#FF8C2E] transition-colors"
                         >
                           تأكيد ({selectedArticles.length})
                         </button>
                         <button
                           onClick={() => setSelectedArticles([])}
-                          className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                          className="text-xs text-gray-600 hover:text-red-600 transition-colors"
                         >
                           إلغاء التحديد
                         </button>
@@ -409,20 +409,20 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
                   {selectedArticles.map((article, idx) => (
                     <div
                       key={article.id}
-                      className="flex items-start gap-2 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-xl p-2.5"
+                      className="flex items-start gap-2 bg-[#FF9F43]/10 border border-[#FF9F43]/20 rounded-xl p-2.5"
                     >
                       <button
                         onClick={() => toggleArticle(article)}
-                        className="p-0.5 hover:bg-white/10 rounded text-gray-400 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
+                        className="p-0.5 hover:bg-gray-200 rounded text-gray-600 hover:text-red-600 transition-colors flex-shrink-0 mt-0.5"
                       >
                         <X size={12} />
                       </button>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[10px] text-[#2563eb] font-bold flex-shrink-0">[{idx + 1}]</span>
-                          <span className="text-xs font-bold text-white truncate">{article.title}</span>
+                          <span className="text-[10px] text-[#FF9F43] font-bold flex-shrink-0">[{idx + 1}]</span>
+                          <span className="text-xs font-bold text-gray-900 truncate">{article.title}</span>
                         </div>
-                        <p className="text-[10px] text-gray-500 line-clamp-1">{article.content?.substring(0, 100)}</p>
+                        <p className="text-[10px] text-gray-600 line-clamp-1">{article.content?.substring(0, 100)}</p>
                       </div>
                     </div>
                   ))}
@@ -430,9 +430,9 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
               )}
 
               {selectedArticles.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-8 gap-2 opacity-20">
+                <div className="flex flex-col items-center justify-center py-8 gap-2 opacity-30">
                   <Newspaper size={28} />
-                  <p className="text-xs">لم تختر أي خبر بعد</p>
+                  <p className="text-xs text-gray-600">لم تختر أي خبر بعد</p>
                 </div>
               )}
             </div>
@@ -441,11 +441,11 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
           {/* Style selector + Process button */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400">
+              <label className="text-xs font-bold text-gray-600">
                 {activeMode === 'REWRITE' ? 'الأسلوب' : activeMode === 'SUMMARIZE' ? 'نوع التلخيص' : 'خيار التدقيق'}
               </label>
               <select
-                className="w-full text-sm"
+                className="w-full text-sm bg-white border border-gray-300 rounded-lg py-2 px-3 text-gray-900"
                 value={
                   activeMode === 'REWRITE'   ? rewriteStyle :
                   activeMode === 'SUMMARIZE' ? summarizeStyle :
@@ -466,7 +466,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
               <button
                 onClick={handleProcess}
                 disabled={isLoading || !hasInput}
-                className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                className="w-full py-2.5 flex items-center justify-center gap-2 disabled:opacity-50 text-sm bg-[#FF9F43] hover:bg-[#FF8C2E] text-white font-bold rounded-lg transition-colors"
               >
                 {isLoading
                   ? <Loader2 className="animate-spin" size={16} />
@@ -478,7 +478,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
 
           {/* Multi-article note */}
           {inputMode === 'DATABASE' && selectedArticles.length > 1 && (
-            <p className="text-[10px] text-gray-500 text-right flex items-center gap-1">
+            <p className="text-[10px] text-gray-600 text-right flex items-center gap-1">
               <Plus size={10} />
               سيتم معالجة {selectedArticles.length} أخبار معاً كنص موحّد
             </p>
@@ -486,18 +486,18 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
         </div>
 
         {/* ══ Output Panel ══ */}
-        <div className="glass-panel p-4 bg-[#2c5f7f] border-dashed border-white/10 flex flex-col min-h-[300px]">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-4 border border-gray-200 flex flex-col min-h-[300px]">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-[#2563eb]/10 rounded-lg flex items-center justify-center text-[#2563eb]">
+              <div className="w-7 h-7 bg-[#FF9F43]/10 rounded-lg flex items-center justify-center text-[#FF9F43]">
                 {activeMode === 'REWRITE'   && <Type size={14} />}
                 {activeMode === 'SUMMARIZE' && <AlignLeft size={14} />}
                 {activeMode === 'GRAMMAR'   && <ShieldCheck size={14} />}
               </div>
               <div>
-                <h3 className="text-sm font-bold">النص المعالج</h3>
+                <h3 className="text-sm font-bold text-gray-900">النص المعالج</h3>
                 {inputMode === 'DATABASE' && selectedArticles.length > 0 && (
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-gray-600">
                     {selectedArticles.length === 1
                       ? selectedArticles[0].title.substring(0, 40) + (selectedArticles[0].title.length > 40 ? '...' : '')
                       : `${selectedArticles.length} أخبار`}
@@ -508,28 +508,28 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
             {result && (
               <button
                 onClick={copyToClipboard}
-                className="p-1.5 hover:bg-white/5 rounded-lg transition-colors text-gray-400 hover:text-white flex items-center gap-1.5 text-xs border border-white/5"
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900 flex items-center gap-1.5 text-xs border border-gray-300"
               >
-                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
                 <span>{copied ? 'تم' : 'نسخ'}</span>
               </button>
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-300 font-arabic text-sm p-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-900 font-arabic text-sm p-2">
             {isLoading ? (
               <div className="h-full flex flex-col items-center justify-center gap-3">
-                <div className="w-8 h-8 border-2 border-[#2563eb]/20 border-t-[#2563eb] rounded-full animate-spin" />
-                <p className="text-gray-500 text-xs">جاري المعالجة...</p>
+                <div className="w-8 h-8 border-2 border-[#FF9F43]/20 border-t-[#FF9F43] rounded-full animate-spin" />
+                <p className="text-gray-600 text-xs">جاري المعالجة...</p>
               </div>
             ) : result ? (
               <div className="space-y-1">{parseNumberedList(result)}</div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center opacity-10 gap-3">
+              <div className="h-full flex flex-col items-center justify-center text-center opacity-20 gap-3">
                 {activeMode === 'REWRITE'   && <Type size={36} />}
                 {activeMode === 'SUMMARIZE' && <AlignLeft size={36} />}
                 {activeMode === 'GRAMMAR'   && <ShieldCheck size={36} />}
-                <p className="text-xs">
+                <p className="text-xs text-gray-900">
                   {inputMode === 'MANUAL'
                     ? 'اكتب نصاً ثم اضغط معالجة'
                     : 'اختر خبراً أو أكثر ثم اضغط معالجة'}

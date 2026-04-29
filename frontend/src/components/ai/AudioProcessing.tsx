@@ -287,20 +287,20 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
   return (
     <div className="space-y-4 text-right">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold">المختبر الصوتي</h2>
-        <p className="text-gray-400 text-xs">حوّل الملفات الصوتية إلى نصوص مكتوبة.</p>
+        <h2 className="text-xl font-bold text-gray-900">المختبر الصوتي</h2>
+        <p className="text-gray-600 text-xs">حوّل الملفات الصوتية إلى نصوص مكتوبة.</p>
       </div>
 
-      <div className="flex gap-2 p-1 bg-white/5 rounded-xl w-fit mr-auto ml-0 flex-row-reverse">
+      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit mr-auto ml-0 flex-row-reverse">
         <button
           onClick={() => { setActiveMode('STT'); setResult(null); setSearchTerm(''); }}
-          className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${activeMode === 'STT' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${activeMode === 'STT' ? 'bg-[#FF9F43] text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
         >
           <Mic size={14} /> صوت لنص (STT)
         </button>
         <button
           onClick={() => { setActiveMode('TTS'); setAudioUrl(null); setSearchTerm(''); }}
-          className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${activeMode === 'TTS' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${activeMode === 'TTS' ? 'bg-[#FF9F43] text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
         >
           <Volume2 size={14} /> نص لصوت (TTS)
         </button>
@@ -309,9 +309,9 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Selector */}
         <div className="lg:col-span-5">
-          <div className="glass-panel p-4 space-y-3 h-[460px] flex flex-col">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-4 space-y-3 h-[460px] flex flex-col border border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold border-b border-white/5 pb-2 flex items-center gap-2 flex-1">
+              <h3 className="text-sm font-bold border-b border-gray-200 pb-2 flex items-center gap-2 flex-1 text-gray-900">
                 {activeMode === 'STT' ? <Music size={14} /> : <Newspaper size={14} />}
                 <span>{activeMode === 'STT' ? 'اختر ملفاً صوتياً' : 'اختر خبراً للتسجيل'}</span>
               </h3>
@@ -324,7 +324,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                 placeholder="ابحث..."
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                className="w-full bg-white border border-gray-300 rounded-xl py-2 pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-[#FF9F43]/20 text-gray-900"
               />
             </div>
 
@@ -333,19 +333,19 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
               <div className="flex gap-2">
                 <button
                   onClick={() => setFileTypeFilter('all')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs border transition-all ${fileTypeFilter === 'all' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-xs border transition-all ${fileTypeFilter === 'all' ? 'bg-[#FF9F43] border-[#FF9F43] text-white' : 'bg-gray-100 border-gray-300 text-gray-700 hover:text-gray-900'}`}
                 >
                   الكل
                 </button>
                 <button
                   onClick={() => setFileTypeFilter('audio')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${fileTypeFilter === 'audio' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${fileTypeFilter === 'audio' ? 'bg-[#FF9F43] border-[#FF9F43] text-white' : 'bg-gray-100 border-gray-300 text-gray-700 hover:text-gray-900'}`}
                 >
                   <FileAudio size={12} /> صوت
                 </button>
                 <button
                   onClick={() => setFileTypeFilter('video')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${fileTypeFilter === 'video' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${fileTypeFilter === 'video' ? 'bg-[#FF9F43] border-[#FF9F43] text-white' : 'bg-gray-100 border-gray-300 text-gray-700 hover:text-gray-900'}`}
                 >
                   <FileVideo size={12} /> فيديو
                 </button>

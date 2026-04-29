@@ -33,10 +33,10 @@ export function Notification({ notification, onClose, duration = 3000, position 
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           onClick={onClose}
-          className={`${positionClass} px-8 py-4 rounded-2xl font-bold text-base flex items-center gap-3 shadow-2xl z-50 cursor-pointer ${
+          className={`${positionClass} px-8 py-4 rounded-2xl font-bold text-base flex items-center gap-3 shadow-lg z-50 cursor-pointer ${
             notification.type === "success"
-              ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-400"
-              : "bg-rose-500/20 border border-rose-500/50 text-rose-400"
+              ? "bg-emerald-100 border border-emerald-300 text-emerald-700"
+              : "bg-rose-100 border border-rose-300 text-rose-700"
           }`}
         >
           {notification.type === "success" ? (

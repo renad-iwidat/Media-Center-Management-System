@@ -190,26 +190,26 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   // Bulk Delete Confirmation Modal
   if (showBulkDeleteConfirm) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-[#2c5f7f] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
+          className="bg-white rounded-3xl border border-gray-200 shadow-xl max-w-sm w-full p-8 space-y-6"
         >
-          <div className="flex items-center justify-center w-12 h-12 bg-rose-500/10 rounded-full mx-auto">
-            <Trash size={24} className="text-rose-400" />
+          <div className="flex items-center justify-center w-12 h-12 bg-rose-100 rounded-full mx-auto">
+            <Trash size={24} className="text-rose-600" />
           </div>
           
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-bold text-white">حذف جميع الأخبار الناقصة</h3>
-            <p className="text-sm text-gray-400">هل أنت متأكد من حذف جميع الأخبار الناقصة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <h3 className="text-lg font-bold text-gray-900">حذف جميع الأخبار الناقصة</h3>
+            <p className="text-sm text-gray-600">هل أنت متأكد من حذف جميع الأخبار الناقصة؟ لا يمكن التراجع عن هذا الإجراء.</p>
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={() => setShowBulkDeleteConfirm(false)}
               disabled={isBulkDeleting}
-              className="flex-1 bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
             >
               إلغاء
             </button>
@@ -233,26 +233,26 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   // Delete Confirmation Modal
   if (deleteConfirm.show) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-[#2c5f7f] rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-8 space-y-6"
+          className="bg-white rounded-3xl border border-gray-200 shadow-xl max-w-sm w-full p-8 space-y-6"
         >
-          <div className="flex items-center justify-center w-12 h-12 bg-rose-500/10 rounded-full mx-auto">
-            <Trash2 size={24} className="text-rose-400" />
+          <div className="flex items-center justify-center w-12 h-12 bg-rose-100 rounded-full mx-auto">
+            <Trash2 size={24} className="text-rose-600" />
           </div>
           
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-bold text-white">حذف الخبر</h3>
-            <p className="text-sm text-gray-400">هل أنت متأكد من حذف هذا الخبر؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <h3 className="text-lg font-bold text-gray-900">حذف الخبر</h3>
+            <p className="text-sm text-gray-600">هل أنت متأكد من حذف هذا الخبر؟ لا يمكن التراجع عن هذا الإجراء.</p>
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={() => setDeleteConfirm({ show: false, articleId: null })}
               disabled={isDeleting}
-              className="flex-1 bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
             >
               إلغاء
             </button>
@@ -287,18 +287,18 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           <ArrowRight size={16} /> العودة للقائمة
         </button>
 
-        <div className="bg-[#2c5f7f] rounded-3xl p-8 border border-white/5 shadow-2xl space-y-6">
-          <h3 className="text-lg font-bold text-white">تكملة الخبر</h3>
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm space-y-6">
+          <h3 className="text-lg font-bold text-gray-900">تكملة الخبر</h3>
           
           {/* رابط الخبر */}
           {editingArticle?.url && (
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">رابط الخبر الأصلي</label>
+              <label className="text-xs text-gray-700 font-bold uppercase">رابط الخبر الأصلي</label>
               <a 
                 href={editingArticle.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="block w-full bg-[#1e4a66]/50 border border-blue-500/30 hover:border-blue-500/50 rounded-2xl px-4 py-3 text-sm text-blue-400 hover:text-blue-300 transition-all truncate"
+                className="block w-full bg-white border border-blue-300 hover:border-blue-500 rounded-2xl px-4 py-3 text-sm text-blue-600 hover:text-blue-700 transition-all truncate"
               >
                 {editingArticle.url}
               </a>
@@ -308,40 +308,40 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           {/* الصورة */}
           {editedImageUrl && (
             <div className="space-y-2">
-              <label className="text-xs text-gray-400 font-bold uppercase">صورة الخبر</label>
-              <div className="relative w-full h-48 bg-black/50 rounded-2xl overflow-hidden border border-white/10">
+              <label className="text-xs text-gray-700 font-bold uppercase">صورة الخبر</label>
+              <div className="relative w-full h-48 bg-gray-100 rounded-2xl overflow-hidden border border-gray-300">
                 <img 
                   src={editedImageUrl} 
                   alt="صورة الخبر"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%23999" text-anchor="middle" dy=".3em"%3Eلا يمكن تحميل الصورة%3C/text%3E%3C/svg%3E';
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%239ca3af" text-anchor="middle" dy=".3em"%3Eلا يمكن تحميل الصورة%3C/text%3E%3C/svg%3E';
                   }}
                 />
               </div>
-              <p className="text-[10px] text-gray-500 font-mono truncate">{editedImageUrl}</p>
+              <p className="text-[10px] text-gray-600 font-mono truncate">{editedImageUrl}</p>
             </div>
           )}
           
           {/* العنوان */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">العنوان</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">العنوان</label>
             <input
               type="text"
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
-              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+              className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
               placeholder="عنوان الخبر"
             />
           </div>
 
           {/* التصنيف */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">التصنيف</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
             <select
               value={editedCategoryId || ""}
               onChange={(e) => setEditedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
             >
               <option value="">-- اختر التصنيف --</option>
               {categories.map((cat) => (
@@ -351,23 +351,23 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               ))}
             </select>
             {editedCategoryId && (
-              <p className="text-[10px] text-emerald-400">✓ تم اختيار: {categories.find(c => c.id === editedCategoryId)?.name}</p>
+              <p className="text-[10px] text-emerald-700">✓ تم اختيار: {categories.find(c => c.id === editedCategoryId)?.name}</p>
             )}
             {!editedCategoryId && (
-              <p className="text-[10px] text-amber-400">⚠️ لم يتم تحديد تصنيف</p>
+              <p className="text-[10px] text-amber-700">⚠️ لم يتم تحديد تصنيف</p>
             )}
           </div>
 
           {/* المحتوى */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">المحتوى</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">المحتوى</label>
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-64 bg-[#1e4a66]/50 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-600/50 resize-none text-white placeholder:text-gray-600"
+              className="w-full h-64 bg-white border border-gray-300 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none text-gray-900 placeholder:text-gray-500"
               placeholder="محتوى الخبر..."
             />
-            <p className="text-[10px] text-gray-500">{editedContent.length} حرف</p>
+            <p className="text-[10px] text-gray-600">{editedContent.length} حرف</p>
           </div>
 
           {/* الأزرار */}
@@ -396,7 +396,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             </button>
             <button
               onClick={() => setEditingArticle(null)}
-              className="bg-white/5 hover:bg-white/10 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-2xl font-bold text-sm transition-all"
             >
               إلغاء
             </button>
@@ -418,32 +418,32 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       <Notification notification={notification} onClose={() => setNotification(null)} />
 
       {/* Filters */}
-      <div className="bg-[#2c5f7f] rounded-3xl p-6 border border-white/5 shadow-2xl space-y-4">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <Search size={16} className="text-blue-400" />
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+          <Search size={16} className="text-blue-600" />
           البحث والفلترة
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search by title */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">البحث عن عنوان</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">البحث عن عنوان</label>
             <input
               type="text"
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
               placeholder="ابحث عن عنوان..."
-              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white placeholder:text-gray-600"
+              className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
             />
           </div>
 
           {/* Filter by category */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">التصنيف</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
             >
               <option value="">كل التصنيفات</option>
               {[...new Set(articles.map(a => a.category_name))].map(cat => (
@@ -454,22 +454,22 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
 
           {/* Filter by date */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">التاريخ</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">التاريخ</label>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
             />
           </div>
 
           {/* Sort */}
           <div className="space-y-2">
-            <label className="text-xs text-gray-400 font-bold uppercase">الترتيب</label>
+            <label className="text-xs text-gray-700 font-bold uppercase">الترتيب</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-              className="w-full bg-[#1e4a66]/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600/50 text-white"
+              className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
             >
               <option value="newest">الأحدث أولاً</option>
               <option value="oldest">الأقدم أولاً</option>
@@ -486,7 +486,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               setSelectedDate("");
               setSortBy("newest");
             }}
-            className="text-xs text-blue-400 hover:text-blue-300 font-bold"
+            className="text-xs text-blue-600 hover:text-blue-700 font-bold"
           >
             مسح الفلاتر
           </button>
@@ -518,59 +518,59 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       ) : (
         <div className="space-y-4">
           {/* Table */}
-          <div className="bg-[#2c5f7f] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.02]">
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">#</th>
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">العنوان</th>
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">التصنيف</th>
-                    <th className="text-right py-4 px-6 text-gray-400 font-semibold">المصدر</th>
-                    <th className="text-center py-4 px-6 text-gray-400 font-semibold">الطول</th>
-                    <th className="text-center py-4 px-6 text-gray-400 font-semibold">التاريخ</th>
-                    <th className="text-center py-4 px-6 text-gray-400 font-semibold">الإجراءات</th>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">#</th>
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">العنوان</th>
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">التصنيف</th>
+                    <th className="text-right py-4 px-6 text-gray-700 font-semibold">المصدر</th>
+                    <th className="text-center py-4 px-6 text-gray-700 font-semibold">الطول</th>
+                    <th className="text-center py-4 px-6 text-gray-700 font-semibold">التاريخ</th>
+                    <th className="text-center py-4 px-6 text-gray-700 font-semibold">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredArticles
                     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                     .map((article: any, idx: number) => (
-                      <tr key={article.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 px-6 text-gray-400 font-mono text-xs">
+                      <tr key={article.id} className="border-b border-gray-200 hover:bg-blue-50 transition-colors">
+                        <td className="py-4 px-6 text-gray-600 font-mono text-xs">
                           {(currentPage - 1) * itemsPerPage + idx + 1}
                         </td>
-                        <td className="py-4 px-6 text-gray-200 max-w-xs truncate">
+                        <td className="py-4 px-6 text-gray-900 max-w-xs truncate">
                           {article.title || 'بدون عنوان'}
                         </td>
-                        <td className="py-4 px-6 text-gray-400">
-                          <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded text-xs font-bold">
+                        <td className="py-4 px-6 text-gray-700">
+                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">
                             {article.category_name || '—'}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-gray-400 text-xs">
+                        <td className="py-4 px-6 text-gray-600 text-xs">
                           {article.source_name || '—'}
                         </td>
-                        <td className="py-4 px-6 text-center text-gray-400 text-xs">
-                          <span className="bg-amber-500/10 text-amber-400 px-2 py-1 rounded font-bold">
+                        <td className="py-4 px-6 text-center text-gray-600 text-xs">
+                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold">
                             {article.content?.length || 0}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-center text-gray-400 text-xs font-mono">
+                        <td className="py-4 px-6 text-center text-gray-600 text-xs font-mono">
                           {new Date(article.fetched_at).toLocaleDateString('ar-SA')}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <div className="flex gap-2 justify-center">
                             <button
                               onClick={() => handleEdit(article)}
-                              className="bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                              className="bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
                               title="تكملة الخبر"
                             >
                               تكملة
                             </button>
                             <button
                               onClick={() => setDeleteConfirm({ show: true, articleId: article.id })}
-                              className="bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                              className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
                               title="حذف الخبر"
                             >
                               حذف

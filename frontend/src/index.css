@@ -3,7 +3,15 @@
 
 @layer base {
   :root {
-    --color-brand-bg: #f9fafb;
+    /* Primary Colors - Blue & Orange Theme */
+    --color-primary-dark: #1e4a66;
+    --color-primary-medium: #2c5f7f;
+    --color-primary-light: #4a7c9c;
+    --color-accent-orange: #FF9F43;
+    --color-accent-orange-dark: #FF8C2E;
+    
+    /* Light Theme */
+    --color-brand-bg: #f8f9fa;
     --color-brand-surface: #ffffff;
     --color-brand-accent: #FF9F43;
     --color-brand-border: rgba(229, 231, 235, 0.8);
@@ -22,7 +30,7 @@
   }
 
   body {
-    background-color: #f9fafb;
+    background-color: #f8f9fa;
     color: #1f2937;
     font-family: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
     direction: rtl;
