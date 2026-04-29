@@ -7,6 +7,7 @@ import apiRoutes from './routes';
 import portalRoutes from './routes/portal-r';
 import { testConnection } from './config/database';
 import { SocketService } from './services/management/SocketService';
+import { bigIntSerializerMiddleware } from './utils/bigint-serializer';
 
 // Load environment variables
 dotenv.config();
@@ -27,6 +28,9 @@ app.use(express.json());
 
 // Parse URL-encoded request bodies
 app.use(express.urlencoded({ extended: true }));
+
+// BigInt serialization middleware
+app.use(bigIntSerializerMiddleware);
 
 // Request logging middleware
 app.use((req: Request, _res: Response, next) => {

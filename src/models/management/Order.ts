@@ -7,9 +7,56 @@ export class OrderModel {
     return result.rows[0] || null;
   }
 
+  static async findByIdWithDetails(id: bigint): Promise<any | null> {
+    const result = await pool.query(
+      `SELECT 
+        o.*,
+        u.name as created_by_name,
+        d.name as desk_name,
+        os.name as status_name,
+        pl.name as priority_name,
+        pr.title as program_name,
+        e.title as episode_title
+       FROM orders o
+       LEFT JOIN users u ON o.created_by = u.id
+       LEFT JOIN desks d ON o.desk_id = d.id
+       LEFT JOIN order_statuses os ON o.status_id = os.id
+       LEFT JOIN priority_levels pl ON o.priority_id = pl.id
+       LEFT JOIN programs pr ON o.program_id = pr.id
+       LEFT JOIN episodes e ON o.episode_id = e.id
+       WHERE o.id = $1`,
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
   static async findAll(limit: number = 10, offset: number = 0): Promise<Order[]> {
     const result = await pool.query(
       'SELECT * FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+    return result.rows;
+  }
+
+  static async findAllWithDetails(limit: number = 10, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT 
+        o.*,
+        u.name as created_by_name,
+        d.name as desk_name,
+        os.name as status_name,
+        pl.name as priority_name,
+        pr.title as program_name,
+        e.title as episode_title
+       FROM orders o
+       LEFT JOIN users u ON o.created_by = u.id
+       LEFT JOIN desks d ON o.desk_id = d.id
+       LEFT JOIN order_statuses os ON o.status_id = os.id
+       LEFT JOIN priority_levels pl ON o.priority_id = pl.id
+       LEFT JOIN programs pr ON o.program_id = pr.id
+       LEFT JOIN episodes e ON o.episode_id = e.id
+       ORDER BY o.created_at DESC 
+       LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
     return result.rows;
@@ -76,7 +123,17 @@ export class OrderModel {
 
   static async getHistory(orderId: bigint): Promise<OrderHistory[]> {
     const result = await pool.query(
-      'SELECT * FROM order_history WHERE order_id = $1 ORDER BY changed_at DESC',
+      `SELECT 
+        oh.*,
+        u.name as changed_by_name,
+        os_old.name as old_status_name,
+        os_new.name as new_status_name
+       FROM order_history oh
+       LEFT JOIN users u ON oh.changed_by = u.id
+       LEFT JOIN order_statuses os_old ON oh.old_status_id = os_old.id
+       LEFT JOIN order_statuses os_new ON oh.new_status_id = os_new.id
+       WHERE oh.order_id = $1 
+       ORDER BY oh.changed_at DESC`,
       [orderId]
     );
     return result.rows;

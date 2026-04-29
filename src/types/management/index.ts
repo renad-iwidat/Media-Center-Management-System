@@ -20,6 +20,13 @@ export interface Order {
   archived_at?: Date;
   quality_score?: number;
   notes?: string;
+  // Joined fields
+  created_by_name?: string;
+  desk_name?: string;
+  status_name?: string;
+  priority_name?: string;
+  program_name?: string;
+  episode_title?: string;
 }
 
 export interface OrderStatus {
@@ -35,6 +42,10 @@ export interface OrderHistory {
   new_status_id?: bigint;
   changed_by?: bigint;
   changed_at?: Date;
+  // Joined fields
+  changed_by_name?: string;
+  old_status_name?: string;
+  new_status_name?: string;
 }
 
 // Task Types

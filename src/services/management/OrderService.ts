@@ -44,7 +44,7 @@ export class OrderService {
   }
 
   async getAllOrders(limit: number = 10, offset: number = 0): Promise<Order[]> {
-    return await OrderModel.findAll(limit, offset);
+    return await OrderModel.findAllWithDetails(limit, offset);
   }
 
   async updateOrder(id: bigint, updates: Partial<Order>): Promise<Order> {
@@ -263,7 +263,11 @@ export class OrderService {
   }
 
   async getOrderWithDetails(orderId: bigint): Promise<any> {
-    const order = await this.getOrder(orderId);
+    const order = await OrderModel.findByIdWithDetails(orderId);
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+    
     const tasks = await TaskModel.findByOrder(orderId, 1000, 0);
     const progress = await this.calculateOrderProgress(orderId);
     const history = await this.getOrderHistory(orderId);
