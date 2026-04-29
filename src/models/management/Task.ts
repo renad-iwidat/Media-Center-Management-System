@@ -7,9 +7,42 @@ export class TaskModel {
     return result.rows[0] || null;
   }
 
+  static async findByIdWithDetails(id: bigint): Promise<any | null> {
+    const result = await pool.query(
+      `SELECT 
+        t.*,
+        u.name as assigned_to_name
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       WHERE t.id = $1`,
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
   static async findAll(limit: number = 10, offset: number = 0): Promise<Task[]> {
     const result = await pool.query(
       'SELECT * FROM tasks ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+    return result.rows;
+  }
+
+  static async findAllWithDetails(limit: number = 10, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT 
+        t.*,
+        u.name as assigned_to_name,
+        o.title as order_title,
+        ts.name as status_name,
+        pl.name as priority_name
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN orders o ON t.order_id = o.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       LEFT JOIN priority_levels pl ON t.priority_id = pl.id
+       ORDER BY t.created_at DESC 
+       LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
     return result.rows;
@@ -23,9 +56,51 @@ export class TaskModel {
     return result.rows;
   }
 
+  static async findByOrderWithDetails(orderId: bigint, limit: number = 10, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT 
+        t.*,
+        u.name as assigned_to_name,
+        o.title as order_title,
+        ts.name as status_name,
+        pl.name as priority_name
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN orders o ON t.order_id = o.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       LEFT JOIN priority_levels pl ON t.priority_id = pl.id
+       WHERE t.order_id = $1 
+       ORDER BY t.sequence_order ASC 
+       LIMIT $2 OFFSET $3`,
+      [orderId, limit, offset]
+    );
+    return result.rows;
+  }
+
   static async findByAssignee(userId: bigint, limit: number = 10, offset: number = 0): Promise<Task[]> {
     const result = await pool.query(
       'SELECT * FROM tasks WHERE assigned_to = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+      [userId, limit, offset]
+    );
+    return result.rows;
+  }
+
+  static async findByAssigneeWithDetails(userId: bigint, limit: number = 10, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT 
+        t.*,
+        u.name as assigned_to_name,
+        o.title as order_title,
+        ts.name as status_name,
+        pl.name as priority_name
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN orders o ON t.order_id = o.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       LEFT JOIN priority_levels pl ON t.priority_id = pl.id
+       WHERE t.assigned_to = $1
+       ORDER BY t.created_at DESC 
+       LIMIT $2 OFFSET $3`,
       [userId, limit, offset]
     );
     return result.rows;
@@ -69,8 +144,84 @@ export class TaskModel {
     return result.rowCount! > 0;
   }
 
+  static async countAll(): Promise<number> {
+    const result = await pool.query('SELECT COUNT(*) as count FROM tasks');
+    return parseInt(result.rows[0].count);
+  }
+
+  static async searchWithDetails(
+    limit: number = 10,
+    offset: number = 0,
+    search: string = '',
+    order_id?: bigint,
+    assigned_to?: bigint,
+    status_id?: bigint
+  ): Promise<{ rows: any[]; total: number }> {
+    let baseQuery = `FROM tasks t
+     LEFT JOIN users u ON t.assigned_to = u.id
+     LEFT JOIN orders o ON t.order_id = o.id
+     LEFT JOIN task_statuses ts ON t.status_id = ts.id
+     LEFT JOIN priority_levels pl ON t.priority_id = pl.id
+     WHERE 1=1`;
+
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (search) {
+      baseQuery += ` AND (t.title ILIKE $${paramIndex} OR t.description ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+    if (order_id) {
+      baseQuery += ` AND t.order_id = $${paramIndex}`;
+      params.push(order_id);
+      paramIndex++;
+    }
+    if (assigned_to) {
+      baseQuery += ` AND t.assigned_to = $${paramIndex}`;
+      params.push(assigned_to);
+      paramIndex++;
+    }
+    if (status_id) {
+      baseQuery += ` AND t.status_id = $${paramIndex}`;
+      params.push(status_id);
+      paramIndex++;
+    }
+
+    const countResult = await pool.query(`SELECT COUNT(*) as count ${baseQuery}`, params);
+    const total = parseInt(countResult.rows[0].count);
+
+    const dataResult = await pool.query(
+      `SELECT t.*, u.name as assigned_to_name, o.title as order_title, ts.name as status_name, pl.name as priority_name
+       ${baseQuery} ORDER BY t.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limit, offset]
+    );
+
+    return { rows: dataResult.rows, total };
+  }
+
   static async getStatuses(): Promise<TaskStatus[]> {
     const result = await pool.query('SELECT * FROM task_statuses');
+    return result.rows;
+  }
+
+  static async getOverdueWithDetails(): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT 
+        t.*,
+        u.name as assigned_to_name,
+        o.title as order_title,
+        ts.name as status_name,
+        pl.name as priority_name
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN orders o ON t.order_id = o.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       LEFT JOIN priority_levels pl ON t.priority_id = pl.id
+       WHERE t.deadline < NOW() 
+       AND t.status_id NOT IN (SELECT id FROM task_statuses WHERE name IN ('Done', 'Cancelled'))
+       ORDER BY t.deadline ASC`
+    );
     return result.rows;
   }
 

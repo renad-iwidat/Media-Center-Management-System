@@ -66,18 +66,18 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-wrap gap-4 items-center">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
+        <div className="p-6 border-b border-slate-200 flex flex-wrap gap-4 items-center bg-white">
           <div className="relative flex-1 min-w-[300px]">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <Input 
               placeholder="بحث باسم الموظف أو البريد الإلكتروني..." 
-              className="pr-12 bg-slate-50/50 border-transparent focus:bg-white"
+              className="pr-12 h-12 text-base bg-slate-50 border-slate-200 focus:bg-white shadow-sm"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+          <div className="flex items-center gap-2 text-xs font-bold text-white bg-[#3d6a8a] px-3 py-2 rounded-lg">
             <Filter size={14} />
             إجمالي: {filteredUsers.length} موظف
           </div>
@@ -86,28 +86,31 @@ export default function UsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الموظف</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الدور الأساسي</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">أيام العمل</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الدوام</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">آخر ظهور</th>
+              <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
+                <th className="px-6 py-4 border-r border-white/20">الموظف</th>
+                <th className="px-6 py-4 border-r border-white/20">الدور الأساسي</th>
+                <th className="px-6 py-4 border-r border-white/20">أيام العمل</th>
+                <th className="px-6 py-4 border-r border-white/20">الدوام</th>
+                <th className="px-6 py-4 border-r border-white/20">آخر ظهور</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredUsers.map((u) => (
+            <tbody className="divide-y divide-slate-200">
+              {filteredUsers.map((u, index) => (
                 <tr 
                   key={u.id} 
-                  className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                  className={cn(
+                    "hover:bg-blue-50 transition-all group cursor-pointer border-l-4 border-l-[#FF9F4A]",
+                    index % 2 === 0 ? "bg-white" : "bg-slate-50"
+                  )}
                   onClick={() => navigate(`/users/${u.id}`)}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5 border-r border-slate-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-[#3d6a8a] group-hover:text-white transition-colors">
                         <Users size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{u.name}</p>
+                        <p className="font-bold text-slate-900 group-hover:text-[#3d6a8a] transition-colors">{u.name}</p>
                         <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
                           <Mail size={12} />
                           {u.email}
@@ -115,22 +118,24 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <Badge variant="blue" className="font-sans">{u.role_name}</Badge>
+                  <td className="px-6 py-5 border-r border-slate-200">
+                    <span className="px-3 py-1.5 bg-[#3d6a8a] text-white rounded-md font-semibold text-xs inline-block">
+                      {u.role_name}
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-[10px] font-bold text-slate-500 max-w-[150px] leading-relaxed">
+                  <td className="px-6 py-5 border-r border-slate-200">
+                    <p className="text-[10px] font-bold text-slate-500 max-w-[150px] leading-relaxed bg-slate-100 px-2.5 py-1 rounded-lg inline-block">
                       {u.work_days || 'غير محدد'}
                     </p>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-                      <Clock size={14} className="text-slate-300" />
+                  <td className="px-6 py-5 border-r border-slate-200">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-orange-50 px-2.5 py-1 rounded-lg inline-block">
+                      <Clock size={14} className="text-[#FF9F4A]" />
                       <span>{u.start_time} - {u.end_time}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                     <span className="text-xs font-bold text-slate-400">
+                  <td className="px-6 py-5 border-r border-slate-200">
+                     <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg inline-block">
                        {u.last_login ? format(new Date(u.last_login), 'yyyy/MM/dd HH:mm') : 'لم يسجل دخول'}
                      </span>
                   </td>
@@ -138,9 +143,22 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
-          {loading && <div className="p-12 text-center text-slate-400 font-bold">جاري تحميل قائمة الموظفين...</div>}
+          {loading && (
+            <div className="p-16 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <div className="w-8 h-8 border-4 border-[#3d6a8a] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <p className="text-slate-600 font-medium">جاري تحميل قائمة الموظفين...</p>
+            </div>
+          )}
           {!loading && filteredUsers.length === 0 && (
-            <div className="p-20 text-center text-slate-400 font-bold">لم يتم العثور على موظفين مطابقين للبحث</div>
+            <div className="p-24 text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-100 rounded-full mb-6 shadow-inner">
+                <Users className="text-slate-400" size={40} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-700 mb-2">لم يتم العثور على موظفين</h3>
+              <p className="text-slate-500">لم يتم العثور على موظفين مطابقين للبحث</p>
+            </div>
           )}
         </div>
       </div>

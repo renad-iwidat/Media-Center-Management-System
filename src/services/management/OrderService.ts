@@ -47,6 +47,17 @@ export class OrderService {
     return await OrderModel.findAllWithDetails(limit, offset);
   }
 
+  async searchOrders(
+    limit: number = 10,
+    offset: number = 0,
+    search: string = '',
+    desk_id?: bigint,
+    status_id?: bigint,
+    program_id?: bigint
+  ): Promise<Order[]> {
+    return await OrderModel.searchWithDetails(limit, offset, search, desk_id, status_id, program_id);
+  }
+
   async updateOrder(id: bigint, updates: Partial<Order>): Promise<Order> {
     await this.getOrder(id); // Verify exists
     this.validateOrderData(updates);
@@ -198,9 +209,21 @@ export class OrderService {
       return { total: 0, completed: 0, inProgress: 0, pending: 0, percentage: 0 };
     }
 
-    const completed = tasks.filter(t => t.status_id?.toString() === 'Done').length;
-    const inProgress = tasks.filter(t => t.status_id?.toString() === 'In Progress').length;
-    const pending = tasks.filter(t => t.status_id?.toString() === 'Pending').length;
+    // Get task statuses
+    const allStatuses = await TaskModel.getStatuses();
+    
+    // Find status IDs by name
+    const doneStatus = allStatuses.find(s => s.name === 'منجز' || s.name === 'Done');
+    const inProgressStatus = allStatuses.find(s => s.name === 'قيد التنفيذ' || s.name === 'In Progress');
+    const pendingStatus = allStatuses.find(s => s.name === 'غير مُسند' || s.name === 'Pending');
+
+    const doneId = doneStatus?.id?.toString();
+    const inProgressId = inProgressStatus?.id?.toString();
+    const pendingId = pendingStatus?.id?.toString();
+
+    const completed = tasks.filter(t => t.status_id?.toString() === doneId).length;
+    const inProgress = tasks.filter(t => t.status_id?.toString() === inProgressId).length;
+    const pending = tasks.filter(t => t.status_id?.toString() === pendingId).length;
 
     return {
       total: tasks.length,
@@ -268,7 +291,7 @@ export class OrderService {
       throw new Error(`Order not found: ${orderId}`);
     }
     
-    const tasks = await TaskModel.findByOrder(orderId, 1000, 0);
+    const tasks = await TaskModel.findByOrderWithDetails(orderId, 1000, 0);
     const progress = await this.calculateOrderProgress(orderId);
     const history = await this.getOrderHistory(orderId);
 

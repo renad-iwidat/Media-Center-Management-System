@@ -28,12 +28,30 @@ export class TaskService {
   }
 
   async getAllTasks(limit: number = 10, offset: number = 0): Promise<Task[]> {
-    return await TaskModel.findAll(limit, offset);
+    return await TaskModel.findAllWithDetails(limit, offset);
+  }
+
+  async countAllTasks(): Promise<number> {
+    return await TaskModel.countAll();
+  }
+
+  async searchTasks(
+    limit: number = 10,
+    offset: number = 0,
+    search: string = '',
+    order_id?: bigint,
+    assigned_to?: bigint,
+    status_id?: bigint
+  ): Promise<{ rows: any[]; total: number }> {
+    return await TaskModel.searchWithDetails(limit, offset, search, order_id, assigned_to, status_id);
   }
 
   async updateTask(id: bigint, updates: Partial<Task>): Promise<Task> {
     await this.getTask(id); // Verify exists
-    this.validateTaskData(updates);
+    const errors = TaskValidator.validateTaskData(updates, true);
+    if (errors.length > 0) {
+      throw new Error(`Validation errors: ${errors.join(', ')}`);
+    }
 
     const updated = await TaskModel.update(id, updates);
     if (!updated) {
@@ -227,8 +245,12 @@ export class TaskService {
     return await TaskModel.findByOrder(orderId, limit, offset);
   }
 
+  async getTasksByOrderWithDetails(orderId: bigint, limit: number = 10, offset: number = 0): Promise<any[]> {
+    return await TaskModel.findByOrderWithDetails(orderId, limit, offset);
+  }
+
   async getTasksByAssignee(userId: bigint, limit: number = 10, offset: number = 0): Promise<Task[]> {
-    return await TaskModel.findByAssignee(userId, limit, offset);
+    return await TaskModel.findByAssigneeWithDetails(userId, limit, offset);
   }
 
   async getTasksByStatus(statusId: bigint, limit: number = 10, offset: number = 0): Promise<Task[]> {
@@ -236,14 +258,8 @@ export class TaskService {
   }
 
   async getOverdueTasks(): Promise<Task[]> {
-    const allTasks = await this.getAllTasks(10000, 0);
-    const now = new Date();
-
-    return allTasks.filter(
-      t => t.deadline && 
-           new Date(t.deadline) < now && 
-           !['Done', 'Cancelled'].includes(t.status_id?.toString() || '')
-    );
+    const allTasks = await TaskModel.getOverdueWithDetails();
+    return allTasks;
   }
 
   // ============ Business Logic ============
@@ -372,8 +388,8 @@ export class TaskService {
 
   // ============ Private Methods ============
 
-  private validateTaskData(data: any): void {
-    const errors = TaskValidator.validateTaskData(data);
+  private validateTaskData(data: any, isUpdate: boolean = false): void {
+    const errors = TaskValidator.validateTaskData(data, isUpdate);
     if (errors.length > 0) {
       throw new Error(`Validation errors: ${errors.join(', ')}`);
     }

@@ -12,6 +12,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Modal } from './ui/Modal';
 import ShootingForm from './ShootingForm';
+import { cn } from '../lib/utils';
 
 export default function ShootingsPage() {
   const navigate = useNavigate();
@@ -73,49 +74,54 @@ export default function ShootingsPage() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg shadow-slate-200/50">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <div className="flex-1 min-w-[250px] relative">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <Input 
               placeholder="البحث في التصويرات..." 
-              className="pr-12"
+              className="pr-12 h-12 text-base bg-slate-50 border-slate-200 focus:bg-white shadow-sm"
             />
           </div>
           
-          <Select 
-            className="w-48"
-            options={[{ value: '', label: 'كل الأوردارات' }, ...orders.map(o => ({ value: o.id.toString(), label: o.title }))]}
-            value={filters.order_id}
-            onChange={(e) => setFilters(prev => ({ ...prev, order_id: e.target.value }))}
-          />
+          <div className="w-56">
+            <Select 
+              className="h-12 text-base shadow-sm"
+              options={[{ value: '', label: 'كل الأوردارات' }, ...orders.map(o => ({ value: o.id.toString(), label: o.title }))]}
+              value={filters.order_id}
+              onChange={(e) => setFilters(prev => ({ ...prev, order_id: e.target.value }))}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الموقع / الموعد</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الأوردر المرتبط</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">النوع / المنشئ</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">المحتوى المنتج</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الإجراءات</th>
+              <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
+                <th className="px-6 py-4 border-r border-white/20">الموقع / الموعد</th>
+                <th className="px-6 py-4 border-r border-white/20">الأوردر المرتبط</th>
+                <th className="px-6 py-4 border-r border-white/20">النوع / المنشئ</th>
+                <th className="px-6 py-4 border-r border-white/20">المحتوى المنتج</th>
+                <th className="px-6 py-4 text-center">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {shootings.map((s) => (
+            <tbody className="divide-y divide-slate-200">
+              {shootings.map((s, index) => (
                 <tr 
                   key={s.id} 
-                  className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                  className={cn(
+                    "hover:bg-blue-50 transition-all group cursor-pointer border-l-4 border-l-[#FF9F4A]",
+                    index % 2 === 0 ? "bg-white" : "bg-slate-50"
+                  )}
                   onClick={() => navigate(`/shootings/${s.id}`)}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5 border-r border-slate-200">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <MapPin size={14} className="text-blue-600" />
-                        <span className="font-bold text-slate-900">{s.location}</span>
+                        <MapPin size={14} className="text-[#FF9F4A]" />
+                        <span className="font-bold text-slate-900 group-hover:text-[#3d6a8a] transition-colors">{s.location}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-400 font-mono font-bold">
                         <Calendar size={12} />
@@ -123,7 +129,7 @@ export default function ShootingsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5 border-r border-slate-200">
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-slate-700 truncate max-w-[200px]">{s.order_title}</p>
                       {s.task_status_name && (
@@ -131,7 +137,7 @@ export default function ShootingsPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5 border-r border-slate-200">
                     <div className="space-y-1">
                       <Badge variant={s.source_type === 'internal' ? 'blue' : 'purple'}>
                         {s.source_type === 'internal' ? 'داخلي' : 'خارجي'}
@@ -139,7 +145,7 @@ export default function ShootingsPage() {
                       <p className="text-[10px] text-slate-400 font-bold">{s.created_by_name}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5 border-r border-slate-200">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
                         {s.content_count || 0}
@@ -147,14 +153,15 @@ export default function ShootingsPage() {
                       <span className="text-xs text-slate-400 font-bold">محتوى منتج</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/shootings/${s.id}`)}>
-                        <Eye size={16} />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit size={16} />
-                      </Button>
+                  <td className="px-6 py-5" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-center">
+                      <button 
+                        className="p-2.5 text-slate-500 hover:text-white hover:bg-[#3d6a8a] rounded-lg transition-all shadow-sm hover:shadow-md" 
+                        onClick={(e) => { e.stopPropagation(); navigate(`/shootings/${s.id}`); }}
+                        title="عرض التفاصيل"
+                      >
+                        <Eye size={20} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -163,41 +170,56 @@ export default function ShootingsPage() {
           </table>
           
           {loading && shootings.length === 0 && (
-            <div className="p-12 text-center text-slate-400">جاري تحميل بيانات التصوير...</div>
+            <div className="p-16 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <div className="w-8 h-8 border-4 border-[#3d6a8a] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <p className="text-slate-600 font-medium">جاري تحميل بيانات التصوير...</p>
+            </div>
           )}
           
           {!loading && shootings.length === 0 && (
-            <div className="p-12 text-center">
-              <Camera size={48} className="mx-auto text-slate-200 mb-4" />
-              <p className="text-slate-500 font-bold text-lg">لم يتم العثور على أوردارات تصوير</p>
-              <p className="text-slate-400 text-sm">جرب تغيير الفلاتر أو أضف تصوير جديد</p>
+            <div className="p-24 text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-100 rounded-full mb-6 shadow-inner">
+                <Camera className="text-slate-400" size={40} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-700 mb-2">لم يتم العثور على أوردارات تصوير</h3>
+              <p className="text-slate-500 mb-6">جرب تغيير الفلاتر أو أضف تصوير جديد</p>
+              <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+                <Plus size={18} />
+                إنشاء تصوير جديد
+              </Button>
             </div>
           )}
         </div>
         
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-500">
-            عرض {shootings.length} من أصل {pagination.total}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              disabled={pagination.offset === 0}
-              onClick={() => handlePageChange(pagination.offset - pagination.limit)}
-            >
-              <ChevronRight size={16} />
-            </Button>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              disabled={pagination.offset + pagination.limit >= pagination.total}
-              onClick={() => handlePageChange(pagination.offset + pagination.limit)}
-            >
-              <ChevronLeft size={16} />
-            </Button>
+        {shootings.length > 0 && (
+          <div className="px-6 py-4 bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] border-t-4 border-[#FF9F4A] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-white font-medium">
+                عرض <span className="font-bold text-[#FF9F4A]">{shootings.length}</span> من أصل <span className="font-bold text-[#FF9F4A]">{pagination.total}</span> تصوير
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                disabled={pagination.offset === 0}
+                onClick={() => handlePageChange(pagination.offset - pagination.limit)}
+                className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
+              >
+                <ChevronRight size={18} />
+                السابق
+              </button>
+              <button 
+                disabled={pagination.offset + pagination.limit >= pagination.total}
+                onClick={() => handlePageChange(pagination.offset + pagination.limit)}
+                className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
+              >
+                التالي
+                <ChevronLeft size={18} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <Modal 

@@ -80,9 +80,14 @@ export class TaskController {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const search = req.query.search ? (req.query.search as string) : '';
+      const order_id = req.query.order_id ? BigInt(req.query.order_id as string) : undefined;
+      const assigned_to = req.query.assigned_to ? BigInt(req.query.assigned_to as string) : undefined;
+      const status_id = req.query.status_id ? BigInt(req.query.status_id as string) : undefined;
 
-      const tasks = await this.taskService.getAllTasks(limit, offset);
-      this.sendSuccess(res, tasks, 200);
+      const { rows, total } = await this.taskService.searchTasks(limit, offset, search, order_id, assigned_to, status_id);
+
+      res.status(200).json({ success: true, data: rows, total, timestamp: new Date().toISOString() });
     } catch (error) {
       this.sendError(res, error, 400);
     }
@@ -95,7 +100,7 @@ export class TaskController {
   async updateTask(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { title, description, deadline, task_type_id } = req.body;
+      const { title, description, deadline, task_type_id, assigned_to, priority_id } = req.body;
 
       if (!id) {
         this.sendError(res, 'Task ID is required', 400);
@@ -104,9 +109,11 @@ export class TaskController {
 
       const updates: any = {};
       if (title) updates.title = title;
-      if (description) updates.description = description;
+      if (description !== undefined) updates.description = description;
       if (deadline) updates.deadline = new Date(deadline);
       if (task_type_id) updates.task_type_id = BigInt(task_type_id);
+      if (assigned_to) updates.assigned_to = BigInt(assigned_to);
+      if (priority_id) updates.priority_id = BigInt(priority_id);
 
       const task = await this.taskService.updateTask(BigInt(id), updates);
       this.sendSuccess(res, task, 200);
@@ -455,7 +462,7 @@ export class TaskController {
         return;
       }
 
-      const tasks = await this.taskService.getTasksByOrder(BigInt(orderId), limit, offset);
+      const tasks = await this.taskService.getTasksByOrderWithDetails(BigInt(orderId), limit, offset);
       this.sendSuccess(res, tasks, 200);
     } catch (error) {
       this.sendError(res, error, 400);

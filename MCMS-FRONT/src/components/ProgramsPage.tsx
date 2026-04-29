@@ -156,52 +156,59 @@ export default function ProgramsPage() {
           {loading && <div className="col-span-full py-12 text-center text-slate-400 font-bold">جاري تحميل البرامج...</div>}
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-wrap gap-4 items-center">
+        <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
+          <div className="p-6 border-b border-slate-200 flex flex-wrap gap-4 items-center bg-white">
             <div className="relative flex-1 min-w-[250px]">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input placeholder="بحث في الحلقات..." className="pr-12" />
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <Input placeholder="بحث في الحلقات..." className="pr-12 h-12 text-base bg-slate-50 border-slate-200 focus:bg-white shadow-sm" />
             </div>
-            <Select 
-              className="w-48"
-              options={[{ value: '', label: 'كل البرامج' }, ...programs.map(p => ({ value: p.id.toString(), label: p.name }))]}
-              value={episodeFilter.program_id}
-              onChange={(e) => setEpisodeFilter({ program_id: e.target.value })}
-            />
+            <div className="w-56">
+              <Select 
+                className="h-12 text-base shadow-sm"
+                options={[{ value: '', label: 'كل البرامج' }, ...programs.map(p => ({ value: p.id.toString(), label: p.name }))]}
+                value={episodeFilter.program_id}
+                onChange={(e) => setEpisodeFilter({ program_id: e.target.value })}
+              />
+            </div>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-right">
               <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الحلقة</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">البرنامج</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">تاريخ البث</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الحالة</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">الضيوف / المحتوى</th>
+                <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
+                  <th className="px-6 py-4 border-r border-white/20">الحلقة</th>
+                  <th className="px-6 py-4 border-r border-white/20">البرنامج</th>
+                  <th className="px-6 py-4 border-r border-white/20">تاريخ البث</th>
+                  <th className="px-6 py-4 border-r border-white/20">الحالة</th>
+                  <th className="px-6 py-4 border-r border-white/20">الضيوف / المحتوى</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
-                {episodes.map((e) => (
+              <tbody className="divide-y divide-slate-200">
+                {episodes.map((e, index) => (
                   <tr 
                     key={e.id} 
-                    className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                    className={cn(
+                      "hover:bg-blue-50 transition-all group cursor-pointer border-l-4 border-l-[#FF9F4A]",
+                      index % 2 === 0 ? "bg-white" : "bg-slate-50"
+                    )}
                     onClick={() => navigate(`/episodes/${e.id}`)}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5 border-r border-slate-200">
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{e.title}</span>
+                        <span className="font-bold text-slate-900 group-hover:text-[#3d6a8a] transition-colors">{e.title}</span>
                         <span className="text-[10px] text-slate-400 font-mono font-bold">الحلقة #{e.episode_number}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-700 text-sm">{e.program_title}</td>
-                    <td className="px-6 py-4 text-xs font-bold text-slate-500">
-                      {e.air_date ? format(new Date(e.air_date), 'yyyy/MM/dd') : 'غير محدد'}
+                    <td className="px-6 py-5 border-r border-slate-200 font-bold text-slate-700 text-sm">{e.program_title}</td>
+                    <td className="px-6 py-5 border-r border-slate-200">
+                      <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg inline-block">
+                        {e.air_date ? format(new Date(e.air_date), 'yyyy/MM/dd') : 'غير محدد'}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5 border-r border-slate-200">
                       {e.status_name && <Badge variant={getStatusVariant(e.status_name)}>{e.status_name}</Badge>}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5 border-r border-slate-200">
                       <div className="flex items-center gap-3">
                          <div className="flex items-center gap-1 text-[10px] font-black text-slate-400">
                            <Users size={12} />
@@ -217,7 +224,14 @@ export default function ProgramsPage() {
                 ))}
               </tbody>
             </table>
-            {loading && <div className="p-12 text-center text-slate-400 font-bold">جاري تحميل الحلقات...</div>}
+            {loading && (
+              <div className="p-16 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                  <div className="w-8 h-8 border-4 border-[#3d6a8a] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p className="text-slate-600 font-medium">جاري تحميل الحلقات...</p>
+              </div>
+            )}
           </div>
         </div>
       )}

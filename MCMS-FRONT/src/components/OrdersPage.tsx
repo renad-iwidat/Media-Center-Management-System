@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Filter, Search, Plus, ChevronLeft, ChevronRight,
   TrendingUp, Clock, AlertCircle, CheckCircle2,
-  MoreHorizontal, Eye, Edit, Trash2, Archive, XCircle
+  MoreHorizontal, Edit, Trash2, Archive, XCircle
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Order, Desk, Status, Program } from '../types';
@@ -37,6 +37,7 @@ export default function OrdersPage() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
+  const [progressData, setProgressData] = useState<Record<number, { percentage: number; completed: number; total: number }>>({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -61,6 +62,20 @@ export default function OrdersPage() {
         setOrders(res.data);
         // If total is not provided, use the length of data
         setPagination(p => ({ ...p, total: res.total || res.data?.length || 0 }));
+        
+        // Fetch progress for each order
+        const progressMap: Record<number, { percentage: number; completed: number; total: number }> = {};
+        for (const order of res.data) {
+          try {
+            const progressRes = await api.get<{ success: boolean; data: { percentage: number; completed: number; total: number } }>(`/api/orders/${order.id}/progress`);
+            if (progressRes.success) {
+              progressMap[order.id as number] = progressRes.data;
+            }
+          } catch (err) {
+            console.error(`Failed to fetch progress for order ${order.id}:`, err);
+          }
+        }
+        setProgressData(progressMap);
       }
     } catch (err) {
       console.error(err);
@@ -188,22 +203,21 @@ export default function OrdersPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl shadow-slate-200/50">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
-              <tr className="bg-gradient-to-l from-slate-50 to-slate-100 text-xs text-slate-600 uppercase font-bold border-b-2 border-slate-200">
-                <th className="px-6 py-4">العنوان</th>
-                <th className="px-6 py-4">الحالة</th>
-                <th className="px-6 py-4">أنشئ بواسطة</th>
-                <th className="px-6 py-4">الأولوية</th>
-                <th className="px-6 py-4">الموعد النهائي</th>
-                <th className="px-6 py-4">الإنجاز</th>
-                <th className="px-6 py-4">تاريخ الإنشاء</th>
-                <th className="px-6 py-4 text-center">الإجراءات</th>
+              <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
+                <th className="px-6 py-4 border border-[#FF9F4A]">العنوان</th>
+                <th className="px-6 py-4 border border-[#FF9F4A]">الحالة</th>
+                <th className="px-6 py-4 border border-[#FF9F4A]">أنشئ بواسطة</th>
+                <th className="px-6 py-4 border border-[#FF9F4A]">الأولوية</th>
+                <th className="px-6 py-4 border border-[#FF9F4A]">الموعد النهائي</th>
+                <th className="px-6 py-4 border border-[#FF9F4A]">الإنجاز</th>
+                <th className="px-6 py-4 border border-[#FF9F4A]">تاريخ الإنشاء</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[#FF9F4A] border-b-4 border-[#FF9F4A]">
               <AnimatePresence mode="popLayout">
                 {orders.map((order, index) => (
                   <motion.tr 
@@ -213,40 +227,32 @@ export default function OrdersPage() {
                     exit={{ opacity: 0 }}
                     key={order.id} 
                     className={cn(
-                      "hover:bg-blue-50 transition-all group cursor-pointer border-b border-slate-100",
-                      index % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                      "hover:bg-blue-50 transition-all group cursor-pointer border-l-4",
+                      index % 2 === 0 ? "bg-white" : "bg-slate-50",
+                      "border-l-[#FF9F4A]"
                     )}
                     onClick={() => navigate(`/orders/${order.id}`)}
                   >
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-base font-bold text-slate-900 group-hover:text-[#3d6a8a] transition-colors">
                           {order.title}
                         </span>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span className="px-2 py-0.5 bg-slate-100 rounded-md font-medium">{order.desk_name}</span>
-                          {order.program_name && (
-                            <>
-                              <span>•</span>
-                              <span>{order.program_name}</span>
-                            </>
-                          )}
-                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
                       <Badge variant={getStatusVariant(order.status_id)}>
                         {order.status_name}
                       </Badge>
                     </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-semibold text-slate-700">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
+                      <span className="text-sm font-semibold text-slate-700 px-3 py-1.5 bg-slate-100 rounded-lg inline-block">
                         {order.created_by_name || 'غير معروف'}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
                       <span className={cn(
-                        "text-sm font-bold px-3 py-1 rounded-lg",
+                        "text-sm font-bold px-3 py-1.5 rounded-lg inline-block",
                         order.priority_id === 1 && "bg-red-100 text-red-700",
                         order.priority_id === 2 && "bg-orange-100 text-orange-700",
                         order.priority_id === 3 && "bg-yellow-100 text-yellow-700",
@@ -255,49 +261,38 @@ export default function OrdersPage() {
                         {getPriorityLabel(order.priority_id)}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
                       <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-slate-400" />
-                        <span className="font-mono text-sm text-slate-700 font-medium">
+                        <Clock size={16} className="text-[#FF9F4A]" />
+                        <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg">
                           {order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : 'N/A'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col gap-2 w-32">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
+                      <div className="flex flex-col gap-2 w-40">
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-slate-500">
-                            {order.completion_percentage}%
+                            {progressData[order.id as number]?.percentage || 0}%
                           </span>
                         </div>
                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
                           <div 
                             className={cn(
                               "h-full rounded-full transition-all duration-500",
-                              order.completion_percentage === 100 ? "bg-green-500" :
-                              order.completion_percentage >= 50 ? "bg-blue-500" :
+                              (progressData[order.id as number]?.percentage || 0) === 100 ? "bg-green-500" :
+                              (progressData[order.id as number]?.percentage || 0) >= 50 ? "bg-blue-500" :
                               "bg-yellow-500"
                             )}
-                            style={{ width: `${order.completion_percentage}%` }} 
+                            style={{ width: `${progressData[order.id as number]?.percentage || 0}%` }} 
                           />
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
-                      <span className="font-mono text-sm text-slate-500">
+                    <td className="px-6 py-5 border border-[#FF9F4A]">
+                      <span className="font-mono text-sm text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg inline-block">
                         {order.created_at ? format(new Date(order.created_at), 'yyyy/MM/dd') : 'N/A'}
                       </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center justify-center">
-                        <button 
-                          className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm hover:shadow-md" 
-                          onClick={(e) => { e.stopPropagation(); navigate(`/orders/${order.id}`); }}
-                          title="عرض التفاصيل"
-                        >
-                          <Eye size={20} />
-                        </button>
-                      </div>
                     </td>
                   </motion.tr>
                 ))}
@@ -308,7 +303,7 @@ export default function OrdersPage() {
           {loading && orders.length === 0 && (
             <div className="p-16 text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-[#3d6a8a] border-t-transparent rounded-full animate-spin"></div>
               </div>
               <p className="text-slate-600 font-medium">جاري تحميل الأوردرات...</p>
             </div>
@@ -331,17 +326,17 @@ export default function OrdersPage() {
 
         {/* Pagination */}
         {orders.length > 0 && (
-          <div className="px-6 py-4 bg-slate-50 border-t-2 border-slate-200 flex items-center justify-between">
+          <div className="px-6 py-4 bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] border-t-4 border-[#FF9F4A] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600 font-medium">
-                عرض <span className="font-bold text-slate-900">{orders.length}</span> من أصل <span className="font-bold text-slate-900">{pagination.total}</span> أوردر
+              <span className="text-sm text-white font-medium">
+                عرض <span className="font-bold text-[#FF9F4A]">{orders.length}</span> من أصل <span className="font-bold text-[#FF9F4A]">{pagination.total}</span> أوردر
               </span>
             </div>
             <div className="flex items-center gap-3">
               <button 
                 disabled={pagination.offset === 0}
                 onClick={() => setPagination(p => ({ ...p, offset: p.offset - p.limit }))}
-                className="px-4 py-2 text-slate-600 hover:bg-white hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
+                className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
               >
                 <ChevronRight size={18} />
                 السابق
@@ -349,7 +344,7 @@ export default function OrdersPage() {
               <button 
                 disabled={pagination.offset + pagination.limit >= pagination.total}
                 onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
-                className="px-4 py-2 text-slate-600 hover:bg-white hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
+                className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2"
               >
                 التالي
                 <ChevronLeft size={18} />

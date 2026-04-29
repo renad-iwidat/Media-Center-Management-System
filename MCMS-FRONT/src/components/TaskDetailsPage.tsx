@@ -169,9 +169,9 @@ export default function TaskDetailsPage() {
     <div className="space-y-8 pb-12">
       {/* Header Info */}
       <div className="flex flex-col gap-6">
-        <Link to="/tasks" className="flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors w-fit group">
-          <ArrowRight size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-bold">العودة لقائمة المهام</span>
+        <Link to="/tasks" className="flex items-center gap-3 text-white hover:text-white transition-all w-fit group bg-[#3d6a8a] hover:bg-[#2d5570] px-6 py-3 rounded-xl shadow-lg hover:shadow-xl">
+          <ArrowRight size={24} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-lg font-bold">العودة لقائمة المهام</span>
         </Link>
 
         <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40">
@@ -491,16 +491,11 @@ export default function TaskDetailsPage() {
       </Modal>
 
       <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="تعيين موظف آخر">
-        <div className="space-y-6">
-          <Select 
-            label="اختر الموظف"
-            options={[{ value: '', label: 'اختر...' }, ...users.map(u => ({ value: u.id, label: u.name }))]}
-            onChange={(e) => handleAssign(Number(e.target.value))}
-          />
-          <div className="flex justify-end pt-4">
-            <Button variant="ghost" onClick={() => setIsAssignModalOpen(false)}>إلغاء</Button>
-          </div>
-        </div>
+        <AssignForm 
+          users={users}
+          onSubmit={(userId) => handleAssign(userId)}
+          onCancel={() => setIsAssignModalOpen(false)}
+        />
       </Modal>
 
       <Modal isOpen={isRelationModalOpen} onClose={() => setIsRelationModalOpen(false)} title="إضافة علاقة جديدة">
@@ -613,3 +608,28 @@ const getRelationLabel = (type: string) => {
   };
   return labels[type] || type;
 };
+
+function AssignForm({ users, onSubmit, onCancel }: { users: any[]; onSubmit: (userId: number) => void; onCancel: () => void }) {
+  const [selectedUser, setSelectedUser] = React.useState('');
+
+  return (
+    <div className="space-y-6">
+      <Select
+        label="اختر الموظف"
+        options={[{ value: '', label: 'اختر...' }, ...users.map(u => ({ value: u.id, label: u.name }))]}
+        value={selectedUser}
+        onChange={(e) => setSelectedUser(e.target.value)}
+      />
+      <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <Button variant="ghost" onClick={onCancel}>إلغاء</Button>
+        <Button
+          onClick={() => selectedUser && onSubmit(Number(selectedUser))}
+          disabled={!selectedUser}
+          className="bg-[#3d6a8a] hover:bg-[#2d5570] text-white"
+        >
+          حفظ التعيين
+        </Button>
+      </div>
+    </div>
+  );
+}

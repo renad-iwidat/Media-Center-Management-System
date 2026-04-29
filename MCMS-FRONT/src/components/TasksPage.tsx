@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Filter, Search, Plus, ChevronLeft, ChevronRight,
-  Clock, AlertCircle, CheckCircle2, UserPlus, 
-  MoreHorizontal, Eye, Edit, Trash2, CheckSquare
+  Search, Plus, ChevronLeft, ChevronRight,
+  Clock, CheckSquare
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,9 +39,6 @@ export default function TasksPage() {
   }>({ orders: [], statuses: [], users: [] });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
-  const [isBulkActionModalOpen, setIsBulkActionModalOpen] = useState(false);
-  const [bulkActionType, setBulkActionType] = useState<'assign' | 'status' | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -63,7 +59,7 @@ export default function TasksPage() {
       const res = await api.get<{ success: boolean; data: Task[]; total: number }>(`${endpoint}?${query}`);
       if (res.success) {
         setTasks(res.data);
-        setPagination(p => ({ ...p, total: res.total || 0 }));
+        setPagination(p => ({ ...p, total: res.total ?? res.data?.length ?? 0 }));
       }
     } catch (err) {
       console.error(err);
@@ -91,37 +87,7 @@ export default function TasksPage() {
   };
 
   useEffect(() => { fetchLookups(); }, []);
-  useEffect(() => { fetchData(); setSelectedTasks([]); }, [pagination.offset, filters, activeTab]);
-
-  const toggleSelectAll = () => {
-    if (selectedTasks.length === tasks.length) setSelectedTasks([]);
-    else setSelectedTasks(tasks.map(t => t.id));
-  };
-
-  const toggleSelectOne = (id: number) => {
-    if (selectedTasks.includes(id)) setSelectedTasks(selectedTasks.filter(tid => tid !== id));
-    else setSelectedTasks([...selectedTasks, id]);
-  };
-
-  const handleBulkAction = async (value: number) => {
-    if (!user) return;
-    try {
-      const endpoint = bulkActionType === 'assign' ? '/api/tasks/bulk-assign' : '/api/tasks/bulk-status';
-      const payload = bulkActionType === 'assign' 
-        ? { task_ids: selectedTasks, user_id: value, assigned_by: user.id }
-        : { task_ids: selectedTasks, status_id: value, changed_by: user.id };
-
-      const res = await api.post<{ success: boolean }>(endpoint, payload);
-      if (res.success) {
-        setIsBulkActionModalOpen(false);
-        setBulkActionType(null);
-        setSelectedTasks([]);
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  useEffect(() => { fetchData(); }, [pagination.offset, filters, activeTab]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -130,7 +96,7 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold text-slate-900 mb-1">المهام التنفيذية</h1>
           <p className="text-slate-500 font-medium">متابعة وإنجاز العمليات اليومية</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+        <Button onClick={() => setIsModalOpen(true)} className="gap-2 bg-[#3d6a8a] hover:bg-[#2d5570] text-white shadow-lg hover:shadow-xl">
           <Plus size={20} />
           مهمة جديدة
         </Button>
@@ -181,41 +147,24 @@ export default function TasksPage() {
             className="h-11 py-0 text-sm"
           />
         </div>
-
-        {selectedTasks.length > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-right-4 duration-300">
-            <span className="text-[11px] font-bold text-blue-700">{selectedTasks.length} مختار</span>
-            <div className="h-4 w-px bg-blue-200 mx-1" />
-            <button onClick={() => { setBulkActionType('assign'); setIsBulkActionModalOpen(true); }} className="text-[11px] font-black text-blue-600 hover:underline">تعيين موظف</button>
-            <button onClick={() => { setBulkActionType('status'); setIsBulkActionModalOpen(true); }} className="text-[11px] font-black text-blue-600 hover:underline">تغيير حالة</button>
-          </div>
-        )}
       </div>
 
-      <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
-              <tr className="bg-slate-50/50 text-[11px] text-slate-500 uppercase font-bold border-b border-slate-100">
-                <th className="px-6 py-4 w-10">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    checked={selectedTasks.length === tasks.length && tasks.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
-                <th className="px-6 py-4">المهمة</th>
-                <th className="px-6 py-4">الأوردر</th>
-                <th className="px-6 py-4 text-center">الحالة</th>
-                <th className="px-6 py-4 text-center">المسؤول</th>
-                <th className="px-6 py-4 text-center">الموعد</th>
-                <th className="px-6 py-4 text-center">الأولوية</th>
+              <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
+                <th className="px-6 py-4 border-r border-white/20">المهمة</th>
+                <th className="px-6 py-4 border-r border-white/20">الأوردر</th>
+                <th className="px-6 py-4 border-r border-white/20">الحالة</th>
+                <th className="px-6 py-4 border-r border-white/20">المسؤول</th>
+                <th className="px-6 py-4 border-r border-white/20">الموعد</th>
+                <th className="px-6 py-4">الأولوية</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               <AnimatePresence mode="popLayout">
-                {tasks.map((task) => (
+                {tasks.map((task, index) => (
                   <motion.tr 
                     layout
                     initial={{ opacity: 0 }}
@@ -223,44 +172,50 @@ export default function TasksPage() {
                     exit={{ opacity: 0 }}
                     key={task.id} 
                     className={cn(
-                      "hover:bg-slate-50 transition-all group cursor-pointer",
-                      selectedTasks.includes(task.id) && "bg-blue-50/30"
+                      "hover:bg-blue-50 transition-all group cursor-pointer border-l-4",
+                      index % 2 === 0 ? "bg-white" : "bg-slate-50",
+                      "border-l-[#FF9F4A]"
                     )}
                     onClick={() => navigate(`/tasks/${task.id}`)}
                   >
-                    <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        checked={selectedTasks.includes(task.id)}
-                        onChange={() => toggleSelectOne(task.id)}
-                      />
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <td className="px-6 py-5 border-r border-slate-200">
+                      <span className="text-sm font-bold text-slate-900 group-hover:text-[#3d6a8a] transition-colors">
                         {task.title}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
-                      <span className="text-xs text-slate-500 font-medium max-w-[150px] truncate block" title={task.order_title}>
+                    <td className="px-6 py-5 border-r border-slate-200">
+                      <span className="text-xs font-semibold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-lg inline-block max-w-[150px] truncate" title={task.order_title}>
                         {task.order_title}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-center">
+                    <td className="px-6 py-5 border-r border-slate-200">
                       <Badge variant={getTaskStatusVariant(task.status_id)}>
                         {task.status_name}
                       </Badge>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-700">{task.assigned_to_name}</span>
+                    <td className="px-6 py-5 border-r border-slate-200">
+                      <span className="text-sm font-semibold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-lg inline-block">
+                        {task.assigned_to_name}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 border-r border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <Clock size={14} className="text-[#FF9F4A]" />
+                        <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg">
+                          {task.deadline ? format(new Date(task.deadline), 'yyyy-MM-dd') : 'N/A'}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-center font-mono text-xs text-slate-500">
-                      {task.deadline ? format(new Date(task.deadline), 'yyyy-MM-dd') : 'N/A'}
-                    </td>
-                    <td className="px-6 py-5 text-center text-xs font-bold text-slate-600">
-                      {getPriorityLabel(task.priority_id)}
+                    <td className="px-6 py-5">
+                      <span className={cn(
+                        "text-xs font-bold px-2.5 py-1 rounded-lg inline-block",
+                        task.priority_id === 1 && "bg-red-100 text-red-700",
+                        task.priority_id === 2 && "bg-orange-100 text-orange-700",
+                        task.priority_id === 3 && "bg-yellow-100 text-yellow-700",
+                        task.priority_id === 4 && "bg-slate-100 text-slate-600"
+                      )}>
+                        {getPriorityLabel(task.priority_id)}
+                      </span>
                     </td>
                   </motion.tr>
                 ))}
@@ -283,57 +238,33 @@ export default function TasksPage() {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-500 font-bold">
-            عرض {tasks.length} من أصل {pagination.total} مهمة
-          </span>
-          <div className="flex items-center gap-2">
-            <button 
-              disabled={pagination.offset === 0}
-              onClick={() => setPagination(p => ({ ...p, offset: p.offset - p.limit }))}
-              className="p-2 text-slate-500 hover:bg-white hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition-all disabled:opacity-30 disabled:pointer-events-none"
-            >
-              <ChevronRight size={18} />
-            </button>
-            <button 
-              disabled={pagination.offset + pagination.limit >= pagination.total}
-              onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
-              className="p-2 text-slate-500 hover:bg-white hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition-all disabled:opacity-30 disabled:pointer-events-none"
-            >
-              <ChevronLeft size={18} />
-            </button>
+        {tasks.length > 0 && (
+          <div className="px-6 py-4 bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] border-t-4 border-[#FF9F4A] flex items-center justify-between text-white">
+            <span className="text-sm font-medium">
+              عرض <span className="font-bold text-[#FF9F4A]">{tasks.length}</span> من أصل <span className="font-bold text-[#FF9F4A]">{pagination.total}</span> مهمة
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                disabled={pagination.offset === 0}
+                onClick={() => setPagination(p => ({ ...p, offset: p.offset - p.limit }))}
+                className="p-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronRight size={18} />
+              </button>
+              <button 
+                disabled={pagination.offset + pagination.limit >= pagination.total}
+                onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
+                className="p-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="إنشاء مهمة جديدة" className="max-w-3xl">
         <TaskForm onSuccess={() => { setIsModalOpen(false); fetchData(); }} onCancel={() => setIsModalOpen(false)} />
-      </Modal>
-
-      <Modal isOpen={isBulkActionModalOpen} onClose={() => setIsBulkActionModalOpen(false)} title="إجراء جماعي">
-        <div className="space-y-6">
-          <p className="text-sm font-bold text-slate-600">
-            سيتم {bulkActionType === 'assign' ? 'تعيين الموظف المختار لـ' : 'تغيير حالة'} {selectedTasks.length} مهمة.
-          </p>
-          
-          {bulkActionType === 'assign' ? (
-            <Select 
-              label="اختر الموظف"
-              options={[{ value: '', label: 'اختر...' }, ...lookups.users.map(u => ({ value: u.id, label: u.name }))]}
-              onChange={(e) => handleBulkAction(Number(e.target.value))}
-            />
-          ) : (
-            <Select 
-              label="اختر الحالة"
-              options={[{ value: '', label: 'اختر...' }, ...lookups.statuses.map(s => ({ value: s.id, label: s.name }))]}
-              onChange={(e) => handleBulkAction(Number(e.target.value))}
-            />
-          )}
-
-          <div className="flex justify-end pt-4">
-            <Button variant="ghost" onClick={() => setIsBulkActionModalOpen(false)}>إلغاء</Button>
-          </div>
-        </div>
       </Modal>
     </div>
   );

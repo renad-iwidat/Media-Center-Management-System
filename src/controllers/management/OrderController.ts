@@ -101,8 +101,12 @@ export class OrderController {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const search = req.query.search ? (req.query.search as string) : '';
+      const desk_id = req.query.desk_id ? BigInt(req.query.desk_id as string) : undefined;
+      const status_id = req.query.status_id ? BigInt(req.query.status_id as string) : undefined;
+      const program_id = req.query.program_id ? BigInt(req.query.program_id as string) : undefined;
 
-      const orders = await this.orderService.getAllOrders(limit, offset);
+      const orders = await this.orderService.searchOrders(limit, offset, search, desk_id, status_id, program_id);
       this.sendSuccess(res, orders, 200);
     } catch (error) {
       this.sendError(res, error, 400);

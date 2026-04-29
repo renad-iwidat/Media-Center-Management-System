@@ -19,6 +19,7 @@ router.post('/bulk-assign', requirePermission('tasks.assign'), (req: Request, re
 router.post('/bulk-status', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.bulkChangeStatus(req, res); });
 router.get('/:id', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.getTask(req, res); });
 router.put('/:id', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.updateTask(req, res); });
+router.patch('/:id', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.updateTask(req, res); });
 router.delete('/:id', requirePermission('tasks.delete'), (req: Request, res: Response) => { taskController.deleteTask(req, res); });
 
 // Status

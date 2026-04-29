@@ -62,6 +62,69 @@ export class OrderModel {
     return result.rows;
   }
 
+  static async searchWithDetails(
+    limit: number = 10,
+    offset: number = 0,
+    search: string = '',
+    desk_id?: bigint,
+    status_id?: bigint,
+    program_id?: bigint
+  ): Promise<any[]> {
+    let query = `SELECT 
+      o.*,
+      u.name as created_by_name,
+      d.name as desk_name,
+      os.name as status_name,
+      pl.name as priority_name,
+      pr.title as program_name,
+      e.title as episode_title
+     FROM orders o
+     LEFT JOIN users u ON o.created_by = u.id
+     LEFT JOIN desks d ON o.desk_id = d.id
+     LEFT JOIN order_statuses os ON o.status_id = os.id
+     LEFT JOIN priority_levels pl ON o.priority_id = pl.id
+     LEFT JOIN programs pr ON o.program_id = pr.id
+     LEFT JOIN episodes e ON o.episode_id = e.id
+     WHERE 1=1`;
+
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Search by title or description
+    if (search) {
+      query += ` AND (o.title ILIKE $${paramIndex} OR o.description ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Filter by desk
+    if (desk_id) {
+      query += ` AND o.desk_id = $${paramIndex}`;
+      params.push(desk_id);
+      paramIndex++;
+    }
+
+    // Filter by status
+    if (status_id) {
+      query += ` AND o.status_id = $${paramIndex}`;
+      params.push(status_id);
+      paramIndex++;
+    }
+
+    // Filter by program
+    if (program_id) {
+      query += ` AND o.program_id = $${paramIndex}`;
+      params.push(program_id);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY o.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  }
+
   static async findByDesk(deskId: bigint, limit: number = 10, offset: number = 0): Promise<Order[]> {
     const result = await pool.query(
       'SELECT * FROM orders WHERE desk_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',

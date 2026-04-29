@@ -42,11 +42,18 @@ export class TaskValidator {
   /**
    * Validate Task Data on Creation/Update
    */
-  static validateTaskData(data: any): string[] {
+  static validateTaskData(data: any, isUpdate: boolean = false): string[] {
     const errors: string[] = [];
 
-    if (!data.title || data.title.trim().length < 3) {
-      errors.push('Title is required and must be at least 3 characters');
+    // Only required on create
+    if (!isUpdate) {
+      if (!data.title || data.title.trim().length < 3) {
+        errors.push('Title is required and must be at least 3 characters');
+      }
+      if (!data.order_id) errors.push('Order is required');
+      if (!data.assigned_to) errors.push('Assigned To is required');
+      if (!data.status_id) errors.push('Status is required');
+      if (!data.priority_id) errors.push('Priority is required');
     }
 
     if (data.title && data.title.length > 255) {
@@ -55,26 +62,6 @@ export class TaskValidator {
 
     if (data.description && data.description.length > 1000) {
       errors.push('Description must not exceed 1000 characters');
-    }
-
-    if (!data.order_id) {
-      errors.push('Order is required');
-    }
-
-    if (!data.assigned_to) {
-      errors.push('Assigned To is required');
-    }
-
-    if (!data.status_id) {
-      errors.push('Status is required');
-    }
-
-    if (!data.priority_id) {
-      errors.push('Priority is required');
-    }
-
-    if (data.deadline && new Date(data.deadline) < new Date()) {
-      errors.push('Deadline must be in the future');
     }
 
     return errors;

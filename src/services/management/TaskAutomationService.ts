@@ -115,15 +115,24 @@ export class TaskAutomationService {
     assignedTo: bigint,
     assignedBy: bigint
   ): Promise<void> {
-    // Add to task_assignments
+    // Update assigned_to in tasks table
+    await pool.query(
+      `UPDATE tasks SET assigned_to = $1 WHERE id = $2`,
+      [assignedTo, taskId]
+    );
+
+    // Add to task_assignments history (ignore duplicates)
     await pool.query(
       `INSERT INTO task_assignments (task_id, assigned_to, assigned_by, assigned_at)
-       VALUES ($1, $2, $3, NOW())`,
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT DO NOTHING`,
       [taskId, assignedTo, assignedBy]
     );
 
-    // Update user KPI
-    await KPIService.calculateUserKPI(assignedTo);
+    // Update user KPI (ignore errors if tables don't exist)
+    try {
+      await KPIService.calculateUserKPI(assignedTo);
+    } catch { /* ignore KPI errors */ }
 
     // إشعار للموظف المعيّن
     try {
@@ -282,10 +291,11 @@ export class TaskAutomationService {
    */
   static async getTaskWithRelations(taskId: bigint): Promise<any> {
     const taskResult = await pool.query(
-      `SELECT t.*, ts.name as status_name, pl.name as priority_name
+      `SELECT t.*, ts.name as status_name, pl.name as priority_name, u.name as assigned_to_name
        FROM tasks t
        LEFT JOIN task_statuses ts ON t.status_id = ts.id
        LEFT JOIN priority_levels pl ON t.priority_id = pl.id
+       LEFT JOIN users u ON t.assigned_to = u.id
        WHERE t.id = $1`,
       [taskId]
     );
@@ -322,17 +332,59 @@ export class TaskAutomationService {
       [taskId]
     );
 
+    // Get task history
+    const historyResult = await pool.query(
+      `SELECT th.*, ts1.name as old_status_name, ts2.name as new_status_name, u.name as changed_by_name
+       FROM task_history th
+       LEFT JOIN task_statuses ts1 ON th.old_status_id = ts1.id
+       LEFT JOIN task_statuses ts2 ON th.new_status_id = ts2.id
+       LEFT JOIN users u ON th.changed_by = u.id
+       WHERE th.task_id = $1
+       ORDER BY th.changed_at DESC`,
+      [taskId]
+    );
+
     // Get task KPI
     const kpiResult = await pool.query(
       `SELECT * FROM task_kpi WHERE task_id = $1`,
       [taskId]
     );
 
+    // Get comments
+    const commentsResult = await pool.query(
+      `SELECT tc.*, u.name as user_name
+       FROM task_comments tc
+       LEFT JOIN users u ON tc.user_id = u.id
+       WHERE tc.task_id = $1
+       ORDER BY tc.created_at DESC`,
+      [taskId]
+    );
+
+    // Get attachments
+    const attachmentsResult = await pool.query(
+      `SELECT ta.*, u.name as user_name
+       FROM task_attachments ta
+       LEFT JOIN users u ON ta.uploaded_by = u.id
+       WHERE ta.task_id = $1
+       ORDER BY ta.created_at DESC`,
+      [taskId]
+    );
+
+    // Get order title
+    const orderResult = await pool.query(
+      `SELECT id, title FROM orders WHERE id = $1`,
+      [task.order_id]
+    );
+
     return {
       ...task,
+      order_title: orderResult.rows[0]?.title || null,
       content: contentResult.rows,
       relations: relationsResult.rows,
       assignments: assignmentsResult.rows,
+      history: historyResult.rows,
+      comments: commentsResult.rows,
+      attachments: attachmentsResult.rows,
       kpi: kpiResult.rows[0] || null
     };
   }
