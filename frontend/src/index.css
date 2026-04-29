@@ -7,6 +7,18 @@
     --color-brand-surface: #ffffff;
     --color-brand-accent: #FF9F43;
     --color-brand-border: rgba(229, 231, 235, 0.8);
+    
+    /* Category Colors - High Contrast */
+    --category-domestic: #EF4444;
+    --category-international: #3B82F6;
+    --category-politics: #8B5CF6;
+    --category-economy: #10B981;
+    --category-sports: #F59E0B;
+    --category-health: #EC4899;
+    --category-technology: #06B6D4;
+    --category-culture: #F97316;
+    --category-science: #6366F1;
+    --category-other: #6B7280;
   }
 
   body {

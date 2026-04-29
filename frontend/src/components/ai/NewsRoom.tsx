@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
 import { getAuthToken } from '../../services/api';
+import { getCategoryColor } from '../../lib/categoryColors';
 
 // استخدام VITE_API_URL من environment variables
 const API_URL = import.meta.env.VITE_API_URL 
@@ -282,7 +283,7 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>{selectedCount} محدد من {filteredItems.length}</span>
+                  <span className="text-[11px] font-bold bg-white/10 text-white px-2.5 py-1 rounded-lg border border-white/20">{selectedCount} محدد من {filteredItems.length}</span>
                   {selectedCategory && (
                     <span className="text-[10px] bg-[#2563eb]/10 text-[#2563eb] px-2 py-0.5 rounded-full">
                       {selectedCategory}
@@ -308,34 +309,39 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
               ) : filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    item.selected ? 'bg-[#2563eb]/10 border-[#2563eb]/50' : 'bg-white/5 border-white/10 hover:border-white/20'
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    item.selected ? 'bg-[#2563eb]/15 border-[#2563eb]/60 shadow-lg shadow-[#2563eb]/10' : 'bg-white/[0.03] border-white/15 hover:border-white/30 hover:bg-white/[0.06]'
                   }`}
                   onClick={() => toggleSelect(item.id)}
                 >
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3.5 h-3.5 rounded border transition-colors shrink-0 flex items-center justify-center ${item.selected ? 'bg-[#2563eb] border-[#2563eb]' : 'border-gray-600'}`}>
+                  <div className="flex justify-between items-start mb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-4 h-4 rounded border-2 transition-colors shrink-0 flex items-center justify-center ${item.selected ? 'bg-[#2563eb] border-[#2563eb]' : 'border-gray-500 hover:border-gray-400'}`}>
                         {item.selected && <Check size={10} className="text-white" />}
                       </div>
-                      <h4 className="font-bold text-xs truncate max-w-[180px]">{item.title}</h4>
+                      <h4 className="font-bold text-xs text-white truncate max-w-[160px] leading-tight">{item.title}</h4>
                     </div>
                     <button
                       onClick={(e: React.MouseEvent) => { e.stopPropagation(); removeNewsItem(item.id); }}
-                      className="text-gray-500 hover:text-red-500 transition-colors"
+                      className="text-gray-400 hover:text-red-400 transition-colors shrink-0 ml-2"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
-                  <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{item.content}</p>
+                  <p className="text-[11px] text-gray-300 line-clamp-2 leading-relaxed mb-2.5">{item.content}</p>
                   {(item.media_unit_name || item.category_name) && (
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    <div className="flex gap-2 flex-wrap">
                       {item.media_unit_name && (
-                        <span className="text-[10px] bg-[#2563eb]/10 text-[#2563eb] px-1.5 py-0.5 rounded-full">{item.media_unit_name}</span>
+                        <span className="text-[10px] bg-[#2563eb]/20 text-[#60a5fa] px-2 py-1 rounded-md border border-[#2563eb]/40 font-medium">{item.media_unit_name}</span>
                       )}
-                      {item.category_name && (
-                        <span className="text-[10px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full">{item.category_name}</span>
-                      )}
+                      {item.category_name && (() => {
+                        const colors = getCategoryColor(item.category_name);
+                        return (
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded-md border ${colors.bg} ${colors.text} ${colors.border}`}>
+                            {item.category_name}
+                          </span>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -428,14 +434,17 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 }, {});
                 
                 return Object.keys(categoryBreakdown).length > 0 ? (
-                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5">
-                    <p className="text-[10px] text-gray-500 mb-1.5 font-bold">التصنيفات المختارة:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(categoryBreakdown).map(([cat, count]) => (
-                        <span key={cat} className="text-[10px] bg-[#2563eb]/10 text-[#2563eb] px-2 py-1 rounded-lg font-bold">
-                          {cat}: {count}
-                        </span>
-                      ))}
+                  <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-300 mb-2 font-bold uppercase tracking-wide">التصنيفات المختارة:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(categoryBreakdown).map(([cat, count]) => {
+                        const colors = getCategoryColor(cat);
+                        return (
+                          <span key={cat} className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border ${colors.bg} ${colors.text} ${colors.border}`}>
+                            {cat}: <span className="font-extrabold">{count}</span>
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : null;

@@ -215,13 +215,21 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-[#2c5f7f] rounded-3xl p-8 border border-white/5 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold flex items-center gap-2 text-white">
-              <Settings size={20} className="text-blue-400" />
+            <motion.h3 
+              className="text-lg font-bold flex items-center gap-2 text-white"
+              whileHover={{ scale: 1.05 }}
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              >
+                <Settings size={20} className="text-blue-400" />
+              </motion.div>
               السياسات النشطة
-            </h3>
+            </motion.h3>
             <button
               onClick={() => { setShowCreateForm(v => !v); setCreateError(""); }}
-              className="flex items-center gap-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-blue-600/20"
+              className="flex items-center gap-1.5 bg-orange-600/15 hover:bg-orange-600/25 text-orange-400 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-orange-600/30 hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-600/10"
             >
               <Plus size={14} /> إضافة سياسة
             </button>
@@ -229,50 +237,78 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
             {policies.length === 0 && <p className="text-gray-500 text-sm">لا توجد سياسات مفعّلة</p>}
             {policies.map((p: any) => (
-              <div 
-                key={p.id} 
+              <motion.div 
+                key={p.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedPolicyId(p.id)}
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group
-                  ${selectedPolicyId === p.id ? "bg-blue-600/10 border-blue-600/50" : "bg-white/[0.02] border-white/5 hover:border-blue-500/30"}`}
+                  ${selectedPolicyId === p.id ? "bg-blue-600/10 border-blue-600/50 shadow-lg shadow-blue-600/10" : "bg-white/[0.02] border-white/5 hover:border-blue-500/30"}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-blue-600/10 transition-colors">
-                    {p.isModifying ? <FileEdit size={18} className="text-blue-400" /> : <Search size={18} className="text-amber-400" />}
-                  </div>
+                  <motion.div 
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-all ${
+                      p.isModifying 
+                        ? 'bg-blue-600/20 border border-blue-500/30' 
+                        : 'bg-orange-600/20 border border-orange-500/30'
+                    }`}
+                    whileHover={{ rotate: 10 }}
+                  >
+                    {p.isModifying ? <FileEdit size={18} className="text-blue-400" /> : <Search size={18} className="text-orange-400" />}
+                  </motion.div>
                   <div>
                     <div className="text-sm font-bold text-white">{p.name}</div>
                     <div className="text-[10px] text-gray-500">{p.description || (p.isModifying ? 'سياسة تعديل' : 'سياسة فحص')}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-black px-2 py-0.5 bg-white/10 rounded-md text-gray-300">
+                  <motion.span 
+                    className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-md border transition-all ${
+                      p.isModifying 
+                        ? 'bg-blue-600/20 text-blue-300 border-blue-500/30' 
+                        : 'bg-orange-600/20 text-orange-300 border-orange-500/30'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                  >
                     {p.isModifying ? "تعديل" : "فحص"}
-                  </span>
-                  <button
+                  </motion.span>
+                  <motion.button
                     onClick={() => handleEdit(p)}
                     className="text-gray-500 hover:text-blue-400 transition-colors p-1"
                     title="تعديل"
+                    whileHover={{ scale: 1.2, rotate: 10 }}
+                    whileTap={{ scale: 0.9 }}
                   >
                     <FileEdit size={14} />
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
                     onClick={() => handleDeletePolicy(p.id, p.name)}
                     className="text-gray-500 hover:text-rose-400 transition-colors p-1"
                     title="حذف"
+                    whileHover={{ scale: 1.2, rotate: -10 }}
+                    whileTap={{ scale: 0.9 }}
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
 
         <div className="bg-[#2c5f7f] rounded-3xl p-8 border border-white/5 shadow-2xl space-y-6">
-          <h3 className="text-lg font-bold flex items-center gap-2 text-white">
-            <Sparkles size={20} className="text-blue-400" />
+          <motion.h3 
+            className="text-lg font-bold flex items-center gap-2 text-white"
+            whileHover={{ scale: 1.05 }}
+          >
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Sparkles size={20} className="text-blue-400" />
+            </motion.div>
             مختبر تجربة السياسات
-          </h3>
+          </motion.h3>
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs text-gray-500 font-bold">النص للتجربة</label>
