@@ -368,12 +368,12 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                                     onClick={() => setSelectedEpisode(selectedEpisode?.id === ep.id ? null : ep)}
                                     className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
                                       selectedEpisode?.id === ep.id
-                                        ? 'bg-indigo-500/10 border-indigo-500/50'
+                                        ? 'bg-sky-500/10 border-sky-500/50'
                                         : 'bg-white/[0.02] border-white/5 hover:border-white/10'
                                     }`}
                                   >
                                     <div className="flex items-center gap-2">
-                                      <Film size={12} className="text-indigo-400 shrink-0" />
+                                      <Film size={12} className="text-sky-400 shrink-0" />
                                       <div className="flex flex-col">
                                         <span className="text-xs font-medium">{ep.title}</span>
                                         {ep.air_date && (
@@ -384,7 +384,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                                       </div>
                                     </div>
                                     {selectedEpisode?.id === ep.id && (
-                                      <Check size={12} className="text-indigo-400" />
+                                      <Check size={12} className="text-sky-400" />
                                     )}
                                   </div>
                                 ))}
@@ -451,7 +451,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                   <label className="text-xs font-bold text-gray-500 block sticky top-0 bg-[#0b1224] py-1 z-10">
                     اختر الضيف
                     {episodeGuests.length > 0 && (
-                      <span className="text-indigo-400 mr-2">(ضيوف الحلقة المختارة مميزون)</span>
+                      <span className="text-sky-400 mr-2">(ضيوف الحلقة المختارة مميزون)</span>
                     )}
                   </label>
 
@@ -492,14 +492,14 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                             className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                               selectedGuest?.id === g.id
                                 ? 'bg-[#2563eb]/10 border-[#2563eb]'
-                                : 'bg-indigo-500/5 border-indigo-500/20 hover:border-indigo-500/40'
+                                : 'bg-sky-500/5 border-sky-500/20 hover:border-sky-500/40'
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <User size={16} className="text-indigo-400 shrink-0" />
+                              <User size={16} className="text-sky-400 shrink-0" />
                               <div className="flex flex-col">
                                 <span className="text-sm font-bold">{g.name}</span>
-                                <span className="text-[10px] text-indigo-300">ضيف الحلقة</span>
+                                <span className="text-[10px] text-sky-300">ضيف الحلقة</span>
                               </div>
                             </div>
                             {selectedGuest?.id === g.id && <Check size={14} className="text-[#2563eb]" />}
@@ -520,7 +520,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                               }`}
                             >
                               <div className="flex items-center gap-3">
-                                <User size={16} className="text-purple-400 shrink-0" />
+                                <User size={16} className="text-amber-400 shrink-0" />
                                 <div className="flex flex-col">
                                   <span className="text-sm font-bold">{g.name}</span>
                                 </div>
@@ -544,7 +544,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                 </div>
                 {selectedEpisode && (
                   <div className="flex items-center gap-2 mr-4">
-                    <Film size={12} className="text-indigo-400" />
+                    <Film size={12} className="text-sky-400" />
                     <span>{selectedEpisode.title}</span>
                     {episodeGuests.length > 0 && (
                       <span className="text-gray-500">· {episodeGuests.map(g => g.name).join('، ')}</span>
@@ -553,7 +553,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                 )}
                 {activeTool === 'QUESTIONS' && selectedGuest && (
                   <div className="flex items-center gap-2 mr-4">
-                    <User size={12} className="text-purple-400" />
+                    <User size={12} className="text-amber-400" />
                     <span>{selectedGuest.name}</span>
                   </div>
                 )}

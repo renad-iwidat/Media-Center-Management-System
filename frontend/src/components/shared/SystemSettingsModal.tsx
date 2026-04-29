@@ -126,8 +126,8 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
-                    <Settings2 size={20} className="text-indigo-400" />
+                  <div className="w-10 h-10 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-center justify-center">
+                    <Settings2 size={20} className="text-sky-400" />
                   </div>
                 </div>
                 <button
@@ -140,7 +140,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
 
               {loading ? (
                 <div className="flex items-center justify-center py-16">
-                  <Loader2 size={28} className="text-indigo-400 animate-spin" />
+                  <Loader2 size={28} className="text-sky-400 animate-spin" />
                 </div>
               ) : (
                 <div className="p-6 space-y-6">
@@ -246,7 +246,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                     {/* عدد الأخبار */}
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-sm text-gray-300">
-                        <Hash size={14} className="text-purple-400" />
+                        <Hash size={14} className="text-amber-400" />
                         عدد الأخبار لكل مصدر
                       </label>
                       <input

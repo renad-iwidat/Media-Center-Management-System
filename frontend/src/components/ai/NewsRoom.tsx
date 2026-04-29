@@ -353,7 +353,7 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 </button>
                 <button
                   onClick={() => setTimeOfDay('EVENING')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${timeOfDay === 'EVENING' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${timeOfDay === 'EVENING' ? 'bg-sky-500 text-white' : 'text-gray-400 hover:text-white'}`}
                 >
                   <Moon size={12} /> مسائي
                 </button>

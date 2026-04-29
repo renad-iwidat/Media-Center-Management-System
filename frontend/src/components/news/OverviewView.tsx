@@ -50,9 +50,9 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
     <div className="space-y-6">
       {/* إحصائيات الوحدات الإعلامية - تظهر فقط عند "كل الوحدات" */}
       {!unitId && (
-        <div className="bg-[#0b1224] rounded-3xl p-4 sm:p-6 border border-white/5 shadow-2xl">
+        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
           <h3 className="text-sm sm:text-base font-bold mb-4 sm:mb-5 flex items-center gap-2 text-white">
-            <TrendingUp size={16} className="text-blue-400 shrink-0" />
+            <TrendingUp size={16} className="text-sky-400 shrink-0" />
             <span className="truncate">إحصائيات جميع الوحدات الإعلامية</span>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
@@ -96,9 +96,9 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
           (u: any) => u.media_unit === selectedUnit?.name
         );
         return selectedUnit ? (
-          <div className="bg-[#0b1224] rounded-3xl p-4 sm:p-6 border border-white/5 shadow-2xl">
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
             <h3 className="text-sm sm:text-base font-bold mb-4 sm:mb-5 flex items-center gap-2 text-white">
-              <TrendingUp size={16} className="text-blue-400 shrink-0" />
+              <TrendingUp size={16} className="text-sky-400 shrink-0" />
               <span className="truncate">إحصائيات {selectedUnit.name}</span>
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -116,8 +116,8 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                 <p className="text-rose-400 font-bold text-xl sm:text-2xl">{selectedUnit.rejected_count || 0}</p>
                 <p className="text-gray-500 text-xs sm:text-xs mt-1">مرفوض</p>
               </div>
-              <div className="bg-indigo-400/5 border border-indigo-400/10 rounded-2xl p-3 sm:p-4 text-center">
-                <p className="text-indigo-400 font-bold text-xl sm:text-2xl">{stats?.activeSources ?? "—"}</p>
+              <div className="bg-sky-400/5 border border-sky-400/10 rounded-2xl p-3 sm:p-4 text-center">
+                <p className="text-sky-400 font-bold text-xl sm:text-2xl">{stats?.activeSources ?? "—"}</p>
                 <p className="text-gray-500 text-xs sm:text-xs mt-1">مصادر نشطة</p>
               </div>
             </div>
@@ -127,9 +127,9 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
 
       {/* رسم بياني للنشر اليومي */}
       {unitId && dailyStats.length > 0 && (
-        <div className="bg-[#0b1224] rounded-3xl p-4 sm:p-6 border border-white/5 shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl overflow-hidden">
           <h3 className="text-sm sm:text-base font-bold mb-4 sm:mb-6 flex items-center gap-2 text-white">
-            <TrendingUp size={16} className="text-blue-400 shrink-0" />
+            <TrendingUp size={16} className="text-sky-400 shrink-0" />
             <span className="truncate">إحصائيات النشر والرفض اليومية</span>
           </h3>
           
@@ -142,7 +142,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                   <th className="text-right py-2 sm:py-3 px-3 sm:px-4 text-gray-400 font-semibold hidden sm:table-cell">اليوم</th>
                   <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-emerald-400 font-semibold">منشور</th>
                   <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-blue-400 font-semibold hidden sm:table-cell">تحريري</th>
-                  <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-purple-400 font-semibold hidden sm:table-cell">أوتوماتيكي</th>
+                  <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-sky-400 font-semibold hidden sm:table-cell">أوتوماتيكي</th>
                   <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-rose-400 font-semibold">مرفوض</th>
                 </tr>
               </thead>
@@ -167,7 +167,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                         </span>
                       </td>
                       <td className="py-2 sm:py-3 px-2 sm:px-4 text-center hidden sm:table-cell">
-                        <span className="bg-purple-500/10 text-purple-400 px-2 sm:px-3 py-0.5 rounded-lg font-bold text-xs">
+                        <span className="bg-sky-500/10 text-sky-400 px-2 sm:px-3 py-0.5 rounded-lg font-bold text-xs">
                           {day.automated_count || 0}
                         </span>
                       </td>
@@ -208,7 +208,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                     )}
                     {day.automated_count > 0 && (
                       <div 
-                        className="bg-purple-500 transition-all" 
+                        className="bg-sky-500 transition-all" 
                         style={{ width: `${(day.automated_count / (day.published_count || 1)) * 100}%` }}
                         title={`أوتوماتيكي: ${day.automated_count}`}
                       />
@@ -230,7 +230,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
               <span className="text-gray-400">تحريري</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-purple-500 rounded" />
+              <div className="w-3 h-3 bg-sky-500 rounded" />
               <span className="text-gray-400">أوتوماتيكي</span>
             </div>
             <div className="flex items-center gap-2">
@@ -243,7 +243,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
 
       {/* الصف الثاني: آخر الأخبار المنتظرة + آخر المنشورات */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-[#0b1224] rounded-3xl p-4 sm:p-6 border border-white/5 shadow-2xl">
+        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
           <h3 className="text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 text-white">
             <Clock size={16} className="text-amber-400 shrink-0" />
             <span className="truncate">آخر الأخبار في الانتظار</span>
@@ -262,7 +262,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
           )}
         </div>
 
-        <div className="bg-[#0b1224] rounded-3xl p-4 sm:p-6 border border-white/5 shadow-2xl">
+        <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 rounded-3xl p-4 sm:p-6 border border-slate-700/50 shadow-2xl">
           <h3 className="text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 text-white">
             <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
             <span className="truncate">آخر المنشورات</span>

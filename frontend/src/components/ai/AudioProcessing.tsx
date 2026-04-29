@@ -375,7 +375,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                               {file.file_type === 'audio' ? (
                                 <FileAudio className="text-blue-400 shrink-0" size={14} />
                               ) : (
-                                <FileVideo className="text-purple-400 shrink-0" size={14} />
+                                <FileVideo className="text-sky-400 shrink-0" size={14} />
                               )}
                               <div className="flex-1 min-w-0">
                                 <p className="font-bold truncate">{file.display_name}</p>
