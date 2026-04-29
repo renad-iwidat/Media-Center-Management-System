@@ -69,10 +69,6 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     window.addEventListener('dataRefresh', handleDataRefresh);
     return () => window.removeEventListener('dataRefresh', handleDataRefresh);
   }, [unitId]);
-      setCategories(c.data || []);
-      setLoading(false);
-    });
-  }, [unitId]);
 
   // Apply filters
   useEffect(() => {
