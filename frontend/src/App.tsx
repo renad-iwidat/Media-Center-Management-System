@@ -398,17 +398,17 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex text-gray-100 selection:bg-blue-500/30">
+    <div className="min-h-screen flex text-gray-100 selection:bg-[#FF9F43]/30">
       {/* ══════════════════════════════════════════════════════════
           SIDEBAR
          ══════════════════════════════════════════════════════════ */}
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 320 : 80 }}
-        className="bg-gradient-to-b from-[#0b1224] via-[#0f1629] to-[#0b1224] border-l border-white/5 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
+        className="bg-gradient-to-b from-[#4A7C9C] via-[#5A8CAC] to-[#4A7C9C] border-l border-white/10 flex flex-col h-screen fixed right-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
       >
         {/* Logo & Header */}
-        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-gradient-to-r from-[#0b1224]/90 to-[#1e293b]/50 backdrop-blur-sm">
+        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-[#4A7C9C]/90 backdrop-blur-sm">
           {isSidebarOpen && (
             <motion.div 
               initial={{ opacity: 0, x: 20 }} 
@@ -416,15 +416,15 @@ export default function App() {
               transition={{ delay: 0.1 }}
               className="flex items-center gap-3 min-w-0"
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-[#3b82f6] via-[#2563eb] to-[#1d4ed8] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/40 shrink-0 relative overflow-hidden">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/40 shrink-0 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
                 <TrendingUp className="text-white w-7 h-7 relative z-10" />
               </div>
               <div className="flex flex-col">
                 <span className="font-arabic font-bold text-xl tracking-tight truncate text-white">
-                  مركز <span className="text-blue-400">الإعلام</span>
+                  مركز <span className="text-[#FF9F43]">الإعلام</span>
                 </span>
-                <span className="text-xs text-gray-400 font-medium">نظام إدارة متكامل</span>
+                <span className="text-xs text-white/70 font-medium">جامعة النجاح الوطنية</span>
               </div>
             </motion.div>
           )}
@@ -438,13 +438,13 @@ export default function App() {
               animate={{ rotate: isSidebarOpen ? 0 : 180 }}
               transition={{ duration: 0.3 }}
             >
-              {isSidebarOpen ? <X size={20} className="group-hover:text-blue-400 transition-colors" /> : <Menu size={20} className="group-hover:text-blue-400 transition-colors" />}
+              {isSidebarOpen ? <X size={20} className="text-white group-hover:text-[#FF9F43] transition-colors" /> : <Menu size={20} className="text-white group-hover:text-[#FF9F43] transition-colors" />}
             </motion.div>
           </motion.button>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-4 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-6 overflow-y-auto custom-scrollbar">
           {NAV_GROUPS.map((group, groupIndex) => (
             <motion.div 
               key={group.label} 
@@ -453,97 +453,71 @@ export default function App() {
               transition={{ delay: groupIndex * 0.1 }}
               className="space-y-2"
             >
-              {/* Group Header */}
-              {isSidebarOpen && (
-                <motion.button
-                  whileHover={{ x: 4 }}
-                  onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-xs uppercase tracking-wider text-gray-400 font-bold hover:text-white transition-all hover:bg-white/5 rounded-xl group"
-                >
-                  <span className="truncate flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                    {group.label}
-                  </span>
-                  <motion.div
-                    animate={{ rotate: collapsedGroups[group.label] ? -90 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ChevronDown size={16} className="group-hover:text-blue-400 transition-colors" />
-                  </motion.div>
-                </motion.button>
-              )}
-
-              {/* Group Items */}
-              <AnimatePresence>
-                {!collapsedGroups[group.label] && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-1 overflow-hidden"
-                  >
-                    {group.items.map((item, itemIndex) => {
-                      const isActive = activeSection === item.id;
-                      const Icon = item.icon;
-                      return (
-                        <motion.button
-                          key={item.id}
-                          initial={{ opacity: 0, x: -20 }}
+              {/* Group Items - بدون header */}
+              <motion.div 
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
+                className="space-y-2"
+              >
+                {group.items.map((item, itemIndex) => {
+                  const isActive = activeSection === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <motion.button
+                      key={item.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: itemIndex * 0.05 }}
+                      whileHover={{ x: 4, scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden
+                        ${isActive
+                          ? 'bg-gradient-to-r from-[#FF9F43] to-[#FF8C2E] text-white shadow-lg shadow-[#FF9F43]/30'
+                          : 'text-white/80 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/20'
+                        }`}
+                    >
+                      {/* Background glow effect for active item */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeGlow"
+                          className="absolute inset-0 bg-gradient-to-r from-[#FF9F43]/20 to-[#FF8C2E]/20 rounded-xl blur-sm"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                      
+                      <div className={`p-2 rounded-lg transition-all duration-300 relative z-10 ${
+                        isActive 
+                          ? 'bg-white/20 shadow-lg' 
+                          : 'group-hover:bg-white/10'
+                      }`}>
+                        <Icon size={18} className={`transition-all duration-300 ${
+                          isActive ? 'text-white' : 'text-white/90 group-hover:text-white'
+                        }`} />
+                      </div>
+                      
+                      {isSidebarOpen && (
+                        <motion.span
+                          initial={{ opacity: 0, x: 10 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: itemIndex * 0.05 }}
-                          whileHover={{ x: 4, scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setActiveSection(item.id)}
-                          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden
-                            ${isActive
-                              ? 'bg-gradient-to-r from-blue-600/20 via-blue-500/15 to-blue-600/20 text-white border border-blue-500/30 shadow-lg shadow-blue-500/20'
-                              : 'text-gray-400 hover:bg-gradient-to-r hover:from-white/5 hover:to-white/10 hover:text-white border border-transparent hover:border-white/10'
-                            }`}
+                          className="font-semibold text-sm whitespace-nowrap truncate relative z-10"
                         >
-                          {/* Background glow effect for active item */}
-                          {isActive && (
-                            <motion.div
-                              layoutId="activeGlow"
-                              className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-xl"
-                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            />
-                          )}
-                          
-                          <div className={`p-2 rounded-lg transition-all duration-300 relative z-10 ${
-                            isActive 
-                              ? 'bg-blue-500/20 shadow-lg' 
-                              : 'group-hover:bg-white/10'
-                          }`}>
-                            <Icon size={18} className={`transition-all duration-300 ${
-                              isActive ? 'text-blue-400' : 'group-hover:text-blue-400'
-                            }`} />
-                          </div>
-                          
-                          {isSidebarOpen && (
-                            <motion.span
-                              initial={{ opacity: 0, x: 10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              className="font-semibold text-sm whitespace-nowrap truncate relative z-10"
-                            >
-                              {item.label}
-                            </motion.span>
-                          )}
-                          
-                          {/* Active indicator */}
-                          {isActive && (
-                            <motion.div
-                              layoutId="activeIndicator"
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-r-full shadow-lg shadow-blue-500/50"
-                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            />
-                          )}
-                        </motion.button>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                          {item.label}
+                        </motion.span>
+                      )}
+                      
+                      {/* Active indicator */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-lg shadow-white/50"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
               
               {/* Elegant divider between groups */}
               {groupIndex < NAV_GROUPS.length - 1 && isSidebarOpen && (
@@ -551,9 +525,9 @@ export default function App() {
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent my-6 relative"
+                  className="h-px bg-gradient-to-r from-transparent via-white/30 to-transparent my-6 relative"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent blur-sm"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF9F43]/30 to-transparent blur-sm"></div>
                 </motion.div>
               )}
             </motion.div>
@@ -564,16 +538,16 @@ export default function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="pt-4 border-t border-white/10"
+            className="pt-4 border-t border-white/20"
           >
             <motion.button
               whileHover={{ x: 4, scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsSettingsOpen(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:bg-gradient-to-r hover:from-white/5 hover:to-white/10 hover:text-white border border-transparent hover:border-white/10 group relative overflow-hidden"
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-white/80 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/20 group relative overflow-hidden"
             >
               <div className="p-2 rounded-lg transition-all duration-300 group-hover:bg-white/10">
-                <Settings2 size={18} className="group-hover:text-blue-400 transition-colors duration-300" />
+                <Settings2 size={18} className="text-white/90 group-hover:text-[#FF9F43] transition-colors duration-300" />
               </div>
               {isSidebarOpen && (
                 <motion.span 
@@ -598,18 +572,18 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="mx-2 sm:mx-3 mb-4 overflow-hidden shrink-0"
             >
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
+              <div className="bg-white/10 border border-white/20 rounded-2xl overflow-hidden backdrop-blur-sm">
                 <button
                   onClick={() => setIsMediaUnitOpen(!isMediaUnitOpen)}
-                  className="w-full flex items-center justify-between px-2 sm:px-3 py-2.5 hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between px-2 sm:px-3 py-2.5 hover:bg-white/10 transition-colors"
                 >
                   <ChevronDown
                     size={16}
-                    className={`text-gray-500 transition-transform shrink-0 ${isMediaUnitOpen ? 'rotate-180' : ''}`}
+                    className={`text-white/70 transition-transform shrink-0 ${isMediaUnitOpen ? 'rotate-180' : ''}`}
                   />
                   <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                    <Building2 size={16} className="text-[#2563eb] shrink-0" />
-                    <span className="text-xs font-bold text-gray-300 truncate">الوحدة الإعلامية</span>
+                    <Building2 size={16} className="text-[#FF9F43] shrink-0" />
+                    <span className="text-xs font-bold text-white truncate">الوحدة الإعلامية</span>
                   </div>
                 </button>
 
@@ -626,8 +600,8 @@ export default function App() {
                           onClick={() => setSelectedMediaUnitId(null)}
                           className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
                             selectedMediaUnitId === null
-                              ? 'bg-[#2563eb] text-white'
-                              : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                              ? 'bg-[#FF9F43] text-white shadow-lg shadow-[#FF9F43]/30'
+                              : 'text-white/70 hover:bg-white/10 hover:text-white'
                           }`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === null ? 'bg-white' : 'bg-transparent'}`} />
@@ -640,20 +614,20 @@ export default function App() {
                               onClick={() => setSelectedMediaUnitId(mu.id)}
                               className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
                                 selectedMediaUnitId === mu.id
-                                  ? 'bg-[#2563eb] text-white'
-                                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                  ? 'bg-[#FF9F43] text-white shadow-lg shadow-[#FF9F43]/30'
+                                  : 'text-white/70 hover:bg-white/10 hover:text-white'
                               }`}
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === mu.id ? 'bg-white' : 'bg-white/20'}`} />
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === mu.id ? 'bg-white' : 'bg-white/30'}`} />
                               <span className="truncate">{mu.name}</span>
                             </button>
                           ))
                         ) : loading ? (
-                          <div className="px-2 sm:px-3 py-2 text-xs text-gray-500 text-center">
+                          <div className="px-2 sm:px-3 py-2 text-xs text-white/50 text-center">
                             جاري تحميل الوحدات...
                           </div>
                         ) : (
-                          <div className="px-2 sm:px-3 py-2 text-xs text-gray-500 text-center">
+                          <div className="px-2 sm:px-3 py-2 text-xs text-white/50 text-center">
                             لا توجد وحدات إعلامية
                           </div>
                         )}
@@ -715,14 +689,14 @@ export default function App() {
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Active media unit badge */}
             {selectedMediaUnitId !== null && mediaUnits.length > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-xl">
-                <Building2 size={12} className="text-[#2563eb] shrink-0" />
-                <span className="text-xs text-[#2563eb] font-medium truncate max-w-[150px]">
+              <div className="hidden sm:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#FF9F43]/10 border border-[#FF9F43]/20 rounded-xl">
+                <Building2 size={12} className="text-[#FF9F43] shrink-0" />
+                <span className="text-xs text-[#FF9F43] font-medium truncate max-w-[150px]">
                   {mediaUnits.find((m: { id: number }) => m.id === selectedMediaUnitId)?.name || `الوحدة ${selectedMediaUnitId}`}
                 </span>
                 <button
                   onClick={() => setSelectedMediaUnitId(null)}
-                  className="text-[#2563eb]/60 hover:text-[#2563eb] transition-colors shrink-0"
+                  className="text-[#FF9F43]/60 hover:text-[#FF9F43] transition-colors shrink-0"
                 >
                   <X size={12} />
                 </button>
@@ -730,7 +704,7 @@ export default function App() {
             )}
 
             <div className="relative group hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF9F43] transition-colors" size={16} />
               <input
                 type="text"
                 placeholder="بحث سريع..."
@@ -738,7 +712,7 @@ export default function App() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchOpen(true)}
                 onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
-                className="bg-[#0b1224] border border-white/5 rounded-full pl-4 pr-10 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 focus:w-64 transition-all w-48"
+                className="bg-[#0b1224] border border-white/5 rounded-full pl-4 pr-10 py-1.5 text-xs focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:w-64 transition-all w-48"
               />
               
               {/* Search Results Dropdown */}
@@ -748,10 +722,10 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 top-full mt-2 w-72 bg-[#0b1224] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    className="absolute left-0 top-full mt-2 w-72 bg-[#0b1224] border border-[#FF9F43]/20 rounded-2xl shadow-2xl shadow-[#FF9F43]/10 overflow-hidden z-50"
                   >
-                    <div className="p-2 border-b border-white/5">
-                      <p className="text-xs text-gray-500 px-3 py-1">نتائج البحث ({searchResults.length})</p>
+                    <div className="p-2 border-b border-white/5 bg-gradient-to-r from-[#FF9F43]/10 to-transparent">
+                      <p className="text-xs text-gray-400 px-3 py-1">نتائج البحث ({searchResults.length})</p>
                     </div>
                     <div className="max-h-96 overflow-y-auto custom-scrollbar">
                       {searchResults.map((result) => {
@@ -760,9 +734,9 @@ export default function App() {
                           <button
                             key={result.id}
                             onClick={() => handleSearchSelect(result.id)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-right"
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FF9F43]/10 transition-colors text-right group"
                           >
-                            <Icon size={18} className="text-blue-400 shrink-0" />
+                            <Icon size={18} className="text-[#FF9F43] group-hover:text-[#FF8C2E] transition-colors shrink-0" />
                             <div className="flex flex-col items-end flex-1 min-w-0">
                               <span className="text-sm font-semibold text-white truncate w-full">{result.label}</span>
                               <span className="text-xs text-gray-500 truncate w-full">{result.group}</span>
@@ -796,14 +770,14 @@ export default function App() {
 
             {/* User Info in Header */}
             <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer group">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 shrink-0 border border-white/10 shadow-lg shadow-blue-500/20 flex items-center justify-center font-bold text-xs text-white">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4A7C9C] to-[#7BA5C1] shrink-0 border border-white/10 shadow-lg shadow-[#4A7C9C]/20 flex items-center justify-center font-bold text-xs text-white">
                 {currentUser?.name?.charAt(0) || 'U'}
               </div>
               <div className="hidden sm:flex flex-col min-w-0">
                 <span className="text-xs font-semibold text-white truncate max-w-[140px]">
                   {currentUser?.name || 'المستخدم'}
                 </span>
-                <span className="text-xs text-blue-400 truncate max-w-[140px]">
+                <span className="text-xs text-[#FF9F43] truncate max-w-[140px]">
                   {currentUser?.roles?.[0]?.name || 'موظف'}
                 </span>
               </div>
@@ -825,8 +799,8 @@ export default function App() {
               {/* Section Header — for news sections */}
               {!activeSection.startsWith('ai-') && !['ideas', 'editing', 'social', 'audio', 'newsroom', 'chat'].includes(activeSection) && (
                 <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shrink-0">
-                    <ActiveIcon size={20} className="text-blue-400 sm:w-6 sm:h-6" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#FF9F43]/20 to-[#FF8C2E]/20 rounded-2xl flex items-center justify-center border border-[#FF9F43]/30 shrink-0 shadow-lg shadow-[#FF9F43]/20">
+                    <ActiveIcon size={20} className="text-[#FF9F43] sm:w-6 sm:h-6" />
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{SECTION_LABELS[activeSection]}</h2>
@@ -869,12 +843,12 @@ export default function App() {
 // ─── AI Dashboard (landing page for AI section) ───────────────
 function AIDashboard({ setActiveSection }: { setActiveSection: (s: SectionId) => void }) {
   const cards = [
-    { id: 'ideas' as SectionId,    title: 'وحدة التفكير',        desc: 'توليد أفكار مبدعة، أسئلة مقابلات، وعناوين جذابة.',  icon: Lightbulb,     color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
-    { id: 'editing' as SectionId,  title: 'التحرير الصحفي',       desc: 'إعادة صياغة، تلخيص، وتدقيق لغوي فوري.',            icon: PenTool,       color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
-    { id: 'social' as SectionId,   title: 'التواصل الاجتماعي',    desc: 'منشورات تفاعلية، هاشتاجات، وتحويل الأخبار.',       icon: Share2,        color: 'text-pink-400',   bg: 'bg-pink-400/10'   },
-    { id: 'audio' as SectionId,    title: 'المختبر الصوتي',       desc: 'تحويل الصوت إلى نص وبالعكس من الأرشيف.',           icon: Mic2,          color: 'text-purple-400', bg: 'bg-purple-400/10' },
-    { id: 'newsroom' as SectionId, title: 'غرفة الأخبار',         desc: 'إنشاء نشرات ومواجيز إخبارية من مادتك الخبرية.',    icon: Newspaper,     color: 'text-emerald-400',bg: 'bg-emerald-400/10'},
-    { id: 'chat' as SectionId,     title: 'مساعد AI ذكي',         desc: 'دردشة تفاعلية لمساعدتك في المهام الإعلامية.',      icon: MessageSquare, color: 'text-blue-500',   bg: 'bg-blue-500/10'   },
+    { id: 'ideas' as SectionId,    title: 'وحدة التفكير',        desc: 'توليد أفكار مبدعة، أسئلة مقابلات، وعناوين جذابة.',  icon: Lightbulb,     color: 'text-[#FF9F43]', bg: 'bg-[#FF9F43]/10' },
+    { id: 'editing' as SectionId,  title: 'التحرير الصحفي',       desc: 'إعادة صياغة، تلخيص، وتدقيق لغوي فوري.',            icon: PenTool,       color: 'text-[#4A7C9C]',   bg: 'bg-[#4A7C9C]/10'   },
+    { id: 'social' as SectionId,   title: 'التواصل الاجتماعي',    desc: 'منشورات تفاعلية، هاشتاجات، وتحويل الأخبار.',       icon: Share2,        color: 'text-[#FF9F43]',   bg: 'bg-[#FF9F43]/10'   },
+    { id: 'audio' as SectionId,    title: 'المختبر الصوتي',       desc: 'تحويل الصوت إلى نص وبالعكس من الأرشيف.',           icon: Mic2,          color: 'text-[#7BA5C1]', bg: 'bg-[#7BA5C1]/10' },
+    { id: 'newsroom' as SectionId, title: 'غرفة الأخبار',         desc: 'إنشاء نشرات ومواجيز إخبارية من مادتك الخبرية.',    icon: Newspaper,     color: 'text-[#4A7C9C]',bg: 'bg-[#4A7C9C]/10'},
+    { id: 'chat' as SectionId,     title: 'مساعد AI ذكي',         desc: 'دردشة تفاعلية لمساعدتك في المهام الإعلامية.',      icon: MessageSquare, color: 'text-[#FF9F43]',   bg: 'bg-[#FF9F43]/10'   },
   ];
 
   return (
@@ -889,7 +863,7 @@ function AIDashboard({ setActiveSection }: { setActiveSection: (s: SectionId) =>
           <button
             key={card.id}
             onClick={() => setActiveSection(card.id)}
-            className="glass-panel p-4 sm:p-5 text-right group hover:border-[#2563eb] transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4 h-full"
+            className="glass-panel p-4 sm:p-5 text-right group hover:border-[#FF9F43] transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4 h-full hover:shadow-lg hover:shadow-[#FF9F43]/20"
           >
             <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center transition-transform group-hover:scale-110`}>
               <card.icon className={`${card.color} w-5 h-5`} />
