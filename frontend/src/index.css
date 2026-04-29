@@ -3,22 +3,22 @@
 
 @layer base {
   :root {
-    --color-brand-bg: #020617;
-    --color-brand-surface: #0b1224;
-    --color-brand-accent: #2563eb;
-    --color-brand-border: rgba(255, 255, 255, 0.05);
+    --color-brand-bg: #f9fafb;
+    --color-brand-surface: #ffffff;
+    --color-brand-accent: #FF9F43;
+    --color-brand-border: rgba(229, 231, 235, 0.8);
   }
 
   body {
-    background-color: #020617;
-    color: #f3f4f6;
+    background-color: #f9fafb;
+    color: #1f2937;
     font-family: "Inter", "Almarai", ui-sans-serif, system-ui, sans-serif;
     direction: rtl;
     overflow-x: hidden;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    color: white;
+    color: #111827;
     font-weight: bold;
     font-family: "Almarai", sans-serif;
   }
@@ -33,13 +33,13 @@
 
 @layer components {
   .glass-panel {
-    background: linear-gradient(135deg, rgba(11, 18, 36, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(229, 231, 235, 0.8);
     border-radius: 1.5rem;
     box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
     position: relative;
     overflow: hidden;
   }
@@ -51,22 +51,24 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 159, 67, 0.2), transparent);
   }
   
   .btn-primary {
-    background-color: #2563eb;
+    background: linear-gradient(135deg, #FF9F43 0%, #FF8C2E 100%);
     color: white;
     font-weight: bold;
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
     transition: all 0.2s;
-    box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 20px 25px -5px rgba(255, 159, 67, 0.3);
     font-family: "Almarai", sans-serif;
   }
 
   .btn-primary:hover {
-    background-color: #1d4ed8;
+    background: linear-gradient(135deg, #FFB366 0%, #FF9F43 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 25px 30px -5px rgba(255, 159, 67, 0.4);
   }
 
   .btn-primary:active {
@@ -74,9 +76,9 @@
   }
 
   .nav-item-active {
-    background-color: rgba(37, 99, 235, 0.1);
-    border-right: 4px solid #2563eb;
-    color: #2563eb;
+    background: linear-gradient(90deg, rgba(255, 159, 67, 0.15) 0%, rgba(255, 140, 46, 0.1) 100%);
+    border-right: 4px solid #FF9F43;
+    color: #FF9F43;
   }
 
   .font-arabic {
@@ -84,9 +86,9 @@
   }
 
   select {
-    background-color: rgba(11, 18, 36, 0.6);
-    color: #f3f4f6;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    border: 1px solid rgba(209, 213, 219, 0.8);
     border-radius: 0.75rem;
     padding: 0.625rem 1rem;
     font-family: "Almarai", sans-serif;
@@ -94,18 +96,18 @@
   }
 
   select option {
-    background-color: #0b1224;
-    color: #f3f4f6;
+    background-color: #ffffff;
+    color: #1f2937;
   }
 
   select:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(255, 159, 67, 0.2);
+    border-color: #FF9F43;
   }
 
   select:hover {
-    background-color: rgba(11, 18, 36, 0.8);
+    background-color: rgba(255, 255, 255, 1);
   }
 
   .custom-scrollbar::-webkit-scrollbar {
@@ -113,19 +115,19 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(2, 6, 23, 0.3);
+    background: rgba(229, 231, 235, 0.5);
     border-radius: 10px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #2563eb, #1d4ed8);
+    background: linear-gradient(180deg, #FF9F43, #FF8C2E);
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 2px 4px rgba(255, 159, 67, 0.3);
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #3b82f6, #2563eb);
-    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(180deg, #FFB366, #FF9F43);
+    box-shadow: 0 4px 8px rgba(255, 159, 67, 0.4);
   }
 
   /* Responsive table */
@@ -140,22 +142,22 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar for light theme */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #f3f4f6;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #d1d5db;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #9ca3af;
 }
 
 /* Responsive utilities */

@@ -163,8 +163,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1224] to-[#020617] flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#4A7C9C]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#FF9F43]/10 rounded-full blur-3xl" />
       </div>
 
       {/* Login Card */}
@@ -177,11 +177,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className="bg-[#0b1224]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/30 mx-auto mb-4">
-              <LogIn className="text-white w-8 h-8" />
+            <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/30 mx-auto mb-4 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+              <LogIn className="text-white w-8 h-8 relative z-10" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">تسجيل الدخول</h1>
-            <p className="text-gray-400 text-sm">نظام إدارة الإعلام الموحد</p>
+            <p className="text-gray-400 text-sm">
+              <span className="text-[#FF9F43] font-semibold">مركز الإعلام</span> — جامعة النجاح الوطنية
+            </p>
           </div>
 
           {/* Error Message */}
@@ -207,7 +210,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 onChange={handleEmailChange}
                 placeholder="example@domain.com"
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 required
               />
             </div>
@@ -222,14 +225,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={isLoading}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors disabled:opacity-50"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#FF9F43] transition-colors disabled:opacity-50"
                 >
                   {showPassword ? '🙈' : '👁️'}
                 </button>
@@ -240,17 +243,18 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             <button
               type="submit"
               disabled={isLoading || !email || !password}
-              className="w-full py-3 bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-[#FF9F43] to-[#FF8C2E] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#FF9F43]/30 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden group"
             >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               {isLoading ? (
                 <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  جاري التحقق...
+                  <Loader className="w-5 h-5 animate-spin relative z-10" />
+                  <span className="relative z-10">جاري التحقق...</span>
                 </>
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
-                  دخول
+                  <LogIn className="w-5 h-5 relative z-10" />
+                  <span className="relative z-10">دخول</span>
                 </>
               )}
             </button>

@@ -388,8 +388,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1224] to-[#020617] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] rounded-xl flex items-center justify-center shadow-xl shadow-blue-600/30 mx-auto mb-3 animate-pulse">
-            <TrendingUp className="text-white w-6 h-6" />
+          <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/30 mx-auto mb-3 animate-pulse relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+            <TrendingUp className="text-white w-6 h-6 relative z-10" />
           </div>
           <p className="text-gray-400 text-sm">جاري التحقق من بيانات الدخول...</p>
         </div>
@@ -398,7 +399,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex text-gray-100 selection:bg-[#FF9F43]/30">
+    <div className="min-h-screen flex text-gray-100 selection:bg-[#FF9F43]/30 bg-gray-100">
       {/* ══════════════════════════════════════════════════════════
           SIDEBAR
          ══════════════════════════════════════════════════════════ */}
@@ -675,14 +676,14 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pr-[320px] sm:pr-[320px]' : 'pr-[80px] sm:pr-[80px]'}`}>
+      <main className={`flex-1 flex flex-col transition-all duration-300 bg-gray-50 ${isSidebarOpen ? 'pr-[320px] sm:pr-[320px]' : 'pr-[80px] sm:pr-[80px]'}`}>
         {/* Header */}
-        <header className="h-14 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-40">
+        <header className="h-14 border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40 shadow-sm">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="text-gray-500 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate">
               <span className="hidden sm:inline">الرئيسية</span>
               <ChevronRight size={14} className="shrink-0" />
-              <span className="text-white font-medium truncate">{SECTION_LABELS[activeSection]}</span>
+              <span className="text-gray-800 font-medium truncate">{SECTION_LABELS[activeSection]}</span>
             </div>
           </div>
 
@@ -704,7 +705,7 @@ export default function App() {
             )}
 
             <div className="relative group hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF9F43] transition-colors" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#FF9F43] transition-colors" size={16} />
               <input
                 type="text"
                 placeholder="بحث سريع..."
@@ -712,7 +713,7 @@ export default function App() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchOpen(true)}
                 onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
-                className="bg-[#0b1224] border border-white/5 rounded-full pl-4 pr-10 py-1.5 text-xs focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:w-64 transition-all w-48"
+                className="bg-white border border-gray-300 rounded-full pl-4 pr-10 py-1.5 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:w-64 transition-all w-48"
               />
               
               {/* Search Results Dropdown */}
@@ -722,10 +723,10 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 top-full mt-2 w-72 bg-[#0b1224] border border-[#FF9F43]/20 rounded-2xl shadow-2xl shadow-[#FF9F43]/10 overflow-hidden z-50"
+                    className="absolute left-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50"
                   >
-                    <div className="p-2 border-b border-white/5 bg-gradient-to-r from-[#FF9F43]/10 to-transparent">
-                      <p className="text-xs text-gray-400 px-3 py-1">نتائج البحث ({searchResults.length})</p>
+                    <div className="p-2 border-b border-gray-200 bg-gradient-to-r from-[#FF9F43]/10 to-transparent">
+                      <p className="text-xs text-gray-600 px-3 py-1">نتائج البحث ({searchResults.length})</p>
                     </div>
                     <div className="max-h-96 overflow-y-auto custom-scrollbar">
                       {searchResults.map((result) => {
@@ -738,7 +739,7 @@ export default function App() {
                           >
                             <Icon size={18} className="text-[#FF9F43] group-hover:text-[#FF8C2E] transition-colors shrink-0" />
                             <div className="flex flex-col items-end flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white truncate w-full">{result.label}</span>
+                              <span className="text-sm font-semibold text-gray-800 truncate w-full">{result.label}</span>
                               <span className="text-xs text-gray-500 truncate w-full">{result.group}</span>
                             </div>
                           </button>
@@ -756,12 +757,12 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 top-full mt-2 w-72 bg-[#0b1224] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-4"
+                    className="absolute left-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50 p-4"
                   >
                     <div className="text-center">
-                      <Search size={32} className="text-gray-600 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400">لا توجد نتائج</p>
-                      <p className="text-xs text-gray-600 mt-1">جرب كلمات بحث أخرى</p>
+                      <Search size={32} className="text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">لا توجد نتائج</p>
+                      <p className="text-xs text-gray-400 mt-1">جرب كلمات بحث أخرى</p>
                     </div>
                   </motion.div>
                 )}
@@ -769,12 +770,12 @@ export default function App() {
             </div>
 
             {/* User Info in Header */}
-            <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer group">
+            <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors cursor-pointer group">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4A7C9C] to-[#7BA5C1] shrink-0 border border-white/10 shadow-lg shadow-[#4A7C9C]/20 flex items-center justify-center font-bold text-xs text-white">
                 {currentUser?.name?.charAt(0) || 'U'}
               </div>
               <div className="hidden sm:flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-white truncate max-w-[140px]">
+                <span className="text-xs font-semibold text-gray-800 truncate max-w-[140px]">
                   {currentUser?.name || 'المستخدم'}
                 </span>
                 <span className="text-xs text-[#FF9F43] truncate max-w-[140px]">
@@ -786,7 +787,7 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar bg-gray-50">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
@@ -803,7 +804,7 @@ export default function App() {
                     <ActiveIcon size={20} className="text-[#FF9F43] sm:w-6 sm:h-6" />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">{SECTION_LABELS[activeSection]}</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-800 truncate">{SECTION_LABELS[activeSection]}</h2>
                     <p className="text-gray-500 text-xs sm:text-sm hidden sm:block">نظام الإدارة الموحد لمركز الإعلام</p>
                   </div>
                 </div>
@@ -854,8 +855,8 @@ function AIDashboard({ setActiveSection }: { setActiveSection: (s: SectionId) =>
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl sm:text-2xl text-white">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
-        <p className="text-gray-400 text-xs sm:text-sm">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
+        <h1 className="text-xl sm:text-2xl text-gray-800">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
+        <p className="text-gray-600 text-xs sm:text-sm">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
