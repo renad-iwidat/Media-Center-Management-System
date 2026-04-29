@@ -73,7 +73,16 @@ export function useMediaUnits() {
   };
 
   useEffect(() => {
-    fetchMediaUnits();
+    let isMounted = true;
+    
+    // Only fetch if component is still mounted
+    if (isMounted) {
+      fetchMediaUnits();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
   }, []); // بدون dependencies عشان ما يعيدش تشغيل
 
   return { mediaUnits, loading };

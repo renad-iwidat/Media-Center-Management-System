@@ -6,7 +6,8 @@
  * سايدبار موحد يجمع كل الأقسام من كلا المشروعين
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   // News icons
@@ -58,6 +59,8 @@ import ChatInterface from './components/ai/ChatInterface';
 // ── Services ──
 import { api, getAuthToken, getCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
+import { useRenderTracker } from './lib/useRenderTracker';
+import { useDebounce } from './lib/useDebounce';
 
 // ─── Types ────────────────────────────────────────────────────
 type SectionId =
@@ -140,6 +143,11 @@ export default function App() {
     const saved = localStorage.getItem('activeSection');
     return (saved as SectionId) || 'overview';
   });
+
+  // مراقب الأداء في وضع التطوير فقط
+  if (process.env.NODE_ENV === 'development') {
+    useRenderTracker('App', { isAuthenticated, isCheckingAuth, activeSection });
+  }
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMediaUnitOpen, setIsMediaUnitOpen] = useState(true);
@@ -174,8 +182,10 @@ export default function App() {
     }
   }, [selectedMediaUnitId]);
 
-  // 3. Token verification
+  // 3. Token verification - Fixed to prevent infinite loops
   useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates after unmount
+    
     const verifyToken = async () => {
       if (!isCheckingAuth) {
         console.log('⏭️ [APP] تم تخطي التحقق لأن isCheckingAuth = false');
@@ -189,8 +199,10 @@ export default function App() {
         
         if (!token) {
           console.log('❌ [APP] لا يوجد توكن في localStorage');
-          setIsAuthenticated(false);
-          setIsCheckingAuth(false);
+          if (isMounted) {
+            setIsAuthenticated(false);
+            setIsCheckingAuth(false);
+          }
           return;
         }
 
@@ -199,9 +211,11 @@ export default function App() {
         const user = getCurrentUser();
         if (user) {
           console.log('✅ [APP] وجدنا بيانات المستخدم في localStorage:', user.name);
-          setCurrentUserState(user);
-          setIsAuthenticated(true);
-          setIsCheckingAuth(false);
+          if (isMounted) {
+            setCurrentUserState(user);
+            setIsAuthenticated(true);
+            setIsCheckingAuth(false);
+          }
           return;
         }
 
@@ -224,6 +238,8 @@ export default function App() {
           );
 
           clearTimeout(timeoutId);
+
+          if (!isMounted) return; // Prevent state updates if component unmounted
 
           if (response.ok) {
             const data = await response.json();
@@ -253,6 +269,8 @@ export default function App() {
           clearTimeout(timeoutId);
           console.error('❌ [APP] خطأ في الاتصال:', fetchError);
           
+          if (!isMounted) return; // Prevent state updates if component unmounted
+          
           const savedUser = getCurrentUser();
           if (savedUser && token) {
             console.log('⚠️ [APP] فشل التحقق من السيرفر، لكن سنستخدم البيانات المحفوظة');
@@ -266,22 +284,34 @@ export default function App() {
         }
       } catch (error) {
         console.error('❌ [APP] خطأ عام في التحقق:', error);
-        setIsAuthenticated(false);
+        if (isMounted) {
+          setIsAuthenticated(false);
+        }
       } finally {
         console.log('🏁 [APP] انتهاء التحقق من التوكن');
-        setIsCheckingAuth(false);
+        if (isMounted) {
+          setIsCheckingAuth(false);
+        }
       }
     };
 
-    verifyToken();
+    // Only run verification if we need to check auth
+    if (isCheckingAuth) {
+      verifyToken();
+    }
 
     const emergencyTimeout = setTimeout(() => {
       console.warn('⚠️ [APP] Timeout احتياطي - إجبار إنهاء التحقق');
-      setIsCheckingAuth(false);
+      if (isMounted) {
+        setIsCheckingAuth(false);
+      }
     }, 8000);
 
-    return () => clearTimeout(emergencyTimeout);
-  }, []); // بدون dependencies
+    return () => {
+      isMounted = false; // Prevent state updates after cleanup
+      clearTimeout(emergencyTimeout);
+    };
+  }, [isCheckingAuth]); // Add isCheckingAuth as dependency to prevent unnecessary runs
 
   // 4. System status
   useEffect(() => {
@@ -305,14 +335,16 @@ export default function App() {
     clearMediaUnitsCache();
   }, [isAuthenticated]);
 
-  // 6. Search functionality
+  // 6. Search functionality with debounce
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  
   useEffect(() => {
-    if (searchQuery.trim() === '') {
+    if (debouncedSearchQuery.trim() === '') {
       setSearchResults([]);
       return;
     }
 
-    const query = searchQuery.toLowerCase().trim();
+    const query = debouncedSearchQuery.toLowerCase().trim();
     const results: Array<{ id: SectionId; label: string; group: string }> = [];
 
     NAV_GROUPS.forEach((group) => {
@@ -331,10 +363,10 @@ export default function App() {
     });
 
     setSearchResults(results);
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
   
-  // دالة تسجيل الخروج
-  const handleLogout = () => {
+  // دالة تسجيل الخروج - مع useCallback لمنع إعادة التصيير
+  const handleLogout = useCallback(() => {
     console.log('🚪 [LOGOUT] بدء عملية تسجيل الخروج');
     
     // تحديث الحالة فوراً قبل مسح البيانات
@@ -353,17 +385,17 @@ export default function App() {
     clearMediaUnitsCache();
     
     console.log('✅ [LOGOUT] تم تسجيل الخروج بنجاح - العودة لصفحة اللوجين فوراً');
-  };
+  }, []);
   
-  const toggleGroup = (label: string) => {
+  const toggleGroup = useCallback((label: string) => {
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
-  };
+  }, []);
 
-  const handleSearchSelect = (sectionId: SectionId) => {
+  const handleSearchSelect = useCallback((sectionId: SectionId) => {
     setActiveSection(sectionId);
     setSearchQuery('');
     setIsSearchOpen(false);
-  };
+  }, []);
 
   const showMediaUnitFilter = isSidebarOpen;
   const ActiveIcon = SECTION_ICONS[activeSection] || LayoutDashboard;
@@ -855,7 +887,7 @@ export default function App() {
 }
 
 // ─── AI Dashboard (landing page for AI section) ───────────────
-function AIDashboard({ setActiveSection }: { setActiveSection: (s: SectionId) => void }) {
+const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: SectionId) => void }) => {
   const cards = [
     { id: 'ideas' as SectionId,    title: 'وحدة التفكير',        desc: 'توليد أفكار مبدعة، أسئلة مقابلات، وعناوين جذابة.',  icon: Lightbulb,     color: 'text-[#FF9F43]', bg: 'bg-[#FF9F43]/10' },
     { id: 'editing' as SectionId,  title: 'التحرير الصحفي',       desc: 'إعادة صياغة، تلخيص، وتدقيق لغوي فوري.',            icon: PenTool,       color: 'text-[#4A7C9C]',   bg: 'bg-[#4A7C9C]/10'   },
@@ -891,4 +923,4 @@ function AIDashboard({ setActiveSection }: { setActiveSection: (s: SectionId) =>
       </div>
     </div>
   );
-}
+});

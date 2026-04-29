@@ -18,16 +18,51 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     console.error('🚨 [ERROR-BOUNDARY] خطأ في التطبيق:', error);
+    console.error('🚨 [ERROR-BOUNDARY] نوع الخطأ:', error.name);
+    console.error('🚨 [ERROR-BOUNDARY] رسالة الخطأ:', error.message);
+    
+    // Check if it's the specific React error #310
+    if (error.message.includes('310') || error.message.includes('Too many re-renders')) {
+      console.error('🔄 [ERROR-BOUNDARY] تم اكتشاف خطأ إعادة التصيير اللانهائي (React Error #310)');
+    }
+    
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('🚨 [ERROR-BOUNDARY] تفاصيل الخطأ:', error, errorInfo);
+    console.error('🚨 [ERROR-BOUNDARY] مكون الخطأ:', errorInfo.componentStack);
+    
+    // Log additional context for debugging
+    console.error('🚨 [ERROR-BOUNDARY] معلومات إضافية:', {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      errorBoundary: 'App-Level'
+    });
   }
 
   handleReload = () => {
-    // مسح localStorage ثم إعادة تحميل
+    // Clear only error-related data, not user preferences
+    const keysToKeep = ['selectedUnitId', 'activeSection'];
+    const dataToKeep: Record<string, string | null> = {};
+    
+    // Save important user preferences
+    keysToKeep.forEach(key => {
+      dataToKeep[key] = localStorage.getItem(key);
+    });
+    
+    // Clear all localStorage
     localStorage.clear();
+    
+    // Restore important preferences
+    Object.entries(dataToKeep).forEach(([key, value]) => {
+      if (value !== null) {
+        localStorage.setItem(key, value);
+      }
+    });
+    
+    console.log('🔄 [ERROR-BOUNDARY] إعادة تحميل مع الحفاظ على تفضيلات المستخدم');
     window.location.reload();
   };
 
