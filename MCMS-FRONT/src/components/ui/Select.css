@@ -1,0 +1,52 @@
+/* Force select dropdown to have proper colors */
+select.custom-select {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230f172a' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 0.75rem center !important;
+  padding-left: 2rem !important;
+}
+
+select.custom-select option {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  padding: 10px 8px !important;
+  line-height: 1.5 !important;
+  font-size: 14px !important;
+}
+
+/* For Windows/Chrome specific styling */
+select.custom-select option:checked {
+  background: linear-gradient(#3d6a8a, #3d6a8a) !important;
+  background-color: #3d6a8a !important;
+  color: #ffffff !important;
+}
+
+select.custom-select option:hover {
+  background-color: #e0f2fe !important;
+  color: #0f172a !important;
+}
+
+/* Focus state */
+select.custom-select:focus {
+  border-color: #3d6a8a !important;
+  box-shadow: 0 0 0 3px rgba(61, 106, 138, 0.1) !important;
+}
+
+/* Global select styling */
+select {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}
+
+select option {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  padding: 10px 8px !important;
+}
+
+select option:checked {
+  background: linear-gradient(#3d6a8a, #3d6a8a) !important;
+  color: #ffffff !important;
+}
