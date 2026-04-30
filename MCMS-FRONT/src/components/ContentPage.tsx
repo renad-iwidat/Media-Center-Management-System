@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileVideo, Search, Plus, Filter, 
   ChevronLeft, ChevronRight, HardDrive, 
-  User, Calendar, Eye, Archive, Layers, Trash2, Tag, RefreshCw
+  User, Calendar, Eye, Archive, Trash2, Tag, RefreshCw
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Content, ContentType, User as UserType, MediaUnit } from '../types';
@@ -12,11 +12,9 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Modal } from './ui/Modal';
 import ContentForm from './ContentForm';
-import { cn } from '../lib/utils';
 
 export default function ContentPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'all' | 'archive'>('all');
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -60,7 +58,7 @@ export default function ContentPage() {
       const params: any = {
         limit: pagination.limit.toString(),
         offset: pagination.offset.toString(),
-        archived: activeTab === 'archive' ? 'true' : 'false',
+        archived: 'true', // Always show archived content only
       };
 
       if (filters.keyword) params.keyword = filters.keyword;
@@ -85,7 +83,7 @@ export default function ContentPage() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.offset, activeTab, filters]);
+  }, [pagination.offset, filters]);
 
   const handlePageChange = (newOffset: number) => {
     setPagination(prev => ({ ...prev, offset: newOffset }));
@@ -95,8 +93,8 @@ export default function ContentPage() {
     <div className="space-y-6 pb-12 font-sans">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-1">المحتوى والأرشيف الرقمي</h1>
-          <p className="text-slate-500 font-bold">إدارة المخرجات الإعلامية والأرشفة الذكية</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-1">الأرشيف الذكي</h1>
+          <p className="text-slate-500 font-bold">إدارة المخرجات الإعلامية المؤرشفة</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} className="gap-2">
           <Plus size={20} />
@@ -105,26 +103,10 @@ export default function ContentPage() {
       </div>
 
       <div className="flex items-center gap-8 border-b border-slate-100 px-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-        <button 
-          onClick={() => { setActiveTab('all'); setPagination({ ...pagination, offset: 0 }); }}
-          className={cn(
-            "flex items-center gap-2 px-4 py-5 font-bold text-sm transition-all border-b-2",
-            activeTab === 'all' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
-          )}
-        >
-          <Layers size={18} />
-          كل المحتوى
-        </button>
-        <button 
-          onClick={() => { setActiveTab('archive'); setPagination({ ...pagination, offset: 0 }); }}
-          className={cn(
-            "flex items-center gap-2 px-4 py-5 font-bold text-sm transition-all border-b-2",
-            activeTab === 'archive' ? "border-blue-600 text-purple-600 border-purple-600" : "border-transparent text-slate-400 hover:text-slate-600"
-          )}
-        >
+        <div className="flex items-center gap-2 px-4 py-5 font-bold text-sm text-purple-600 border-b-2 border-purple-600">
           <Archive size={18} />
-          الأرشيف
-        </button>
+          الأرشيف الرقمي
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">

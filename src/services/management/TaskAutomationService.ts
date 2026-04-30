@@ -83,6 +83,9 @@ export class TaskAutomationService {
 
     // Calculate KPI if task is completed
     if (newStatusName === 'Done') {
+      // Mark all content linked to this task as final and archive them
+      await this.markTaskContentAsFinal(taskId);
+
       await KPIService.calculateTaskKPI(taskId);
 
       // Also update order KPI if task has an order
@@ -246,6 +249,35 @@ export class TaskAutomationService {
        VALUES ($1, $2, 'task', $3, $4, true, NOW(), $5)`,
       [taskId, relatedToId, relationType, description, createdBy]
     );
+  }
+
+  /**
+   * Mark all content linked to a task as final and archive them
+   * Called when task status changes to "Done"
+   */
+  static async markTaskContentAsFinal(taskId: bigint): Promise<void> {
+    try {
+      // Get all content linked to this task
+      const contentResult = await pool.query(
+        `SELECT c.id FROM content c
+         JOIN content_tasks ct ON c.id = ct.content_id
+         WHERE ct.task_id = $1 AND c.is_archived = false`,
+        [taskId]
+      );
+
+      // Mark each content as final and archive it
+      for (const row of contentResult.rows) {
+        await pool.query(
+          `UPDATE content 
+           SET is_final = true, is_archived = true, archived_at = NOW()
+           WHERE id = $1`,
+          [row.id]
+        );
+      }
+    } catch (error) {
+      console.error(`Error marking content as final for task ${taskId}:`, error);
+      // Don't throw - this shouldn't block task completion
+    }
   }
 
   /**

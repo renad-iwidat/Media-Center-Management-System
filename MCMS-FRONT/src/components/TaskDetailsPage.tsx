@@ -14,6 +14,7 @@ import { Button, Input, Select, Textarea } from './ui/Inputs';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import ShootingForm from './ShootingForm';
+import FileUploadForm from './FileUploadForm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -38,6 +39,7 @@ export default function TaskDetailsPage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isRelationModalOpen, setIsRelationModalOpen] = useState(false);
   const [isShootingModalOpen, setIsShootingModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
 
   const [commentText, setCommentText] = useState('');
@@ -334,36 +336,39 @@ export default function TaskDetailsPage() {
 
           {activeTab === 'attachments' && (
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <form onSubmit={handleAddAttachment} className="flex gap-4">
-                  <Input 
-                    placeholder="رابط الملف..." 
-                    className="flex-1" 
-                    value={attachmentUrl}
-                    onChange={(e) => setAttachmentUrl(e.target.value)}
-                  />
-                  <Button type="submit" className="gap-2">
-                    <Plus size={18}/>
-                    إضافة
-                  </Button>
-                </form>
+              <div className="flex justify-between items-center">
+                <h4 className="text-lg font-bold text-slate-900">الملفات المرفقة</h4>
+                <Button onClick={() => setIsUploadModalOpen(true)} className="gap-2">
+                  <Plus size={18}/>
+                  رفع ملف جديد
+                </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(task.attachments || []).map((file) => (
-                  <div key={file.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 group">
-                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all">
-                      <Paperclip size={24} />
+                  <div key={file.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all flex-shrink-0">
+                        <Paperclip size={24} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h5 className="text-sm font-bold text-slate-900 truncate">{file.title || 'بدون عنوان'}</h5>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{file.description || 'بدون وصف'}</p>
+                        <span className="text-[10px] text-slate-400 font-bold mt-2 block">{file.user_name} • {file.created_at ? format(new Date(file.created_at), 'MM/dd HH:mm') : 'N/A'}</span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{file.file_url}</p>
-                      <span className="text-[10px] text-slate-400 font-bold">{file.user_name} • {file.created_at ? format(new Date(file.created_at), 'MM/dd') : 'N/A'}</span>
-                    </div>
-                    <a href={file.file_url} target="_blank" rel="noreferrer" className="p-2 text-slate-400 hover:text-blue-600 transition-all">
-                      <Download size={18} />
+                    <a href={file.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all text-xs font-bold">
+                      <Download size={14} />
+                      تحميل
                     </a>
                   </div>
                 ))}
-                {(task.attachments || []).length === 0 && <p className="col-span-2 text-center text-slate-400 py-12">لا توجد مرفقات</p>}
+                {(task.attachments || []).length === 0 && (
+                  <div className="col-span-2 py-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
+                    <Paperclip size={48} className="mx-auto text-slate-200 mb-4" />
+                    <p className="text-slate-400 font-bold">لا توجد ملفات مرفقة</p>
+                    <Button variant="ghost" onClick={() => setIsUploadModalOpen(true)} className="mt-4 text-blue-600">ابدأ برفع أول ملف</Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -513,6 +518,17 @@ export default function TaskDetailsPage() {
           onSuccess={() => { setIsShootingModalOpen(false); fetchDetails(); }} 
           onCancel={() => setIsShootingModalOpen(false)} 
         />
+      </Modal>
+
+      <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="رفع ملف جديد" className="max-w-2xl">
+        {currentUser && (
+          <FileUploadForm 
+            taskId={task?.id || 0}
+            userId={currentUser.id}
+            onSuccess={() => { setIsUploadModalOpen(false); fetchDetails(); }} 
+            onCancel={() => setIsUploadModalOpen(false)} 
+          />
+        )}
       </Modal>
     </div>
   );

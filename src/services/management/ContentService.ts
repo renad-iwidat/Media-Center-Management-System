@@ -50,10 +50,6 @@ export class ContentService {
     const updated = await ContentModel.update(id, data as Partial<Content>);
     if (!updated) throw new Error('Failed to update content: ' + id);
 
-    if (data.is_final === true) {
-      await ContentModel.update(id, { is_archived: true, archived_at: new Date() });
-    }
-
     return updated;
   }
 

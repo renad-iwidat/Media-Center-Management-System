@@ -108,6 +108,8 @@ export interface TaskComment {
 export interface TaskAttachment {
   id: bigint;
   task_id?: bigint;
+  title?: string;
+  description?: string;
   file_url?: string;
   file_type?: string;
   uploaded_by?: bigint;

@@ -4,6 +4,7 @@ import { Task, TaskStatus, TaskHistory, TaskAssignment, TaskComment, TaskAttachm
 import { TaskValidator } from './validators/TaskValidator';
 import { DependencyHelper } from './helpers/DependencyHelper';
 import { OrderStatusHelper } from './helpers/OrderStatusHelper';
+import pool from '../../config/database';
 
 export class TaskService {
   // ============ CRUD Operations ============
@@ -180,12 +181,14 @@ export class TaskService {
     taskId: bigint,
     userId: bigint,
     fileUrl: string,
-    fileType: string
+    fileType: string,
+    title?: string,
+    description?: string
   ): Promise<TaskAttachment> {
     await this.getTask(taskId); // Verify task exists
 
-    if (!fileUrl || !fileType) {
-      throw new Error('File URL and type are required');
+    if (!fileUrl || !fileType || !title) {
+      throw new Error('File URL, type, and title are required');
     }
 
     return await TaskModel.addAttachment({
@@ -193,11 +196,22 @@ export class TaskService {
       file_url: fileUrl,
       file_type: fileType,
       uploaded_by: userId,
+      title,
+      description,
     });
   }
 
   async getAttachments(taskId: bigint): Promise<TaskAttachment[]> {
     return await TaskModel.getAttachments(taskId);
+  }
+
+  async deleteAttachment(attachmentId: bigint): Promise<boolean> {
+    // Delete from database
+    const result = await pool.query(
+      'DELETE FROM task_attachments WHERE id = $1',
+      [attachmentId]
+    );
+    return result.rowCount! > 0;
   }
 
   // ============ Task Relations & Dependencies ============

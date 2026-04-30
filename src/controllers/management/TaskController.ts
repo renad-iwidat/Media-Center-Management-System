@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { TaskService } from '../../services/management/TaskService';
 import { TaskAutomationService } from '../../services/management/TaskAutomationService';
 import { KPIService } from '../../services/management/KPIService';
+import { S3Service } from '../../services/management/S3Service';
 
 /**
  * TaskController - Handles all Task-related API endpoints
@@ -667,6 +668,90 @@ export class TaskController {
       }
 
       this.sendSuccess(res, task, 200);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  /**
+   * POST /api/tasks/:id/upload
+   * Upload file to task
+   */
+  async uploadAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+      const { user_id, title, description } = req.body;
+      const userId = user_id || (req as any).user?.id;
+
+      if (!id || !file || !userId || !title) {
+        this.sendError(res, 'Task ID, file, user_id, and title are required', 400);
+        return;
+      }
+
+      // Upload to S3
+      const { url, key } = await S3Service.uploadFile(
+        file.buffer,
+        file.originalname,
+        file.mimetype,
+        `tasks/${id}`,
+        title,
+        description
+      );
+
+      // Save attachment to database
+      const attachment = await this.taskService.addAttachment(
+        BigInt(id),
+        BigInt(userId),
+        url,
+        file.mimetype,
+        title,
+        description
+      );
+
+      this.sendSuccess(res, { ...attachment, s3_key: key }, 201);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  /**
+   * DELETE /api/tasks/:id/attachments/:attachmentId
+   * Delete attachment
+   */
+  async deleteAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, attachmentId } = req.params;
+
+      if (!id || !attachmentId) {
+        this.sendError(res, 'Task ID and attachment ID are required', 400);
+        return;
+      }
+
+      // Get attachment to find S3 key
+      const attachments = await this.taskService.getAttachments(BigInt(id));
+      const attachment = attachments.find(a => String(a.id) === attachmentId);
+
+      if (!attachment) {
+        this.sendError(res, 'Attachment not found', 404);
+        return;
+      }
+
+      // Delete from S3 if URL exists
+      if (attachment.file_url) {
+        try {
+          const key = attachment.file_url.split('.amazonaws.com/')[1];
+          if (key) {
+            await S3Service.deleteFile(key);
+          }
+        } catch (err) {
+          console.error('Failed to delete from S3:', err);
+        }
+      }
+
+      // Delete from database
+      await this.taskService.deleteAttachment(BigInt(attachmentId));
+      this.sendSuccess(res, { deleted: true });
     } catch (error) {
       this.sendError(res, error, 400);
     }

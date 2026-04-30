@@ -294,10 +294,10 @@ export class TaskModel {
 
   static async addAttachment(attachment: Omit<TaskAttachment, 'id' | 'created_at'>): Promise<TaskAttachment> {
     const result = await pool.query(
-      `INSERT INTO task_attachments (task_id, file_url, file_type, uploaded_by)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO task_attachments (task_id, title, description, file_url, file_type, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [attachment.task_id, attachment.file_url, attachment.file_type, attachment.uploaded_by]
+      [attachment.task_id, attachment.title, attachment.description, attachment.file_url, attachment.file_type, attachment.uploaded_by]
     );
     return result.rows[0];
   }

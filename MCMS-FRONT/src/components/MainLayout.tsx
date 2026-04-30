@@ -73,7 +73,7 @@ export default function MainLayout() {
     { name: 'لوحة التحكم', path: '/dashboard', icon: LayoutDashboard, permission: 'kpi.view' },
     { name: 'الأوردرات', path: '/orders', icon: ClipboardList, permission: 'orders.view' },
     { name: 'المهام', path: '/tasks', icon: CheckSquare, permission: 'tasks.view' },
-    { name: 'المحتوى والأرشيف', path: '/content', icon: FileText, permission: 'content.view' },
+    { name: 'الأرشيف الذكي', path: '/content', icon: FileText, permission: 'content.view' },
     { name: 'البرامج والحلقات', path: '/programs', icon: Tv, permission: 'programs.view' },
     { name: 'الأقسام والفرق', path: '/departments', icon: Layers, permission: 'users.view' },
     { name: 'إدارة المستخدمين', path: '/users', icon: Users, permission: 'users.manage' },

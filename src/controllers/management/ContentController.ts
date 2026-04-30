@@ -152,6 +152,9 @@ export class ContentController {
 
   async searchContent(req: Request, res: Response): Promise<void> {
     try {
+      // Accept both 'archived' and 'is_archived' parameter names
+      const archivedParam = req.query.archived !== undefined ? req.query.archived : req.query.is_archived;
+      
       const content = await this.contentService.searchContent({
         keyword: req.query.keyword as string,
         content_type_id: req.query.content_type_id ? BigInt(req.query.content_type_id as string) : undefined,
@@ -160,7 +163,7 @@ export class ContentController {
         created_by: req.query.created_by ? BigInt(req.query.created_by as string) : undefined,
         from_date: req.query.from_date ? new Date(req.query.from_date as string) : undefined,
         to_date: req.query.to_date ? new Date(req.query.to_date as string) : undefined,
-        is_archived: req.query.is_archived !== undefined ? req.query.is_archived === 'true' : undefined,
+        is_archived: archivedParam !== undefined ? archivedParam === 'true' : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
         offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
       });

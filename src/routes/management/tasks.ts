@@ -1,9 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { TaskController } from '../../controllers/management/TaskController';
 import { authenticate, requirePermission } from '../../middleware/auth';
+import multer from 'multer';
 
 const router = Router();
 const taskController = new TaskController();
+
+// Multer configuration for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB
+  },
+});
 
 router.use(authenticate);
 
@@ -35,7 +44,9 @@ router.get('/:id/assignments', requirePermission('tasks.view'), (req: Request, r
 router.post('/:id/comments', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.addComment(req, res); });
 router.get('/:id/comments', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.getComments(req, res); });
 router.post('/:id/attachments', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.addAttachment(req, res); });
+router.post('/:id/upload', upload.single('file'), requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.uploadAttachment(req, res); });
 router.get('/:id/attachments', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.getAttachments(req, res); });
+router.delete('/:id/attachments/:attachmentId', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.deleteAttachment(req, res); });
 
 // Relations
 router.post('/:id/relations', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.addRelation(req, res); });
