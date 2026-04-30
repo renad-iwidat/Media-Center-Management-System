@@ -158,7 +158,7 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<Array<{ id: SectionId; label: string; group: string }>>([]);
 
   // ═══ جميع الـ custom hooks بعد useState ═══
-  const { mediaUnits, loading } = useMediaUnits();
+  const { mediaUnits, loading, refetch: refetchMediaUnits } = useMediaUnits();
 
   // ═══ جميع الـ useEffect hooks بترتيب ثابت ═══
   
@@ -340,15 +340,22 @@ export default function App() {
     
     // إعادة تحميل الوحدات الإعلامية عند تسجيل الدخول
     console.log('🔄 [APP] إعادة تحميل الوحدات الإعلامية بعد تسجيل الدخول');
-    // نمسح الـ cache عشان يعيد التحميل
+    // نمسح الـ cache ونعيد الجلب
     if (isMounted) {
       clearMediaUnitsCache();
+      // نستدعي refetch بعد مسح الـ cache مباشرة
+      setTimeout(() => {
+        if (isMounted) {
+          console.log('🔄 [APP] استدعاء refetch للوحدات الإعلامية');
+          refetchMediaUnits();
+        }
+      }, 100);
     }
     
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refetchMediaUnits]);
 
   // 6. Search functionality with debounce
   const debouncedSearchQuery = useDebounce(searchQuery, 300);

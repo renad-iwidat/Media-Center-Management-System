@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TrendingUp, Clock, CheckCircle2 } from "lucide-react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -12,8 +12,8 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
   const [publishedItems, setPublishedItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // دالة لتحميل البيانات
-  const loadData = () => {
+  // دالة لتحميل البيانات - مع useCallback
+  const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.getStatistics().catch(() => null),
@@ -32,12 +32,12 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
       setDailyStats(daily?.data || []);
       setLoading(false);
     });
-  };
+  }, [unitId]); // dependency على unitId
 
   // تحميل البيانات عند التحميل الأول أو تغيير unitId
   useEffect(() => {
     loadData();
-  }, [unitId]);
+  }, [loadData]);
 
   // إجمالي في الانتظار (pending + incomplete)
   const totalPending = queueStats.reduce(

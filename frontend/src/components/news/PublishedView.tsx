@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CheckCircle, Search, Calendar, Tag, Zap, Eye, X } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
@@ -23,19 +23,19 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // دالة لتحميل البيانات
-  const loadData = () => {
+  // دالة لتحميل البيانات - مع useCallback
+  const loadData = useCallback(() => {
     setLoading(true);
     api.getPublished(unitId)
       .then((res) => setItems(res.data || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  };
+  }, [unitId]); // dependency على unitId
 
   // تحميل البيانات عند التحميل الأول أو تغيير unitId
   useEffect(() => {
     loadData();
-  }, [unitId]);
+  }, [loadData]);
 
   // Apply filters
   useEffect(() => {

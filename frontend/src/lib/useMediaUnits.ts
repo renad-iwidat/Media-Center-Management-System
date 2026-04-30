@@ -2,7 +2,7 @@
  * useMediaUnits — shared hook
  * يجلب قائمة وحدات الإعلام مرة واحدة ويخزنها
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api, getAuthToken, getCurrentUser } from '../services/api';
 
 export interface MediaUnit {
@@ -23,10 +23,12 @@ export function clearMediaUnitsCache() {
 export function useMediaUnits() {
   const [mediaUnits, setMediaUnits] = useState<MediaUnit[]>(_cache ?? []);
   const [loading, setLoading] = useState(false);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-  const fetchMediaUnits = () => {
-    // لا نجلب البيانات إذا كانت محفوظة بالفعل
-    if (_cache && _cache.length > 0) {
+  // ✅ استخدام useCallback لمنع إعادة إنشاء الدالة في كل render
+  const fetchMediaUnits = useCallback(() => {
+    // لا نجلب البيانات إذا كانت محفوظة بالفعل (إلا إذا تم مسح الـ cache)
+    if (_cache && _cache.length > 0 && refetchTrigger === 0) {
       console.log('📋 [MEDIA-UNITS] استخدام البيانات المحفوظة من الـ cache');
       setMediaUnits(_cache);
       return;
@@ -38,6 +40,7 @@ export function useMediaUnits() {
     
     if (!token || !user) {
       console.log('⏭️ [MEDIA-UNITS] لا يوجد توكن أو مستخدم - تخطي جلب البيانات');
+      setMediaUnits([]);
       return;
     }
 
@@ -70,7 +73,7 @@ export function useMediaUnits() {
         setMediaUnits([]);
       })
       .finally(() => setLoading(false));
-  };
+  }, [refetchTrigger]); // ✅ dependencies صحيحة
 
   useEffect(() => {
     let isMounted = true;
@@ -83,7 +86,7 @@ export function useMediaUnits() {
     return () => {
       isMounted = false;
     };
-  }, []); // بدون dependencies عشان ما يعيدش تشغيل
+  }, [fetchMediaUnits]); // ✅ الآن fetchMediaUnits مستقرة بفضل useCallback
 
-  return { mediaUnits, loading };
+  return { mediaUnits, loading, refetch: () => setRefetchTrigger(prev => prev + 1) };
 }

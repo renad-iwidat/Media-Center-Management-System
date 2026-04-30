@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Rss } from "lucide-react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -8,19 +8,19 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   const [sources, setSources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // دالة لتحميل البيانات
-  const loadData = () => {
+  // دالة لتحميل البيانات - مع useCallback
+  const loadData = useCallback(() => {
     setLoading(true);
     api.getSources()
       .then((res) => setSources(res.data || []))
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
-  };
+  }, []); // لا توجد dependencies
 
   // تحميل البيانات عند التحميل الأول
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   if (loading) return <LoadingSpinner />;
 

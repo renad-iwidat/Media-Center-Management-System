@@ -95,6 +95,19 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     setCurrentPage(1);
   }, [queue, searchTitle, selectedCategory, selectedDate, sortBy]);
 
+  // منع السكرول عند فتح التحرير - مع cleanup صحيح
+  useEffect(() => {
+    if (editingItem) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [editingItem]); // ✅ يعمل عند تغيير editingItem
+
   const handleOpenEditor = useCallback((item: any) => {
     setEditingItem(item);
     // استخدم modified_text إذا كان موجود، وإلا استخدم content
@@ -254,14 +267,6 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
   // Editor mode
   if (editingItem) {
-    // منع السكرول عند فتح التحرير - مع cleanup صحيح
-    useEffect(() => {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = 'unset';
-      };
-    }, []); // dependencies فارغة لأنها تعمل مرة واحدة فقط
-
     return (
       <>
         <Notification notification={notification} onClose={() => setNotification(null)} position="center" />

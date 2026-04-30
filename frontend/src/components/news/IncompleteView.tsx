@@ -278,16 +278,21 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     );
   }
 
+  // منع السكرول عند فتح التحرير - مع cleanup صحيح
+  useEffect(() => {
+    if (editingArticle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [editingArticle]); // ✅ يعمل عند تغيير editingArticle
+
   // وضع التحرير
   if (editingArticle) {
-    // منع السكرول عند فتح التحرير - مع cleanup صحيح
-    useEffect(() => {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = 'unset';
-      };
-    }, []); // dependencies فارغة لأنها تعمل مرة واحدة فقط
-
     return (
       <div className="space-y-6">
         {/* Notification */}
