@@ -217,8 +217,6 @@ export default function App() {
 
         console.log('🌐 [APP] جاري التحقق من صحة التوكن...');
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
         const managementApiUrl = import.meta.env.VITE_MANAGEMENT_API_URL || 'https://media-center-management-system.onrender.com';
 
         try {
@@ -229,11 +227,8 @@ export default function App() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
               },
-              signal: controller.signal,
             }
           );
-
-          clearTimeout(timeoutId);
 
           if (!isMounted) return;
 
@@ -262,7 +257,6 @@ export default function App() {
             setIsAuthenticated(false);
           }
         } catch (fetchError) {
-          clearTimeout(timeoutId);
           console.error('❌ [APP] خطأ في الاتصال:', fetchError);
           
           if (!isMounted) return;

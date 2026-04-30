@@ -20,23 +20,49 @@ function getHeaders(): HeadersInit {
   return headers;
 }
 
+// Callback type for progress updates
+export type ProgressCallback = (message: string) => void;
+
+// Helper function to fetch without timeout (waits indefinitely)
+// but with progress updates from server
+async function fetchWithProgress(
+  url: string,
+  options: RequestInit & { onProgress?: ProgressCallback } = {}
+): Promise<Response> {
+  const { onProgress, ...fetchOptions } = options;
+  
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+    });
+    
+    return response;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request was cancelled');
+    }
+    throw error;
+  }
+}
+
 // ─── Chat / Generate ──────────────────────────────────────────
 export async function generateAIContent(
   prompt: string,
   systemInstruction: string = '',
-  options?: { max_tokens?: number }
+  options?: { max_tokens?: number; onProgress?: ProgressCallback }
 ): Promise<string> {
   const fullPrompt = systemInstruction
     ? `${systemInstruction}\n\n${prompt}`
     : prompt;
 
-  const response = await fetch(`${API_URL}/ai-hub/chat/generate`, {
+  const response = await fetchWithProgress(`${API_URL}/ai-hub/chat/generate`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
       prompt: fullPrompt,
       ...(options?.max_tokens ? { max_tokens: options.max_tokens } : {}),
     }),
+    onProgress: options?.onProgress,
   });
 
   if (!response.ok) {
@@ -54,12 +80,14 @@ export type SummarizeStyle = 'bullet_points' | 'short_paragraph' | 'headlines';
 
 export async function summarizeContent(
   text: string,
-  style: SummarizeStyle = 'bullet_points'
+  style: SummarizeStyle = 'bullet_points',
+  onProgress?: ProgressCallback
 ): Promise<string> {
-  const response = await fetch(`${API_URL}/ai-hub/chat/summarize`, {
+  const response = await fetchWithProgress(`${API_URL}/ai-hub/chat/summarize`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ text, style }),
+    onProgress,
   });
 
   if (!response.ok) {
@@ -77,12 +105,14 @@ export type RewriteStyle = 'radio_broadcast' | 'investigative' | 'social_media' 
 
 export async function rewriteContent(
   text: string,
-  style: RewriteStyle = 'radio_broadcast'
+  style: RewriteStyle = 'radio_broadcast',
+  onProgress?: ProgressCallback
 ): Promise<string> {
-  const response = await fetch(`${API_URL}/ai-hub/chat/rewrite`, {
+  const response = await fetchWithProgress(`${API_URL}/ai-hub/chat/rewrite`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ text, style }),
+    onProgress,
   });
 
   if (!response.ok) {
@@ -116,7 +146,7 @@ export interface IdeasPayload {
 }
 
 export async function generateIdeasContent(payload: IdeasPayload): Promise<string> {
-  const response = await fetch(`${API_URL}/ai-hub/ideas/generate`, {
+  const response = await fetchWithProgress(`${API_URL}/ai-hub/ideas/generate`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload),

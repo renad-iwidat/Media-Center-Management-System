@@ -60,10 +60,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       console.log('🔐 [LOGIN] بدء عملية تسجيل الدخول');
       console.log('📧 البريد الإلكتروني:', email);
 
-      // تسجيل الدخول مع timeout 10 ثواني
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
       const managementApiUrl = import.meta.env.VITE_MANAGEMENT_API_URL || 'https://media-center-management-system.onrender.com';
 
       console.log('🌐 [LOGIN] الرابط:', `${managementApiUrl}/api/auth/login`);
@@ -74,11 +70,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
-          signal: controller.signal,
         }
       );
-
-      clearTimeout(timeoutId);
 
       console.log('📨 [LOGIN] الرد من السيرفر:', loginResponse.status, loginResponse.statusText);
 
@@ -103,10 +96,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       setAuthToken(loginData.data.token);
       console.log('💾 [LOGIN] تم حفظ التوكن في localStorage');
 
-      // جلب بيانات المستخدم مع timeout 5 ثواني
-      const meController = new AbortController();
-      const meTimeoutId = setTimeout(() => meController.abort(), 5000);
-
       console.log('🌐 [LOGIN] جاري جلب بيانات المستخدم...');
 
       const meResponse = await fetch(
@@ -116,11 +105,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             'Authorization': `Bearer ${loginData.data.token}`,
             'Content-Type': 'application/json',
           },
-          signal: meController.signal,
         }
       );
-
-      clearTimeout(meTimeoutId);
 
       console.log('📨 [LOGIN] الرد من /auth/me:', meResponse.status, meResponse.statusText);
 

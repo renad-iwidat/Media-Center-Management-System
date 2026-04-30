@@ -57,18 +57,12 @@ async function request<T>(url: string, options?: RequestInit, useManagementAPI: 
 
   console.log(`🌐 [API] ${options?.method || 'GET'} ${baseUrl}${url}`);
 
-  // إضافة timeout 10 ثواني
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+  // بدون timeout ثابت — الخادم يتحكم بالـ timeout
   try {
     const res = await fetch(`${baseUrl}${url}`, {
       headers,
-      signal: controller.signal,
       ...options,
     });
-
-    clearTimeout(timeoutId);
 
     console.log(`📨 [API] الرد: ${res.status} ${res.statusText}`);
 
@@ -105,7 +99,6 @@ async function request<T>(url: string, options?: RequestInit, useManagementAPI: 
     console.log(`✅ [API] الرد بنجاح`);
     return data;
   } catch (error: any) {
-    clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
       console.error('⏱️ [API] انتهت مهلة الانتظار');
       throw new Error('انتهت مهلة الانتظار — تحقق من الاتصال بالإنترنت');
