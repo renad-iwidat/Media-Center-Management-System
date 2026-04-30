@@ -96,6 +96,15 @@ export class AuthService {
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 
+    // جلب كل صلاحيات المستخدم
+    const permsResult = await pool.query(
+      'SELECT DISTINCT p.name FROM permissions p ' +
+      'INNER JOIN role_permissions rp ON p.id = rp.permission_id ' +
+      'INNER JOIN user_roles ur ON rp.role_id = ur.role_id ' +
+      'WHERE ur.user_id = $1',
+      [user.id]
+    );
+
     return {
       token,
       user: {
@@ -103,6 +112,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         roles: roles,
+        permissions: permsResult.rows.map((r: any) => r.name),
       },
     };
   }

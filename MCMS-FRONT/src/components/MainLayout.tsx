@@ -12,7 +12,8 @@ import {
   Bell, 
   Menu, 
   ChevronLeft,
-  Layers
+  Layers,
+  Mic
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -78,6 +79,7 @@ export default function MainLayout() {
     { name: 'الأقسام والفرق', path: '/departments', icon: Layers, permission: 'users.view' },
     { name: 'إدارة المستخدمين', path: '/users', icon: Users, permission: 'users.manage' },
     { name: 'الصلاحيات', path: '/permissions', icon: ShieldCheck, permission: 'roles.manage' },
+    { name: 'بوابة إدخال المراسلين', path: 'https://manual-reporter-input-frontend.onrender.com/', icon: Mic, permission: 'reporters.view' },
   ];
 
   const filteredMenuItems = menuItems.filter(item => 
@@ -130,38 +132,66 @@ export default function MainLayout() {
         {/* Logo Section - Removed */}
 
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {filteredMenuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-4 px-4 py-4 rounded-xl transition-all group relative text-[15px] font-semibold",
-                location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
-                  ? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/10" 
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              )}
-            >
-              <item.icon size={24} className={cn(
-                "min-w-[24px]",
-                location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path)) ? "text-[#FF9F4A] drop-shadow-lg" : "text-white/90 group-hover:text-white"
-              )} />
-              {isSidebarOpen && (
-                <motion.span 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="whitespace-nowrap overflow-hidden drop-shadow-sm"
+          {filteredMenuItems.map((item) => {
+            const isExternal = item.path.startsWith('http');
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            
+            const linkContent = (
+              <>
+                <item.icon size={24} className={cn(
+                  "min-w-[24px]",
+                  isActive ? "text-[#FF9F4A] drop-shadow-lg" : "text-white/90 group-hover:text-white"
+                )} />
+                {isSidebarOpen && (
+                  <motion.span 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="whitespace-nowrap overflow-hidden drop-shadow-sm"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+                {isActive && (
+                  <motion.div 
+                    layoutId="active-bar"
+                    className="absolute right-0 top-2 bottom-2 w-1.5 bg-[#FF9F4A] rounded-l-full shadow-lg shadow-orange-500/50"
+                  />
+                )}
+              </>
+            );
+
+            if (isExternal) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "flex items-center gap-4 px-4 py-4 rounded-xl transition-all group relative text-[15px] font-semibold",
+                    "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
                 >
-                  {item.name}
-                </motion.span>
-              )}
-              {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
-                <motion.div 
-                  layoutId="active-bar"
-                  className="absolute right-0 top-2 bottom-2 w-1.5 bg-[#FF9F4A] rounded-l-full shadow-lg shadow-orange-500/50"
-                />
-              )}
-            </Link>
-          ))}
+                  {linkContent}
+                </a>
+              );
+            }
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-4 px-4 py-4 rounded-xl transition-all group relative text-[15px] font-semibold",
+                  isActive
+                    ? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/10" 
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                )}
+              >
+                {linkContent}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-white/20">
