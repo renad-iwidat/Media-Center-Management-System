@@ -194,38 +194,38 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* News list */}
-        <div className="lg:col-span-5 flex flex-col">
-          <div className="glass-panel p-4 space-y-3 flex flex-col flex-1 max-h-[520px] bg-white border border-gray-200">
+        <div className="lg:col-span-6 flex flex-col">
+          <div className="glass-panel p-4 space-y-3 flex flex-col flex-1 max-h-[600px] bg-white border border-gray-200">
             {/* Search + refresh */}
             <div className="flex gap-2">
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-300 flex-1">
-                <Search size={14} className="text-gray-500 shrink-0" />
+              <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border border-gray-300 flex-1 hover:border-blue-400 transition-colors">
+                <Search size={16} className="text-gray-500 shrink-0" />
                 <input
                   type="text"
                   placeholder="ابحث في الأخبار..."
                   value={searchTerm}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                  className="bg-transparent border-none outline-none w-full text-sm text-gray-900 placeholder-gray-500"
+                  className="bg-transparent border-none outline-none w-full text-base text-gray-900 placeholder-gray-500"
                 />
               </div>
               <button
                 onClick={fetchNews}
                 disabled={isLoadingNews}
-                className="p-2 bg-gray-100 border border-gray-300 rounded-xl hover:border-gray-400 transition-colors text-gray-600 hover:text-gray-900"
+                className="p-3 bg-white border border-gray-300 rounded-xl hover:border-blue-400 hover:shadow-sm transition-all text-gray-600 hover:text-blue-600 disabled:opacity-50"
                 title="تحديث"
               >
-                <RefreshCw size={14} className={isLoadingNews ? 'animate-spin' : ''} />
+                <RefreshCw size={16} className={isLoadingNews ? 'animate-spin' : ''} />
               </button>
             </div>
 
             {/* Category Filter */}
             {categories.length > 0 && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-gray-600 font-bold">فلتر حسب التصنيف</label>
+              <div className="space-y-2">
+                <label className="text-xs text-gray-600 font-bold">فلتر حسب التصنيف</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-[#FF9F43]/20 text-gray-900"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-400 text-gray-900 hover:border-blue-400 transition-colors"
                 >
                   <option value="">كل التصنيفات</option>
                   {categories.map(cat => (
@@ -237,23 +237,23 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
 
             {/* Select all + deselect all + count */}
             {filteredItems.length > 0 && (
-              <div className="flex items-center justify-between text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <button onClick={selectAll} className="hover:text-gray-900 transition-colors flex items-center gap-1">
-                    <Plus size={12} />
-                    تحديد الكل
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="flex gap-2">
+                <button onClick={selectAll} className="hover:text-blue-600 transition-colors flex items-center gap-1 text-sm font-medium text-gray-700">
+                  <Plus size={14} />
+                  تحديد الكل
+                </button>
+                {selectedCount > 0 && (
+                  <button onClick={deselectAll} className="hover:text-red-600 transition-colors flex items-center gap-1 text-sm font-medium text-gray-700">
+                    <X size={14} />
+                    إلغاء الكل
                   </button>
-                  {selectedCount > 0 && (
-                    <button onClick={deselectAll} className="hover:text-rose-600 transition-colors flex items-center gap-1">
-                      <X size={12} />
-                      إلغاء الكل
-                    </button>
-                  )}
-                </div>
+                )}
+              </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold bg-gray-100 text-gray-900 px-2.5 py-1 rounded-lg border border-gray-300">{selectedCount} محدد من {filteredItems.length}</span>
+                  <span className="text-sm font-bold bg-gray-100 text-gray-900 px-3 py-1.5 rounded-lg border border-gray-300">{selectedCount} محدد من {filteredItems.length}</span>
                   {selectedCategory && (
-                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-300">
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full border border-blue-300">
                       {selectedCategory}
                     </span>
                   )}
@@ -264,48 +264,48 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
               {isLoadingNews ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-500">
-                  <Loader2 size={20} className="animate-spin" />
-                  <span className="text-xs">جاري تحميل الأخبار...</span>
+                  <Loader2 size={24} className="animate-spin" />
+                  <span className="text-sm">جاري تحميل الأخبار...</span>
                 </div>
               ) : dbError ? (
-                <div className="text-center py-8 text-red-600 text-xs">{dbError}</div>
+                <div className="text-center py-8 text-red-600 text-sm">{dbError}</div>
               ) : filteredItems.length === 0 ? (
                 <div className="text-center py-8 opacity-40 flex flex-col items-center gap-2">
-                  <Newspaper size={32} />
-                  <p className="text-xs">لا توجد أخبار</p>
+                  <Newspaper size={40} />
+                  <p className="text-sm">لا توجد أخبار</p>
                 </div>
               ) : filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    item.selected ? 'bg-blue-100 border-blue-400 shadow-lg shadow-blue-200' : 'bg-gray-50 border-gray-300 hover:border-gray-400 hover:bg-white'
+                  className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                    item.selected ? 'bg-blue-100 border-blue-400 shadow-lg shadow-blue-200' : 'bg-gray-50 border-gray-300 hover:border-blue-300 hover:shadow-md'
                   }`}
                   onClick={() => toggleSelect(item.id)}
                 >
-                  <div className="flex justify-between items-start mb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-4 h-4 rounded border-2 transition-colors shrink-0 flex items-center justify-center ${item.selected ? 'bg-blue-600 border-blue-600' : 'border-gray-400 hover:border-gray-600'}`}>
-                        {item.selected && <Check size={10} className="text-white" />}
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded border-2 transition-colors shrink-0 flex items-center justify-center ${item.selected ? 'bg-blue-600 border-blue-600' : 'border-gray-400 hover:border-gray-600'}`}>
+                        {item.selected && <Check size={12} className="text-white" />}
                       </div>
-                      <h4 className="font-bold text-xs text-gray-900 truncate max-w-[160px] leading-tight">{item.title}</h4>
+                      <h4 className="font-bold text-sm text-gray-900 leading-tight">{item.title}</h4>
                     </div>
                     <button
                       onClick={(e: React.MouseEvent) => { e.stopPropagation(); removeNewsItem(item.id); }}
                       className="text-gray-500 hover:text-red-600 transition-colors shrink-0 ml-2"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
-                  <p className="text-[11px] text-gray-700 line-clamp-2 leading-relaxed mb-2.5">{item.content}</p>
+                  <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed mb-3">{item.content}</p>
                   {(item.media_unit_name || item.category_name) && (
                     <div className="flex gap-2 flex-wrap">
                       {item.media_unit_name && (
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-md border border-blue-300 font-medium">{item.media_unit_name}</span>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-md border border-blue-300 font-medium">{item.media_unit_name}</span>
                       )}
                       {item.category_name && (() => {
                         const colors = getCategoryColor(item.category_name);
                         return (
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded-md border ${colors.bg} ${colors.text} ${colors.border}`}>
+                          <span className={`text-xs font-bold px-3 py-1.5 rounded-md border ${colors.bg} ${colors.text} ${colors.border}`}>
                             {item.category_name}
                           </span>
                         );
@@ -318,55 +318,55 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
 
             <div className="border-t border-gray-200 pt-3 flex flex-col gap-2">
               {/* ── Time of Day ── */}
-              <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg">
+              <div className="flex gap-1.5 p-1.5 bg-gray-100 rounded-lg">
                 <button
                   onClick={() => setTimeOfDay('MORNING')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${timeOfDay === 'MORNING' ? 'bg-amber-500 text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${timeOfDay === 'MORNING' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-gray-700 border border-gray-300 hover:border-amber-400 hover:shadow-sm'}`}
                 >
-                  <Sun size={12} /> صباحي
+                  <Sun size={14} /> صباحي
                 </button>
                 <button
                   onClick={() => setTimeOfDay('EVENING')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${timeOfDay === 'EVENING' ? 'bg-sky-500 text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${timeOfDay === 'EVENING' ? 'bg-sky-500 text-white shadow-md' : 'bg-white text-gray-700 border border-gray-300 hover:border-sky-400 hover:shadow-sm'}`}
                 >
-                  <Moon size={12} /> مسائي
+                  <Moon size={14} /> مسائي
                 </button>
               </div>
 
               {/* ── Mode: Summary / Bulletin ── */}
-              <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg">
+              <div className="flex gap-1.5 p-1.5 bg-gray-100 rounded-lg">
                 <button
                   onClick={() => setActiveMode('SUMMARY')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${activeMode === 'SUMMARY' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${activeMode === 'SUMMARY' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:shadow-sm'}`}
                 >
-                  <LayoutList size={12} /> موجز
+                  <LayoutList size={14} /> موجز
                 </button>
                 <button
                   onClick={() => setActiveMode('BULLETIN')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${activeMode === 'BULLETIN' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${activeMode === 'BULLETIN' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:shadow-sm'}`}
                 >
-                  <FileText size={12} /> نشرة
+                  <FileText size={14} /> نشرة
                 </button>
               </div>
 
               {/* ── News Count ── */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] text-gray-600 text-right flex items-center gap-1 justify-end">
-                  <Hash size={10} /> عدد الأخبار
+              <div className="flex flex-col gap-2">
+                <span className="text-xs text-gray-600 text-right flex items-center gap-1 justify-end">
+                  <Hash size={12} /> عدد الأخبار
                 </span>
                 <div className="flex gap-1.5">
                   {COUNT_PRESETS.map(n => (
                     <button
                       key={n}
                       onClick={() => { setCountPreset(n); selectCount(n); }}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${countPreset === n ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400'}`}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all border ${countPreset === n ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:shadow-sm'}`}
                     >
                       {n}
                     </button>
                   ))}
                   <button
                     onClick={() => setCountPreset('custom')}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${countPreset === 'custom' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400'}`}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all border ${countPreset === 'custom' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:shadow-sm'}`}
                   >
                     يدوي
                   </button>
@@ -380,11 +380,11 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                       placeholder="أدخل العدد"
                       value={customCount}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomCount(e.target.value)}
-                      className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#FF9F43] text-right text-gray-900"
+                      className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FF9F43] text-right text-gray-900"
                     />
                     <button
                       onClick={() => selectCount(parseInt(customCount) || 0)}
-                      className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs hover:bg-blue-200 transition-colors border border-blue-300"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors border border-blue-600 font-medium"
                     >
                       تطبيق
                     </button>
@@ -403,12 +403,12 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 
                 return Object.keys(categoryBreakdown).length > 0 ? (
                   <div className="bg-gray-50 border border-gray-300 rounded-xl p-3">
-                    <p className="text-[10px] text-gray-700 mb-2 font-bold uppercase tracking-wide">التصنيفات المختارة:</p>
+                    <p className="text-xs text-gray-700 mb-2.5 font-bold uppercase tracking-wide">التصنيفات المختارة:</p>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(categoryBreakdown).map(([cat, count]) => {
                         const colors = getCategoryColor(cat);
                         return (
-                          <span key={cat} className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border ${colors.bg} ${colors.text} ${colors.border}`}>
+                          <span key={cat} className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${colors.bg} ${colors.text} ${colors.border}`}>
                             {cat}: <span className="font-extrabold">{count}</span>
                           </span>
                         );
@@ -421,11 +421,11 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
               <button
                 onClick={handleGenerate}
                 disabled={isLoading || selectedCount === 0}
-                className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 disabled:opacity-30 text-sm"
+                className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-30 text-base"
               >
                 {isLoading
-                  ? <Loader2 className="animate-spin" size={16} />
-                  : <><Sparkles size={14} /><span>إنشاء {activeMode === 'BULLETIN' ? 'النشرة' : 'الموجز'} ({selectedCount})</span></>
+                  ? <Loader2 className="animate-spin" size={18} />
+                  : <><Sparkles size={16} /><span>إنشاء {activeMode === 'BULLETIN' ? 'النشرة' : 'الموجز'} ({selectedCount})</span></>
                 }
               </button>
             </div>
@@ -433,16 +433,16 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
         </div>
 
         {/* Result */}
-        <div className="lg:col-span-7 flex flex-col">
-          <div className="glass-panel p-4 bg-white border border-gray-200 border-r-4 border-r-blue-600 flex flex-col flex-1 min-h-[460px]">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
-                  <Newspaper size={14} />
+        <div className="lg:col-span-6 flex flex-col">
+          <div className="glass-panel p-5 bg-white border border-gray-200 border-r-4 border-r-blue-600 flex flex-col flex-1 min-h-[600px]">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                  <Newspaper size={16} />
                 </div>
                 <div className="flex flex-col">
-                  <h3 className="text-sm font-bold text-gray-900">المنتج النهائي</h3>
-                  <span className="text-[10px] text-gray-600">
+                  <h3 className="text-base font-bold text-gray-900">المنتج النهائي</h3>
+                  <span className="text-xs text-gray-600">
                     {activeMode === 'BULLETIN' ? 'نشرة' : 'موجز'} {timeOfDay === 'MORNING' ? 'صباحية' : 'مسائية'}
                   </span>
                 </div>
@@ -450,23 +450,23 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
               {result && (
                 <button
                   onClick={copyToClipboard}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900 flex items-center gap-1.5 text-xs border border-gray-300"
+                  className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-gray-600 hover:text-blue-600 flex items-center gap-2 text-sm border border-gray-300 hover:border-blue-400"
                 >
-                  {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                  {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
                   <span>{copied ? 'تم' : 'نسخ'}</span>
                 </button>
               )}
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-900 font-arabic text-sm whitespace-pre-wrap p-3 bg-gray-50 rounded-xl border border-gray-300">
+            <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-900 font-arabic text-base whitespace-pre-wrap p-4 bg-white rounded-xl border border-gray-300">
               {isLoading ? (
                 <div className="h-full flex flex-col items-center justify-center gap-3">
-                  <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                  <p className="text-xs text-gray-600">جاري التحرير...</p>
+                  <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                  <p className="text-sm text-gray-600">جاري التحرير...</p>
                 </div>
               ) : result ? result : (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-3">
-                  <Newspaper size={40} />
-                  <p className="text-xs text-gray-900">حدد الأخبار ثم اضغط إنشاء</p>
+                  <Newspaper size={48} />
+                  <p className="text-sm text-gray-900">حدد الأخبار ثم اضغط إنشاء</p>
                 </div>
               )}
             </div>

@@ -10,6 +10,9 @@ const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
 
+console.log('🔗 [AI Client] API_URL:', API_URL);
+console.log('🔗 [AI Client] VITE_API_URL:', import.meta.env.VITE_API_URL);
+
 // Helper function to get headers with Authorization
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -55,7 +58,12 @@ export async function generateAIContent(
     ? `${systemInstruction}\n\n${prompt}`
     : prompt;
 
-  const response = await fetchWithProgress(`${API_URL}/ai-hub/chat/generate`, {
+  const url = `${API_URL}/ai-hub/chat/generate`;
+  console.log('🤖 [AI] Sending request to:', url);
+  console.log('🤖 [AI] Full URL:', `${API_URL}/ai-hub/chat/generate`);
+  console.log('🤖 [AI] Headers:', getHeaders());
+
+  const response = await fetchWithProgress(url, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -65,12 +73,22 @@ export async function generateAIContent(
     onProgress: options?.onProgress,
   });
 
+  console.log('🤖 [AI] Response status:', response.status);
+  console.log('🤖 [AI] Response headers:', response.headers);
+
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${response.status}`);
+    const text = await response.text();
+    console.error('🤖 [AI] Error response:', text);
+    try {
+      const err = JSON.parse(text);
+      throw new Error(err.error || `HTTP ${response.status}`);
+    } catch {
+      throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
+    }
   }
 
   const data = await response.json();
+  console.log('🤖 [AI] Success response:', data);
   if (!data.success) throw new Error(data.error || 'AI request failed');
   return data.result ?? '';
 }
@@ -83,19 +101,31 @@ export async function summarizeContent(
   style: SummarizeStyle = 'bullet_points',
   onProgress?: ProgressCallback
 ): Promise<string> {
-  const response = await fetchWithProgress(`${API_URL}/ai-hub/chat/summarize`, {
+  const url = `${API_URL}/ai-hub/chat/summarize`;
+  console.log('📝 [Summarize] Sending request to:', url);
+
+  const response = await fetchWithProgress(url, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ text, style }),
     onProgress,
   });
 
+  console.log('📝 [Summarize] Response status:', response.status);
+
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${response.status}`);
+    const text = await response.text();
+    console.error('📝 [Summarize] Error response:', text);
+    try {
+      const err = JSON.parse(text);
+      throw new Error(err.error || `HTTP ${response.status}`);
+    } catch {
+      throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
+    }
   }
 
   const data = await response.json();
+  console.log('📝 [Summarize] Success response:', data);
   if (!data.success) throw new Error(data.error || 'Summarize request failed');
   return data.result ?? '';
 }
@@ -108,19 +138,31 @@ export async function rewriteContent(
   style: RewriteStyle = 'radio_broadcast',
   onProgress?: ProgressCallback
 ): Promise<string> {
-  const response = await fetchWithProgress(`${API_URL}/ai-hub/chat/rewrite`, {
+  const url = `${API_URL}/ai-hub/chat/rewrite`;
+  console.log('✏️ [Rewrite] Sending request to:', url);
+
+  const response = await fetchWithProgress(url, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ text, style }),
     onProgress,
   });
 
+  console.log('✏️ [Rewrite] Response status:', response.status);
+
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${response.status}`);
+    const text = await response.text();
+    console.error('✏️ [Rewrite] Error response:', text);
+    try {
+      const err = JSON.parse(text);
+      throw new Error(err.error || `HTTP ${response.status}`);
+    } catch {
+      throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
+    }
   }
 
   const data = await response.json();
+  console.log('✏️ [Rewrite] Success response:', data);
   if (!data.success) throw new Error(data.error || 'Rewrite request failed');
   return data.result ?? '';
 }
@@ -146,18 +188,31 @@ export interface IdeasPayload {
 }
 
 export async function generateIdeasContent(payload: IdeasPayload): Promise<string> {
-  const response = await fetchWithProgress(`${API_URL}/ai-hub/ideas/generate`, {
+  const url = `${API_URL}/ai-hub/ideas/generate`;
+  console.log('💡 [Ideas] Sending request to:', url);
+  console.log('💡 [Ideas] Payload:', payload);
+
+  const response = await fetchWithProgress(url, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload),
   });
 
+  console.log('💡 [Ideas] Response status:', response.status);
+
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${response.status}`);
+    const text = await response.text();
+    console.error('💡 [Ideas] Error response:', text);
+    try {
+      const err = JSON.parse(text);
+      throw new Error(err.error || `HTTP ${response.status}`);
+    } catch {
+      throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
+    }
   }
 
   const data = await response.json();
+  console.log('💡 [Ideas] Success response:', data);
   if (!data.success) throw new Error(data.error || 'Ideas request failed');
   return data.result ?? '';
 }

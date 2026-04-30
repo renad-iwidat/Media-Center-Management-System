@@ -23,7 +23,13 @@ interface ChatResponse {
   resetTime?: number;
 }
 
-const API_BASE_URL = '/api';
+// استخدام VITE_API_URL من environment variables
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
+console.log('🔗 [ChatInterface] API_BASE_URL:', API_BASE_URL);
+console.log('🔗 [ChatInterface] VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
@@ -76,11 +82,21 @@ export default function ChatInterface() {
         ? `السياق السابق:\n${conversationContext}\n\nالسؤال الجديد: ${input}`
         : input;
 
+      const url = `${API_BASE_URL}/ai-hub/chat/generate`;
+      console.log('🤖 [ChatInterface] Sending request to:', url);
+      console.log('🤖 [ChatInterface] Full URL:', url);
+      console.log('🤖 [ChatInterface] Prompt:', fullPrompt.substring(0, 100));
+
+      // Get token from localStorage
+      const token = localStorage.getItem('authToken');
+      console.log('🤖 [ChatInterface] Token:', token ? 'Present' : 'Missing');
+
       // Call the backend API
-      const response = await fetch(`${API_BASE_URL}/ai-hub/chat/generate`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           prompt: fullPrompt,
@@ -90,7 +106,11 @@ export default function ChatInterface() {
         } as ChatRequest),
       });
 
+      console.log('🤖 [ChatInterface] Response status:', response.status);
+      console.log('🤖 [ChatInterface] Response headers:', response.headers);
+
       const data: ChatResponse = await response.json();
+      console.log('🤖 [ChatInterface] Response data:', data);
 
       // Update remaining messages
       if (data.remaining !== undefined) {
@@ -111,7 +131,7 @@ export default function ChatInterface() {
       const assistantMessage: Message = { role: 'assistant', content: data.result, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (e) {
-      console.error(e);
+      console.error('🤖 [ChatInterface] Error:', e);
       const errorMessage = e instanceof Error ? e.message : 'خطأ غير معروف';
       setMessages(prev => [...prev, { 
         role: 'assistant', 
