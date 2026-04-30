@@ -88,3 +88,9 @@ body {
 .gradient-page {
   background: linear-gradient(to bottom, #3D5F7A, #5A7A96, #6B8FAD);
 }
+
+/* Fix select options visibility */
+select option {
+  background-color: #3D5F7A;
+  color: white;
+}
