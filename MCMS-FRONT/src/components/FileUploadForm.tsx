@@ -37,23 +37,26 @@ export default function FileUploadForm({ taskId, userId, onSuccess, onCancel }: 
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('user_id', userId.toString());
       formData.append('title', title);
       formData.append('description', description);
+      formData.append('user_id', userId.toString());
 
+      const token = localStorage.getItem('token');
       const response = await fetch(
         `${import.meta.env.VITE_API_URL || 'https://media-center-management-system.onrender.com'}/api/tasks/${taskId}/upload`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: formData
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('فشل رفع الملف');
+        throw new Error(data.message || 'فشل رفع الملف');
       }
 
       setFile(null);
