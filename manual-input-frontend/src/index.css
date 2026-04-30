@@ -13,3 +13,78 @@ body {
   background-color: #f5f5f5;
   direction: rtl;
 }
+
+/* Brand Colors */
+.bg-brand-blue-dark { background-color: #3D5F7A; }
+.bg-brand-blue { background-color: #5A7A96; }
+.bg-brand-blue-hover { background-color: #6B8FAD; }
+.bg-brand-orange { background-color: #F5A55A; }
+.bg-brand-orange-light { background-color: #F7B870; }
+.bg-brand-orange-pale { background-color: #FDF3E7; }
+
+.from-brand-blue-dark { --tw-gradient-from: #2E4A61; }
+.via-brand-blue { --tw-gradient-via: #4A6580; }
+.to-brand-blue-hover { --tw-gradient-to: #5A7A96; }
+.from-brand-blue { --tw-gradient-from: #4A6580; }
+.to-brand-blue { --tw-gradient-to: #4A6580; }
+
+.text-brand-orange-pale { color: #FDF3E7; }
+.text-brand-orange { color: #F5A55A; }
+
+.border-brand-blue { border-color: #4A6580; }
+.border-brand-orange { border-color: #F5A55A; }
+
+.hover\:bg-brand-orange-light:hover { background-color: #F7B870; }
+.hover\:bg-brand-orange:hover { background-color: #F5A55A; }
+
+.card-bg {
+  background-color: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: white;
+  box-shadow: 0 -6px 20px rgba(255, 255, 255, 0.35), 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.panel-bg {
+  background-color: rgba(30, 55, 75, 0.65);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+}
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideLeft {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeSlideRight {
+  from { opacity: 0; transform: translateX(-60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.card-top {
+  animation: fadeSlideDown 0.6s ease both;
+}
+.card-left {
+  animation: fadeSlideLeft 0.6s ease 0.2s both;
+}
+.card-right {
+  animation: fadeSlideRight 0.6s ease 0.2s both;
+}
+.card-icon {
+  display: inline-block;
+  animation: iconBounce 2.5s ease-in-out infinite;
+}
+
+.gradient-header {
+  background: linear-gradient(to right, #3D5F7A, #5A7A96);
+}
+.gradient-page {
+  background: linear-gradient(to bottom, #3D5F7A, #5A7A96, #6B8FAD);
+}

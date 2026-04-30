@@ -230,14 +230,14 @@ export default function ManualInputVideo() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700" dir="rtl">
+    <div className="min-h-screen gradient-page" dir="rtl">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-950 to-blue-900 text-white py-6 shadow-lg">
+      <div className="gradient-header text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center px-6">
           <h1 className="text-3xl font-bold">🎥 إدخال ملف فيديو</h1>
           <button
             onClick={() => navigate('/')}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition font-semibold"
+            className="bg-brand-orange hover:bg-brand-orange-light px-6 py-2 rounded-lg transition font-semibold"
           >
             العودة
           </button>
@@ -295,8 +295,8 @@ export default function ManualInputVideo() {
           {/* القسم الأيسر: التسجيل والرفع */}
           <div className="space-y-6">
             {/* تسجيل فيديو */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">تسجيل فيديو مباشر</h2>
+            <div className="panel-bg rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-white mb-4">تسجيل فيديو مباشر</h2>
               <div className="text-center">
                 {!isRecording && !selectedFile && (
                   <button
@@ -343,8 +343,8 @@ export default function ManualInputVideo() {
 
             {/* رفع ملف */}
             {!selectedFile && !isRecording && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">رفع ملف فيديو</h2>
+              <div className="panel-bg rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold text-white mb-4">رفع ملف فيديو</h2>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition">
                   <input
                     type="file"
@@ -355,7 +355,7 @@ export default function ManualInputVideo() {
                   />
                   <label htmlFor="video-file" className="cursor-pointer block">
                     <div className="text-4xl mb-2">📁</div>
-                    <p className="text-gray-700">اضغط لاختيار ملف</p>
+                    <p className="text-white">اضغط لاختيار ملف</p>
                     <p className="text-sm text-gray-500 mt-1">MP4, WebM, MOV (حتى 500 MB)</p>
                   </label>
                 </div>
@@ -364,12 +364,12 @@ export default function ManualInputVideo() {
 
             {/* معلومات الملف والعنوان */}
             {selectedFile && !isRecording && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">معلومات الفيديو</h2>
+              <div className="panel-bg rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold text-white mb-4">معلومات الفيديو</h2>
                 <div className="space-y-4">
                   {/* اسم المراسل */}
                   <div>
-                    <label className="block text-gray-700 font-bold mb-2">
+                    <label className="block text-white font-bold mb-2">
                       اسم المراسل <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -388,7 +388,7 @@ export default function ManualInputVideo() {
 
                   {/* الوحدة الإعلامية */}
                   <div>
-                    <label className="block text-gray-700 font-bold mb-2">
+                    <label className="block text-white font-bold mb-2">
                       الوحدة الإعلامية <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -406,7 +406,7 @@ export default function ManualInputVideo() {
                   </div>
 
                   <div>
-                    <label className="block text-gray-700 font-bold mb-2">
+                    <label className="block text-white font-bold mb-2">
                       عنوان الفيديو <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -419,14 +419,14 @@ export default function ManualInputVideo() {
                     />
                   </div>
 
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-blue-100">
                     الحجم: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
 
                   <button
                     onClick={handleUpload}
                     disabled={!title.trim() || !userId || !mediaUnitId || loading}
-                    className={`w-full px-6 py-3 bg-gray-900 text-white font-bold rounded-lg hover:bg-black transition ${
+                    className={`w-full px-6 py-3 bg-brand-orange text-white font-bold rounded-lg hover:bg-brand-orange-light transition ${
                       (!title.trim() || !userId || !mediaUnitId || loading) ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -437,7 +437,7 @@ export default function ManualInputVideo() {
             )}
 
             {/* ملاحظات */}
-            <div className="bg-blue-50 border-r-4 border-blue-700 p-4 rounded-lg">
+            <div className="bg-brand-orange-pale border-r-4 border-brand-blue p-4 rounded-lg">
               <p className="text-sm text-gray-700">
                 <strong>ملاحظة:</strong> الحد الأقصى 500 MB
               </p>
@@ -446,8 +446,8 @@ export default function ManualInputVideo() {
 
           {/* القسم الأيمن: معاينة الفيديو */}
           <div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
+            <div className="panel-bg rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-white mb-4">
                 {isRecording ? 'جاري التسجيل' : 'معاينة الفيديو'}
               </h2>
               <div className="bg-black rounded-lg overflow-hidden">

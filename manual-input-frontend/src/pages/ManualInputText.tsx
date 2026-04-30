@@ -196,14 +196,14 @@ export default function ManualInputText() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700" dir="rtl">
+    <div className="min-h-screen gradient-page" dir="rtl">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-950 to-blue-900 text-white py-6 shadow-lg">
+      <div className="gradient-header text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center px-6">
           <h1 className="text-3xl font-bold">📝 إدخال خبر نصي</h1>
           <button
             onClick={() => navigate('/')}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition font-semibold"
+            className="bg-brand-orange hover:bg-brand-orange-light px-6 py-2 rounded-lg transition font-semibold"
           >
             العودة
           </button>
@@ -256,14 +256,14 @@ export default function ManualInputText() {
 
       {/* Form */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <form onSubmit={handleSubmit} className="bg-white shadow-lg rounded-lg p-8">
+        <form onSubmit={handleSubmit} className="panel-bg shadow-lg rounded-lg p-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* القسم الأيسر: العنوان والتصنيف */}
           <div className="space-y-6">
             {/* اسم المراسل */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="created_by">
+              <label className="block text-white text-sm font-bold mb-2" htmlFor="created_by">
                 اسم المراسل <span className="text-red-500">*</span>
               </label>
               <select
@@ -285,7 +285,7 @@ export default function ManualInputText() {
 
             {/* الوحدة الإعلامية */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="media_unit_id">
+              <label className="block text-white text-sm font-bold mb-2" htmlFor="media_unit_id">
                 الوحدة الإعلامية <span className="text-red-500">*</span>
               </label>
               <select
@@ -307,7 +307,7 @@ export default function ManualInputText() {
 
             {/* Title */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
+              <label className="block text-white text-sm font-bold mb-2" htmlFor="title">
                 عنوان الخبر <span className="text-red-500">*</span>
               </label>
               <input
@@ -321,14 +321,14 @@ export default function ManualInputText() {
                 required
                 minLength={20}
               />
-              <p className={`text-sm mt-1 ${formData.title.length < 20 ? 'text-red-500 font-semibold' : 'text-green-600 font-semibold'}`}>
+              <p className={`text-sm mt-1 ${formData.title.length < 20 ? 'text-red-500 font-bold' : 'text-green-300 font-bold'}`}>
                 عدد الأحرف: {formData.title.length} / 20 حرف كحد أدنى
               </p>
             </div>
 
             {/* Category */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="category_id">
+              <label className="block text-white text-sm font-bold mb-2" htmlFor="category_id">
                 التصنيف <span className="text-red-500">*</span>
               </label>
               <select
@@ -350,7 +350,7 @@ export default function ManualInputText() {
 
             {/* Image Upload */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2">
+              <label className="block text-white text-sm font-bold mb-2">
                 صورة الخبر (اختياري)
               </label>
               
@@ -365,8 +365,8 @@ export default function ManualInputText() {
                   />
                   <label htmlFor="image-file" className="cursor-pointer block">
                     <div className="text-4xl mb-2">🖼️</div>
-                    <p className="text-gray-700">اضغط لاختيار صورة</p>
-                    <p className="text-sm text-gray-500 mt-1">JPG, PNG, GIF, WebP (حتى 10 MB)</p>
+                    <p className="text-white font-semibold">اضغط لاختيار صورة</p>
+                    <p className="text-sm text-blue-100 mt-1">JPG, PNG, GIF, WebP (حتى 10 MB)</p>
                   </label>
                 </div>
               )}
@@ -402,7 +402,7 @@ export default function ManualInputText() {
           <div>
             {/* Content */}
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="content">
+              <label className="block text-white text-sm font-bold mb-2" htmlFor="content">
                 محتوى الخبر <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -416,7 +416,7 @@ export default function ManualInputText() {
                 required
                 minLength={100}
               />
-              <p className={`text-sm mt-1 ${formData.content.length < 100 ? 'text-red-500 font-semibold' : 'text-green-600 font-semibold'}`}>
+              <p className={`text-sm mt-1 ${formData.content.length < 100 ? 'text-red-500 font-bold' : 'text-green-300 font-bold'}`}>
                 عدد الأحرف: {formData.content.length} / 100 حرف كحد أدنى
               </p>
             </div>
@@ -428,7 +428,7 @@ export default function ManualInputText() {
           <button
             type="submit"
             disabled={loading || uploadingImage}
-            className={`px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition ${
+            className={`px-8 py-3 bg-brand-orange text-white font-bold rounded-lg hover:bg-brand-orange-light transition ${
               (loading || uploadingImage) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >

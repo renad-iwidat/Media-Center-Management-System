@@ -177,14 +177,14 @@ export default function ManualInputAudio() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700" dir="rtl">
+    <div className="min-h-screen gradient-page" dir="rtl">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-950 to-blue-900 text-white py-6 shadow-lg">
+      <div className="gradient-header text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center px-6">
           <h1 className="text-3xl font-bold">🎤 إدخال ملف صوتي</h1>
           <button
             onClick={() => navigate('/')}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition font-semibold"
+            className="bg-brand-orange hover:bg-brand-orange-light px-6 py-2 rounded-lg transition font-semibold"
           >
             العودة
           </button>
@@ -242,8 +242,8 @@ export default function ManualInputAudio() {
           {/* القسم الأيسر: التسجيل والرفع */}
           <div className="space-y-6">
             {/* تسجيل صوتي */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">تسجيل صوتي مباشر</h2>
+            <div className="panel-bg rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-white mb-4">تسجيل صوتي مباشر</h2>
               <div className="text-center">
                 {!isRecording ? (
                   <button
@@ -272,8 +272,8 @@ export default function ManualInputAudio() {
             </div>
 
             {/* رفع ملف */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">رفع ملف صوتي</h2>
+            <div className="panel-bg rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-white mb-4">رفع ملف صوتي</h2>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition">
                 <input
                   type="file"
@@ -284,14 +284,14 @@ export default function ManualInputAudio() {
                 />
                 <label htmlFor="audio-file" className="cursor-pointer block">
                   <div className="text-4xl mb-2">📁</div>
-                  <p className="text-gray-700">اضغط لاختيار ملف</p>
+                  <p className="text-white">اضغط لاختيار ملف</p>
                   <p className="text-sm text-gray-500 mt-1">MP3, WAV, M4A (حتى 50 MB)</p>
                 </label>
               </div>
             </div>
 
             {/* ملاحظات */}
-            <div className="bg-blue-50 border-r-4 border-blue-700 p-4 rounded-lg">
+            <div className="bg-brand-orange-pale border-r-4 border-brand-blue p-4 rounded-lg">
               <p className="text-sm text-gray-700">
                 <strong>ملاحظة:</strong> الحد الأقصى 50 MB
               </p>
@@ -302,15 +302,15 @@ export default function ManualInputAudio() {
           <div className="space-y-6">
             {/* مشغل الصوت */}
             {audioUrl && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">استماع للتسجيل</h2>
+              <div className="panel-bg rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold text-white mb-4">استماع للتسجيل</h2>
                 <audio 
                   controls 
                   src={audioUrl} 
                   className="w-full"
                 />
                 {selectedFile && (
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-blue-100 mt-2">
                     الحجم: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 )}
@@ -319,12 +319,12 @@ export default function ManualInputAudio() {
 
             {/* حقل العنوان */}
             {selectedFile && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">معلومات الملف</h2>
+              <div className="panel-bg rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold text-white mb-4">معلومات الملف</h2>
                 <div className="space-y-4">
                   {/* اسم المراسل */}
                   <div>
-                    <label className="block text-gray-700 font-bold mb-2">
+                    <label className="block text-white font-bold mb-2">
                       اسم المراسل <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -343,7 +343,7 @@ export default function ManualInputAudio() {
 
                   {/* الوحدة الإعلامية */}
                   <div>
-                    <label className="block text-gray-700 font-bold mb-2">
+                    <label className="block text-white font-bold mb-2">
                       الوحدة الإعلامية <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -361,7 +361,7 @@ export default function ManualInputAudio() {
                   </div>
 
                   <div>
-                    <label className="block text-gray-700 font-bold mb-2">
+                    <label className="block text-white font-bold mb-2">
                       عنوان التسجيل <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -377,7 +377,7 @@ export default function ManualInputAudio() {
                   <button
                     onClick={handleUpload}
                     disabled={!title.trim() || !userId || !mediaUnitId || loading}
-                    className={`w-full px-6 py-3 bg-gray-900 text-white font-bold rounded-lg hover:bg-black transition ${
+                    className={`w-full px-6 py-3 bg-brand-orange text-white font-bold rounded-lg hover:bg-brand-orange-light transition ${
                       (!title.trim() || !userId || !mediaUnitId || loading) ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
