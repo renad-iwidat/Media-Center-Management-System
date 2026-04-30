@@ -120,19 +120,19 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="bg-white border border-gray-200 rounded-3xl shadow-xl w-full max-w-md pointer-events-auto"
+              className="bg-white border border-e2e8f0 rounded-2xl shadow-lg w-full max-w-md pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-6 border-b border-e2e8f0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 border border-blue-300 rounded-xl flex items-center justify-center">
-                    <Settings2 size={20} className="text-blue-600" />
+                  <div className="w-10 h-10 bg-[#f0f4f8] border border-[#4A7C9E]/30 rounded-xl flex items-center justify-center">
+                    <Settings2 size={20} className="text-[#4A7C9E]" />
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-f8fafc text-[#64748b] hover:text-[#1e293b] transition-colors"
                 >
                   <X size={18} />
                 </button>
@@ -140,14 +140,14 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
 
               {loading ? (
                 <div className="flex items-center justify-center py-16">
-                  <Loader2 size={28} className="text-blue-600 animate-spin" />
+                  <Loader2 size={28} className="text-[#4A7C9E] animate-spin" />
                 </div>
               ) : (
                 <div className="p-6 space-y-6">
 
                   {/* زر تشغيل/إيقاف الثلاثة */}
                   <div className="space-y-3">
-                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-semibold">
+                    <p className="text-[11px] uppercase tracking-widest text-[#64748b] font-semibold">
                       تشغيل النظام الآلي
                     </p>
                     <button
@@ -157,26 +157,26 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                         ${saveStatus === "saving" ? "opacity-60 cursor-not-allowed" : ""}
                         ${allEnabled
                           ? "bg-emerald-50 border-emerald-300 hover:border-emerald-400"
-                          : "bg-gray-50 border-gray-300 hover:border-gray-400"
+                          : "bg-f8fafc border-e2e8f0 hover:border-cbd5e1"
                         }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors
-                          ${allEnabled ? "bg-emerald-100" : "bg-gray-100"}`}>
-                          <Power size={20} className={allEnabled ? "text-emerald-600" : "text-gray-600"} />
+                          ${allEnabled ? "bg-emerald-100" : "bg-f1f5f9"}`}>
+                          <Power size={20} className={allEnabled ? "text-emerald-600" : "text-[#64748b]"} />
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-gray-900">
+                          <p className="text-sm font-bold text-[#1e293b]">
                             {allEnabled ? "النظام شغّال" : "النظام متوقف"}
                           </p>
-                          <p className="text-[11px] text-gray-600 mt-0.5">
+                          <p className="text-[11px] text-[#64748b] mt-0.5">
                             السحب · التصنيف · التوجيه
                           </p>
                         </div>
                       </div>
                       {/* Toggle Switch */}
                       <div className={`w-12 h-6 rounded-full relative transition-colors shrink-0
-                        ${allEnabled ? "bg-emerald-600" : "bg-gray-300"}`}>
+                        ${allEnabled ? "bg-emerald-600" : "bg-[#cbd5e1]"}`}>
                         <motion.div
                           animate={{ x: allEnabled ? 24 : 2 }}
                           transition={{ type: "spring", damping: 20, stiffness: 300 }}
@@ -197,13 +197,13 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                           className={`rounded-xl p-3 border text-center transition-colors
                             ${item.value
                               ? "bg-emerald-50 border-emerald-300"
-                              : "bg-gray-50 border-gray-300"
+                              : "bg-f8fafc border-e2e8f0"
                             }`}
                         >
                           <div className={`w-1.5 h-1.5 rounded-full mx-auto mb-1.5
-                            ${item.value ? "bg-emerald-600" : "bg-gray-400"}`} />
+                            ${item.value ? "bg-emerald-600" : "bg-[#cbd5e1]"}`} />
                           <p className={`text-[11px] font-medium
-                            ${item.value ? "text-emerald-700" : "text-gray-600"}`}>
+                            ${item.value ? "text-emerald-700" : "text-[#64748b]"}`}>
                             {item.label}
                           </p>
                         </div>
@@ -212,18 +212,18 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                   </div>
 
                   {/* فاصل */}
-                  <div className="border-t border-gray-200" />
+                  <div className="border-t border-e2e8f0" />
 
                   {/* إعدادات السحب */}
                   <div className="space-y-4">
-                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-semibold">
+                    <p className="text-[11px] uppercase tracking-widest text-[#64748b] font-semibold">
                       إعدادات السحب
                     </p>
 
                     {/* الفترة الزمنية */}
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm text-gray-700">
-                        <Clock size={14} className="text-blue-600" />
+                      <label className="flex items-center gap-2 text-sm text-[#1e293b]">
+                        <Clock size={14} className="text-[#4A7C9E]" />
                         الفترة بين كل سحب (بالدقائق)
                       </label>
                       <div className="flex items-center gap-3">
@@ -233,9 +233,9 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                           max={1440}
                           value={intervalInput}
                           onChange={(e) => setIntervalInput(e.target.value)}
-                          className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-colors text-center font-mono"
+                          className="flex-1 bg-white border border-e2e8f0 rounded-xl px-4 py-3 text-sm text-[#1e293b] focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 transition-colors text-center font-mono"
                         />
-                        <div className="text-xs text-gray-600 shrink-0">
+                        <div className="text-xs text-[#64748b] shrink-0">
                           {parseInt(intervalInput) >= 60
                             ? `${Math.floor(parseInt(intervalInput) / 60)}س ${parseInt(intervalInput) % 60}د`
                             : "دقيقة"}
@@ -245,7 +245,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
 
                     {/* عدد الأخبار */}
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <label className="flex items-center gap-2 text-sm text-[#1e293b]">
                         <Hash size={14} className="text-orange-600" />
                         عدد الأخبار لكل مصدر
                       </label>
@@ -255,7 +255,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                         max={100}
                         value={articlesInput}
                         onChange={(e) => setArticlesInput(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-colors text-center font-mono"
+                        className="w-full bg-white border border-e2e8f0 rounded-xl px-4 py-3 text-sm text-[#1e293b] focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 transition-colors text-center font-mono"
                       />
                     </div>
 
@@ -265,8 +265,8 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                       disabled={!hasNumberChanges || saveStatus === "saving"}
                       className={`w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2
                         ${!hasNumberChanges || saveStatus === "saving"
-                          ? "bg-gray-100 text-gray-600 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200"
+                          ? "bg-f1f5f9 text-[#64748b] cursor-not-allowed"
+                          : "bg-[#4A7C9E] hover:bg-[#3d6a8a] text-white shadow-md shadow-[#4A7C9E]/20"
                         }`}
                     >
                       {saveStatus === "saving" && <Loader2 size={16} className="animate-spin" />}

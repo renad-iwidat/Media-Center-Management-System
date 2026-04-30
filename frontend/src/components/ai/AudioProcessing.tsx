@@ -543,25 +543,25 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
 
         {/* Result */}
         <div className="lg:col-span-7">
-          <div className="glass-panel p-4 h-[460px] flex flex-col items-center justify-center text-center bg-[#2c5f7f] border-dashed border-white/10 relative overflow-hidden">
+          <div className="glass-panel p-4 h-[460px] flex flex-col items-center justify-center text-center bg-gray-50 border border-gray-300 relative overflow-hidden">
             {activeMode === 'STT' ? (
               result ? (
                 <div className="w-full h-full flex flex-col text-right">
                   <div className="flex items-center gap-2 mb-3">
-                    <FileText size={16} className="text-[#2563eb]" />
-                    <h4 className="text-sm font-bold">التفريغ النهائي</h4>
+                    <FileText size={16} className="text-blue-600" />
+                    <h4 className="text-sm font-bold text-gray-900">التفريغ النهائي</h4>
                     {selectedFile && (
-                      <span className="text-xs text-gray-500 mr-auto">
+                      <span className="text-xs text-gray-600 mr-auto">
                         {selectedFile.display_name}
                       </span>
                     )}
                   </div>
-                  <div className="flex-1 bg-white/[0.02] rounded-xl p-4 border border-white/5 overflow-y-auto custom-scrollbar font-arabic leading-loose text-gray-200 text-sm">
+                  <div className="flex-1 bg-white rounded-xl p-4 border border-gray-300 overflow-y-auto custom-scrollbar font-arabic leading-loose text-gray-900 text-sm">
                     {result}
                   </div>
                 </div>
               ) : (
-                <div className="opacity-10 flex flex-col items-center gap-3">
+                <div className="opacity-30 flex flex-col items-center gap-3 text-gray-600">
                   <Mic size={48} />
                   <p className="text-sm">اختر ملفاً للتفريغ</p>
                 </div>
@@ -570,29 +570,29 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
               audioUrl ? (
                 <div className="space-y-5 w-full max-w-xs">
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 bg-[#2563eb]/10 rounded-full flex items-center justify-center text-[#2563eb] relative">
-                      <div className="absolute inset-0 rounded-full border-2 border-[#2563eb]/20 animate-ping" />
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 relative">
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping" />
                       <Volume2 size={28} className="relative z-10" />
                     </div>
-                    <p className="text-sm font-bold">النشرة الصوتية جاهزة</p>
+                    <p className="text-sm font-bold text-gray-900">النشرة الصوتية جاهزة</p>
                   </div>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                  <div className="bg-white rounded-2xl p-4 border border-gray-300">
                     <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} className="hidden" />
                     <div className="flex items-center gap-3">
-                      <button onClick={togglePlayback} className="w-10 h-10 bg-[#2563eb] rounded-full flex items-center justify-center text-white hover:scale-105 transition-transform">
+                      <button onClick={togglePlayback} className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white hover:scale-105 transition-transform">
                         {isPlaying ? <Pause size={18} /> : <Play size={18} className="translate-x-0.5" />}
                       </button>
-                      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div className={`h-full bg-[#2563eb] ${isPlaying ? 'w-full' : 'w-0'}`} />
+                      <div className="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div className={`h-full bg-blue-600 ${isPlaying ? 'w-full' : 'w-0'}`} />
                       </div>
                     </div>
                   </div>
-                  <a href={audioUrl} download="audio.mp3" className="flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-white transition-colors">
+                  <a href={audioUrl} download="audio.mp3" className="flex items-center justify-center gap-2 text-xs text-gray-600 hover:text-gray-900 transition-colors">
                     <Download size={14} /> تحميل التسجيل
                   </a>
                 </div>
               ) : (
-                <div className="opacity-10 flex flex-col items-center gap-3">
+                <div className="opacity-30 flex flex-col items-center gap-3 text-gray-600">
                   <Volume2 size={48} />
                   <p className="text-sm">اختر خبراً لتحويله لصوت</p>
                 </div>

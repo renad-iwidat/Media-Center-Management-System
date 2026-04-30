@@ -442,13 +442,13 @@ export default function App() {
   if (isCheckingAuth) {
     console.log('⏳ [APP] عرض شاشة التحميل - isCheckingAuth:', isCheckingAuth);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1e4a66] via-[#2c5f7f] to-[#1e4a66] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#2d5570] via-[#3d6a8a] to-[#2d5570] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/30 mx-auto mb-3 animate-pulse relative overflow-hidden">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/30 mx-auto mb-3 animate-pulse relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
             <TrendingUp className="text-white w-6 h-6 relative z-10" />
           </div>
-          <p className="text-gray-400 text-sm">جاري التحقق من بيانات الدخول...</p>
+          <p className="text-[#cbd5e1] text-sm">جاري التحقق من بيانات الدخول...</p>
         </div>
       </div>
     );
@@ -456,7 +456,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen flex text-gray-100 selection:bg-[#FF9F43]/30 bg-gray-100"
+      className="min-h-screen flex text-[#1e293b] selection:bg-[#FF9F4A]/30 bg-f8fafc"
       style={{ 
         paddingRight: isSidebarOpen ? '260px' : '70px', 
         transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -468,10 +468,10 @@ export default function App() {
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 260 : 70 }}
-        className="bg-gradient-to-b from-[#4A7C9C] via-[#5A8CAC] to-[#4A7C9C] border-l border-white/10 flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
+        className="bg-gradient-to-b from-[#2d5570] to-[#1f3a4f] border-l border-white/10 flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
       >
         {/* Logo & Header */}
-        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-[#4A7C9C]/90 backdrop-blur-sm">
+        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-[#2d5570]/90 backdrop-blur-sm">
           {isSidebarOpen && (
             <motion.div 
               initial={{ opacity: 0, x: 20 }} 
@@ -479,13 +479,13 @@ export default function App() {
               transition={{ delay: 0.1 }}
               className="flex items-center gap-3 min-w-0"
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F43] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F43]/40 shrink-0 relative overflow-hidden">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/40 shrink-0 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
                 <TrendingUp className="text-white w-7 h-7 relative z-10" />
               </div>
               <div className="flex flex-col">
                 <span className="font-arabic font-bold text-xl tracking-tight truncate text-white">
-                  مركز <span className="text-[#FF9F43]">الإعلام</span>
+                  مركز <span className="text-[#FF9F4A]">الإعلام</span>
                 </span>
               </div>
             </motion.div>
@@ -500,7 +500,7 @@ export default function App() {
               animate={{ rotate: isSidebarOpen ? 0 : 180 }}
               transition={{ duration: 0.3 }}
             >
-              {isSidebarOpen ? <X size={20} className="text-white group-hover:text-[#FF9F43] transition-colors" /> : <Menu size={20} className="text-white group-hover:text-[#FF9F43] transition-colors" />}
+              {isSidebarOpen ? <X size={20} className="text-white group-hover:text-[#FF9F4A] transition-colors" /> : <Menu size={20} className="text-white group-hover:text-[#FF9F4A] transition-colors" />}
             </motion.div>
           </motion.button>
         </div>
@@ -737,14 +737,14 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className="flex-1 flex flex-col transition-all duration-300 bg-gray-50 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col transition-all duration-300 bg-f8fafc h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-14 border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40 shadow-sm shrink-0">
+        <header className="h-14 border-b border-e2e8f0 flex items-center justify-between px-3 sm:px-6 bg-white/90 backdrop-blur-md sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="text-gray-500 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate">
+            <div className="text-[#64748b] text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate">
               <span className="hidden sm:inline">الرئيسية</span>
               <ChevronRight size={14} className="shrink-0" />
-              <span className="text-gray-800 font-medium truncate">{SECTION_LABELS[activeSection]}</span>
+              <span className="text-[#1e293b] font-medium truncate">{SECTION_LABELS[activeSection]}</span>
             </div>
           </div>
 

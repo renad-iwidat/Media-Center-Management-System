@@ -44,8 +44,8 @@ export function Notification({ notification, onClose, duration = 3000, position 
           onClick={onClose}
           className={`${positionClass} px-8 py-4 rounded-2xl font-bold text-base flex items-center gap-3 shadow-lg z-50 cursor-pointer ${
             notification.type === "success"
-              ? "bg-emerald-100 border border-emerald-300 text-emerald-700"
-              : "bg-rose-100 border border-rose-300 text-rose-700"
+              ? "bg-emerald-50 border border-emerald-300 text-emerald-700"
+              : "bg-rose-50 border border-rose-300 text-rose-700"
           }`}
         >
           {notification.type === "success" ? (

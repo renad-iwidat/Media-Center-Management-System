@@ -180,7 +180,7 @@ export default function ChatInterface() {
                 <div className={`max-w-[80%] p-3 rounded-2xl font-arabic text-sm leading-relaxed ${
                   msg.role === 'user'
                   ? 'bg-blue-100 border border-blue-300 text-blue-900 rounded-tr-none'
-                  : 'bg-gray-800 border border-gray-700 text-white rounded-tl-none'
+                  : 'bg-gray-50 border border-gray-300 text-gray-900 rounded-tl-none'
                 }`}>
                   <div className="whitespace-pre-wrap">
                     {msg.role === 'assistant' ? parseNumberedList(msg.content) : msg.content}

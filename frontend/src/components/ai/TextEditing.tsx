@@ -539,7 +539,7 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-900 font-arabic text-sm p-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-900 font-arabic text-sm p-2 bg-gray-50 rounded-xl border border-gray-300">
             {isLoading ? (
               <div className="h-full flex flex-col items-center justify-center gap-3">
                 <div className="w-8 h-8 border-2 border-[#FF9F43]/20 border-t-[#FF9F43] rounded-full animate-spin" />
