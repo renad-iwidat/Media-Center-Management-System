@@ -20,7 +20,8 @@
     "classify": "ts-node src/utils/classify-articles.ts",
     "fetch:save": "ts-node src/utils/fetch-and-save.ts",
     "db:test": "ts-node src/utils/test-db-connection.ts",
-    "scheduler": "ts-node src/utils/start-scheduler.ts"
+    "scheduler": "ts-node src/utils/start-scheduler.ts",
+    "add-reporters-perm": "ts-node scripts/add-reporters-permission.ts"
   },
   "keywords": [
     "media",
