@@ -470,18 +470,6 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 </div>
               )}
             </div>
-              {isLoading ? (
-                <div className="h-full flex flex-col items-center justify-center gap-3">
-                  <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                  <p className="text-xs text-gray-600">جاري التحرير...</p>
-                </div>
-              ) : result ? result : (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-3">
-                  <Newspaper size={40} />
-                  <p className="text-xs">حدد الأخبار ثم اضغط إنشاء</p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
