@@ -146,11 +146,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#1f3a4f] via-[#2d5570] to-[#1f3a4f] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration - subtle gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-[#FF9F4A]/10 to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-br from-[#4A7C9E]/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-[#FF9F4A]/15 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-br from-[#FF9F4A]/10 to-transparent rounded-full blur-3xl" />
       </div>
 
       {/* Login Card */}
@@ -163,8 +163,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className="bg-white backdrop-blur-xl border border-gray-200 rounded-2xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 mx-auto mb-4 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F4A] to-[#FFB366] rounded-2xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/40 mx-auto mb-4 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent"></div>
               <LogIn className="text-white w-8 h-8 relative z-10" />
             </div>
             <h1 className="text-2xl font-bold text-[#1e293b] mb-2">تسجيل الدخول</h1>
@@ -193,7 +193,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 onChange={handleEmailChange}
                 placeholder="example@domain.com"
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-[#1e293b] placeholder-[#cbd5e1] focus:outline-none focus:border-[#FF9F4A] focus:ring-2 focus:ring-[#FF9F4A]/20 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#1e293b] placeholder-[#cbd5e1] focus:outline-none focus:border-[#FF9F4A] focus:ring-2 focus:ring-[#FF9F4A]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 required
               />
             </div>
@@ -208,7 +208,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={isLoading}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-[#1e293b] placeholder-[#cbd5e1] focus:outline-none focus:border-[#FF9F4A] focus:ring-2 focus:ring-[#FF9F4A]/20 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#1e293b] placeholder-[#cbd5e1] focus:outline-none focus:border-[#FF9F4A] focus:ring-2 focus:ring-[#FF9F4A]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
                 <button
@@ -226,7 +226,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             <button
               type="submit"
               disabled={isLoading || !email || !password}
-              className="w-full py-3 bg-gradient-to-r from-[#FF9F4A] to-[#FF8C2E] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#FF9F4A]/30 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden group"
+              className="w-full py-3 bg-gradient-to-r from-[#FF9F4A] to-[#FFB366] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#FF9F4A]/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden group"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               {isLoading ? (
