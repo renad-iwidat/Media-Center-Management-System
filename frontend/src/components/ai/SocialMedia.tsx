@@ -47,7 +47,7 @@ function HashtagsDisplay({ text }: { text: string }) {
   return (
     <div className="space-y-3">
       {plainText && (
-        <p className="text-xs text-gray-700 leading-relaxed">{plainText}</p>
+        <p className="text-xs text-gray-300 leading-relaxed">{plainText}</p>
       )}
       {hashtags.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -62,7 +62,7 @@ function HashtagsDisplay({ text }: { text: string }) {
         </div>
       )}
       {hashtags.length === 0 && (
-        <p className="text-sm text-gray-900 whitespace-pre-wrap">{text}</p>
+        <p className="text-sm text-white whitespace-pre-wrap">{text}</p>
       )}
     </div>
   );
@@ -488,14 +488,14 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-white rounded-xl border border-gray-200 font-arabic text-gray-900 text-sm leading-relaxed">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-gray-800 rounded-xl border border-gray-700 font-arabic text-white text-sm leading-relaxed">
             {isLoading ? (
               <div className="h-full flex flex-col items-center justify-center gap-3">
                 <div className="relative">
                   <div className="w-8 h-8 border-2 border-[#FF9F43]/20 border-t-[#FF9F43] rounded-full animate-spin" />
                   <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#FF9F43]" size={12} />
                 </div>
-                <p className="text-xs text-gray-600">جاري الإنشاء لـ {platform}...</p>
+                <p className="text-xs text-gray-400">جاري الإنشاء لـ {platform}...</p>
               </div>
             ) : result ? (
               activeTab === 'HASHTAGS'
@@ -504,7 +504,7 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center opacity-20 gap-3">
                 <Repeat size={40} />
-                <p className="text-xs text-gray-900">
+                <p className="text-xs text-white">
                   {activeTab === 'TRANSFORM' ? 'أدخل خبراً واضغط تحويل'
                     : activeTab === 'CAPTION' ? 'اكتب فكرتك واضغط كتابة الـ Caption'
                     : 'أدخل الموضوع واضغط توليد الهاشتاجات'}

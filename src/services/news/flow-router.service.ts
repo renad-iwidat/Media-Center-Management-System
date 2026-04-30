@@ -175,12 +175,20 @@ export class FlowRouterService {
           if (USER_INPUT_SOURCE_TYPE_IDS.has(article.source_type_id)) {
             flowType = 'editorial';
             console.log(`📝 الخبر ${article.id} — إدخال يدوي → تحرير إجباري`);
-          } else if (category) {
+          } else if (category && category.is_active) {
+            // استخدام flow من التصنيف فقط إذا كان التصنيف موجود وفعال
             flowType = category.flow;
-          } else {
+            console.log(`   ${flowType === 'automated' ? '⚡' : '📝'} الخبر ${article.id} — تصنيف: ${category.name} → ${flowType}`);
+          } else if (!article.category_id) {
             // تصنيف غير موجود → تحرير (fallback)
-            console.warn(`⚠️  الخبر ${article.id} — تصنيف غير موجود (id=${article.category_id}) → تحرير (fallback)`);
-            result.errors.push(`الخبر ${article.id}: تصنيف غير موجود — تم توجيهه للتحرير`);
+            console.warn(`⚠️  الخبر ${article.id} — بدون تصنيف → تحرير (fallback)`);
+            result.errors.push(`الخبر ${article.id}: بدون تصنيف — تم توجيهه للتحرير`);
+            flowType = 'editorial';
+          } else {
+            // التصنيف موجود لكن غير فعال → تحرير (fallback)
+            console.warn(`⚠️  الخبر ${article.id} — تصنيف غير فعال (id=${article.category_id}) → تحرير (fallback)`);
+            result.errors.push(`الخبر ${article.id}: تصنيف غير فعال — تم توجيهه للتحرير`);
+            flowType = 'editorial';
           }
 
           // ── ج. تنظيف النص — فقط للأوتوماتيك ───────────────────────────

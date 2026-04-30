@@ -457,7 +457,19 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 </button>
               )}
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-gray-900 font-arabic text-sm whitespace-pre-wrap p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="flex-1 overflow-y-auto custom-scrollbar leading-relaxed text-white font-arabic text-sm whitespace-pre-wrap p-3 bg-gray-800 rounded-xl border border-gray-700">
+              {isLoading ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                  <p className="text-xs text-gray-400">جاري التحرير...</p>
+                </div>
+              ) : result ? result : (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-3">
+                  <Newspaper size={40} />
+                  <p className="text-xs">حدد الأخبار ثم اضغط إنشاء</p>
+                </div>
+              )}
+            </div>
               {isLoading ? (
                 <div className="h-full flex flex-col items-center justify-center gap-3">
                   <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />

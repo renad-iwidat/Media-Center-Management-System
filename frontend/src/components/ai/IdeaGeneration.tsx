@@ -590,7 +590,7 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
                     <span className="text-xs">{copied ? 'تم النسخ' : 'نسخ الكل'}</span>
                   </button>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-gray-200 font-arabic text-gray-900 leading-loose shadow-inner overflow-y-auto max-h-[420px]">
+                <div className="bg-gray-800 rounded-2xl p-5 border border-gray-700 font-arabic text-white leading-loose shadow-inner overflow-y-auto max-h-[420px]">
                   {parseNumberedList(result)}
                 </div>
               </div>

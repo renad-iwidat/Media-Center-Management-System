@@ -180,7 +180,7 @@ export default function ChatInterface() {
                 <div className={`max-w-[80%] p-3 rounded-2xl font-arabic text-sm leading-relaxed ${
                   msg.role === 'user'
                   ? 'bg-blue-100 border border-blue-300 text-blue-900 rounded-tr-none'
-                  : 'bg-gray-100 border border-gray-300 text-gray-900 rounded-tl-none'
+                  : 'bg-gray-800 border border-gray-700 text-white rounded-tl-none'
                 }`}>
                   <div className="whitespace-pre-wrap">
                     {msg.role === 'assistant' ? parseNumberedList(msg.content) : msg.content}
@@ -196,10 +196,10 @@ export default function ChatInterface() {
                 <div className="w-10 h-10 rounded-xl bg-blue-200 flex items-center justify-center text-blue-600">
                   <Sparkles size={20} />
                 </div>
-                <div className="bg-gray-100 border border-gray-300 p-4 rounded-3xl rounded-tl-none w-24 flex gap-1 items-center justify-center">
-                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" />
-                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="bg-gray-800 border border-gray-700 p-4 rounded-3xl rounded-tl-none w-24 flex gap-1 items-center justify-center">
+                   <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" />
+                   <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                   <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 </div>
               </div>
             )}

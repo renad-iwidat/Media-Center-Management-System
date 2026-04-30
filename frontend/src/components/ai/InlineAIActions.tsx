@@ -167,7 +167,7 @@ export default function InlineAIActions({ sourceText, onResult }: InlineAIAction
 
       {/* ── Result Panel ── */}
       {isExpanded && (
-        <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-2">
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               {activeAction === 'SUMMARIZE'
@@ -191,12 +191,12 @@ export default function InlineAIActions({ sourceText, onResult }: InlineAIAction
           </div>
 
           {isLoading ? (
-            <div className="flex items-center gap-2 py-4 justify-center text-gray-500">
+            <div className="flex items-center gap-2 py-4 justify-center text-gray-400">
               <Loader2 size={14} className="animate-spin" />
               <span className="text-xs">جاري المعالجة...</span>
             </div>
           ) : result ? (
-            <div className="space-y-1 font-arabic text-sm leading-relaxed">
+            <div className="space-y-1 font-arabic text-sm leading-relaxed text-white">
               {parseNumberedList(result)}
             </div>
           ) : null}

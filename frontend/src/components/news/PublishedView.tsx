@@ -56,7 +56,8 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
     // Filter by type (automatic/manual)
     if (selectedType) {
       filtered = filtered.filter(item => {
-        const itemType = item.publish_type || (item.policy_id ? "تحريري" : "أوتوماتيكي");
+        // استخدام flow_type من الباك (من categories.flow)
+        const itemType = item.flow_type === 'automated' ? "أوتوماتيكي" : "تحريري";
         return itemType === selectedType;
       });
     }
@@ -244,11 +245,11 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                         </td>
                         <td className="py-4 px-6">
                           <span className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 w-fit ${
-                            (item.publish_type || (item.policy_id ? "تحريري" : "أوتوماتيكي")) === "أوتوماتيكي"
+                            item.flow_type === "automated"
                               ? "bg-emerald-100 text-emerald-700"
                               : "bg-amber-100 text-amber-700"
                           }`}>
-                            {(item.publish_type || (item.policy_id ? "تحريري" : "أوتوماتيكي")) === "أوتوماتيكي" ? (
+                            {item.flow_type === "automated" ? (
                               <><Zap size={12} /> أوتوماتيكي</>
                             ) : (
                               <><Eye size={12} /> تحريري</>
@@ -345,7 +346,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
                 <p className="text-xs text-gray-600 mb-1">النوع</p>
                 <p className="text-sm font-bold text-gray-900 flex items-center gap-1">
-                  {(selectedItem.publish_type || (selectedItem.policy_id ? "تحريري" : "أوتوماتيكي")) === "أوتوماتيكي" ? (
+                  {selectedItem.flow_type === "automated" ? (
                     <><Zap size={14} className="text-emerald-600" /> أوتوماتيكي</>
                   ) : (
                     <><Eye size={14} className="text-amber-600" /> تحريري</>
