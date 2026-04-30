@@ -15,6 +15,7 @@ export interface ParsedContent {
 /**
  * Parse markdown text and return formatted content
  * Supports: **bold**, *italic*, `code`, [link](url), # headings, - lists
+ * Colors follow DESIGN_SYSTEM.md specifications
  */
 export function parseMarkdown(text: string): (string | React.ReactElement)[] {
   const result: (string | React.ReactElement)[] = [];
@@ -27,7 +28,7 @@ export function parseMarkdown(text: string): (string | React.ReactElement)[] {
       if (endIndex !== -1) {
         const boldText = text.substring(i + 2, endIndex);
         result.push(
-          <strong key={`bold-${i}`} className="font-bold text-white">
+          <strong key={`bold-${i}`} className="font-bold text-[#1e293b]">
             {boldText}
           </strong>
         );
@@ -42,7 +43,7 @@ export function parseMarkdown(text: string): (string | React.ReactElement)[] {
       if (endIndex !== -1) {
         const italicText = text.substring(i + 1, endIndex);
         result.push(
-          <em key={`italic-${i}`} className="italic text-gray-300">
+          <em key={`italic-${i}`} className="italic text-[#64748b]">
             {italicText}
           </em>
         );
@@ -59,7 +60,7 @@ export function parseMarkdown(text: string): (string | React.ReactElement)[] {
         result.push(
           <code
             key={`code-${i}`}
-            className="bg-gray-800 text-green-400 px-2 py-1 rounded text-sm font-mono"
+            className="bg-[#f1f5f9] text-[#1e293b] px-2 py-1 rounded text-sm font-mono border border-[#e2e8f0]"
           >
             {codeText}
           </code>
@@ -83,7 +84,7 @@ export function parseMarkdown(text: string): (string | React.ReactElement)[] {
               href={linkUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline"
+              className="text-[#3d6a8a] hover:text-[#2d5570] underline transition-colors"
             >
               {linkText}
             </a>
@@ -122,7 +123,7 @@ export function parseMarkdown(text: string): (string | React.ReactElement)[] {
 export function parseTextWithLineBreaks(text: string): React.ReactElement[] {
   const lines = text.split('\n');
   return lines.map((line, index) => (
-    <div key={index} className="mb-2">
+    <div key={index} className="mb-2 text-[#1e293b]">
       {parseMarkdown(line)}
     </div>
   ));
@@ -130,6 +131,7 @@ export function parseTextWithLineBreaks(text: string): React.ReactElement[] {
 
 /**
  * Parse numbered lists and headings
+ * Colors follow DESIGN_SYSTEM.md specifications
  */
 export function parseNumberedList(text: string): React.ReactElement[] {
   const lines = text.split('\n');
@@ -145,7 +147,7 @@ export function parseNumberedList(text: string): React.ReactElement[] {
         listItems = [];
         inList = false;
       }
-      result.push(<hr key={`hr-${index}`} className="border-white/10 my-4" />);
+      result.push(<hr key={`hr-${index}`} className="border-[#cbd5e1] my-4" />);
       return;
     }
 
@@ -161,12 +163,12 @@ export function parseNumberedList(text: string): React.ReactElement[] {
       const level = headingMatch[1].length;
       const headingText = headingMatch[2];
       const headingClasses: Record<number, string> = {
-        1: 'text-2xl font-bold text-white mb-3 mt-6',
-        2: 'text-xl font-bold text-blue-300 mb-2 mt-5',
-        3: 'text-lg font-bold text-blue-200 mb-2 mt-4',
-        4: 'text-base font-bold text-gray-100 mb-1 mt-3',
-        5: 'text-sm font-bold text-gray-200 mb-1 mt-2',
-        6: 'text-sm font-bold text-gray-300 mb-1 mt-2',
+        1: 'text-2xl font-bold text-[#1e293b] mb-3 mt-6',
+        2: 'text-xl font-bold text-[#1e293b] mb-2 mt-5',
+        3: 'text-lg font-bold text-[#1e293b] mb-2 mt-4',
+        4: 'text-base font-bold text-[#1e293b] mb-1 mt-3',
+        5: 'text-sm font-bold text-[#1e293b] mb-1 mt-2',
+        6: 'text-sm font-bold text-[#1e293b] mb-1 mt-2',
       };
 
       const HeadingTag = `h${level}` as keyof React.JSX.IntrinsicElements;
@@ -190,8 +192,8 @@ export function parseNumberedList(text: string): React.ReactElement[] {
       }
       result.push(
         <div key={`bullet-${index}`} className="flex items-start gap-2 mb-2 mr-2">
-          <span className="text-blue-400 mt-1 shrink-0">•</span>
-          <span>{parseMarkdown(bulletMatch[1])}</span>
+          <span className="text-[#3d6a8a] mt-1 shrink-0">•</span>
+          <span className="text-[#1e293b]">{parseMarkdown(bulletMatch[1])}</span>
         </div>
       );
       return;
@@ -202,7 +204,7 @@ export function parseNumberedList(text: string): React.ReactElement[] {
     if (numberedMatch) {
       inList = true;
       listItems.push(
-        <li key={`item-${index}`} className="mb-3 leading-relaxed">
+        <li key={`item-${index}`} className="mb-3 leading-relaxed text-[#1e293b]">
           {parseMarkdown(numberedMatch[1])}
         </li>
       );
@@ -228,7 +230,7 @@ export function parseNumberedList(text: string): React.ReactElement[] {
 
     // ─── Regular paragraph
     result.push(
-      <p key={`text-${index}`} className="mb-2 leading-relaxed text-gray-200">
+      <p key={`text-${index}`} className="mb-2 leading-relaxed text-[#1e293b]">
         {parseMarkdown(line)}
       </p>
     );
