@@ -355,7 +355,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, refetchMediaUnits]);
+  }, [isAuthenticated]); // ✅ FIXED: إزالة refetchMediaUnits من dependencies
 
   // 6. Search functionality with debounce
   const debouncedSearchQuery = useDebounce(searchQuery, 300);

@@ -2,7 +2,7 @@
  * useMediaUnits — shared hook
  * يجلب قائمة وحدات الإعلام مرة واحدة ويخزنها
  */
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api, getAuthToken, getCurrentUser } from '../services/api';
 
 export interface MediaUnit {
@@ -75,21 +75,23 @@ export function useMediaUnits() {
       .finally(() => setLoading(false));
   }, [refetchTrigger]); // ✅ dependencies صحيحة
 
+  // ✅ CRITICAL FIX: استخدام useRef لتتبع ما إذا كان fetch قد تم بالفعل
+  const hasFetchedRef = React.useRef(false);
+
   useEffect(() => {
-    let isMounted = true;
-    
-    // Only fetch if component is still mounted
-    if (isMounted) {
-      fetchMediaUnits();
+    // ✅ منع التنفيذ المتكرر - فقط مرة واحدة عند mount أو عند تغيير refetchTrigger
+    if (hasFetchedRef.current && refetchTrigger === 0) {
+      return;
     }
     
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchMediaUnits]); // ✅ الآن fetchMediaUnits مستقرة بفضل useCallback
+    hasFetchedRef.current = true;
+    fetchMediaUnits();
+  }, [refetchTrigger]); // ✅ FIXED: إزالة fetchMediaUnits من dependencies لمنع infinite loop
 
   // ✅ لف refetch بـ useCallback لمنع إعادة إنشائها في كل render
   const refetch = useCallback(() => {
+    console.log('🔄 [MEDIA-UNITS] تم استدعاء refetch');
+    hasFetchedRef.current = false; // إعادة تعيين flag
     setRefetchTrigger(prev => prev + 1);
   }, []); // dependency array فاضي = مستقرة دائماً
 

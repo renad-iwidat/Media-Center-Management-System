@@ -291,19 +291,6 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     );
   }
 
-  // منع السكرول عند فتح التحرير - مع cleanup صحيح
-  useEffect(() => {
-    if (editingArticle) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [editingArticle]); // ✅ يعمل عند تغيير editingArticle
-
   // وضع التحرير
   if (editingArticle) {
     return (
