@@ -743,9 +743,9 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════
           MAIN CONTENT
          ══════════════════════════════════════════════════════════ */}
-      <main className="flex-1 flex flex-col transition-all duration-300 bg-gray-50">
+      <main className="flex-1 flex flex-col transition-all duration-300 bg-gray-50 h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-14 border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40 shadow-sm">
+        <header className="h-14 border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="text-gray-500 text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate">
               <span className="hidden sm:inline">الرئيسية</span>
@@ -854,7 +854,7 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar bg-gray-50 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}

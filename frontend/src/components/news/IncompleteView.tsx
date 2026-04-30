@@ -97,6 +97,11 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     setEditedTitle(article.title || "");
     setEditedImageUrl(article.image_url || "");
     setEditedCategoryId(article.category_id || null);
+    
+    // Scroll to top to show the editing form
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
   }, []);
 
   const handleSaveInIncomplete = useCallback(async () => {

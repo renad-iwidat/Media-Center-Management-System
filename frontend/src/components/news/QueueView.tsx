@@ -119,6 +119,11 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     setSelectedInspectionPolicy(null);
     setInspectionResult(null);
     setPolicyResults([]);
+    
+    // Scroll to top to show the editing form
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
   }, []);
 
   const togglePolicy = useCallback((id: number) => {

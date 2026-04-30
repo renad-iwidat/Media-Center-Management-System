@@ -136,6 +136,11 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
         isModifying: policyData.is_modifying,
       });
       setEditError("");
+      
+      // Scroll to top to show the editing form
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 0);
     } catch (err) {
       console.error("خطأ في جلب تفاصيل السياسة:", err);
       setEditError("حدث خطأ في جلب بيانات السياسة");
