@@ -684,8 +684,26 @@ export class TaskController {
       const { user_id, title, description } = req.body;
       const userId = user_id || (req as any).user?.id;
 
+      console.log('Upload request:', {
+        taskId: id,
+        hasFile: !!file,
+        fileName: file?.originalname,
+        userId,
+        title,
+        description,
+        bodyKeys: Object.keys(req.body)
+      });
+
       if (!id || !file || !userId || !title) {
-        this.sendError(res, 'Task ID, file, user_id, and title are required', 400);
+        const missingFields = [];
+        if (!id) missingFields.push('Task ID');
+        if (!file) missingFields.push('file');
+        if (!userId) missingFields.push('user_id');
+        if (!title) missingFields.push('title');
+        
+        const errorMsg = `Missing required fields: ${missingFields.join(', ')}`;
+        console.error(errorMsg);
+        this.sendError(res, errorMsg, 400);
         return;
       }
 
@@ -711,6 +729,7 @@ export class TaskController {
 
       this.sendSuccess(res, { ...attachment, s3_key: key }, 201);
     } catch (error) {
+      console.error('Upload error:', error);
       this.sendError(res, error, 400);
     }
   }

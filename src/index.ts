@@ -24,10 +24,10 @@ app.use(helmet());
 app.use(cors());
 
 // Parse JSON request bodies
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
 
 // Parse URL-encoded request bodies
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // BigInt serialization middleware
 app.use(bigIntSerializerMiddleware);

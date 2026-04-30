@@ -47,7 +47,7 @@ router.post('/:id/reassign', requirePermission('tasks.assign'), (req: Request, r
 // Comments & Attachments
 router.post('/:id/comments', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.addComment(req, res); });
 router.post('/:id/attachments', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.addAttachment(req, res); });
-router.post('/:id/upload', upload.single('file'), requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.uploadAttachment(req, res); });
+router.post('/:id/upload', requirePermission('tasks.view'), upload.single('file'), (req: Request, res: Response) => { taskController.uploadAttachment(req, res); });
 router.delete('/:id/attachments/:attachmentId', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.deleteAttachment(req, res); });
 
 // Relations
