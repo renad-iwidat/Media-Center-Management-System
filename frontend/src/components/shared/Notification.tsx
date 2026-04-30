@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -15,11 +15,20 @@ interface NotificationProps {
 }
 
 export function Notification({ notification, onClose, duration = 3000, position = "center" }: NotificationProps) {
+  // ✅ خزّن onClose في ref لتجنب إعادة تشغيل الـ effect عند تغيير الدالة
+  const onCloseRef = useRef(onClose);
+  
+  // تحديث الـ ref عند تغيير onClose
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // ✅ الآن الـ timer مستقر ولا يتأثر بتغيير onClose
   useEffect(() => {
     if (!notification) return;
-    const timer = setTimeout(onClose, duration);
+    const timer = setTimeout(() => onCloseRef.current(), duration);
     return () => clearTimeout(timer);
-  }, [notification, onClose, duration]);
+  }, [notification, duration]); // ✅ حذفنا onClose من dependencies
 
   const positionClass = position === "top-right"
     ? "fixed top-4 right-4"

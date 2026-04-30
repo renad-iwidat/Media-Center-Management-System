@@ -190,6 +190,19 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
     setShowBulkDeleteConfirm(false);
   };
 
+  // ✅ منع السكرول عند فتح التحرير - يجب أن يكون قبل أي return مشروط
+  useEffect(() => {
+    if (editingArticle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [editingArticle]);
+
   if (loading) return <LoadingSpinner />;
 
   // Bulk Delete Confirmation Modal

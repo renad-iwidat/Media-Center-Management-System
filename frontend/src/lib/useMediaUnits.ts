@@ -88,5 +88,10 @@ export function useMediaUnits() {
     };
   }, [fetchMediaUnits]); // ✅ الآن fetchMediaUnits مستقرة بفضل useCallback
 
-  return { mediaUnits, loading, refetch: () => setRefetchTrigger(prev => prev + 1) };
+  // ✅ لف refetch بـ useCallback لمنع إعادة إنشائها في كل render
+  const refetch = useCallback(() => {
+    setRefetchTrigger(prev => prev + 1);
+  }, []); // dependency array فاضي = مستقرة دائماً
+
+  return { mediaUnits, loading, refetch };
 }
