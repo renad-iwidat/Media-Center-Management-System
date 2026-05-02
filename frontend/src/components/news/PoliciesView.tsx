@@ -222,17 +222,17 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
       <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
       <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-2xl p-6 border border-[#e2e8f0] shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <motion.h3 
-              className="text-lg font-bold flex items-center gap-2 text-gray-900"
+              className="text-base font-bold flex items-center gap-2 text-[#1e293b]"
               whileHover={{ scale: 1.05 }}
             >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               >
-                <Settings size={20} className="text-blue-600" />
+                <Settings size={18} className="text-[#3d6a8a]" />
               </motion.div>
               السياسات النشطة
             </motion.h3>
@@ -244,7 +244,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
             </button>
           </div>
           <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-            {policies.length === 0 && <p className="text-gray-500 text-sm">لا توجد سياسات مفعّلة</p>}
+            {policies.length === 0 && <p className="text-[#94a3b8] text-sm">لا توجد سياسات مفعّلة</p>}
             {policies.map((p: any) => (
               <motion.div 
                 key={p.id}
@@ -252,22 +252,22 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedPolicyId(p.id)}
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group
-                  ${selectedPolicyId === p.id ? "bg-blue-50 border-blue-300 shadow-md shadow-blue-100" : "bg-white border-gray-200 hover:border-blue-300"}`}
+                  ${selectedPolicyId === p.id ? "bg-[#3d6a8a]/5 border-[#3d6a8a] shadow-sm" : "bg-white border-[#e2e8f0] hover:border-[#4A7C9E]"}`}
               >
                 <div className="flex items-center gap-4">
                   <motion.div 
                     className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-all ${
                       p.isModifying 
-                        ? 'bg-blue-100 border border-blue-300' 
-                        : 'bg-orange-100 border border-orange-300'
+                        ? 'bg-[#3d6a8a]/10 border border-[#3d6a8a]' 
+                        : 'bg-[#FF9F4A]/10 border border-[#FF9F4A]'
                     }`}
                     whileHover={{ rotate: 10 }}
                   >
-                    {p.isModifying ? <FileEdit size={18} className="text-blue-600" /> : <Search size={18} className="text-orange-600" />}
+                    {p.isModifying ? <FileEdit size={16} className="text-[#3d6a8a]" /> : <Search size={16} className="text-[#FF9F4A]" />}
                   </motion.div>
                   <div>
-                    <div className="text-sm font-bold text-gray-900">{p.name}</div>
-                    <div className="text-[10px] text-gray-600">{p.description || (p.isModifying ? 'سياسة تعديل' : 'سياسة فحص')}</div>
+                    <div className="text-sm font-bold text-[#1e293b]">{p.name}</div>
+                    <div className="text-[10px] text-[#94a3b8]">{p.description || (p.isModifying ? 'سياسة تعديل' : 'سياسة فحص')}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -283,7 +283,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                   </motion.span>
                   <motion.button
                     onClick={() => handleEdit(p)}
-                    className="text-gray-600 hover:text-blue-600 transition-colors p-1"
+                    className="text-[#94a3b8] hover:text-[#3d6a8a] transition-colors p-1"
                     title="تعديل"
                     whileHover={{ scale: 1.2, rotate: 10 }}
                     whileTap={{ scale: 0.9 }}
@@ -292,7 +292,7 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                   </motion.button>
                   <motion.button
                     onClick={() => handleDeletePolicy(p.id, p.name)}
-                    className="text-gray-600 hover:text-rose-600 transition-colors p-1"
+                    className="text-[#94a3b8] hover:text-rose-600 transition-colors p-1"
                     title="حذف"
                     whileHover={{ scale: 1.2, rotate: -10 }}
                     whileTap={{ scale: 0.9 }}
@@ -305,27 +305,27 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm space-y-6">
+        <div className="bg-white rounded-2xl p-6 border border-[#e2e8f0] shadow-sm space-y-5">
           <motion.h3 
-            className="text-lg font-bold flex items-center gap-2 text-gray-900"
+            className="text-base font-bold flex items-center gap-2 text-[#1e293b]"
             whileHover={{ scale: 1.05 }}
           >
             <motion.div
               animate={{ y: [0, -5, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Sparkles size={20} className="text-blue-600" />
+              <Sparkles size={18} className="text-[#FF9F4A]" />
             </motion.div>
             مختبر تجربة السياسات
           </motion.h3>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-xs text-gray-600 font-bold">النص للتجربة</label>
+              <label className="text-xs text-[#64748b] font-bold">النص للتجربة</label>
               <textarea 
                 value={testText}
                 onChange={(e) => setTestText(e.target.value)}
                 placeholder="الصق النص هنا لاختبار السياسات..."
-                className="w-full h-32 bg-white border border-gray-300 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none font-sans text-gray-900 placeholder:text-gray-500"
+                className="w-full h-32 bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-4 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none font-sans text-[#1e293b] placeholder:text-[#cbd5e1]"
               />
             </div>
             
@@ -334,11 +334,11 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
                 onClick={handleApply}
                 disabled={isProcessing || !selectedPolicyId || !testText}
                 className={`flex-1 py-3 rounded-2xl font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2
-                  ${isProcessing ? "bg-gray-200 text-gray-600" : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200"}
+                  ${isProcessing ? "bg-[#f1f5f9] text-[#94a3b8]" : "bg-[#3d6a8a] text-white hover:bg-[#2d5570] shadow-[#3d6a8a]/20"}
                   disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isProcessing ? (
-                  <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <><Sparkles size={16} /> تطبيق السياسة المختارة</>
                 )}
@@ -369,85 +369,85 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
+            className="bg-white rounded-2xl border border-[#e2e8f0] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
-                <Plus size={20} className="text-blue-600" />
+              <h3 className="text-base font-bold flex items-center gap-2 text-[#1e293b]">
+                <Plus size={18} className="text-[#3d6a8a]" />
                 إضافة سياسة تحريرية جديدة
               </h3>
-              <button onClick={() => { setShowCreateForm(false); setCreateError(""); }} className="text-gray-500 hover:text-gray-700 transition-colors">
+              <button onClick={() => { setShowCreateForm(false); setCreateError(""); }} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#94a3b8] hover:text-[#1e293b]">
                 <X size={20} />
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold">الاسم <span className="text-rose-600">*</span></label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الاسم <span className="text-rose-600">*</span></label>
                 <input
                   type="text"
                   value={createForm.name}
                   onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="مثال: تنظيف النص"
-                  className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold">الوصف</label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الوصف</label>
                 <input
                   type="text"
                   value={createForm.description}
                   onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="وصف مختصر للسياسة"
-                  className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-gray-700 font-bold">نوع السياسة <span className="text-rose-600">*</span></label>
+              <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">نوع السياسة <span className="text-rose-600">*</span></label>
               <div className="flex gap-3">
                 <button
                   onClick={() => setCreateForm(f => ({ ...f, isModifying: true }))}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-bold transition-all
-                    ${createForm.isModifying ? "bg-blue-50 border-blue-300 text-blue-700" : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"}`}
+                    ${createForm.isModifying ? "bg-[#3d6a8a]/10 border-[#3d6a8a] text-[#3d6a8a]" : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#4A7C9E]"}`}
                 >
                   <FileEdit size={16} /> سياسة تعديل
                 </button>
                 <button
                   onClick={() => setCreateForm(f => ({ ...f, isModifying: false }))}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-bold transition-all
-                    ${!createForm.isModifying ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"}`}
+                    ${!createForm.isModifying ? "bg-[#FF9F4A]/10 border-[#FF9F4A] text-[#FF8C2E]" : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#FF9F4A]"}`}
                 >
                   <Search size={16} /> سياسة فحص
                 </button>
               </div>
-              <p className="text-[10px] text-gray-600">
+              <p className="text-[10px] text-[#94a3b8]">
                 {createForm.isModifying ? "تعدّل النص وترجع النص المعدّل" : "تفحص النص وترجع تقرير بالمخالفات"}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-gray-700 font-bold">تعليمات المحرر <span className="text-rose-600">*</span></label>
+              <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">تعليمات المحرر <span className="text-rose-600">*</span></label>
               <textarea
                 value={createForm.editorInstructions}
                 onChange={e => setCreateForm(f => ({ ...f, editorInstructions: e.target.value }))}
                 placeholder="اكتب التعليمات التفصيلية للـ AI..."
                 rows={5}
-                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none text-gray-900 placeholder:text-gray-500"
+                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none text-[#1e293b] placeholder:text-[#cbd5e1]"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-gray-700 font-bold">المتغيرات المحقونة <span className="text-gray-500">(اختياري — JSON)</span></label>
+              <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">المتغيرات المحقونة <span className="text-[#94a3b8]">(اختياري — JSON)</span></label>
               <textarea
                 value={createForm.injectedVarsRaw}
                 onChange={e => setCreateForm(f => ({ ...f, injectedVarsRaw: e.target.value }))}
                 placeholder=""
                 rows={5}
-                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none text-gray-900 placeholder:text-gray-500 font-mono"
+                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none text-[#1e293b] placeholder:text-[#cbd5e1] font-mono"
               />
-              <p className="text-[10px] text-gray-600 leading-relaxed">
+              <p className="text-[10px] text-[#94a3b8] leading-relaxed">
                 مثال: عدّل القيم حسب احتياجاتك — banned_words (كلمات ممنوعة)، replacement_map (استبدال)، required_phrases (عبارات مطلوبة)
               </p>
             </div>
@@ -483,14 +483,14 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6"
+            className="bg-white rounded-2xl border border-[#e2e8f0] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
-                <FileEdit size={20} className="text-blue-600" />
+              <h3 className="text-base font-bold flex items-center gap-2 text-[#1e293b]">
+                <FileEdit size={18} className="text-[#3d6a8a]" />
                 تعديل السياسة
               </h3>
-              <button onClick={() => setEditingPolicyId(null)} className="text-gray-500 hover:text-gray-700 transition-colors">
+              <button onClick={() => setEditingPolicyId(null)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#94a3b8] hover:text-[#1e293b]">
                 <X size={20} />
               </button>
             </div>
@@ -503,48 +503,48 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs text-gray-700 font-bold">الاسم <span className="text-rose-600">*</span></label>
+                    <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الاسم <span className="text-rose-600">*</span></label>
                     <input
                       type="text"
                       value={editForm.name}
                       onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="مثال: تنظيف النص"
-                      className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
+                      className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs text-gray-700 font-bold">الوصف</label>
+                    <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الوصف</label>
                     <input
                       type="text"
                       value={editForm.description}
                       onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
                       placeholder="وصف مختصر للسياسة"
-                      className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
+                      className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs text-gray-700 font-bold">تعليمات المحرر <span className="text-rose-600">*</span></label>
+                  <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">تعليمات المحرر <span className="text-rose-600">*</span></label>
                   <textarea
                     value={editForm.editorInstructions}
                     onChange={e => setEditForm(f => ({ ...f, editorInstructions: e.target.value }))}
                     placeholder="اكتب التعليمات التفصيلية للـ AI..."
                     rows={5}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none text-gray-900 placeholder:text-gray-500"
+                    className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none text-[#1e293b] placeholder:text-[#cbd5e1]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs text-gray-700 font-bold">المتغيرات المحقونة <span className="text-gray-500">(اختياري — JSON)</span></label>
+                  <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">المتغيرات المحقونة <span className="text-[#94a3b8]">(اختياري — JSON)</span></label>
                   <textarea
                     value={editForm.injectedVarsRaw}
                     onChange={e => setEditForm(f => ({ ...f, injectedVarsRaw: e.target.value }))}
                     placeholder=""
                     rows={5}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none text-gray-900 placeholder:text-gray-500 font-mono"
+                    className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none text-[#1e293b] placeholder:text-[#cbd5e1] font-mono"
                   />
-                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                  <p className="text-[10px] text-[#94a3b8] leading-relaxed">
                     مثال: عدّل القيم حسب احتياجاتك — banned_words (كلمات ممنوعة)، replacement_map (استبدال)، required_phrases (عبارات مطلوبة)
                   </p>
                 </div>
@@ -582,24 +582,24 @@ export function PoliciesView({ unitId }: { unitId: number | null }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl w-full max-w-md space-y-6"
+            className="bg-white rounded-2xl p-6 border border-[#e2e8f0] shadow-2xl w-full max-w-md space-y-5"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
-                <Trash2 size={20} className="text-rose-600" />
+              <h3 className="text-base font-bold flex items-center gap-2 text-[#1e293b]">
+                <Trash2 size={18} className="text-rose-600" />
                 تأكيد الحذف
               </h3>
-              <button onClick={() => setDeletingPolicyId(null)} className="text-gray-500 hover:text-gray-700 transition-colors">
+              <button onClick={() => setDeletingPolicyId(null)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#94a3b8] hover:text-[#1e293b]">
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-2">
-              <p className="text-gray-700">هل أنت متأكد من حذف السياسة:</p>
-              <p className="text-lg font-bold text-gray-900 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3">
+              <p className="text-[#64748b] text-sm">هل أنت متأكد من حذف السياسة:</p>
+              <p className="text-base font-bold text-[#1e293b] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-3">
                 {deletingPolicyName}
               </p>
-              <p className="text-sm text-gray-600">هذا الإجراء لا يمكن التراجع عنه.</p>
+              <p className="text-xs text-[#94a3b8]">هذا الإجراء لا يمكن التراجع عنه.</p>
             </div>
 
             <div className="flex gap-3">

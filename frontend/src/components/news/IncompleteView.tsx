@@ -217,7 +217,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl border border-e2e8f0 shadow-lg max-w-sm w-full p-8 space-y-6"
+          className="bg-white rounded-2xl border border-[#e2e8f0] shadow-lg max-w-sm w-full p-8 space-y-6"
         >
           <div className="flex items-center justify-center w-12 h-12 bg-rose-100 rounded-full mx-auto">
             <Trash size={24} className="text-rose-600" />
@@ -260,7 +260,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl border border-e2e8f0 shadow-lg max-w-sm w-full p-8 space-y-6"
+          className="bg-white rounded-2xl border border-[#e2e8f0] shadow-lg max-w-sm w-full p-8 space-y-6"
         >
           <div className="flex items-center justify-center w-12 h-12 bg-rose-100 rounded-full mx-auto">
             <Trash2 size={24} className="text-rose-600" />
@@ -312,7 +312,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl p-8 border border-e2e8f0 shadow-md space-y-6">
+        <div className="bg-white rounded-2xl p-8 border border-[#e2e8f0] shadow-md space-y-6">
           <h3 className="text-lg font-bold text-[#1e293b]">تكملة الخبر</h3>
           
           {/* رابط الخبر */}
@@ -346,7 +346,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               </div>
             )}
             {!editedImageUrl && (
-              <div className="w-full h-80 bg-f8fafc rounded-2xl overflow-hidden border border-dashed border-e2e8f0 flex items-center justify-center">
+              <div className="w-full h-80 bg-[#f8fafc] rounded-2xl overflow-hidden border border-dashed border-e2e8f0 flex items-center justify-center">
                 <p className="text-sm text-[#cbd5e1]">لا توجد صورة</p>
               </div>
             )}
@@ -355,7 +355,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               value={editedImageUrl} 
               onChange={(e) => setEditedImageUrl(e.target.value)}
               placeholder="أدخل رابط الصورة (URL)"
-              className="w-full bg-white border border-e2e8f0 rounded-2xl px-4 py-3 text-sm text-[#1e293b] focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 placeholder:text-[#cbd5e1] font-mono"
+              className="w-full bg-white border border-[#e2e8f0] rounded-2xl px-4 py-3 text-sm text-[#1e293b] focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 placeholder:text-[#cbd5e1] font-mono"
             />
             {editedImageUrl && (
               <p className="text-[10px] text-[#64748b] font-mono truncate">{editedImageUrl}</p>
@@ -369,7 +369,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               type="text"
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
-              className="w-full bg-white border border-e2e8f0 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
+              className="w-full bg-white border border-[#e2e8f0] rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
               placeholder="عنوان الخبر"
             />
           </div>
@@ -380,7 +380,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <select
               value={editedCategoryId || ""}
               onChange={(e) => setEditedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full bg-white border border-e2e8f0 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+              className="w-full bg-white border border-[#e2e8f0] rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
             >
               <option value="">-- اختر التصنيف --</option>
               {categories.map((cat) => (
@@ -403,7 +403,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-64 bg-white border border-e2e8f0 rounded-2xl p-4 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none text-[#1e293b] placeholder:text-[#cbd5e1]"
+              className="w-full h-64 bg-white border border-[#e2e8f0] rounded-2xl p-4 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 resize-none text-[#1e293b] placeholder:text-[#cbd5e1]"
               placeholder="محتوى الخبر..."
             />
             <p className="text-[10px] text-[#64748b]">{editedContent.length} حرف</p>
@@ -457,7 +457,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       <Notification notification={notification} onClose={() => setNotification(null)} />
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl p-6 border border-e2e8f0 shadow-md space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-[#e2e8f0] shadow-md space-y-4">
         <h3 className="text-base font-bold text-[#1e293b] flex items-center gap-2">
           <Search size={16} className="text-[#4A7C9E]" />
           البحث والفلترة
@@ -472,7 +472,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
               placeholder="ابحث عن عنوان..."
-              className="w-full bg-white border border-e2e8f0 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
+              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
             />
           </div>
 
@@ -482,7 +482,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-white border border-e2e8f0 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
             >
               <option value="">كل التصنيفات</option>
               {[...new Set(articles.map(a => a.category_name))].map(cat => (
@@ -498,7 +498,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-white border border-e2e8f0 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
             />
           </div>
 
@@ -508,7 +508,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-              className="w-full bg-white border border-e2e8f0 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
             >
               <option value="newest">الأحدث أولاً</option>
               <option value="oldest">الأقدم أولاً</option>
@@ -534,7 +534,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
 
       {/* Results count and pagination info */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-[#cbd5e1]">
+        <div className="text-xs text-[#94a3b8]">
           عدد النتائج: <span className="text-[#1e293b] font-bold">{filteredArticles.length}</span> من <span className="text-[#1e293b] font-bold">{articles.length}</span>
         </div>
         {filteredArticles.length > 0 && (
@@ -545,7 +545,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
             >
               <Trash size={14} /> حذف الكل
             </button>
-            <div className="text-sm text-[#cbd5e1]">
+            <div className="text-xs text-[#94a3b8]">
               الصفحة <span className="text-[#1e293b] font-bold">{currentPage}</span> من <span className="text-[#1e293b] font-bold">{Math.ceil(filteredArticles.length / itemsPerPage)}</span>
             </div>
           </div>
@@ -557,11 +557,11 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       ) : (
         <div className="space-y-4">
           {/* Table */}
-          <div className="bg-white rounded-2xl border border-e2e8f0 shadow-md overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-e2e8f0 bg-f8fafc">
+                  <tr className="border-b border-e2e8f0 bg-[#f8fafc]">
                     <th className="text-right py-4 px-6 text-[#64748b] font-semibold">#</th>
                     <th className="text-right py-4 px-6 text-[#64748b] font-semibold">العنوان</th>
                     <th className="text-right py-4 px-6 text-[#64748b] font-semibold">التصنيف</th>
@@ -575,7 +575,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                   {filteredArticles
                     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                     .map((article: any, idx: number) => (
-                      <tr key={article.id} className="border-b border-e2e8f0 hover:bg-f8fafc transition-colors">
+                      <tr key={article.id} className="border-b border-e2e8f0 hover:bg-[#f8fafc] transition-colors">
                         <td className="py-4 px-6 text-[#64748b] font-mono text-xs">
                           {(currentPage - 1) * itemsPerPage + idx + 1}
                         </td>
@@ -583,7 +583,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                           {article.title || 'بدون عنوان'}
                         </td>
                         <td className="py-4 px-6 text-[#1e293b]">
-                          <span className="bg-[#f0f4f8] text-[#4A7C9E] px-2 py-1 rounded text-xs font-bold">
+                          <span className="bg-[#f0f4f8] text-[#4A7C9E] px-2 py-1 rounded-lg text-[10px] font-bold border border-[#e2e8f0]">
                             {article.category_name || '—'}
                           </span>
                         </td>
@@ -591,7 +591,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                           {article.source_name || '—'}
                         </td>
                         <td className="py-4 px-6 text-center text-[#64748b] text-xs">
-                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold">
+                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-lg text-[10px] font-bold">
                             {article.content?.length || 0}
                           </span>
                         </td>
@@ -602,14 +602,14 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                           <div className="flex gap-2 justify-center">
                             <button
                               onClick={() => handleEdit(article)}
-                              className="bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                              className="bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
                               title="تكملة الخبر"
                             >
                               تكملة
                             </button>
                             <button
                               onClick={() => setDeleteConfirm({ show: true, articleId: article.id })}
-                              className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                              className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
                               title="حذف الخبر"
                             >
                               حذف
@@ -641,8 +641,8 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                     onClick={() => setCurrentPage(page)}
                     className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
                       currentPage === page
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                        ? 'bg-[#3d6a8a] text-white shadow-sm'
+                        : 'bg-[#f8fafc] hover:bg-[#f1f5f9] border border-[#e2e8f0] text-[#64748b]'
                     }`}
                   >
                     {page}

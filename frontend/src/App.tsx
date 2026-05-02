@@ -10,20 +10,17 @@ import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  // News icons
   LayoutDashboard,
   Rss,
   AlertTriangle,
   FileEdit,
   CheckCircle,
   PenTool,
-  // AI icons
   Lightbulb,
   Share2,
   Mic2,
   Newspaper,
   MessageSquare,
-  // Shared icons
   Sparkles,
   Menu,
   X,
@@ -34,9 +31,10 @@ import {
   ChevronRight,
   TrendingUp,
   LogOut,
+  Bell,
+  ChevronLeft,
 } from 'lucide-react';
 
-// ── News Components ──
 import { OverviewView } from './components/news/OverviewView';
 import { SourcesView } from './components/news/SourcesView';
 import { IncompleteView } from './components/news/IncompleteView';
@@ -44,11 +42,7 @@ import { QueueView } from './components/news/QueueView';
 import { PoliciesView } from './components/news/PoliciesView';
 import { PublishedView } from './components/news/PublishedView';
 import { SystemSettingsModal } from './components/shared/SystemSettingsModal';
-
-// ── Auth Components ──
 import { LoginPage } from './components/auth/LoginPage';
-
-// ── AI Components ──
 import IdeaGeneration from './components/ai/IdeaGeneration';
 import TextEditing from './components/ai/TextEditing';
 import SocialMedia from './components/ai/SocialMedia';
@@ -56,100 +50,94 @@ import AudioProcessing from './components/ai/AudioProcessing';
 import NewsRoom from './components/ai/NewsRoom';
 import ChatInterface from './components/ai/ChatInterface';
 
-// ── Services ──
 import { api, getAuthToken, getCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
 import { useRenderTracker } from './lib/useRenderTracker';
 import { useDebounce } from './lib/useDebounce';
 
-// ─── Types ────────────────────────────────────────────────────
+// دعم runtime environment variables من Docker
+const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
+  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+    return window.ENV[key];
+  }
+  return import.meta.env[key];
+};
+
 type SectionId =
-  // News sections
   | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published'
-  // AI sections
   | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat';
 
 interface NavGroup {
   label: string;
+  icon: any;
   items: { id: SectionId; label: string; icon: any }[];
 }
 
-// ─── Navigation Structure ─────────────────────────────────────
 const NAV_GROUPS: NavGroup[] = [
   {
     label: 'إدارة الأخبار',
+    icon: Newspaper,
     items: [
-      { id: 'overview',   label: 'نظرة عامة',          icon: LayoutDashboard },
-      { id: 'sources',    label: 'مصادر المحتوى',       icon: Rss },
-      { id: 'incomplete', label: 'أخبار غير مكتملة',    icon: AlertTriangle },
-      { id: 'queue',      label: 'ستوديو التحرير',      icon: FileEdit },
-      { id: 'policies',   label: 'السياسات التحريرية',   icon: PenTool },
-      { id: 'published',  label: 'الأرشيف المنشور',     icon: CheckCircle },
+      { id: 'overview',   label: 'نظرة عامة',         icon: LayoutDashboard },
+      { id: 'sources',    label: 'مصادر المحتوى',      icon: Rss },
+      { id: 'incomplete', label: 'أخبار غير مكتملة',   icon: AlertTriangle },
+      { id: 'queue',      label: 'ستوديو التحرير',     icon: FileEdit },
+      { id: 'policies',   label: 'السياسات التحريرية',  icon: PenTool },
+      { id: 'published',  label: 'الأرشيف المنشور',    icon: CheckCircle },
     ],
   },
   {
     label: 'أدوات الذكاء الاصطناعي',
+    icon: Sparkles,
     items: [
-      { id: 'ai-dashboard', label: 'وحدة AI',            icon: Sparkles },
-      { id: 'ideas',        label: 'وحدة التفكير',        icon: Lightbulb },
-      { id: 'editing',      label: 'التحرير الصحفي',      icon: PenTool },
-      { id: 'social',       label: 'التواصل الاجتماعي',   icon: Share2 },
-      { id: 'audio',        label: 'المختبر الصوتي',      icon: Mic2 },
-      { id: 'newsroom',     label: 'غرفة الأخبار',        icon: Newspaper },
-      { id: 'chat',         label: 'مساعد AI ذكي',        icon: MessageSquare },
+      { id: 'ai-dashboard', label: 'وحدة AI',           icon: Sparkles },
+      { id: 'ideas',        label: 'وحدة التفكير',       icon: Lightbulb },
+      { id: 'editing',      label: 'التحرير الصحفي',     icon: PenTool },
+      { id: 'social',       label: 'التواصل الاجتماعي',  icon: Share2 },
+      { id: 'audio',        label: 'المختبر الصوتي',     icon: Mic2 },
+      { id: 'newsroom',     label: 'غرفة الأخبار',       icon: Newspaper },
+      { id: 'chat',         label: 'مساعد AI ذكي',       icon: MessageSquare },
     ],
   },
 ];
 
-// ─── Section Labels (flat) ────────────────────────────────────
 const SECTION_LABELS: Record<SectionId, string> = {} as any;
 NAV_GROUPS.forEach(g => g.items.forEach(i => { (SECTION_LABELS as any)[i.id] = i.label; }));
 
-// ─── Section Icons (flat) ─────────────────────────────────────
 const SECTION_ICONS: Record<SectionId, any> = {} as any;
 NAV_GROUPS.forEach(g => g.items.forEach(i => { (SECTION_ICONS as any)[i.id] = i.icon; }));
 
 export default function App() {
-  // ═══ جميع الـ useState hooks في البداية ═══
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const token = getAuthToken();
     const user = getCurrentUser();
-    console.log('🔍 [APP] Initial auth check - token:', !!token, 'user:', !!user);
     return !!(token && user);
   });
-  
-  const [currentUser, setCurrentUserState] = useState(() => {
-    return getCurrentUser();
-  });
-  
+
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
+
   const [isCheckingAuth, setIsCheckingAuth] = useState(() => {
     const token = getAuthToken();
     const user = getCurrentUser();
-    
-    // فقط نتحقق إذا كان في توكن بس مافيش user
-    const shouldCheck = !!(token && !user);
-    console.log('🔍 [APP] Initial checking state:', shouldCheck, 'token:', !!token, 'user:', !!user);
-    
-    return shouldCheck;
+    return !!(token && !user);
   });
-  
+
   const [activeSection, setActiveSection] = useState<SectionId>(() => {
     const saved = localStorage.getItem('activeSection');
     return (saved as SectionId) || 'overview';
   });
 
-  // مراقب الأداء في وضع التطوير فقط
   if (process.env.NODE_ENV === 'development') {
     useRenderTracker('App', { isAuthenticated, isCheckingAuth, activeSection });
   }
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMediaUnitOpen, setIsMediaUnitOpen] = useState(true);
   const [selectedMediaUnitId, setSelectedMediaUnitId] = useState<number | null>(() => {
     const saved = localStorage.getItem('selectedUnitId');
     return saved ? Number(saved) : null;
   });
-  
+
   const [isSystemOnline, setIsSystemOnline] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -157,17 +145,12 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{ id: SectionId; label: string; group: string }>>([]);
 
-  // ═══ جميع الـ custom hooks بعد useState ═══
   const { mediaUnits, loading, refetch: refetchMediaUnits } = useMediaUnits();
 
-  // ═══ جميع الـ useEffect hooks بترتيب ثابت ═══
-  
-  // 1. Persist activeSection
   useEffect(() => {
     localStorage.setItem('activeSection', activeSection);
   }, [activeSection]);
 
-  // 2. Persist selectedMediaUnitId  
   useEffect(() => {
     if (selectedMediaUnitId) {
       localStorage.setItem('selectedUnitId', String(selectedMediaUnitId));
@@ -176,138 +159,71 @@ export default function App() {
     }
   }, [selectedMediaUnitId]);
 
-  // 3. Token verification - CRITICAL: Run only once on mount
   useEffect(() => {
     let isMounted = true;
-    let hasRun = false; // Prevent multiple runs
-    
+    let hasRun = false;
+
     const verifyToken = async () => {
-      // CRITICAL: Prevent multiple executions
-      if (hasRun || !isCheckingAuth) {
-        return;
-      }
+      if (hasRun || !isCheckingAuth) return;
       hasRun = true;
 
-      console.log('🔐 [APP] بدء التحقق من التوكن');
-      
       try {
         const token = getAuthToken();
-        
         if (!token) {
-          console.log('❌ [APP] لا يوجد توكن في localStorage');
-          if (isMounted) {
-            setIsAuthenticated(false);
-            setIsCheckingAuth(false);
-          }
+          if (isMounted) { setIsAuthenticated(false); setIsCheckingAuth(false); }
           return;
         }
-
-        console.log('✅ [APP] وجدنا توكن:', token.substring(0, 20) + '...');
 
         const user = getCurrentUser();
         if (user) {
-          console.log('✅ [APP] وجدنا بيانات المستخدم في localStorage:', user.name);
-          if (isMounted) {
-            setCurrentUserState(user);
-            setIsAuthenticated(true);
-            setIsCheckingAuth(false);
-          }
+          if (isMounted) { setCurrentUserState(user); setIsAuthenticated(true); setIsCheckingAuth(false); }
           return;
         }
 
-        console.log('🌐 [APP] جاري التحقق من صحة التوكن...');
-
-        const managementApiUrl = import.meta.env.VITE_MANAGEMENT_API_URL || 'https://media-center-management-system.onrender.com';
-
+        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://media-center-management-system.onrender.com';
         try {
-          const response = await fetch(
-            `${managementApiUrl}/api/auth/me`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-
+          const response = await fetch(`${managementApiUrl}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          });
           if (!isMounted) return;
-
           if (response.ok) {
             const data = await response.json();
-            
             if (data.success && data.data) {
-              console.log('💾 [APP] حفظ بيانات المستخدم:', data.data.name);
               setCurrentUserState(data.data);
               setIsAuthenticated(true);
             } else {
-              console.error('❌ [APP] لا توجد بيانات في الرد');
-              clearAuthToken();
-              clearCurrentUser();
-              setIsAuthenticated(false);
+              clearAuthToken(); clearCurrentUser(); setIsAuthenticated(false);
             }
-          } else if (response.status === 401) {
-            console.log('⏱️ [APP] التوكن انتهى (401)');
-            clearAuthToken();
-            clearCurrentUser();
-            setIsAuthenticated(false);
           } else {
-            console.error('❌ [APP] خطأ من السيرفر:', response.status);
-            clearAuthToken();
-            clearCurrentUser();
-            setIsAuthenticated(false);
+            clearAuthToken(); clearCurrentUser(); setIsAuthenticated(false);
           }
-        } catch (fetchError) {
-          console.error('❌ [APP] خطأ في الاتصال:', fetchError);
-          
-          if (!isMounted) return;
-          
+        } catch {
           const savedUser = getCurrentUser();
           if (savedUser && token) {
-            console.log('⚠️ [APP] فشل التحقق من السيرفر، لكن سنستخدم البيانات المحفوظة');
-            setCurrentUserState(savedUser);
-            setIsAuthenticated(true);
+            setCurrentUserState(savedUser); setIsAuthenticated(true);
           } else {
-            clearAuthToken();
-            clearCurrentUser();
-            setIsAuthenticated(false);
+            clearAuthToken(); clearCurrentUser(); setIsAuthenticated(false);
           }
         }
-      } catch (error) {
-        console.error('❌ [APP] خطأ عام في التحقق:', error);
-        if (isMounted) {
-          setIsAuthenticated(false);
-        }
+      } catch {
+        if (isMounted) setIsAuthenticated(false);
       } finally {
-        console.log('🏁 [APP] انتهاء التحقق من التوكن');
-        if (isMounted) {
-          setIsCheckingAuth(false);
-        }
+        if (isMounted) setIsCheckingAuth(false);
       }
     };
 
-    if (isCheckingAuth) {
-      verifyToken();
-    }
+    if (isCheckingAuth) verifyToken();
 
     const emergencyTimeout = setTimeout(() => {
-      console.warn('⚠️ [APP] Timeout احتياطي - إجبار إنهاء التحقق');
-      if (isMounted) {
-        setIsCheckingAuth(false);
-      }
+      if (isMounted) setIsCheckingAuth(false);
     }, 8000);
 
-    return () => {
-      isMounted = false;
-      clearTimeout(emergencyTimeout);
-    };
-  }, []); // CRITICAL: Empty dependency array - run only once on mount
+    return () => { isMounted = false; clearTimeout(emergencyTimeout); };
+  }, []);
 
-  // 4. System status - Run only once after authentication
   useEffect(() => {
     let isMounted = true;
-    
     if (!isAuthenticated) return;
-    
     api.getSystemToggles()
       .then((res) => {
         if (isMounted) {
@@ -315,94 +231,46 @@ export default function App() {
           setIsSystemOnline(!!(d.scheduler_enabled && d.classifier_enabled && d.flow_enabled));
         }
       })
-      .catch(() => {
-        if (isMounted) {
-          setIsSystemOnline(false);
-        }
-      });
-      
-    return () => {
-      isMounted = false;
-    };
+      .catch(() => { if (isMounted) setIsSystemOnline(false); });
+    return () => { isMounted = false; };
   }, [isAuthenticated]);
 
-  // 5. Reload media units when authenticated - Run only once
   useEffect(() => {
     let isMounted = true;
-    
     if (!isAuthenticated) return;
-    
-    // إعادة تحميل الوحدات الإعلامية عند تسجيل الدخول
-    console.log('🔄 [APP] إعادة تحميل الوحدات الإعلامية بعد تسجيل الدخول');
-    // نمسح الـ cache ونعيد الجلب
     if (isMounted) {
       clearMediaUnitsCache();
-      // نستدعي refetch بعد مسح الـ cache مباشرة
-      setTimeout(() => {
-        if (isMounted) {
-          console.log('🔄 [APP] استدعاء refetch للوحدات الإعلامية');
-          refetchMediaUnits();
-        }
-      }, 100);
+      setTimeout(() => { if (isMounted) refetchMediaUnits(); }, 100);
     }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [isAuthenticated]); // ✅ FIXED: إزالة refetchMediaUnits من dependencies
+    return () => { isMounted = false; };
+  }, [isAuthenticated]);
 
-  // 6. Search functionality with debounce
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  
-  useEffect(() => {
-    if (debouncedSearchQuery.trim() === '') {
-      setSearchResults([]);
-      return;
-    }
 
+  useEffect(() => {
+    if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; }
     const query = debouncedSearchQuery.toLowerCase().trim();
     const results: Array<{ id: SectionId; label: string; group: string }> = [];
-
     NAV_GROUPS.forEach((group) => {
       group.items.forEach((item) => {
-        if (
-          item.label.toLowerCase().includes(query) ||
-          group.label.toLowerCase().includes(query)
-        ) {
-          results.push({
-            id: item.id,
-            label: item.label,
-            group: group.label,
-          });
+        if (item.label.toLowerCase().includes(query) || group.label.toLowerCase().includes(query)) {
+          results.push({ id: item.id, label: item.label, group: group.label });
         }
       });
     });
-
     setSearchResults(results);
   }, [debouncedSearchQuery]);
-  
-  // دالة تسجيل الخروج - مع useCallback لمنع إعادة التصيير
+
   const handleLogout = useCallback(() => {
-    console.log('🚪 [LOGOUT] بدء عملية تسجيل الخروج');
-    
-    // تحديث الحالة فوراً قبل مسح البيانات
     setIsAuthenticated(false);
     setCurrentUserState(null);
     setIsCheckingAuth(false);
-    
-    // وضع flag إنه تم عمل logout
     localStorage.setItem('justLoggedOut', 'true');
-    
-    // مسح التوكن وبيانات المستخدم
     clearAuthToken();
     clearCurrentUser();
-    
-    // مسح cache وحدات الإعلام
     clearMediaUnitsCache();
-    
-    console.log('✅ [LOGOUT] تم تسجيل الخروج بنجاح - العودة لصفحة اللوجين فوراً');
   }, []);
-  
+
   const toggleGroup = useCallback((label: string) => {
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
   }, []);
@@ -413,239 +281,232 @@ export default function App() {
     setIsSearchOpen(false);
   }, []);
 
-  const showMediaUnitFilter = isSidebarOpen;
   const ActiveIcon = SECTION_ICONS[activeSection] || LayoutDashboard;
+  const isAISection = activeSection.startsWith('ai-') || ['ideas', 'editing', 'social', 'audio', 'newsroom', 'chat'].includes(activeSection);
 
-  // ═══ Early returns مع error handling ═══
-  
-  // إذا لم يكن المستخدم مسجل دخول — عرض صفحة تسجيل الدخول
   if (!isAuthenticated) {
     return (
       <LoginPage
         onLoginSuccess={() => {
-          console.log('🎉 [APP] تم استدعاء onLoginSuccess');
           const user = getCurrentUser();
-          console.log('👤 [APP] بيانات المستخدم بعد Login:', user);
-          
-          // تحديث الحالة فوراً
           setIsAuthenticated(true);
           setCurrentUserState(user);
           setIsCheckingAuth(false);
-          
-          console.log('✅ [APP] تم تحديث جميع الحالات بعد Login - دخول فوري للنظام');
         }}
       />
     );
   }
 
-  // إذا كان التطبيق بيتحقق من التوكن — عرض loading (بس لفترة قصيرة)
   if (isCheckingAuth) {
-    console.log('⏳ [APP] عرض شاشة التحميل - isCheckingAuth:', isCheckingAuth);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#2d5570] via-[#3d6a8a] to-[#2d5570] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/30 mx-auto mb-3 animate-pulse relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-            <TrendingUp className="text-white w-6 h-6 relative z-10" />
+      <div className="min-h-screen bg-gradient-to-br from-[#1f3a4f] via-[#2d5570] to-[#1f3a4f] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-2xl shadow-[#FF9F4A]/40 mx-auto relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
+            <TrendingUp className="text-white w-8 h-8 relative z-10" />
           </div>
-          <p className="text-[#cbd5e1] text-sm">جاري التحقق من بيانات الدخول...</p>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+          <p className="text-white/60 text-sm">جاري التحقق من بيانات الدخول...</p>
         </div>
       </div>
     );
   }
 
+  const selectedUnitName = selectedMediaUnitId
+    ? mediaUnits.find((m: { id: number }) => m.id === selectedMediaUnitId)?.name
+    : null;
+
   return (
-    <div 
-      className="min-h-screen flex text-[#1e293b] selection:bg-[#FF9F4A]/30 bg-f8fafc"
-      style={{ 
-        paddingRight: isSidebarOpen ? '260px' : '70px', 
+    <div
+      className="min-h-screen flex text-[#1e293b] bg-[#f0f4f8]"
+      style={{
+        paddingRight: isSidebarOpen ? '272px' : '72px',
         transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
-      {/* ══════════════════════════════════════════════════════════
-          SIDEBAR
-         ══════════════════════════════════════════════════════════ */}
+      {/* ══ SIDEBAR ══ */}
       <motion.aside
         initial={false}
-        animate={{ width: isSidebarOpen ? 260 : 70 }}
-        className="bg-gradient-to-b from-[#2d5570] to-[#1f3a4f] border-l border-white/10 flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden max-w-[90vw] sm:max-w-none shadow-2xl"
+        animate={{ width: isSidebarOpen ? 272 : 72 }}
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        className="bg-gradient-to-b from-[#1f3a4f] to-[#0f2535] flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden shadow-2xl"
       >
-        {/* Logo & Header */}
-        <div className="p-4 sm:p-6 flex items-center justify-between shrink-0 border-b border-white/10 bg-[#2d5570]/90 backdrop-blur-sm">
+        {/* Logo Header */}
+        <div className="h-16 flex items-center justify-between px-4 shrink-0 border-b border-white/8">
+          <AnimatePresence>
+            {isSidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-3 min-w-0"
+              >
+                <div className="w-9 h-9 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 shrink-0">
+                  <TrendingUp className="text-white w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-arabic font-bold text-base text-white leading-none">مركز <span className="text-[#FF9F4A]">الإعلام</span></p>
+                  <p className="text-white/40 text-[10px] mt-0.5">نظام الأخبار</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!isSidebarOpen && (
+            <div className="w-9 h-9 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 mx-auto">
+              <TrendingUp className="text-white w-5 h-5" />
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0 ${!isSidebarOpen ? 'hidden' : ''}`}
+          >
+            <ChevronLeft size={18} className="text-white/60 hover:text-white transition-colors" />
+          </button>
+        </div>
+
+        {/* Toggle button when collapsed */}
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="mx-auto mt-3 p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <Menu size={18} className="text-white/60 hover:text-white transition-colors" />
+          </button>
+        )}
+
+        {/* System Status Pill */}
+        <AnimatePresence>
           {isSidebarOpen && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              transition={{ delay: 0.1 }}
-              className="flex items-center gap-3 min-w-0"
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mx-4 mt-3 mb-1"
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/40 shrink-0 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                <TrendingUp className="text-white w-7 h-7 relative z-10" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-arabic font-bold text-xl tracking-tight truncate text-white">
-                  مركز <span className="text-[#FF9F4A]">الإعلام</span>
-                </span>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold ${
+                isSystemOnline
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-white/5 border-white/10 text-white/40'
+              }`}>
+                <div className={`w-2 h-2 rounded-full shrink-0 ${isSystemOnline ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
+                <span>{isSystemOnline ? 'النظام الآلي نشط' : 'النظام الآلي متوقف'}</span>
               </div>
             </motion.div>
           )}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-3 hover:bg-white/10 rounded-xl transition-all duration-200 hover:shadow-lg shrink-0 group"
-          >
-            <motion.div
-              animate={{ rotate: isSidebarOpen ? 0 : 180 }}
-              transition={{ duration: 0.3 }}
-            >
-              {isSidebarOpen ? <X size={20} className="text-white group-hover:text-[#FF9F4A] transition-colors" /> : <Menu size={20} className="text-white group-hover:text-[#FF9F4A] transition-colors" />}
-            </motion.div>
-          </motion.button>
-        </div>
+        </AnimatePresence>
 
-        {/* Navigation Groups */}
-        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-6 overflow-y-auto custom-scrollbar">
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 custom-scrollbar">
           {NAV_GROUPS.map((group, groupIndex) => (
-            <motion.div 
-              key={group.label} 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: groupIndex * 0.1 }}
-              className="space-y-2"
-            >
-              {/* Group Items - بدون header */}
-              <motion.div 
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 1 }}
-                className="space-y-2"
-              >
-                {group.items.map((item, itemIndex) => {
-                  const isActive = activeSection === item.id;
-                  const Icon = item.icon;
-                  return (
-                    <motion.button
-                      key={item.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: itemIndex * 0.05 }}
-                      whileHover={{ x: 4, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setActiveSection(item.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden
-                        ${isActive
-                          ? 'bg-gradient-to-r from-[#FF9F43] to-[#FF8C2E] text-white shadow-lg shadow-[#FF9F43]/30'
-                          : 'text-white/80 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/20'
-                        }`}
-                    >
-                      {/* Background glow effect for active item */}
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeGlow"
-                          className="absolute inset-0 bg-gradient-to-r from-[#FF9F43]/20 to-[#FF8C2E]/20 rounded-xl blur-sm"
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                      )}
-                      
-                      <div className={`p-2 rounded-lg transition-all duration-300 relative z-10 ${
-                        isActive 
-                          ? 'bg-white/20 shadow-lg' 
-                          : 'group-hover:bg-white/10'
-                      }`}>
-                        <Icon size={18} className={`transition-all duration-300 ${
-                          isActive ? 'text-white' : 'text-white/90 group-hover:text-white'
-                        }`} />
-                      </div>
-                      
-                      {isSidebarOpen && (
-                        <motion.span
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="font-semibold text-sm whitespace-nowrap truncate relative z-10"
-                        >
-                          {item.label}
-                        </motion.span>
-                      )}
-                      
-                      {/* Active indicator */}
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeIndicator"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-lg shadow-white/50"
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </motion.div>
-              
-              {/* Elegant divider between groups */}
-              {groupIndex < NAV_GROUPS.length - 1 && isSidebarOpen && (
-                <motion.div 
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="h-px bg-gradient-to-r from-transparent via-white/30 to-transparent my-6 relative"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF9F43]/30 to-transparent blur-sm"></div>
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
+            <div key={group.label} className="mb-1">
+              {/* Group Label */}
+              <AnimatePresence>
+                {isSidebarOpen && (
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => toggleGroup(group.label)}
+                    className="w-full flex items-center justify-between px-4 py-2 mb-1 group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <group.icon size={13} className="text-[#FF9F4A]/70" />
+                      <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase group-hover:text-white/60 transition-colors">
+                        {group.label}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      size={13}
+                      className={`text-white/30 transition-transform duration-200 ${collapsedGroups[group.label] ? '-rotate-90' : ''}`}
+                    />
+                  </motion.button>
+                )}
+              </AnimatePresence>
 
-          {/* Settings Button */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="pt-4 border-t border-white/20"
-          >
-            <motion.button
-              whileHover={{ x: 4, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setIsSettingsOpen(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-white/80 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/20 group relative overflow-hidden"
-            >
-              <div className="p-2 rounded-lg transition-all duration-300 group-hover:bg-white/10">
-                <Settings2 size={18} className="text-white/90 group-hover:text-[#FF9F43] transition-colors duration-300" />
-              </div>
-              {isSidebarOpen && (
-                <motion.span 
-                  initial={{ opacity: 0, x: 10 }} 
-                  animate={{ opacity: 1, x: 0 }} 
-                  className="font-semibold text-sm whitespace-nowrap truncate"
-                >
-                  إعدادات النظام
-                </motion.span>
+              {/* Group Items */}
+              <AnimatePresence>
+                {!collapsedGroups[group.label] && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden px-3 space-y-0.5"
+                  >
+                    {group.items.map((item) => {
+                      const isActive = activeSection === item.id;
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => setActiveSection(item.id)}
+                          title={!isSidebarOpen ? item.label : undefined}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative ${
+                            isActive
+                              ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                              : 'text-white/60 hover:bg-white/8 hover:text-white'
+                          } ${!isSidebarOpen ? 'justify-center' : ''}`}
+                        >
+                          {/* Active left indicator */}
+                          {isActive && isSidebarOpen && (
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white/60 rounded-l-full" />
+                          )}
+
+                          <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                            isActive
+                              ? 'bg-white/20'
+                              : 'group-hover:bg-white/8'
+                          }`}>
+                            <Icon size={16} className={`transition-colors ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
+                          </div>
+
+                          {isSidebarOpen && (
+                            <span className={`text-sm font-medium truncate transition-colors ${
+                              isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
+                            }`}>
+                              {item.label}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Divider between groups */}
+              {groupIndex < NAV_GROUPS.length - 1 && (
+                <div className="mx-4 mt-3 mb-2 h-px bg-white/8" />
               )}
-            </motion.button>
-          </motion.div>
+            </div>
+          ))}
         </nav>
 
-        {/* ── Media Unit Filter ── */}
+        {/* Media Unit Selector */}
         <AnimatePresence>
-          {showMediaUnitFilter && (
+          {isSidebarOpen && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="mx-2 sm:mx-3 mb-4 overflow-hidden shrink-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mx-3 mb-3 overflow-hidden"
             >
-              <div className="bg-white/10 border border-white/20 rounded-2xl overflow-hidden backdrop-blur-sm">
+              <div className="bg-white/6 border border-white/10 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setIsMediaUnitOpen(!isMediaUnitOpen)}
-                  className="w-full flex items-center justify-between px-2 sm:px-3 py-2.5 hover:bg-white/10 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/5 transition-colors"
                 >
-                  <ChevronDown
-                    size={16}
-                    className={`text-white/70 transition-transform shrink-0 ${isMediaUnitOpen ? 'rotate-180' : ''}`}
-                  />
-                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                    <Building2 size={16} className="text-[#FF9F43] shrink-0" />
-                    <span className="text-xs font-bold text-white truncate">الوحدة الإعلامية</span>
+                  <ChevronDown size={14} className={`text-white/50 transition-transform ${isMediaUnitOpen ? 'rotate-180' : ''}`} />
+                  <div className="flex items-center gap-2">
+                    <Building2 size={14} className="text-[#FF9F4A]" />
+                    <span className="text-xs font-semibold text-white/70">الوحدة الإعلامية</span>
                   </div>
                 </button>
 
@@ -657,41 +518,35 @@ export default function App() {
                       exit={{ height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-2 sm:px-3 pb-3 space-y-1">
+                      <div className="px-3 pb-3 space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
                         <button
                           onClick={() => setSelectedMediaUnitId(null)}
-                          className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
+                          className={`w-full text-right px-3 py-1.5 rounded-lg text-xs transition-all ${
                             selectedMediaUnitId === null
-                              ? 'bg-[#FF9F43] text-white shadow-lg shadow-[#FF9F43]/30'
-                              : 'text-white/70 hover:bg-white/10 hover:text-white'
+                              ? 'bg-[#FF9F4A]/20 text-[#FF9F4A] font-semibold'
+                              : 'text-white/50 hover:text-white hover:bg-white/8'
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === null ? 'bg-white' : 'bg-transparent'}`} />
-                          <span>الكل</span>
+                          الكل
                         </button>
-                        {mediaUnits.length > 0 ? (
+                        {loading ? (
+                          <p className="text-xs text-white/30 text-center py-2">تحميل...</p>
+                        ) : mediaUnits.length === 0 ? (
+                          <p className="text-xs text-white/30 text-center py-2">لا توجد وحدات</p>
+                        ) : (
                           mediaUnits.map((mu: { id: number; name: string }) => (
                             <button
                               key={mu.id}
                               onClick={() => setSelectedMediaUnitId(mu.id)}
-                              className={`w-full text-right px-2 sm:px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
+                              className={`w-full text-right px-3 py-1.5 rounded-lg text-xs transition-all truncate ${
                                 selectedMediaUnitId === mu.id
-                                  ? 'bg-[#FF9F43] text-white shadow-lg shadow-[#FF9F43]/30'
-                                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                  ? 'bg-[#FF9F4A]/20 text-[#FF9F4A] font-semibold'
+                                  : 'text-white/50 hover:text-white hover:bg-white/8'
                               }`}
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedMediaUnitId === mu.id ? 'bg-white' : 'bg-white/30'}`} />
-                              <span className="truncate">{mu.name}</span>
+                              {mu.name}
                             </button>
                           ))
-                        ) : loading ? (
-                          <div className="px-2 sm:px-3 py-2 text-xs text-white/50 text-center">
-                            جاري تحميل الوحدات...
-                          </div>
-                        ) : (
-                          <div className="px-2 sm:px-3 py-2 text-xs text-white/50 text-center">
-                            لا توجد وحدات إعلامية
-                          </div>
                         )}
                       </div>
                     </motion.div>
@@ -702,191 +557,215 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Logout Section */}
-        <div className="p-3 sm:p-4 border-t border-gradient-to-r from-white/5 via-white/10 to-white/5 shrink-0">
-          <motion.button
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleLogout}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-gray-300 hover:bg-gradient-to-r hover:from-red-500/10 hover:to-red-600/10 hover:text-red-400 border border-white/10 hover:border-red-500/30 group relative overflow-hidden ${!isSidebarOpen && 'justify-center'}`}
+        {/* Settings + Logout Footer */}
+        <div className="border-t border-white/8 p-3 space-y-1 shrink-0">
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            title={!isSidebarOpen ? 'إعدادات النظام' : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-white/50 hover:bg-white/8 hover:text-white group ${!isSidebarOpen ? 'justify-center' : ''}`}
           >
-            {/* Background glow effect */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-red-600/5 rounded-xl"
-            />
-            
-            <div className="p-2 rounded-lg transition-all duration-300 group-hover:bg-red-500/20 relative z-10">
-              <LogOut size={18} className="shrink-0 transition-all duration-300 group-hover:rotate-12" />
+            <div className="w-8 h-8 flex items-center justify-center rounded-lg group-hover:bg-white/8">
+              <Settings2 size={16} />
             </div>
-            
-            {isSidebarOpen && (
-              <motion.span 
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="font-semibold text-sm whitespace-nowrap relative z-10"
+            {isSidebarOpen && <span className="text-sm font-medium">إعدادات النظام</span>}
+          </button>
+
+          {isSidebarOpen ? (
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#4A7C9E] to-[#3d6a8a] flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-lg">
+                {currentUser?.name?.charAt(0) || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{currentUser?.name || 'المستخدم'}</p>
+                <p className="text-[10px] text-[#FF9F4A]/80 truncate">{currentUser?.roles?.[0]?.name || 'موظف'}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-white/30 hover:text-red-400 shrink-0"
+                title="تسجيل الخروج"
               >
-                تسجيل الخروج
-              </motion.span>
-            )}
-          </motion.button>
+                <LogOut size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogout}
+              title="تسجيل الخروج"
+              className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all text-white/30 hover:bg-red-500/15 hover:text-red-400"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </motion.aside>
 
-      {/* ══════════════════════════════════════════════════════════
-          MAIN CONTENT
-         ══════════════════════════════════════════════════════════ */}
-      <main className="flex-1 flex flex-col transition-all duration-300 bg-f8fafc h-screen overflow-hidden">
-        {/* Header */}
-        <header className="h-14 border-b border-e2e8f0 flex items-center justify-between px-3 sm:px-6 bg-white/90 backdrop-blur-md sticky top-0 z-40 shadow-sm shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="text-[#64748b] text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate">
-              <span className="hidden sm:inline">الرئيسية</span>
-              <ChevronRight size={14} className="shrink-0" />
-              <span className="text-[#1e293b] font-medium truncate">{SECTION_LABELS[activeSection]}</span>
+      {/* ══ MAIN CONTENT ══ */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Top Header */}
+        <header className="h-16 shrink-0 bg-white border-b border-[#e2e8f0] flex items-center justify-between px-5 sm:px-6 shadow-sm">
+          {/* Left: Breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                isAISection
+                  ? 'bg-purple-100'
+                  : 'bg-[#3d6a8a]/10'
+              }`}>
+                <ActiveIcon size={16} className={isAISection ? 'text-purple-600' : 'text-[#3d6a8a]'} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[#64748b] text-xs">
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="hidden sm:inline text-[#64748b] hover:text-[#4A7C9E] transition-colors cursor-pointer"
+                  >الرئيسية</button>
+                  <ChevronRight size={12} className="hidden sm:block shrink-0" />
+                  <span className={`font-semibold truncate ${isAISection ? 'text-purple-700' : 'text-[#1e293b]'}`}>
+                    {SECTION_LABELS[activeSection]}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {/* Active media unit badge */}
-            {selectedMediaUnitId !== null && mediaUnits.length > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#FF9F43]/10 border border-[#FF9F43]/20 rounded-xl">
-                <Building2 size={12} className="text-[#FF9F43] shrink-0" />
-                <span className="text-xs text-[#FF9F43] font-medium truncate max-w-[150px]">
-                  {mediaUnits.find((m: { id: number }) => m.id === selectedMediaUnitId)?.name || `الوحدة ${selectedMediaUnitId}`}
-                </span>
+            {/* Active unit badge */}
+            {selectedUnitName && (
+              <div className="hidden sm:flex items-center gap-1.5 bg-[#FF9F4A]/10 border border-[#FF9F4A]/20 text-[#FF9F4A] px-2.5 py-1 rounded-lg text-xs font-medium">
+                <Building2 size={11} />
+                <span className="max-w-[120px] truncate">{selectedUnitName}</span>
                 <button
                   onClick={() => setSelectedMediaUnitId(null)}
-                  className="text-[#FF9F43]/60 hover:text-[#FF9F43] transition-colors shrink-0"
+                  className="hover:text-[#FF8C2E] transition-colors"
                 >
-                  <X size={12} />
+                  <X size={11} />
                 </button>
               </div>
             )}
+          </div>
 
-            <div className="relative group hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#FF9F43] transition-colors" size={16} />
-              <input
-                type="text"
-                placeholder="بحث سريع..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchOpen(true)}
-                onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
-                className="bg-white border border-gray-300 rounded-full pl-4 pr-10 py-1.5 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF9F43]/50 focus:ring-1 focus:ring-[#FF9F43]/30 focus:w-64 transition-all w-48"
-              />
-              
-              {/* Search Results Dropdown */}
-              <AnimatePresence>
-                {isSearchOpen && searchResults.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50"
-                  >
-                    <div className="p-2 border-b border-gray-200 bg-gradient-to-r from-[#FF9F43]/10 to-transparent">
-                      <p className="text-xs text-gray-600 px-3 py-1">نتائج البحث ({searchResults.length})</p>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                      {searchResults.map((result) => {
-                        const Icon = SECTION_ICONS[result.id];
-                        return (
-                          <button
-                            key={result.id}
-                            onClick={() => handleSearchSelect(result.id)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FF9F43]/10 transition-colors text-right group"
-                          >
-                            <Icon size={18} className="text-[#FF9F43] group-hover:text-[#FF8C2E] transition-colors shrink-0" />
-                            <div className="flex flex-col items-end flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-gray-800 truncate w-full">{result.label}</span>
-                              <span className="text-xs text-gray-500 truncate w-full">{result.group}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
+          {/* Right: Search + User */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Search */}
+            <div className="relative hidden md:block">
+              <div className="flex items-center gap-2 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 focus-within:border-[#FF9F4A]/50 focus-within:ring-2 focus-within:ring-[#FF9F4A]/10 transition-all">
+                <Search size={15} className="text-[#94a3b8] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="بحث سريع..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
+                  className="bg-transparent text-sm text-[#1e293b] placeholder-[#94a3b8] focus:outline-none w-40 focus:w-52 transition-all duration-300"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="text-[#94a3b8] hover:text-[#64748b]">
+                    <X size={13} />
+                  </button>
                 )}
-              </AnimatePresence>
-              
-              {/* No Results */}
+              </div>
+
+              {/* Search Dropdown */}
               <AnimatePresence>
-                {isSearchOpen && searchQuery.trim() !== '' && searchResults.length === 0 && (
+                {isSearchOpen && (searchResults.length > 0 || searchQuery.trim()) && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50 p-4"
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute left-0 top-full mt-2 w-72 bg-white border border-[#e2e8f0] rounded-2xl shadow-xl overflow-hidden z-50"
                   >
-                    <div className="text-center">
-                      <Search size={32} className="text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">لا توجد نتائج</p>
-                      <p className="text-xs text-gray-400 mt-1">جرب كلمات بحث أخرى</p>
-                    </div>
+                    {searchResults.length > 0 ? (
+                      <>
+                        <div className="px-4 py-2.5 border-b border-[#e2e8f0] bg-[#f8fafc]">
+                          <p className="text-xs text-[#64748b] font-medium">النتائج ({searchResults.length})</p>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {searchResults.map((result) => {
+                            const Icon = SECTION_ICONS[result.id];
+                            return (
+                              <button
+                                key={result.id}
+                                onClick={() => handleSearchSelect(result.id)}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#f8fafc] transition-colors text-right"
+                              >
+                                <div className="w-8 h-8 bg-[#FF9F4A]/10 rounded-lg flex items-center justify-center shrink-0">
+                                  <Icon size={15} className="text-[#FF9F4A]" />
+                                </div>
+                                <div className="flex flex-col items-end flex-1 min-w-0">
+                                  <span className="text-sm font-medium text-[#1e293b] truncate w-full">{result.label}</span>
+                                  <span className="text-xs text-[#94a3b8] truncate w-full">{result.group}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-6 text-center">
+                        <Search size={28} className="text-[#cbd5e1] mx-auto mb-2" />
+                        <p className="text-sm text-[#64748b]">لا توجد نتائج</p>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* User Info in Header */}
-            <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors cursor-pointer group">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4A7C9C] to-[#7BA5C1] shrink-0 border border-white/10 shadow-lg shadow-[#4A7C9C]/20 flex items-center justify-center font-bold text-xs text-white">
+
+            {/* User info */}
+            <div className="flex items-center gap-2.5 bg-[#f8fafc] border border-[#e2e8f0] hover:border-[#cbd5e1] rounded-xl px-3 py-2 transition-all cursor-default">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#4A7C9E] to-[#3d6a8a] flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
                 {currentUser?.name?.charAt(0) || 'U'}
               </div>
-              <div className="hidden sm:flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-gray-800 truncate max-w-[140px]">
-                  {currentUser?.name || 'المستخدم'}
-                </span>
-                <span className="text-xs text-[#FF9F43] truncate max-w-[140px]">
-                  {currentUser?.roles?.[0]?.name || 'موظف'}
-                </span>
+              <div className="hidden sm:block min-w-0">
+                <p className="text-xs font-semibold text-[#1e293b] truncate max-w-[120px]">{currentUser?.name || 'المستخدم'}</p>
+                <p className="text-[10px] text-[#FF9F4A] truncate max-w-[120px]">{currentUser?.roles?.[0]?.name || 'موظف'}</p>
               </div>
             </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar bg-gray-50 min-h-0">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="max-w-7xl mx-auto"
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="max-w-7xl mx-auto p-4 sm:p-6"
             >
-              {/* Section Header — for news sections */}
-              {!activeSection.startsWith('ai-') && !['ideas', 'editing', 'social', 'audio', 'newsroom', 'chat'].includes(activeSection) && (
-                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#FF9F43]/20 to-[#FF8C2E]/20 rounded-2xl flex items-center justify-center border border-[#FF9F43]/30 shrink-0 shadow-lg shadow-[#FF9F43]/20">
-                    <ActiveIcon size={20} className="text-[#FF9F43] sm:w-6 sm:h-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-800 truncate">{SECTION_LABELS[activeSection]}</h2>
-                    <p className="text-gray-500 text-xs sm:text-sm hidden sm:block">نظام الإدارة الموحد لمركز الإعلام</p>
+              {/* Page Header - News only */}
+              {!isAISection && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#3d6a8a] to-[#2d5570] rounded-2xl flex items-center justify-center shadow-lg shadow-[#3d6a8a]/20 shrink-0">
+                      <ActiveIcon size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-[#1e293b]">{SECTION_LABELS[activeSection]}</h2>
+                      <p className="text-[#64748b] text-xs mt-0.5">نظام الأخبار</p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* ── News Views ── */}
-              {activeSection === 'overview' && <OverviewView unitId={selectedMediaUnitId} />}
-              {activeSection === 'sources' && <SourcesView autoEnabled={isSystemOnline} />}
+              {/* News Views */}
+              {activeSection === 'overview'   && <OverviewView unitId={selectedMediaUnitId} />}
+              {activeSection === 'sources'    && <SourcesView autoEnabled={isSystemOnline} />}
               {activeSection === 'incomplete' && <IncompleteView unitId={selectedMediaUnitId} />}
-              {activeSection === 'queue' && <QueueView unitId={selectedMediaUnitId} />}
-              {activeSection === 'policies' && <PoliciesView unitId={selectedMediaUnitId} />}
-              {activeSection === 'published' && <PublishedView unitId={selectedMediaUnitId} />}
+              {activeSection === 'queue'      && <QueueView unitId={selectedMediaUnitId} />}
+              {activeSection === 'policies'   && <PoliciesView unitId={selectedMediaUnitId} />}
+              {activeSection === 'published'  && <PublishedView unitId={selectedMediaUnitId} />}
 
-              {/* ── AI Views ── */}
+              {/* AI Views */}
               {activeSection === 'ai-dashboard' && <AIDashboard setActiveSection={setActiveSection} />}
-              {activeSection === 'ideas' && <IdeaGeneration mediaUnitId={selectedMediaUnitId} />}
-              {activeSection === 'editing' && <TextEditing mediaUnitId={selectedMediaUnitId} />}
-              {activeSection === 'social' && <SocialMedia mediaUnitId={selectedMediaUnitId} />}
-              {activeSection === 'audio' && <AudioProcessing mediaUnitId={selectedMediaUnitId} />}
-              {activeSection === 'newsroom' && <NewsRoom mediaUnitId={selectedMediaUnitId} />}
-              {activeSection === 'chat' && <ChatInterface />}
+              {activeSection === 'ideas'        && <IdeaGeneration mediaUnitId={selectedMediaUnitId} />}
+              {activeSection === 'editing'      && <TextEditing mediaUnitId={selectedMediaUnitId} />}
+              {activeSection === 'social'       && <SocialMedia mediaUnitId={selectedMediaUnitId} />}
+              {activeSection === 'audio'        && <AudioProcessing mediaUnitId={selectedMediaUnitId} />}
+              {activeSection === 'newsroom'     && <NewsRoom mediaUnitId={selectedMediaUnitId} />}
+              {activeSection === 'chat'         && <ChatInterface />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -902,39 +781,120 @@ export default function App() {
   );
 }
 
-// ─── AI Dashboard (landing page for AI section) ───────────────
+// ─── AI Dashboard ────────────────────────────────────────────
 const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: SectionId) => void }) => {
   const cards = [
-    { id: 'ideas' as SectionId,    title: 'وحدة التفكير',        desc: 'توليد أفكار مبدعة، أسئلة مقابلات، وعناوين جذابة.',  icon: Lightbulb,     color: 'text-[#FF9F43]', bg: 'bg-[#FF9F43]/10' },
-    { id: 'editing' as SectionId,  title: 'التحرير الصحفي',       desc: 'إعادة صياغة، تلخيص، وتدقيق لغوي فوري.',            icon: PenTool,       color: 'text-[#4A7C9C]',   bg: 'bg-[#4A7C9C]/10'   },
-    { id: 'social' as SectionId,   title: 'التواصل الاجتماعي',    desc: 'منشورات تفاعلية، هاشتاجات، وتحويل الأخبار.',       icon: Share2,        color: 'text-[#FF9F43]',   bg: 'bg-[#FF9F43]/10'   },
-    { id: 'audio' as SectionId,    title: 'المختبر الصوتي',       desc: 'تحويل الصوت إلى نص وبالعكس من الأرشيف.',           icon: Mic2,          color: 'text-[#7BA5C1]', bg: 'bg-[#7BA5C1]/10' },
-    { id: 'newsroom' as SectionId, title: 'غرفة الأخبار',         desc: 'إنشاء نشرات ومواجيز إخبارية من مادتك الخبرية.',    icon: Newspaper,     color: 'text-[#4A7C9C]',bg: 'bg-[#4A7C9C]/10'},
-    { id: 'chat' as SectionId,     title: 'مساعد AI ذكي',         desc: 'دردشة تفاعلية لمساعدتك في المهام الإعلامية.',      icon: MessageSquare, color: 'text-[#FF9F43]',   bg: 'bg-[#FF9F43]/10'   },
+    {
+      id: 'ideas' as SectionId,
+      title: 'وحدة التفكير',
+      desc: 'توليد أفكار مبدعة، أسئلة مقابلات، وعناوين جذابة.',
+      icon: Lightbulb,
+      gradient: 'from-amber-500 to-orange-500',
+      bg: 'from-amber-50 to-orange-50',
+      border: 'border-amber-200',
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+    },
+    {
+      id: 'editing' as SectionId,
+      title: 'التحرير الصحفي',
+      desc: 'إعادة صياغة، تلخيص، وتدقيق لغوي فوري.',
+      icon: PenTool,
+      gradient: 'from-[#4A7C9E] to-[#3d6a8a]',
+      bg: 'from-blue-50 to-sky-50',
+      border: 'border-blue-200',
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-[#4A7C9E]',
+    },
+    {
+      id: 'social' as SectionId,
+      title: 'التواصل الاجتماعي',
+      desc: 'منشورات تفاعلية، هاشتاجات، وتحويل الأخبار.',
+      icon: Share2,
+      gradient: 'from-[#FF9F4A] to-[#FF8C2E]',
+      bg: 'from-orange-50 to-amber-50',
+      border: 'border-orange-200',
+      iconBg: 'bg-orange-100',
+      iconColor: 'text-[#FF9F4A]',
+    },
+    {
+      id: 'audio' as SectionId,
+      title: 'المختبر الصوتي',
+      desc: 'تحويل الصوت إلى نص وبالعكس من الأرشيف.',
+      icon: Mic2,
+      gradient: 'from-violet-500 to-purple-500',
+      bg: 'from-violet-50 to-purple-50',
+      border: 'border-violet-200',
+      iconBg: 'bg-violet-100',
+      iconColor: 'text-violet-600',
+    },
+    {
+      id: 'newsroom' as SectionId,
+      title: 'غرفة الأخبار',
+      desc: 'إنشاء نشرات ومواجيز إخبارية من مادتك الخبرية.',
+      icon: Newspaper,
+      gradient: 'from-teal-500 to-emerald-500',
+      bg: 'from-teal-50 to-emerald-50',
+      border: 'border-teal-200',
+      iconBg: 'bg-teal-100',
+      iconColor: 'text-teal-600',
+    },
+    {
+      id: 'chat' as SectionId,
+      title: 'مساعد AI ذكي',
+      desc: 'دردشة تفاعلية لمساعدتك في المهام الإعلامية.',
+      icon: MessageSquare,
+      gradient: 'from-pink-500 to-rose-500',
+      bg: 'from-pink-50 to-rose-50',
+      border: 'border-pink-200',
+      iconBg: 'bg-pink-100',
+      iconColor: 'text-pink-600',
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl sm:text-2xl text-gray-800">أهلاً بك في وحدة الذكاء الاصطناعي</h1>
-        <p className="text-gray-600 text-xs sm:text-sm">بماذا يمكننا مساعدتك اليوم في رحلتك الإبداعية؟</p>
+      {/* Hero */}
+      <div className="bg-gradient-to-bl from-[#2d5570] via-[#3d6a8a] to-[#1f3a4f] rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-[#FF9F4A]/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-2xl translate-x-1/4 translate-y-1/4" />
+        </div>
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/30 shrink-0">
+            <Sparkles className="text-white w-7 h-7" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-arabic font-bold text-white">أدوات الذكاء الاصطناعي</h1>
+            <p className="text-white/60 text-sm mt-1">استخدم قوة الـ AI لتسريع عملك الإعلامي</p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((card) => (
-          <button
+          <motion.button
             key={card.id}
+            whileHover={{ y: -3, scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setActiveSection(card.id)}
-            className="glass-panel p-4 sm:p-5 text-right group hover:border-[#FF9F43] transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4 h-full hover:shadow-lg hover:shadow-[#FF9F43]/20"
+            className={`bg-gradient-to-br ${card.bg} border ${card.border} rounded-2xl p-5 text-right group hover:shadow-lg transition-all duration-200 flex flex-col gap-4`}
           >
-            <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center transition-transform group-hover:scale-110`}>
-              <card.icon className={`${card.color} w-5 h-5`} />
+            <div className="flex items-start justify-between">
+              <motion.div
+                whileHover={{ rotate: 10 }}
+                className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center shrink-0`}
+              >
+                <card.icon className={`${card.iconColor} w-5 h-5`} />
+              </motion.div>
+              <ChevronLeft size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors mt-1" />
             </div>
-            <div className="flex flex-col gap-1 flex-1">
-              <h3 className="text-sm sm:text-base font-bold">{card.title}</h3>
-              <p className="text-gray-400 text-xs leading-relaxed">{card.desc}</p>
+            <div>
+              <h3 className="text-sm font-bold text-[#1e293b] mb-1.5">{card.title}</h3>
+              <p className="text-[#64748b] text-xs leading-relaxed">{card.desc}</p>
             </div>
-          </button>
+          </motion.button>
         ))}
       </div>
     </div>

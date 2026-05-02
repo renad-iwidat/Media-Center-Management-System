@@ -28,7 +28,7 @@ export function parseMarkdown(text: string): (string | React.ReactElement)[] {
       if (endIndex !== -1) {
         const boldText = text.substring(i + 2, endIndex);
         result.push(
-          <strong key={`bold-${i}`} className="font-bold text-[#1e293b]">
+          <strong key={`bold-${i}`} className="font-extrabold text-[#1e293b] text-[1.05em]">
             {boldText}
           </strong>
         );
@@ -199,13 +199,15 @@ export function parseNumberedList(text: string): React.ReactElement[] {
       return;
     }
 
-    // ─── Numbered lists 1. item
-    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    // ─── Numbered lists 1. item or ١. item (Arabic numbers)
+    const numberedMatch = line.match(/^(\d+|[٠-٩]+)\.\s+(.+)$/);
     if (numberedMatch) {
       inList = true;
       listItems.push(
-        <li key={`item-${index}`} className="mb-3 leading-relaxed text-[#1e293b]">
-          {parseMarkdown(numberedMatch[1])}
+        <li key={`item-${index}`} className="mb-4 leading-relaxed text-[#1e293b] pr-2">
+          <div className="flex flex-col gap-1">
+            {parseMarkdown(numberedMatch[2])}
+          </div>
         </li>
       );
       return;
@@ -214,7 +216,7 @@ export function parseNumberedList(text: string): React.ReactElement[] {
     // ─── Close list if open
     if (inList && listItems.length > 0) {
       result.push(
-        <ol key={`list-${index}`} className="list-decimal mb-4 mr-6 space-y-1">
+        <ol key={`list-${index}`} className="list-decimal mb-6 mr-8 space-y-2 [&>li]:pl-2 [&>li::marker]:text-[#4A7C9E] [&>li::marker]:font-bold">
           {listItems}
         </ol>
       );
@@ -230,7 +232,7 @@ export function parseNumberedList(text: string): React.ReactElement[] {
 
     // ─── Regular paragraph
     result.push(
-      <p key={`text-${index}`} className="mb-2 leading-relaxed text-[#1e293b]">
+      <p key={`text-${index}`} className="mb-3 leading-loose text-[#1e293b] text-[15px]">
         {parseMarkdown(line)}
       </p>
     );
@@ -239,7 +241,7 @@ export function parseNumberedList(text: string): React.ReactElement[] {
   // Close any remaining list
   if (inList && listItems.length > 0) {
     result.push(
-      <ol key="final-list" className="list-decimal mb-4 mr-6 space-y-1">
+      <ol key="final-list" className="list-decimal mb-6 mr-8 space-y-2 [&>li]:pl-2 [&>li::marker]:text-[#4A7C9E] [&>li::marker]:font-bold">
         {listItems}
       </ol>
     );

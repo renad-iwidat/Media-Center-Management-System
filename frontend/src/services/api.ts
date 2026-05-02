@@ -2,14 +2,24 @@
  * API Service - ربط الفرونت اند بالباكند
  */
 
+// دعم runtime environment variables من Docker
+const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
+  // أولاً: جرب window.ENV (runtime من Docker)
+  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+    return window.ENV[key];
+  }
+  // ثانياً: استخدم import.meta.env (build time)
+  return import.meta.env[key];
+};
+
 // استخدام VITE_MANAGEMENT_API_URL لسيرفر الإدارة و VITE_API_URL لسيرفر الأخبار
-const MANAGEMENT_API_BASE = import.meta.env.VITE_MANAGEMENT_API_URL 
-  ? `${import.meta.env.VITE_MANAGEMENT_API_URL}/api`
+const MANAGEMENT_API_BASE = getEnvVar('VITE_MANAGEMENT_API_URL')
+  ? `${getEnvVar('VITE_MANAGEMENT_API_URL')}/api`
   : "https://media-center-management-system.onrender.com/api";
 
-const API_BASE = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "http://localhost:4000/api";
+const API_BASE = getEnvVar('VITE_API_URL')
+  ? `${getEnvVar('VITE_API_URL')}/api`
+  : "https://automation-and-ai-hub-backend.onrender.com/api";
 
 console.log('🔗 Management API Base URL:', MANAGEMENT_API_BASE);
 console.log('🔗 News API Base URL:', API_BASE);
