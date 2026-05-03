@@ -187,6 +187,8 @@ export const api = {
     request<any>("/flow/process", { method: "POST" }),
   getPendingQueue: (mediaUnitId?: number | null) =>
     request<any>(`/flow/queue/pending${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
+  getEditorialStudio: (mediaUnitId?: number | null, status?: string) =>
+    request<any>(`/flow/editorial${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}${status ? `${mediaUnitId ? '&' : '?'}status=${status}` : ""}`),
   getQueueStats: () => request<any>("/flow/queue/stats"),
   getQueueItem: (id: number) => request<any>(`/flow/queue/${id}`),
   approveQueueItem: (id: number, data?: any) =>

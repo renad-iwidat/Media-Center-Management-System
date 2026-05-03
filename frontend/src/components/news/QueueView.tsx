@@ -41,7 +41,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
-      api.getPendingQueue(unitId).catch(() => ({ data: [] })),
+      api.getEditorialStudio(unitId).catch(() => ({ data: [] })),
       api.getPolicies().catch(() => ({ policies: [] })),
       api.getCategories().catch(() => ({ data: [] })),
     ]).then(([q, p, c]) => {

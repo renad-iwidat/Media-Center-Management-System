@@ -20,7 +20,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
       api.getStatistics().catch(() => null),
       api.getQueueStats().catch(() => null),
       api.getPublishedStats().catch(() => null),
-      api.getPendingQueue(unitId).catch(() => null),
+      api.getEditorialStudio(unitId).catch(() => null),
       api.getPublished(unitId).catch(() => null),
       api.getDailyStats(unitId, 30).catch(() => null),
     ]).then(([s, q, p, pending, published, daily]) => {
