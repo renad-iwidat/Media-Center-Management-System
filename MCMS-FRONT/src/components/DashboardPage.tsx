@@ -274,7 +274,7 @@ export default function DashboardPage() {
       {/* Secondary Statistics: Summary Cards */}
       <h2 className="text-xl font-bold text-slate-900 pt-6 flex items-center gap-3">
         <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-        ملخص المؤشرات الحيوية
+        ملخص المؤشرات الحية
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <SummaryCard 
