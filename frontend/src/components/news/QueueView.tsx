@@ -5,6 +5,7 @@ import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { EmptyState } from "../shared/EmptyState";
 import { Notification, NotificationData } from "../shared/Notification";
+import { getStatusLabel, getStatusColor, getStatusBgColor } from "../../lib/statusTranslations";
 
 export function QueueView({ unitId }: { unitId: number | null }) {
   const [queue, setQueue] = useState<any[]>([]);
@@ -30,6 +31,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   // Filter states
   const [searchTitle, setSearchTitle] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
@@ -75,6 +77,11 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       filtered = filtered.filter(item => item.category_name === selectedCategory);
     }
 
+    // Filter by status
+    if (selectedStatus) {
+      filtered = filtered.filter(item => item.status === selectedStatus);
+    }
+
     // Filter by date
     if (selectedDate) {
       filtered = filtered.filter(item => {
@@ -93,7 +100,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
     setFilteredQueue(filtered);
     setCurrentPage(1);
-  }, [queue, searchTitle, selectedCategory, selectedDate, sortBy]);
+  }, [queue, searchTitle, selectedCategory, selectedStatus, selectedDate, sortBy]);
 
   // منع السكرول عند فتح التحرير - مع cleanup صحيح
   useEffect(() => {
@@ -595,6 +602,23 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 </select>
               </div>
 
+              {/* Filter by status */}
+              <div className="space-y-2">
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الحالة</label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+                >
+                  <option value="">كل الحالات</option>
+                  <option value="pending">في الانتظار</option>
+                  <option value="in_review">قيد المراجعة</option>
+                  <option value="incomplete">غير مكتمل</option>
+                  <option value="approved">موافق عليه</option>
+                  <option value="rejected">مرفوض</option>
+                </select>
+              </div>
+
               {/* Filter by date */}
               <div className="space-y-2">
                 <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">التاريخ</label>
@@ -621,11 +645,12 @@ export function QueueView({ unitId }: { unitId: number | null }) {
             </div>
 
             {/* Clear filters */}
-            {(searchTitle || selectedCategory || selectedDate || sortBy !== "newest") && (
+            {(searchTitle || selectedCategory || selectedStatus || selectedDate || sortBy !== "newest") && (
               <button
                 onClick={() => {
                   setSearchTitle("");
                   setSelectedCategory("");
+                  setSelectedStatus("");
                   setSelectedDate("");
                   setSortBy("newest");
                 }}
@@ -695,8 +720,14 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                               {item.source_name || '—'}
                             </td>
                             <td className="py-3 px-4">
-                              <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-lg text-[10px] font-bold">
-                                {item.status || 'pending'}
+                              <span 
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold"
+                                style={{
+                                  color: getStatusColor(item.status || 'pending'),
+                                  backgroundColor: getStatusBgColor(item.status || 'pending'),
+                                }}
+                              >
+                                {getStatusLabel(item.status || 'pending')}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-center text-[#64748b] text-xs font-mono">

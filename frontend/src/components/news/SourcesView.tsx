@@ -8,10 +8,64 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   const [sources, setSources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // دالة لتنسيق التاريخ
+  const formatLastFetched = (dateString: string | null) => {
+    if (!dateString) return null;
+    
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      // إذا أقل من دقيقة
+      if (diffMins < 1) return 'الآن';
+      // إذا أقل من ساعة
+      if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+      // إذا أقل من 24 ساعة
+      if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+      // إذا أقل من 7 أيام
+      if (diffDays < 7) return `منذ ${diffDays} يوم`;
+      // إذا أكثر من 7 أيام، عرض التاريخ
+      return date.toLocaleDateString('ar-SA', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  // دالة للتحقق من أن السحب حديث (آخر ساعة)
+  const isRecentlyFetched = (dateString: string | null) => {
+    if (!dateString) return false;
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffHours = diffMs / 3600000;
+      return diffHours < 1; // آخر ساعة
+    } catch {
+      return false;
+    }
+  };
+
   const loadData = useCallback(() => {
     setLoading(true);
     api.getSources()
-      .then((res) => setSources(res.data || []))
+      .then((res) => {
+        const sourcesWithFormatted = (res.data || []).map((source: any) => ({
+          ...source,
+          last_fetched_formatted: formatLastFetched(source.last_fetched_at),
+          is_recently_fetched: isRecentlyFetched(source.last_fetched_at),
+        }));
+        setSources(sourcesWithFormatted);
+      })
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
   }, []);
