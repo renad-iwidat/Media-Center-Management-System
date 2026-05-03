@@ -24,7 +24,9 @@
     "add-reporters-perm": "ts-node scripts/add-reporters-permission.ts",
     "check:attachments": "ts-node scripts/check-task-attachments.ts",
     "migrate:attachments": "ts-node scripts/migrate-task-attachments.ts",
-    "check:content-attachments": "ts-node scripts/check-content-attachments.ts"
+    "check:content-attachments": "ts-node scripts/check-content-attachments.ts",
+    "frontend:build": "cd MCMS-FRONT && npm install && npm run build",
+    "frontend:serve": "cd MCMS-FRONT && npm run serve"
   },
   "keywords": [
     "media",
