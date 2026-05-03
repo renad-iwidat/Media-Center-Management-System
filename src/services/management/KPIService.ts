@@ -258,6 +258,22 @@ export class KPIService {
   /**
    * Get all orders KPI (for dashboard)
    */
+  static async getAllUsersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT uk.*, u.name as user_name, u.email, r.name as role_name
+       FROM user_kpi uk
+       INNER JOIN users u ON uk.user_id = u.id
+       LEFT JOIN roles r ON u.role_id = r.id
+       ORDER BY uk.on_time_percentage DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Get all orders KPI (for dashboard)
+   */
   static async getAllOrdersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
     const result = await pool.query(
       `SELECT uk.*, u.name as user_name, u.email, r.name as role_name

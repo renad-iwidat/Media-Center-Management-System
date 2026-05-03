@@ -178,6 +178,27 @@ export interface UpdateShootingDTO {
   source_type?: string;
 }
 
+// Desk Types
+export interface Desk {
+  id: bigint;
+  name: string;
+  description?: string;
+  manager_id?: bigint;
+  created_at?: Date;
+}
+
+export interface CreateDeskDTO {
+  name: string;
+  description?: string;
+  manager_id?: bigint;
+}
+
+export interface UpdateDeskDTO {
+  name?: string;
+  description?: string;
+  manager_id?: bigint;
+}
+
 // قسم & Team Types
 export interface Qism {
   id: bigint;
