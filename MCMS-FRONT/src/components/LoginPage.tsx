@@ -91,11 +91,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-8 flex flex-col gap-2 text-center text-xs text-gray-500">
-          <p>الحسابات التجريبية:</p>
-          <p>gmortaja@najah.edu / admin123 (أدمن)</p>
-          <p>a.moqadi@najah.edu / a.mo1234 (موظف)</p>
-        </div>
+      
       </motion.div>
     </div>
   );
