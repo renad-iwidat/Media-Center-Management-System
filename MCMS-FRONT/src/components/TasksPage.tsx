@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { Task, Order, Status, User } from '../types';
+import { Task, Order, Status, User, TaskType } from '../types';
 import { Button, Input, Select } from './ui/Inputs';
 import { Badge } from './ui/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +14,8 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from './ui/Modal';
 import TaskForm from './TaskForm';
+import TaskTypeIndicator from './TaskTypeIndicator';
+import TaskStatusDropdown from './TaskStatusDropdown';
 
 type TaskTab = 'all' | 'mine' | 'overdue';
 
@@ -29,6 +31,7 @@ export default function TasksPage() {
     order_id: '',
     assigned_to: '',
     status_id: '',
+    task_type_id: '',
     search: ''
   });
 
@@ -36,7 +39,17 @@ export default function TasksPage() {
     orders: Order[];
     statuses: Status[];
     users: User[];
-  }>({ orders: [], statuses: [], users: [] });
+    taskTypes: TaskType[];
+  }>({ 
+    orders: [], 
+    statuses: [], 
+    users: [], 
+    taskTypes: [
+      { id: 1, name: 'تصوير', category: 'shooting', color: '#3b82f6', icon: '📹' },
+      { id: 2, name: 'اخبارية', category: 'reporting', color: '#a855f7', icon: '📰' },
+      { id: 3, name: 'أخرى', category: 'other', color: '#64748b', icon: '📋' }
+    ]
+  });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -53,6 +66,7 @@ export default function TasksPage() {
         ...(filters.order_id && { order_id: filters.order_id }),
         ...(filters.assigned_to && { assigned_to: filters.assigned_to }),
         ...(filters.status_id && { status_id: filters.status_id }),
+        ...(filters.task_type_id && { task_type_id: filters.task_type_id }),
         ...(filters.search && { search: filters.search })
       }).toString();
 
@@ -70,16 +84,31 @@ export default function TasksPage() {
 
   const fetchLookups = async () => {
     try {
-      const [ordersRes, statusesRes, usersRes] = await Promise.all([
+      const [ordersRes, statusesRes, usersRes, typesRes] = await Promise.all([
         api.get<{ success: boolean; data: Order[] }>('/api/orders?limit=50'),
         api.get<{ success: boolean; data: Status[] }>('/api/tasks/statuses'),
-        api.get<{ success: boolean; data: User[] }>('/api/portal/users')
+        api.get<{ success: boolean; data: User[] }>('/api/portal/users'),
+        api.get<{ success: boolean; data: TaskType[] }>('/api/tasks/types')
       ]);
+
+      // Task types - use API data if available
+      let taskTypes: TaskType[] = [];
+      if (typesRes.success && Array.isArray(typesRes.data) && typesRes.data.length > 0) {
+        taskTypes = typesRes.data;
+      } else {
+        // Fallback to hardcoded task types
+        taskTypes = [
+          { id: 1, name: 'تصوير', category: 'shooting', color: '#3b82f6', icon: '📹' },
+          { id: 2, name: 'اخبارية', category: 'reporting', color: '#a855f7', icon: '📰' },
+          { id: 3, name: 'أخرى', category: 'other', color: '#64748b', icon: '📋' }
+        ];
+      }
 
       setLookups({
         orders: ordersRes.data || [],
         statuses: statusesRes.data || [],
-        users: usersRes.data || []
+        users: usersRes.data || [],
+        taskTypes: taskTypes
       });
     } catch (err) {
       console.error(err);
@@ -123,7 +152,7 @@ export default function TasksPage() {
         
         <div className="w-48">
           <Select 
-            options={[{ value: '', label: 'كل الأوردرات' }, ...lookups.orders.map(o => ({ value: o.id, label: o.title }))]}
+            options={[{ value: '', label: 'كل الطلبات' }, ...lookups.orders.map(o => ({ value: o.id, label: o.title }))]}
             value={filters.order_id}
             onChange={(e) => setFilters(f => ({ ...f, order_id: e.target.value }))}
             className="h-11 py-0 text-sm"
@@ -147,6 +176,15 @@ export default function TasksPage() {
             className="h-11 py-0 text-sm"
           />
         </div>
+
+        <div className="w-40">
+          <Select 
+            options={[{ value: '', label: 'كل الأنواع' }, ...lookups.taskTypes.map(t => ({ value: t.id, label: t.name }))]}
+            value={filters.task_type_id}
+            onChange={(e) => setFilters(f => ({ ...f, task_type_id: e.target.value }))}
+            className="h-11 py-0 text-sm"
+          />
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
@@ -155,7 +193,8 @@ export default function TasksPage() {
             <thead>
               <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
                 <th className="px-6 py-4 border-r border-white/20">المهمة</th>
-                <th className="px-6 py-4 border-r border-white/20">الأوردر</th>
+                <th className="px-6 py-4 border-r border-white/20">النوع</th>
+                <th className="px-6 py-4 border-r border-white/20">الطلب</th>
                 <th className="px-6 py-4 border-r border-white/20">الحالة</th>
                 <th className="px-6 py-4 border-r border-white/20">المسؤول</th>
                 <th className="px-6 py-4 border-r border-white/20">الموعد</th>
@@ -184,14 +223,32 @@ export default function TasksPage() {
                       </span>
                     </td>
                     <td className="px-6 py-5 border-r border-slate-200">
+                      <TaskTypeIndicator 
+                        taskType={lookups.taskTypes.find(t => t.id === task.task_type_id)}
+                        size="sm"
+                      />
+                    </td>
+                    <td className="px-6 py-5 border-r border-slate-200">
                       <span className="text-xs font-semibold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-lg inline-block max-w-[150px] truncate" title={task.order_title}>
                         {task.order_title}
                       </span>
                     </td>
                     <td className="px-6 py-5 border-r border-slate-200">
-                      <Badge variant={getTaskStatusVariant(task.status_id)}>
-                        {task.status_name}
-                      </Badge>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <TaskStatusDropdown 
+                          task={task}
+                          isEditable={true}
+                          onStatusChange={(taskId, newStatusId, newStatusName) => {
+                            // Update the task in the list
+                            setTasks(tasks.map(t => 
+                              t.id === taskId 
+                                ? { ...t, status_id: newStatusId, status_name: newStatusName }
+                                : t
+                            ));
+                          }}
+                          className="w-full"
+                        />
+                      </div>
                     </td>
                     <td className="px-6 py-5 border-r border-slate-200">
                       <span className="text-sm font-semibold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-lg inline-block">
@@ -266,7 +323,18 @@ export default function TasksPage() {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="إنشاء مهمة جديدة" className="max-w-3xl">
-        <TaskForm onSuccess={() => { setIsModalOpen(false); fetchData(); }} onCancel={() => setIsModalOpen(false)} />
+        <TaskForm 
+          onSuccess={(newTaskId) => { 
+            setIsModalOpen(false); 
+            if (newTaskId) {
+              // إذا كانت مهمة اخبارية جديدة، افتح تفاصيلها
+              navigate(`/tasks/${newTaskId}`);
+            } else {
+              fetchData();
+            }
+          }} 
+          onCancel={() => setIsModalOpen(false)} 
+        />
       </Modal>
     </div>
   );

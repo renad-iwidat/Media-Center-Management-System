@@ -18,6 +18,7 @@ import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 import OrderForm from './OrderForm';
 import TaskForm from './TaskForm';
+import TaskStatusDropdown from './TaskStatusDropdown';
 
 export default function OrderDetailsPage() {
   const { id } = useParams();
@@ -88,7 +89,7 @@ export default function OrderDetailsPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الأوردر؟')) return;
+    if (!window.confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
     try {
       const res = await api.delete<{ success: boolean }>(`/api/orders/${id}`);
       if (res.success) navigate('/orders');
@@ -97,8 +98,8 @@ export default function OrderDetailsPage() {
     }
   };
 
-  if (loading) return <div className="p-12 text-center text-slate-400">جاري تحميل تفاصيل الأوردر...</div>;
-  if (!order) return <div className="p-12 text-center text-red-500 font-bold">لم يتم العثور على الأوردر</div>;
+  if (loading) return <div className="p-12 text-center text-slate-400">جاري تحميل تفاصيل الطلب...</div>;
+  if (!order) return <div className="p-12 text-center text-red-500 font-bold">لم يتم العثور على الطلب</div>;
 
   const getStatusVariant = (id: number) => {
     const variants: Record<number, any> = {
@@ -116,7 +117,7 @@ export default function OrderDetailsPage() {
           className="flex items-center gap-3 text-white hover:text-white transition-all w-fit group bg-[#3d6a8a] hover:bg-[#2d5570] px-6 py-3 rounded-xl shadow-lg hover:shadow-xl"
         >
           <ArrowRight size={24} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-lg font-bold">العودة لقائمة الأوردرات</span>
+          <span className="text-lg font-bold">العودة لقائمة الطلبات</span>
         </Link>
 
         <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
@@ -298,7 +299,7 @@ export default function OrderDetailsPage() {
                   <CheckCircle2 className="text-blue-600" size={28} />
                   المهام المرتبطة
                 </h3>
-                <p className="text-sm text-slate-500 font-medium">إدارة المهام التفصيلية لهذا الأوردر</p>
+                <p className="text-sm text-slate-500 font-medium">إدارة المهام التفصيلية لهذا الطلب</p>
               </div>
               <Button 
                 onClick={() => setIsNewTaskModalOpen(true)} 
@@ -338,9 +339,26 @@ export default function OrderDetailsPage() {
                         </div>
                       </td>
                       <td className="px-8 py-6 text-center">
-                        <Badge variant={getTaskStatusVariant(task.status_id)}>
-                          {task.status_name}
-                        </Badge>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <TaskStatusDropdown 
+                            task={task}
+                            isEditable={true}
+                            onStatusChange={(taskId, newStatusId, newStatusName) => {
+                              // Update the order's tasks
+                              if (order) {
+                                setOrder({
+                                  ...order,
+                                  tasks: order.tasks.map(t =>
+                                    t.id === taskId
+                                      ? { ...t, status_id: newStatusId, status_name: newStatusName }
+                                      : t
+                                  )
+                                });
+                              }
+                            }}
+                            className="w-full"
+                          />
+                        </div>
                       </td>
                       <td className="px-8 py-6 text-center font-mono text-xs text-slate-500">
                         {task.deadline ? format(new Date(task.deadline), 'yyyy-MM-dd') : 'N/A'}
@@ -357,7 +375,7 @@ export default function OrderDetailsPage() {
                           <ClipboardCheck className="text-slate-300" size={32} />
                         </div>
                         <p className="text-slate-500 font-bold">لا يوجد مهام مرتبطة حالياً</p>
-                        <p className="text-sm text-slate-400 mt-1">ابدأ بإضافة أول مهمة لإنجاز هذا الأوردر</p>
+                        <p className="text-sm text-slate-400 mt-1">ابدأ بإضافة أول مهمة لإنجاز هذا الطلب</p>
                       </td>
                     </tr>
                   )}
@@ -371,7 +389,7 @@ export default function OrderDetailsPage() {
       <Modal 
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)} 
-        title="تعديل الأوردر"
+        title="تعديل الطلب"
         className="max-w-3xl"
       >
         <OrderForm 
@@ -389,7 +407,15 @@ export default function OrderDetailsPage() {
       >
         <TaskForm
           fixedOrderId={order.id}
-          onSuccess={() => { setIsNewTaskModalOpen(false); fetchDetails(); }}
+          onSuccess={(newTaskId) => { 
+            setIsNewTaskModalOpen(false); 
+            if (newTaskId) {
+              // إذا كانت مهمة اخبارية جديدة، افتح تفاصيلها
+              navigate(`/tasks/${newTaskId}`);
+            } else {
+              fetchDetails();
+            }
+          }}
           onCancel={() => setIsNewTaskModalOpen(false)}
         />
       </Modal>

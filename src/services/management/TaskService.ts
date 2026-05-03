@@ -1,6 +1,6 @@
 import { TaskModel } from '../../models/management/Task';
 import { OrderModel } from '../../models/management/Order';
-import { Task, TaskStatus, TaskHistory, TaskAssignment, TaskComment, TaskAttachment, TaskRelation } from '../../types/management';
+import { Task, TaskStatus, TaskType, TaskHistory, TaskAssignment, TaskComment, TaskAttachment, TaskRelation } from '../../types/management';
 import { TaskValidator } from './validators/TaskValidator';
 import { DependencyHelper } from './helpers/DependencyHelper';
 import { OrderStatusHelper } from './helpers/OrderStatusHelper';
@@ -119,6 +119,10 @@ export class TaskService {
 
   async getTaskStatuses(): Promise<TaskStatus[]> {
     return await TaskModel.getStatuses();
+  }
+
+  async getTaskTypes(): Promise<TaskType[]> {
+    return await TaskModel.getTypes();
   }
 
   async getTaskHistory(taskId: bigint): Promise<TaskHistory[]> {

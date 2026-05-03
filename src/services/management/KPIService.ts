@@ -256,9 +256,9 @@ export class KPIService {
   }
 
   /**
-   * Get all users KPI (for dashboard)
+   * Get all orders KPI (for dashboard)
    */
-  static async getAllUsersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
+  static async getAllOrdersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
     const result = await pool.query(
       `SELECT uk.*, u.name as user_name, u.email, r.name as role_name
        FROM user_kpi uk

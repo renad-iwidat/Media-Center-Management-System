@@ -214,9 +214,21 @@ export default function ContentDetailsPage() {
                  <FileVideo size={64} className="text-white/10" />
                  {content.cloud_url && (
                    <a 
-                     href={content.cloud_url} 
-                     target="_blank" 
-                     rel="noreferrer" 
+                     href="#"
+                     onClick={async (e) => {
+                       e.preventDefault();
+                       try {
+                         const res = await api.get<{ success: boolean; data: { download_url: string } }>(`/api/content/${id}/download-url`);
+                         if (res.success && res.data?.download_url) {
+                           window.open(res.data.download_url, '_blank');
+                         } else {
+                           window.open(content.cloud_url, '_blank');
+                         }
+                       } catch (err) {
+                         console.error('Error getting download URL:', err);
+                         window.open(content.cloud_url, '_blank');
+                       }
+                     }}
                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 text-white font-bold text-lg"
                    >
                      <ExternalLink size={24} />

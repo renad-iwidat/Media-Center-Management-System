@@ -5,7 +5,7 @@ export const Dashboard = () => (
   <div className="space-y-8">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard 
-        title="الأوردرات الكلية" 
+        title="الطلبات الكلية" 
         value="128" 
         change="+12%" 
         icon={<ClipboardList size={24} />} 
@@ -42,7 +42,7 @@ export const Dashboard = () => (
         </div>
         <div className="flex-1 p-4 space-y-4">
           <NotificationItem title="تم تعيين مهمة جديدة" time="منذ دقيقتين" msg="تم تعيينك لتصوير فعالية التخرج في قاعة الأمير تركي." active />
-          <NotificationItem title="تحديث حالة الأوردر #402" time="منذ ساعة" msg={`تم تغيير حالة "إنتاج فيديو تعريفي" إلى مرحلة المونتاج.`} />
+          <NotificationItem title="تحديث حالة الطلب #402" time="منذ ساعة" msg={`تم تغيير حالة "إنتاج فيديو تعريفي" إلى مرحلة المونتاج.`} />
           <NotificationItem title="تم رفع محتوى جديد" time="منذ ٤ ساعات" msg="قام الموظف أحمد مقادي برفع صور فعالية يوم البحث العلمي." />
         </div>
       </div>
@@ -120,7 +120,7 @@ const StatusProgress = ({ label, status, color, percent }: any) => {
     </div>
   );
 };
-export const Orders = () => <Placeholder title="الأوردرات" />;
+export const Orders = () => <Placeholder title="الطلبات" />;
 export const Tasks = () => <Placeholder title="المهام" />;
 export const Shootings = () => <Placeholder title="التصوير" />;
 export const Content = () => <Placeholder title="المحتوى والأرشيف" />;

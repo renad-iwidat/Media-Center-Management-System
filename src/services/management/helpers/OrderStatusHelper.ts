@@ -1,6 +1,10 @@
 import { Task } from '../../../types/management';
 import { OrderModel } from '../../../models/management/Order';
 
+/**
+ * OrderStatusHelper - طلب (Order)
+ * Handles status calculations and transitions for Order
+ */
 export class OrderStatusHelper {
   private static statusCache: Map<string, bigint> = new Map();
   private static statusNameCache: Map<bigint, string> = new Map();

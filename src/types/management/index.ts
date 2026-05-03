@@ -1,4 +1,4 @@
-// Order Types
+// طلب Types
 export interface Order {
   id: bigint;
   title: string;
@@ -121,13 +121,23 @@ export interface TaskRelation {
   task_id?: bigint;
   related_to_type?: string;
   related_to_id?: bigint;
+}
+
+export interface TaskTabaiya {
+  id: bigint;
+  task_id?: bigint;
+  related_to_type?: string;
+  related_to_id?: bigint;
   // New fields
-  relation_type?: string; // 'depends_on', 'blocks', 'related_to', 'subtask_of', 'parent_of'
+  tabaiya_type?: string; // 'depends_on', 'blocks', 'related_to', 'subtask_of', 'parent_of'
   description?: string;
   is_active?: boolean;
   created_at?: Date;
   created_by?: bigint;
 }
+
+// Alias for TaskTabaiya - مهام مرتبطة (Related Tasks)
+export type TaskMoharakatMortabita = TaskTabaiya;
 
 // Shooting Types
 export interface Shooting {
@@ -168,8 +178,8 @@ export interface UpdateShootingDTO {
   source_type?: string;
 }
 
-// Desk & Team Types
-export interface Desk {
+// قسم & Team Types
+export interface Qism {
   id: bigint;
   name: string;
   description?: string;
@@ -177,13 +187,13 @@ export interface Desk {
   created_at?: Date;
 }
 
-export interface CreateDeskDTO {
+export interface CreateQismDTO {
   name: string;
   description?: string;
   manager_id?: bigint;
 }
 
-export interface UpdateDeskDTO {
+export interface UpdateQismDTO {
   name?: string;
   description?: string;
   manager_id?: bigint;

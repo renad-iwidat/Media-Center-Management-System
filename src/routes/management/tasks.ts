@@ -18,6 +18,7 @@ router.use(authenticate);
 
 // CRUD - Specific routes first
 router.get('/statuses', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.getTaskStatuses(req, res); });
+router.get('/types', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.getTaskTypes(req, res); });
 router.get('/overdue', requirePermission('tasks.view'), (req: Request, res: Response) => { taskController.getOverdueTasks(req, res); });
 router.post('/bulk-assign', requirePermission('tasks.assign'), (req: Request, res: Response) => { taskController.bulkAssignTasks(req, res); });
 router.post('/bulk-status', requirePermission('tasks.edit'), (req: Request, res: Response) => { taskController.bulkChangeStatus(req, res); });

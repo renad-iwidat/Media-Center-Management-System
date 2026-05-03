@@ -78,7 +78,7 @@ export default function ShootingDetailsPage() {
               </h1>
               <div className="flex items-center gap-4 text-slate-500 font-bold">
                  <Link to={`/orders/${shooting.order_id}`} className="hover:text-blue-600 transition-colors">
-                   الأوردر: {shooting.order_title}
+                   الطلب: {shooting.order_title}
                  </Link>
                  {shooting.task_title && (
                    <>

@@ -293,13 +293,38 @@ export class TaskModel {
   }
 
   static async addAttachment(attachment: Omit<TaskAttachment, 'id' | 'created_at'>): Promise<TaskAttachment> {
-    const result = await pool.query(
-      `INSERT INTO task_attachments (task_id, title, description, file_url, file_type, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [attachment.task_id, attachment.title, attachment.description, attachment.file_url, attachment.file_type, attachment.uploaded_by]
-    );
-    return result.rows[0];
+    try {
+      // Try with title and description first
+      const result = await pool.query(
+        `INSERT INTO task_attachments (task_id, title, description, file_url, file_type, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [attachment.task_id, attachment.title, attachment.description, attachment.file_url, attachment.file_type, attachment.uploaded_by]
+      );
+      console.log('Attachment added with title/description:', result.rows[0]);
+      return result.rows[0];
+    } catch (err: any) {
+      // If columns don't exist, fall back to basic insert
+      const errorMsg = err.message || '';
+      if (errorMsg.includes('title') || errorMsg.includes('description') || errorMsg.includes('column')) {
+        console.warn('Title/description columns not found, using basic insert. Error:', errorMsg);
+        try {
+          const result = await pool.query(
+            `INSERT INTO task_attachments (task_id, file_url, file_type, uploaded_by)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [attachment.task_id, attachment.file_url, attachment.file_type, attachment.uploaded_by]
+          );
+          console.log('Attachment added without title/description:', result.rows[0]);
+          return result.rows[0];
+        } catch (fallbackErr: any) {
+          console.error('Fallback insert also failed:', fallbackErr.message);
+          throw fallbackErr;
+        }
+      }
+      console.error('Unexpected error in addAttachment:', err);
+      throw err;
+    }
   }
 
   static async getRelations(taskId: bigint): Promise<TaskRelation[]> {

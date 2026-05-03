@@ -5,16 +5,20 @@ import {
   Settings, CheckCircle2, AlertCircle, Trash2, 
   Edit, Plus, History, MessageSquare, Paperclip,
   GitBranch, UserCheck, Send, Download, ExternalLink,
-  ShieldAlert, Lock, Unlock, UserPlus, Camera, Layers
+  ShieldAlert, Lock, Unlock, UserPlus, Camera, Layers, Zap
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { TaskDetails, Status, User as UserType, TaskRelation } from '../types';
+import { TaskDetails, Status, User as UserType, TaskRelation, TaskType } from '../types';
 import { Button, Input, Select, Textarea } from './ui/Inputs';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import ShootingForm from './ShootingForm';
 import FileUploadForm from './FileUploadForm';
+import TaskTypeIndicator from './TaskTypeIndicator';
+import ShootingDataForm from './ShootingDataForm';
+import ShootingDataDisplay from './ShootingDataDisplay';
+import AISystemButton from './AISystemButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -32,8 +36,10 @@ export default function TaskDetailsPage() {
   const [allTasks, setAllTasks] = useState<{id: number, title: string}[]>([]);
   const [dependencyStatus, setDependencyStatus] = useState<{can_start: boolean, blocked_by: any[]} | null>(null);
   const [shootings, setShootings] = useState<any[]>([]);
+  const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
+  const [aiUsageRecords, setAiUsageRecords] = useState<any[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'comments' | 'attachments' | 'relations' | 'shootings' | 'history'>('comments');
+  const [activeTab, setActiveTab] = useState<'comments' | 'attachments' | 'relations' | 'shootings' | 'history' | 'shooting-data' | 'ai-usage'>('comments');
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -41,6 +47,8 @@ export default function TaskDetailsPage() {
   const [isShootingModalOpen, setIsShootingModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [isShootingDataModalOpen, setIsShootingDataModalOpen] = useState(false);
+  const [showReportingTaskPopup, setShowReportingTaskPopup] = useState(false);
 
   const [commentText, setCommentText] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -48,13 +56,15 @@ export default function TaskDetailsPage() {
   const fetchDetails = async () => {
     setLoading(true);
     try {
-      const [detailsRes, statusesRes, usersRes, tasksRes, depRes, shootRes] = await Promise.all([
+      const [detailsRes, statusesRes, usersRes, tasksRes, depRes, shootRes, typesRes, aiUsageRes] = await Promise.all([
         api.get<{ success: boolean; data: TaskDetails }>(`/api/tasks/${id}/details`).catch(() => ({ success: false, data: null })),
         api.get<{ success: boolean; data: Status[] }>('/api/tasks/statuses').catch(() => ({ success: false, data: [] })),
         api.get<{ success: boolean; data: UserType[] }>('/api/portal/users').catch(() => ({ success: false, data: [] })),
         api.get<{ success: boolean; data: any[] }>('/api/tasks?limit=100').catch(() => ({ success: false, data: [] })),
         api.get<{ success: boolean; data: any }>(`/api/tasks/${id}/dependency`).catch(() => ({ success: false, data: null })),
-        api.get<{ success: boolean; data: any[] }>(`/api/shootings/task/${id}`).catch(() => ({ success: false, data: [] }))
+        api.get<{ success: boolean; data: any[] }>(`/api/shootings/task/${id}`).catch(() => ({ success: false, data: [] })),
+        api.get<{ success: boolean; data: TaskType[] }>('/api/tasks/types').catch(() => ({ success: false, data: [] })),
+        api.get<{ success: boolean; data: any[] }>(`/api/tasks/${id}/ai-system-usage`).catch(() => ({ success: false, data: [] }))
       ]);
 
       if (detailsRes.success && detailsRes.data) setTask(detailsRes.data);
@@ -63,6 +73,20 @@ export default function TaskDetailsPage() {
       if (tasksRes.success && Array.isArray(tasksRes.data)) setAllTasks(tasksRes.data);
       if (depRes.success && depRes.data) setDependencyStatus(depRes.data);
       if (shootRes.success && Array.isArray(shootRes.data)) setShootings(shootRes.data);
+      
+      // Task types - use API data if available, otherwise use hardcoded
+      if (typesRes.success && Array.isArray(typesRes.data) && typesRes.data.length > 0) {
+        setTaskTypes(typesRes.data);
+      } else {
+        // Fallback to hardcoded task types
+        setTaskTypes([
+          { id: 1, name: 'تصوير', category: 'shooting', color: '#3b82f6', icon: '📹' },
+          { id: 2, name: 'اخبارية', category: 'reporting', color: '#a855f7', icon: '📰' },
+          { id: 3, name: 'أخرى', category: 'other', color: '#64748b', icon: '📋' }
+        ]);
+      }
+      
+      if (aiUsageRes.success && Array.isArray(aiUsageRes.data)) setAiUsageRecords(aiUsageRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -72,19 +96,60 @@ export default function TaskDetailsPage() {
 
   useEffect(() => { fetchDetails(); }, [id]);
 
+  // عرض popup للمهام الاخبارية الجديدة فقط
+  useEffect(() => {
+    if (task && taskTypes.length > 0) {
+      const taskType = taskTypes.find(t => t.id === task.task_type_id);
+      // عرض popup إذا كانت مهمة اخبارية ولم تكن قد عُرضت من قبل
+      // وتحقق من أن المهمة جديدة (تم إنشاؤها للتو) بالتحقق من وقت الإنشاء
+      if (taskType?.category === 'reporting' && !showReportingTaskPopup) {
+        // تحقق من أن المهمة تم إنشاؤها في آخر دقيقة
+        const createdAt = new Date(task.created_at || task.updated_at || new Date());
+        const now = new Date();
+        const diffInSeconds = (now.getTime() - createdAt.getTime()) / 1000;
+        
+        // إذا تم إنشاء المهمة في آخر دقيقة، اعرض الـ popup
+        if (diffInSeconds < 60) {
+          setShowReportingTaskPopup(true);
+        }
+      }
+    }
+  }, [task, taskTypes]);
+
   const handleStatusChange = async (statusId: number) => {
     if (!currentUser || !task) return;
     try {
+      console.log('Changing task status:', { taskId: id, statusId, changedBy: currentUser.id });
       const res = await api.patch<{ success: boolean }>(`/api/tasks/${id}/status`, {
         status_id: statusId,
         changed_by: currentUser.id
       });
+      console.log('Status change response:', res);
       if (res.success) {
+        console.log('✅ Status changed successfully');
         fetchDetails();
         setIsStatusMenuOpen(false);
+      } else {
+        console.error('❌ Status change failed:', res);
       }
     } catch (err) {
-      console.error(err);
+      console.error('❌ Status change error:', err);
+    }
+  };
+
+  const handleOpenAISystemAndChangeStatus = async () => {
+    if (!currentUser || !task) return;
+    
+    try {
+      // ابحث عن حالة "في التنفيذ" (in progress)
+      const inProgressStatus = availableStatuses.find(s => s.name.toLowerCase().includes('تنفيذ') || s.name.toLowerCase().includes('progress'));
+      
+      if (inProgressStatus) {
+        // غيّر الحالة إلى "في التنفيذ"
+        await handleStatusChange(inProgressStatus.id);
+      }
+    } catch (err) {
+      console.error('Error changing status:', err);
     }
   };
 
@@ -164,6 +229,30 @@ export default function TaskDetailsPage() {
     }
   };
 
+  const handleSaveShootingData = async (data: any) => {
+    try {
+      if (task?.shooting_data?.id) {
+        await api.patch(`/api/tasks/${id}/shooting-data`, data);
+      } else {
+        await api.post(`/api/tasks/${id}/shooting-data`, data);
+      }
+      fetchDetails();
+      setIsShootingDataModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteShootingData = async () => {
+    if (!window.confirm('هل أنت متأكد من حذف بيانات التصوير؟')) return;
+    try {
+      await api.delete(`/api/tasks/${id}/shooting-data`);
+      fetchDetails();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) return <div className="p-12 text-center text-slate-400">جاري تحميل تفاصيل المهمة...</div>;
   if (!task) return <div className="p-12 text-center text-red-500 font-bold">لم يتم العثور على المهمة</div>;
 
@@ -183,6 +272,12 @@ export default function TaskDetailsPage() {
                 <Badge variant={getStatusVariant(task.status_id)} className="px-4 py-1 text-[12px]">
                   {task.status_name}
                 </Badge>
+                {task.task_type_id && (
+                  <TaskTypeIndicator 
+                    taskType={taskTypes.find(t => t.id === task.task_type_id)}
+                    size="sm"
+                  />
+                )}
                 <span className="text-xs font-mono font-bold text-slate-400">#{task.id}</span>
                 {dependencyStatus && (
                   <Badge variant={dependencyStatus.can_start ? 'green' : 'red'} className="gap-1.5">
@@ -196,6 +291,14 @@ export default function TaskDetailsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              {task.task_type_id && (
+                <AISystemButton 
+                  task={task}
+                  taskType={taskTypes.find(t => t.id === task.task_type_id)}
+                  onUsageRecorded={fetchDetails}
+                />
+              )}
+
               <div className="relative">
                 <Button onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)} variant="secondary" className="gap-2 bg-slate-50 border-slate-200 text-slate-700">
                   <Clock size={18} />
@@ -237,7 +340,7 @@ export default function TaskDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-10 pt-8 border-t border-slate-100">
-            <InfoItem icon={<Briefcase size={18} />} label="الأوردر المرتبط" value={task.order_title || 'غير متوفر'} isLink link={`/orders/${task.order_id}`} />
+            <InfoItem icon={<Briefcase size={18} />} label="الطلب المرتبط" value={task.order_title || 'غير متوفر'} isLink link={`/orders/${task.order_id}`} />
             <InfoItem icon={<User size={18} />} label="الموظف المعين" value={task.assigned_to_name || 'غير معين'} isHighlight />
             <InfoItem icon={<Calendar size={18} />} label="الموعد النهائي" value={task.deadline ? format(new Date(task.deadline), 'yyyy/MM/dd') : 'N/A'} />
             <InfoItem icon={<ShieldAlert size={18} />} label="الأولوية" value={task.priority_name || 'متوسط'} />
@@ -251,10 +354,36 @@ export default function TaskDetailsPage() {
           <div className="flex items-center gap-8 border-b border-slate-100 px-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
              <TabLink active={activeTab === 'comments'} onClick={() => setActiveTab('comments')} icon={<MessageSquare size={18}/>} label="التعليقات" count={(task.comments || []).length} />
              <TabLink active={activeTab === 'attachments'} onClick={() => setActiveTab('attachments')} icon={<Paperclip size={18}/>} label="المرفقات" count={(task.attachments || []).length} />
+             {task.task_type_id && taskTypes.find(t => t.id === task.task_type_id)?.category === 'shooting' && (
+               <TabLink active={activeTab === 'shooting-data'} onClick={() => setActiveTab('shooting-data')} icon={<Camera size={18}/>} label="بيانات التصوير" />
+             )}
              <TabLink active={activeTab === 'shootings'} onClick={() => setActiveTab('shootings')} icon={<Camera size={18}/>} label="التصوير" count={shootings.length} />
+             {task.task_type_id && taskTypes.find(t => t.id === task.task_type_id)?.category === 'reporting' && (
+               <TabLink active={activeTab === 'ai-usage'} onClick={() => setActiveTab('ai-usage')} icon={<Zap size={18}/>} label="سجل النظام الذكي" count={aiUsageRecords.length} />
+             )}
              <TabLink active={activeTab === 'relations'} onClick={() => setActiveTab('relations')} icon={<GitBranch size={18}/>} label="العلاقات" count={(task.relations || []).length} />
              <TabLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={18}/>} label="السجل الكامل" />
           </div>
+
+          {activeTab === 'shooting-data' && (
+            <div className="space-y-6">
+              {task.shooting_data ? (
+                <ShootingDataDisplay 
+                  data={task.shooting_data}
+                  onEdit={() => setIsShootingDataModalOpen(true)}
+                  onDelete={handleDeleteShootingData}
+                />
+              ) : (
+                <div className="py-12 text-center bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100">
+                  <Camera size={48} className="mx-auto text-slate-200 mb-4" />
+                  <p className="text-slate-400 font-bold">لا توجد بيانات تصوير لهذه المهمة بعد</p>
+                  <Button variant="ghost" onClick={() => setIsShootingDataModalOpen(true)} className="mt-4 text-blue-600">
+                    ابدأ بإضافة بيانات التصوير
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {activeTab === 'shootings' && (
             <div className="space-y-6">
@@ -293,6 +422,66 @@ export default function TaskDetailsPage() {
                     <Camera size={48} className="mx-auto text-slate-200 mb-4" />
                     <p className="text-slate-400 font-bold">لا توجد أحداث تصوير لهذه المهمة بعد</p>
                     <Button variant="ghost" onClick={() => setIsShootingModalOpen(true)} className="mt-4 text-blue-600">ابدأ بإنشاء أول حدث تصوير</Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'ai-usage' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">سجل استخدام النظام الذكي</h3>
+                      <p className="text-xs text-slate-500 font-medium">تسجيل جميع مرات استخدام نظام الأخبار الذكي</p>
+                    </div>
+                  </div>
+                </div>
+
+                {aiUsageRecords.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50">
+                          <th className="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-widest">الوقت</th>
+                          <th className="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-widest">المستخدم</th>
+                          <th className="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-widest">رابط النظام</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aiUsageRecords.map((record) => (
+                          <tr key={record.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                              {record.timestamp ? format(new Date(record.timestamp), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-700">
+                              {record.used_by_name || 'غير معروف'}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <a 
+                                href={record.ai_system_url} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-2 w-fit"
+                              >
+                                <ExternalLink size={14} />
+                                فتح النظام
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-12 text-center">
+                    <Zap size={48} className="mx-auto text-slate-200 mb-4" />
+                    <p className="text-slate-400 font-bold">لم يتم استخدام النظام الذكي بعد</p>
                   </div>
                 )}
               </div>
@@ -530,6 +719,55 @@ export default function TaskDetailsPage() {
           />
         )}
       </Modal>
+
+      <Modal isOpen={isShootingDataModalOpen} onClose={() => setIsShootingDataModalOpen(false)} title={task?.shooting_data ? "تعديل بيانات التصوير" : "إضافة بيانات التصوير"} className="max-w-3xl">
+        <ShootingDataForm 
+          initialData={task?.shooting_data}
+          onSubmit={handleSaveShootingData}
+          onCancel={() => setIsShootingDataModalOpen(false)}
+        />
+      </Modal>
+
+      {/* Reporting Task Popup */}
+      {showReportingTaskPopup && task && (
+        <Modal isOpen={showReportingTaskPopup} onClose={() => setShowReportingTaskPopup(false)}>
+          <div className="space-y-6 p-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">📰 مهمة اخبارية</h2>
+              <p className="text-slate-600">هل تريد فتح نظام الأخبار الذكي لتنفيذ هذه المهمة؟</p>
+            </div>
+
+            <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
+              <p className="text-sm text-slate-700 mb-3">
+                <strong>المهمة:</strong> {task.title}
+              </p>
+              <p className="text-sm text-slate-600">
+                سيتم فتح نظام الأخبار الذكي في نافذة جديدة مع تمرير بيانات المهمة تلقائياً.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowReportingTaskPopup(false)}
+                className="flex-1"
+              >
+                لاحقاً
+              </Button>
+              <div className="flex-1">
+                <AISystemButton 
+                  task={task}
+                  taskType={taskTypes.find(t => t.id === task.task_type_id)}
+                  onUsageRecorded={() => {
+                    setShowReportingTaskPopup(false);
+                    handleOpenAISystemAndChangeStatus();
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

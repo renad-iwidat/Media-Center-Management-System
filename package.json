@@ -21,7 +21,10 @@
     "fetch:save": "ts-node src/utils/fetch-and-save.ts",
     "db:test": "ts-node src/utils/test-db-connection.ts",
     "scheduler": "ts-node src/utils/start-scheduler.ts",
-    "add-reporters-perm": "ts-node scripts/add-reporters-permission.ts"
+    "add-reporters-perm": "ts-node scripts/add-reporters-permission.ts",
+    "check:attachments": "ts-node scripts/check-task-attachments.ts",
+    "migrate:attachments": "ts-node scripts/migrate-task-attachments.ts",
+    "check:content-attachments": "ts-node scripts/check-content-attachments.ts"
   },
   "keywords": [
     "media",

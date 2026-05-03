@@ -101,7 +101,7 @@ export default function ShootingsPage() {
             <thead>
               <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
                 <th className="px-6 py-4 border-r border-white/20">الموقع / الموعد</th>
-                <th className="px-6 py-4 border-r border-white/20">الأوردر المرتبط</th>
+                <th className="px-6 py-4 border-r border-white/20">الطلب المرتبط</th>
                 <th className="px-6 py-4 border-r border-white/20">النوع / المنشئ</th>
                 <th className="px-6 py-4 border-r border-white/20">المحتوى المنتج</th>
                 <th className="px-6 py-4 text-center">الإجراءات</th>

@@ -173,9 +173,9 @@ export default function PermissionsPage() {
                          <h4 className="text-lg font-black text-slate-900">{group.category}</h4>
                        </div>
                        <div className="grid grid-cols-1 gap-3">
-                         {(group.permissions || []).map((p) => (
+                         {(group.permissions || []).map((p, idx) => (
                            <div 
-                            key={p.key} 
+                            key={`${group.category}-${p.key}-${idx}`}
                             className={cn(
                               "flex items-center justify-between p-4 rounded-[20px] border transition-all",
                               p.has 

@@ -3,14 +3,21 @@ import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+
+// Load environment variables FIRST
+dotenv.config();
+
+console.log('Environment variables loaded:');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  PORT:', process.env.PORT);
+console.log('  AWS_REGION:', process.env.AWS_REGION);
+console.log('  AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
+
 import apiRoutes from './routes';
 import portalRoutes from './routes/portal-r';
 import { testConnection } from './config/database';
 import { SocketService } from './services/management/SocketService';
 import { bigIntSerializerMiddleware } from './utils/bigint-serializer';
-
-// Load environment variables
-dotenv.config();
 
 // Create Express app + HTTP server
 const app: Express = express();

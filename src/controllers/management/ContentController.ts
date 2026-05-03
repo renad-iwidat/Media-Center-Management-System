@@ -40,12 +40,68 @@ export class ContentController {
     }
   }
 
+  async uploadContent(req: Request, res: Response): Promise<void> {
+    try {
+      const { title, description, media_unit_id, created_by, tags } = req.body;
+      const file = (req as any).file;
+
+      if (!file || !title || !created_by) {
+        this.sendError(res, 'file, title, and created_by are required', 400);
+        return;
+      }
+
+      // Upload file to S3
+      const { S3Service } = await import('../../services/management/S3Service');
+      const uploadResult = await S3Service.uploadFile(
+        file.buffer,
+        file.originalname,
+        file.mimetype,
+        'content',
+        title
+      );
+
+      // Create content record
+      const content = await this.contentService.createContent({
+        title,
+        content_type_id: BigInt(1), // Default content type
+        media_unit_id: media_unit_id ? BigInt(media_unit_id) : undefined,
+        created_by: BigInt(created_by),
+        tags: tags ? JSON.parse(tags) : [],
+        cloud_url: uploadResult.url,
+        file_size: file.size,
+      });
+
+      this.sendSuccess(res, content, 201);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
   async getContent(req: Request, res: Response): Promise<void> {
     try {
       const content = await this.contentService.getContent(BigInt(req.params.id));
       this.sendSuccess(res, content);
     } catch (error) {
       this.sendError(res, error, 404);
+    }
+  }
+
+  async getContentDownloadUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const content = await this.contentService.getContent(BigInt(req.params.id));
+      if (!content.cloud_url) {
+        this.sendError(res, 'No download URL available for this content', 404);
+        return;
+      }
+      
+      // Extract S3 key from URL
+      const url = new URL(content.cloud_url);
+      const key = url.pathname.substring(1); // Remove leading slash
+      
+      const downloadUrl = await this.contentService.getPresignedDownloadUrl(key);
+      this.sendSuccess(res, { download_url: downloadUrl });
+    } catch (error) {
+      this.sendError(res, error, 400);
     }
   }
 
@@ -155,7 +211,7 @@ export class ContentController {
       // Accept both 'archived' and 'is_archived' parameter names
       const archivedParam = req.query.archived !== undefined ? req.query.archived : req.query.is_archived;
       
-      const content = await this.contentService.searchContent({
+      const result = await this.contentService.searchContent({
         keyword: req.query.keyword as string,
         content_type_id: req.query.content_type_id ? BigInt(req.query.content_type_id as string) : undefined,
         status_id: req.query.status_id ? BigInt(req.query.status_id as string) : undefined,
@@ -167,7 +223,7 @@ export class ContentController {
         limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
         offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
       });
-      this.sendSuccess(res, content);
+      this.sendSuccess(res, result.data, 200, result.total);
     } catch (error) {
       this.sendError(res, error, 400);
     }
@@ -291,8 +347,10 @@ export class ContentController {
 
   // ============ Helpers ============
 
-  private sendSuccess(res: Response, data: any, statusCode: number = 200): void {
-    res.status(statusCode).json({ success: true, data, timestamp: new Date().toISOString() });
+  private sendSuccess(res: Response, data: any, statusCode: number = 200, total?: number): void {
+    const response: any = { success: true, data, timestamp: new Date().toISOString() };
+    if (total !== undefined) response.total = total;
+    res.status(statusCode).json(response);
   }
 
   private sendError(res: Response, error: any, statusCode: number = 400): void {

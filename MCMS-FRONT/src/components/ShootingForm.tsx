@@ -103,9 +103,9 @@ export default function ShootingForm({ initialOrderId, initialTaskId, onSuccess,
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Select 
-          label="الأوردر المرتبط"
+          label="الطلب المرتبط"
           required
-          options={[{ value: '', label: 'اختر الأوردر...' }, ...orders.map(o => ({ value: o.id.toString(), label: o.title }))]}
+          options={[{ value: '', label: 'اختر الطلب...' }, ...orders.map(o => ({ value: o.id.toString(), label: o.title }))]}
           value={formData.order_id}
           onChange={(e) => setFormData(prev => ({ ...prev, order_id: e.target.value }))}
         />

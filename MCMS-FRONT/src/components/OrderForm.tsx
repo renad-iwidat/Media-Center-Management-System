@@ -136,7 +136,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
         <div className="md:col-span-2">
           <Input 
             label="العنوان" 
-            placeholder="أدخل عنوان الأوردر..." 
+            placeholder="أدخل عنوان الطلب..." 
             value={formData.title}
             onChange={(e) => setFormData(f => ({ ...f, title: e.target.value }))}
             required
@@ -231,7 +231,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
           إلغاء
         </Button>
         <Button type="submit" isLoading={loading} className="min-w-[120px] bg-[#3d6a8a] hover:bg-[#2d5570] text-white shadow-lg hover:shadow-xl">
-          {initialData?.id ? 'تحديث الأوردر' : 'إنشاء الأوردر'}
+          {initialData?.id ? 'تحديث الطلب' : 'إنشاء الطلب'}
         </Button>
       </div>
     </form>

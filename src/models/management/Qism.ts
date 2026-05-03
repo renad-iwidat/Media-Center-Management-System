@@ -1,13 +1,23 @@
 import pool from '../../config/database';
-import { Desk, Team, TeamUser } from '../../types/management';
+import { Qism, Team, TeamUser } from '../../types/management';
 
-export class DeskModel {
-  static async findById(id: bigint): Promise<Desk | null> {
+/**
+ * QismModel - قسم (Desk/Department)
+ * Handles database operations for Qism (departments/desks)
+ */
+export class QismModel {
+  /**
+   * Find a qism by ID
+   */
+  static async findById(id: bigint): Promise<Qism | null> {
     const result = await pool.query('SELECT * FROM desks WHERE id = $1', [id]);
     return result.rows[0] || null;
   }
 
-  static async findAll(limit: number = 10, offset: number = 0): Promise<Desk[]> {
+  /**
+   * Get all qisms with pagination
+   */
+  static async findAll(limit: number = 10, offset: number = 0): Promise<Qism[]> {
     const result = await pool.query(
       'SELECT * FROM desks ORDER BY name ASC LIMIT $1 OFFSET $2',
       [limit, offset]
@@ -15,7 +25,10 @@ export class DeskModel {
     return result.rows;
   }
 
-  static async findByManager(managerId: bigint): Promise<Desk[]> {
+  /**
+   * Get qisms managed by a specific user
+   */
+  static async findByManager(managerId: bigint): Promise<Qism[]> {
     const result = await pool.query(
       'SELECT * FROM desks WHERE manager_id = $1 ORDER BY name ASC',
       [managerId]
@@ -23,44 +36,56 @@ export class DeskModel {
     return result.rows;
   }
 
-  static async create(desk: Omit<Desk, 'id' | 'created_at'>): Promise<Desk> {
+  /**
+   * Create a new qism
+   */
+  static async create(qism: Omit<Qism, 'id' | 'created_at'>): Promise<Qism> {
     const result = await pool.query(
       `INSERT INTO desks (name, description, manager_id)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [desk.name, desk.description, desk.manager_id]
+      [qism.name, qism.description, qism.manager_id]
     );
     return result.rows[0];
   }
 
-  static async update(id: bigint, updates: Partial<Desk>): Promise<Desk | null> {
+  /**
+   * Update a qism
+   */
+  static async update(id: bigint, updates: Partial<Qism>): Promise<Qism | null> {
     const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at');
     if (fields.length === 0) return this.findById(id);
 
-    const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
-    const values = fields.map(field => updates[field as keyof Desk]);
+    const setClause = fields.map((field, i) => `${field} = ${i + 1}`).join(', ');
+    const values = fields.map(field => updates[field as keyof Qism]);
     values.push(id);
 
     const result = await pool.query(
-      `UPDATE desks SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`,
+      `UPDATE desks SET ${setClause} WHERE id = ${fields.length + 1} RETURNING *`,
       values
     );
     return result.rows[0] || null;
   }
 
+  /**
+   * Delete a qism
+   */
   static async delete(id: bigint): Promise<boolean> {
     const result = await pool.query('DELETE FROM desks WHERE id = $1', [id]);
     return result.rowCount! > 0;
   }
 
-  static async getTeams(deskId: bigint): Promise<Team[]> {
+  /**
+   * Get teams in a qism
+   */
+  static async getTeamsInQism(qismId: bigint): Promise<Team[]> {
     const result = await pool.query(
       `SELECT t.*, u.name as manager_name,
        (SELECT COUNT(*) FROM team_users tu WHERE tu.team_id = t.id) as member_count
        FROM teams t
        LEFT JOIN users u ON t.manager_id = u.id
        WHERE t.desk_id = $1 ORDER BY t.name ASC`,
-      [deskId]
+      [qismId]
     );
     return result.rows;
   }
@@ -122,12 +147,12 @@ export class TeamModel {
     const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at');
     if (fields.length === 0) return this.findById(id);
 
-    const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
+    const setClause = fields.map((field, i) => `${field} = ${i + 1}`).join(', ');
     const values = fields.map(field => updates[field as keyof Team]);
     values.push(id);
 
     const result = await pool.query(
-      `UPDATE teams SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`,
+      `UPDATE teams SET ${setClause} WHERE id = ${fields.length + 1} RETURNING *`,
       values
     );
     return result.rows[0] || null;

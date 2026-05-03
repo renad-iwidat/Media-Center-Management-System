@@ -186,6 +186,19 @@ export class TaskController {
   }
 
   /**
+   * GET /api/tasks/types
+   * Get all available task types
+   */
+  async getTaskTypes(req: Request, res: Response): Promise<void> {
+    try {
+      const types = await this.taskService.getTaskTypes();
+      this.sendSuccess(res, types, 200);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  /**
    * GET /api/tasks/:id/history
    * Get task status change history
    */
@@ -684,52 +697,63 @@ export class TaskController {
       const { user_id, title, description } = req.body;
       const userId = user_id || (req as any).user?.id;
 
-      console.log('Upload request:', {
-        taskId: id,
-        hasFile: !!file,
-        fileName: file?.originalname,
-        userId,
-        title,
-        description,
-        bodyKeys: Object.keys(req.body)
-      });
+      console.log('=== Upload Request Debug ===');
+      console.log('Task ID:', id);
+      console.log('File:', file ? { name: file.originalname, size: file.size, mimetype: file.mimetype } : 'NO FILE');
+      console.log('User ID:', userId);
+      console.log('Title:', title);
+      console.log('Description:', description);
+      console.log('Body keys:', Object.keys(req.body));
+      console.log('Body:', req.body);
+      console.log('===========================');
 
-      if (!id || !file || !userId || !title) {
-        const missingFields = [];
-        if (!id) missingFields.push('Task ID');
-        if (!file) missingFields.push('file');
-        if (!userId) missingFields.push('user_id');
-        if (!title) missingFields.push('title');
-        
+      // Validate required fields
+      const missingFields: string[] = [];
+      if (!id) missingFields.push('Task ID');
+      if (!file) missingFields.push('file');
+      if (!userId) missingFields.push('user_id');
+      if (!title || !title.trim()) missingFields.push('title');
+
+      if (missingFields.length > 0) {
         const errorMsg = `Missing required fields: ${missingFields.join(', ')}`;
-        console.error(errorMsg);
+        console.error('Validation error:', errorMsg);
         this.sendError(res, errorMsg, 400);
         return;
       }
 
+      console.log('Validation passed, uploading to S3...');
+
       // Upload to S3
       const { url, key } = await S3Service.uploadFile(
-        file.buffer,
-        file.originalname,
-        file.mimetype,
+        file!.buffer,
+        file!.originalname,
+        file!.mimetype,
         `tasks/${id}`,
         title,
         description
       );
+
+      console.log('S3 upload successful:', { url, key });
 
       // Save attachment to database
       const attachment = await this.taskService.addAttachment(
         BigInt(id),
         BigInt(userId),
         url,
-        file.mimetype,
+        file!.mimetype,
         title,
         description
       );
 
+      console.log('Database insert successful:', attachment);
+
       this.sendSuccess(res, { ...attachment, s3_key: key }, 201);
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('=== Upload Error ===');
+      console.error('Error:', error);
+      console.error('Error message:', error instanceof Error ? error.message : String(error));
+      console.error('Error stack:', error instanceof Error ? error.stack : 'N/A');
+      console.error('====================');
       this.sendError(res, error, 400);
     }
   }
@@ -793,11 +817,32 @@ export class TaskController {
    * Send error response
    */
   private sendError(res: Response, error: any, statusCode: number = 400): void {
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(statusCode).json({
+    let message = '';
+    let details = '';
+
+    if (error instanceof Error) {
+      message = error.message;
+      details = error.stack || '';
+    } else if (typeof error === 'string') {
+      message = error;
+    } else if (error && typeof error === 'object') {
+      message = error.message || JSON.stringify(error);
+      details = error.stack || error.detail || '';
+    } else {
+      message = String(error);
+    }
+
+    const response: any = {
       success: false,
       error: message,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Include details in development
+    if (process.env.NODE_ENV === 'development' && details) {
+      response.details = details;
+    }
+
+    res.status(statusCode).json(response);
   }
 }

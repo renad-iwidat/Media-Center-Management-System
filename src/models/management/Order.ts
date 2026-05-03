@@ -1,6 +1,10 @@
 import pool from '../../config/database';
 import { Order, OrderStatus, OrderHistory } from '../../types/management';
 
+/**
+ * OrderModel - طلب (Order)
+ * Handles database operations for Order (orders/requests)
+ */
 export class OrderModel {
   static async findById(id: bigint): Promise<Order | null> {
     const result = await pool.query('SELECT * FROM orders WHERE id = $1', [id]);
@@ -92,33 +96,33 @@ export class OrderModel {
 
     // Search by title or description
     if (search) {
-      query += ` AND (o.title ILIKE $${paramIndex} OR o.description ILIKE $${paramIndex})`;
+      query += ` AND (o.title ILIKE ${paramIndex} OR o.description ILIKE ${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
 
     // Filter by desk
     if (desk_id) {
-      query += ` AND o.desk_id = $${paramIndex}`;
+      query += ` AND o.desk_id = ${paramIndex}`;
       params.push(desk_id);
       paramIndex++;
     }
 
     // Filter by status
     if (status_id) {
-      query += ` AND o.status_id = $${paramIndex}`;
+      query += ` AND o.status_id = ${paramIndex}`;
       params.push(status_id);
       paramIndex++;
     }
 
     // Filter by program
     if (program_id) {
-      query += ` AND o.program_id = $${paramIndex}`;
+      query += ` AND o.program_id = ${paramIndex}`;
       params.push(program_id);
       paramIndex++;
     }
 
-    query += ` ORDER BY o.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY o.created_at DESC LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -163,12 +167,12 @@ export class OrderModel {
     const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at');
     if (fields.length === 0) return this.findById(id);
 
-    const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
+    const setClause = fields.map((field, i) => `${field} = ${i + 1}`).join(', ');
     const values = fields.map(field => updates[field as keyof Order]);
     values.push(id);
 
     const result = await pool.query(
-      `UPDATE orders SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`,
+      `UPDATE orders SET ${setClause} WHERE id = ${fields.length + 1} RETURNING *`,
       values
     );
     return result.rows[0] || null;

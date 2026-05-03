@@ -35,10 +35,69 @@ export class ContentService {
     return content;
   }
 
-  async getContent(id: bigint): Promise<Content> {
-    const content = await ContentModel.findById(id);
-    if (!content) throw new Error('Content not found: ' + id);
-    return content;
+  async getContent(id: bigint): Promise<any> {
+    const result = await pool.query(`
+      SELECT 
+        c.*,
+        ct.name as content_type_name,
+        u.name as created_by_name,
+        mu.name as media_unit_name,
+        COUNT(DISTINCT cta.task_id) as reuse_count
+      FROM content c
+      LEFT JOIN content_types ct ON c.content_type_id = ct.id
+      LEFT JOIN users u ON c.created_by = u.id
+      LEFT JOIN media_units mu ON c.media_unit_id = mu.id
+      LEFT JOIN content_tasks cta ON c.id = cta.content_id AND cta.usage_type = 'reuse'
+      WHERE c.id = $1
+      GROUP BY c.id, ct.id, u.id, mu.id
+    `, [id]);
+    
+    if (!result.rows[0]) throw new Error('Content not found: ' + id);
+    
+    const content = result.rows[0];
+    
+    // Get reuse history
+    const reuseResult = await pool.query(`
+      SELECT 
+        cta.id,
+        cta.task_id,
+        t.title as task_title,
+        cta.linked_by,
+        u.name as reused_by_name,
+        cta.linked_at as reused_at
+      FROM content_tasks cta
+      INNER JOIN tasks t ON cta.task_id = t.id
+      LEFT JOIN users u ON cta.linked_by = u.id
+      WHERE cta.content_id = $1 AND cta.usage_type = 'reuse'
+      ORDER BY cta.linked_at DESC
+    `, [id]);
+    
+    // Get linked tasks
+    const linkedResult = await pool.query(`
+      SELECT 
+        cta.task_id,
+        t.title as task_title,
+        cta.linked_by,
+        u.name as linked_by_name,
+        cta.usage_type,
+        cta.linked_at
+      FROM content_tasks cta
+      INNER JOIN tasks t ON cta.task_id = t.id
+      LEFT JOIN users u ON cta.linked_by = u.id
+      WHERE cta.content_id = $1
+      ORDER BY cta.linked_at DESC
+    `, [id]);
+    
+    return {
+      ...content,
+      reuse_history: reuseResult.rows,
+      linked_tasks: linkedResult.rows
+    };
+  }
+
+  async getPresignedDownloadUrl(s3Key: string): Promise<string> {
+    const { S3Service } = await import('./S3Service');
+    return S3Service.getPresignedUrl(s3Key, 3600); // 1 hour expiry
   }
 
   async getAllContent(limit: number = 10, offset: number = 0): Promise<Content[]> {
@@ -122,7 +181,7 @@ export class ContentService {
     is_archived?: boolean;
     limit?: number;
     offset?: number;
-  }): Promise<Content[]> {
+  }): Promise<{ data: Content[]; total: number }> {
     const conds: string[] = [];
     const vals: any[] = [];
     let p = 1;
@@ -137,11 +196,34 @@ export class ContentService {
     if (query.is_archived !== undefined) { conds.push('is_archived = $' + p); vals.push(query.is_archived); p++; }
 
     const where = conds.length > 0 ? 'WHERE ' + conds.join(' AND ') : '';
-    vals.push(query.limit || 10, query.offset || 0);
+    
+    // Get total count
+    const countSql = 'SELECT COUNT(*) as total FROM content ' + where;
+    const countResult = await pool.query(countSql, vals.slice(0, p - 1));
+    const total = parseInt(countResult.rows[0].total) || 0;
 
-    const sql = 'SELECT * FROM content ' + where + ' ORDER BY created_at DESC LIMIT $' + p + ' OFFSET $' + (p + 1);
+    // Get paginated data with joins
+    vals.push(query.limit || 10, query.offset || 0);
+    const sql = `
+      SELECT 
+        c.*,
+        ct.name as content_type_name,
+        u.name as created_by_name,
+        mu.name as media_unit_name,
+        COUNT(DISTINCT cta.task_id) as reuse_count
+      FROM content c
+      LEFT JOIN content_types ct ON c.content_type_id = ct.id
+      LEFT JOIN users u ON c.created_by = u.id
+      LEFT JOIN media_units mu ON c.media_unit_id = mu.id
+      LEFT JOIN content_tasks cta ON c.id = cta.content_id AND cta.usage_type = 'reuse'
+      ${where}
+      GROUP BY c.id, ct.id, u.id, mu.id
+      ORDER BY c.created_at DESC 
+      LIMIT $${p} OFFSET $${p + 1}
+    `;
     const result = await pool.query(sql, vals);
-    return result.rows;
+    
+    return { data: result.rows, total };
   }
 
   // ============ Tags ============

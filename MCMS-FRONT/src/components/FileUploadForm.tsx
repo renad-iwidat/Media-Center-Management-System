@@ -41,6 +41,15 @@ export default function FileUploadForm({ taskId, userId, onSuccess, onCancel }: 
       formData.append('description', description);
       formData.append('user_id', userId.toString());
 
+      console.log('Uploading file:', {
+        fileName: file.name,
+        fileSize: file.size,
+        title,
+        description,
+        userId,
+        taskId
+      });
+
       const token = localStorage.getItem('token');
       const response = await fetch(
         `${import.meta.env.VITE_API_URL || 'https://media-center-management-system.onrender.com'}/api/tasks/${taskId}/upload`,
@@ -55,8 +64,11 @@ export default function FileUploadForm({ taskId, userId, onSuccess, onCancel }: 
 
       const data = await response.json();
 
+      console.log('Upload response:', { status: response.status, data });
+
       if (!response.ok) {
-        throw new Error(data.message || 'فشل رفع الملف');
+        const errorMessage = data.error || data.message || 'فشل رفع الملف';
+        throw new Error(errorMessage);
       }
 
       setFile(null);
@@ -64,7 +76,9 @@ export default function FileUploadForm({ taskId, userId, onSuccess, onCancel }: 
       setDescription('');
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ أثناء رفع الملف');
+      const errorMsg = err instanceof Error ? err.message : 'حدث خطأ أثناء رفع الملف';
+      console.error('Upload error:', errorMsg);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

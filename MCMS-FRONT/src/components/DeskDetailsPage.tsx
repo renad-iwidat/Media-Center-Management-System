@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Building2, User, Users, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../services/api';
-import { DeskDetails, User as UserType } from '../types';
+import { QismDetails, User as UserType } from '../types';
 import { Button, Input, Select } from './ui/Inputs';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function DeskDetailsPage() {
+export default function QismDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [desk, setDesk] = useState<DeskDetails | null>(null);
+  const [qism, setQism] = useState<QismDetails | null>(null);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [users, setUsers] = useState<UserType[]>([]);
   const [teamPage, setTeamPage] = useState(0);
@@ -23,10 +23,10 @@ export default function DeskDetailsPage() {
     setLoading(true);
     try {
       const [res, usersRes] = await Promise.all([
-        api.get<{ success: boolean; data: DeskDetails }>(`/api/portal/desks/${id}/with-teams`),
+        api.get<{ success: boolean; data: QismDetails }>(`/api/portal/desks/${id}/with-teams`),
         api.get<{ success: boolean; data: UserType[] }>('/api/portal/users'),
       ]);
-      if (res.success) setDesk(res.data);
+      if (res.success) setQism(res.data);
       if (usersRes.success) setUsers(usersRes.data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -48,7 +48,7 @@ export default function DeskDetailsPage() {
       <p className="text-slate-600 font-medium">جاري تحميل تفاصيل القسم...</p>
     </div>
   );
-  if (!desk) return <div className="p-16 text-center"><h3 className="text-xl font-bold text-red-600">لم يتم العثور على القسم</h3></div>;
+  if (!qism) return <div className="p-16 text-center"><h3 className="text-xl font-bold text-red-600">لم يتم العثور على القسم</h3></div>;
 
   return (
     <div className="space-y-8 pb-12">
@@ -58,19 +58,19 @@ export default function DeskDetailsPage() {
         <span className="text-sm font-bold">العودة للأقسام</span>
       </Link>
 
-      {/* Desk Header */}
+      {/* Qism Header */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] p-8 border-b-4 border-[#FF9F4A]">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Badge variant="blue" className="bg-white/20 text-white border-white/30">قسم رئيسي</Badge>
-              <span className="text-xs font-mono font-bold text-white/60">#{desk.id}</span>
+              <span className="text-xs font-mono font-bold text-white/60">#{qism.id}</span>
             </div>
             <h1 className="text-3xl font-black text-white flex items-center gap-3">
               <Building2 size={32} className="text-[#FF9F4A]" />
-              {desk.name}
+              {qism.name}
             </h1>
-            {desk.description && <p className="text-white/70 font-medium max-w-2xl">{desk.description}</p>}
+            {qism.description && <p className="text-white/70 font-medium max-w-2xl">{qism.description}</p>}
           </div>
         </div>
         {/* Stats */}
@@ -79,14 +79,14 @@ export default function DeskDetailsPage() {
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-[#3d6a8a]"><User size={24} /></div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">مدير القسم</p>
-              <p className="text-lg font-black text-slate-900">{desk.manager_name || 'غير محدد'}</p>
+              <p className="text-lg font-black text-slate-900">{qism.manager_name || 'غير محدد'}</p>
             </div>
           </div>
           <div className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600"><Users size={24} /></div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">عدد الفرق</p>
-              <p className="text-lg font-black text-slate-900">{desk.teams?.length || 0} فريق</p>
+              <p className="text-lg font-black text-slate-900">{qism.teams?.length || 0} فريق</p>
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function DeskDetailsPage() {
             </thead>
             <tbody className="divide-y divide-[#FF9F4A] border-b-4 border-[#FF9F4A]">
               <AnimatePresence mode="popLayout">
-                {(desk.teams || []).slice(teamPage * TEAMS_PER_PAGE, (teamPage + 1) * TEAMS_PER_PAGE).map((team, index) => (
+                {(qism.teams || []).slice(teamPage * TEAMS_PER_PAGE, (teamPage + 1) * TEAMS_PER_PAGE).map((team, index) => (
                   <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={team.id}
                     className={cn("hover:bg-blue-50 transition-all group cursor-pointer border-l-4 border-l-[#FF9F4A]", index % 2 === 0 ? "bg-white" : "bg-slate-50")}
                     onClick={() => navigate(`/teams/${team.id}`)}
@@ -145,7 +145,7 @@ export default function DeskDetailsPage() {
             </tbody>
           </table>
 
-          {(!desk.teams || desk.teams.length === 0) && (
+          {(!qism.teams || qism.teams.length === 0) && (
             <div className="p-16 text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4"><Users className="text-slate-400" size={32} /></div>
               <p className="text-slate-500 font-bold mb-4">لا توجد فرق تابعة لهذا القسم</p>
@@ -155,17 +155,17 @@ export default function DeskDetailsPage() {
         </div>
 
         {/* Pagination */}
-        {desk.teams && desk.teams.length > TEAMS_PER_PAGE && (
+        {qism.teams && qism.teams.length > TEAMS_PER_PAGE && (
           <div className="px-6 py-4 bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] border-t-4 border-[#FF9F4A] flex items-center justify-between">
             <span className="text-sm text-white font-medium">
-              عرض <span className="font-bold text-[#FF9F4A]">{Math.min(TEAMS_PER_PAGE, desk.teams.length - teamPage * TEAMS_PER_PAGE)}</span> من أصل <span className="font-bold text-[#FF9F4A]">{desk.teams.length}</span> فريق
+              عرض <span className="font-bold text-[#FF9F4A]">{Math.min(TEAMS_PER_PAGE, qism.teams.length - teamPage * TEAMS_PER_PAGE)}</span> من أصل <span className="font-bold text-[#FF9F4A]">{qism.teams.length}</span> فريق
             </span>
             <div className="flex items-center gap-3">
               <button disabled={teamPage === 0} onClick={() => setTeamPage(p => p - 1)} className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2">
                 <ChevronRight size={18} /> السابق
               </button>
-              <span className="text-white text-sm font-bold">{teamPage + 1} / {Math.ceil(desk.teams.length / TEAMS_PER_PAGE)}</span>
-              <button disabled={teamPage >= Math.ceil(desk.teams.length / TEAMS_PER_PAGE) - 1} onClick={() => setTeamPage(p => p + 1)} className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2">
+              <span className="text-white text-sm font-bold">{teamPage + 1} / {Math.ceil(qism.teams.length / TEAMS_PER_PAGE)}</span>
+              <button disabled={teamPage >= Math.ceil(qism.teams.length / TEAMS_PER_PAGE) - 1} onClick={() => setTeamPage(p => p + 1)} className="px-4 py-2 text-white bg-white/20 hover:bg-white/30 rounded-lg border border-white/30 transition-all disabled:opacity-30 disabled:pointer-events-none font-medium flex items-center gap-2">
                 التالي <ChevronLeft size={18} />
               </button>
             </div>
@@ -175,18 +175,18 @@ export default function DeskDetailsPage() {
 
       {/* Team Modal */}
       <Modal isOpen={isTeamModalOpen} onClose={() => setIsTeamModalOpen(false)} title="إضافة فريق للقسم">
-        <TeamForm deskId={desk.id} users={users} onSuccess={() => { setIsTeamModalOpen(false); fetchDetails(); }} onCancel={() => setIsTeamModalOpen(false)} />
+        <TeamForm qismId={qism.id} users={users} onSuccess={() => { setIsTeamModalOpen(false); fetchDetails(); }} onCancel={() => setIsTeamModalOpen(false)} />
       </Modal>
     </div>
   );
 }
 
-function TeamForm({ deskId, users, onSuccess, onCancel }: { deskId: number; users: UserType[]; onSuccess: () => void; onCancel: () => void }) {
+function TeamForm({ qismId, users, onSuccess, onCancel }: { qismId: number; users: UserType[]; onSuccess: () => void; onCancel: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', manager_id: '' });
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
-    try { const res = await api.post<{ success: boolean }>('/api/portal/teams', { name: formData.name, desk_id: deskId, manager_id: Number(formData.manager_id) }); if (res.success) onSuccess(); }
+    try { const res = await api.post<{ success: boolean }>('/api/portal/teams', { name: formData.name, desk_id: qismId, manager_id: Number(formData.manager_id) }); if (res.success) onSuccess(); }
     catch (err) { console.error(err); } finally { setLoading(false); }
   };
   return (

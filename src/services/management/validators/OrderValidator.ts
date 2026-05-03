@@ -1,5 +1,9 @@
 import { Order } from '../../../types/management';
 
+/**
+ * OrderValidator - طلب (Order)
+ * Validates Order data and status transitions
+ */
 export class OrderValidator {
   /**
    * Valid Order Status Transitions
@@ -58,7 +62,7 @@ export class OrderValidator {
     }
 
     if (!data.desk_id) {
-      errors.push('Desk is required');
+      errors.push('Qism is required');
     }
 
     if (!data.status_id) {

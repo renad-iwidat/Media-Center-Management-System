@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Users, Plus, Search, ChevronLeft, ChevronRight, User, Edit, Trash2, Radio, Tag } from 'lucide-react';
 import { api } from '../services/api';
-import { Desk, Team, MediaUnit, Role, User as UserType } from '../types';
+import { Qism, Team, MediaUnit, Role, User as UserType } from '../types';
 import { Button, Input, Select, Textarea } from './ui/Inputs';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
@@ -9,15 +9,15 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type ActiveTab = 'desks' | 'teams' | 'units' | 'roles';
+type ActiveTab = 'qisms' | 'teams' | 'units' | 'roles';
 const PER_PAGE = 5;
 
 export default function DepartmentsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('desks');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('qisms');
   const [loading, setLoading] = useState(true);
 
-  const [desks, setDesks] = useState<Desk[]>([]);
+  const [desks, setDesks] = useState<Qism[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [units, setUnits] = useState<MediaUnit[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -38,7 +38,7 @@ export default function DepartmentsPage() {
     setLoading(true);
     try {
       const [desksRes, teamsRes, unitsRes, rolesRes, usersRes] = await Promise.all([
-        api.get<{ success: boolean; data: Desk[] }>('/api/portal/desks'),
+        api.get<{ success: boolean; data: Qism[] }>('/api/portal/desks'),
         api.get<{ success: boolean; data: Team[] }>('/api/portal/teams'),
         api.get<{ success: boolean; data: MediaUnit[] }>('/api/portal/media-units'),
         api.get<{ success: boolean; data: Role[] }>('/api/portal/roles'),
@@ -78,7 +78,7 @@ export default function DepartmentsPage() {
 
   const getAddBtn = () => {
     const c: Record<ActiveTab, { label: string; onClick: () => void }> = {
-      desks: { label: 'قسم جديد', onClick: () => setIsDeskModalOpen(true) },
+      qisms: { label: 'قسم جديد', onClick: () => setIsDeskModalOpen(true) },
       teams: { label: 'فريق جديد', onClick: () => setIsTeamModalOpen(true) },
       units: { label: 'وحدة إعلامية جديدة', onClick: () => setIsUnitModalOpen(true) },
       roles: { label: 'دور جديد', onClick: () => setIsRoleModalOpen(true) },
@@ -102,14 +102,14 @@ export default function DepartmentsPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-fit border border-slate-200">
-        <TabBtn active={activeTab === 'desks'} onClick={() => setActiveTab('desks')}><Building2 size={16} /> الأقسام</TabBtn>
+        <TabBtn active={activeTab === 'qisms'} onClick={() => setActiveTab('qisms')}><Building2 size={16} /> الأقسام</TabBtn>
         <TabBtn active={activeTab === 'teams'} onClick={() => setActiveTab('teams')}><Users size={16} /> الفرق</TabBtn>
         <TabBtn active={activeTab === 'units'} onClick={() => setActiveTab('units')}><Radio size={16} /> الوحدات الإعلامية</TabBtn>
         <TabBtn active={activeTab === 'roles'} onClick={() => setActiveTab('roles')}><Tag size={16} /> الأدوار</TabBtn>
       </div>
 
       {/* ========== DESKS TAB ========== */}
-      {activeTab === 'desks' && (
+      {activeTab === 'qisms' && (
         <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-right">
@@ -298,10 +298,10 @@ export default function DepartmentsPage() {
 
       {/* ========== MODALS ========== */}
       <Modal isOpen={isDeskModalOpen} onClose={() => setIsDeskModalOpen(false)} title="إنشاء قسم جديد">
-        <DeskForm users={users} onSuccess={() => { setIsDeskModalOpen(false); fetchData(); }} onCancel={() => setIsDeskModalOpen(false)} />
+        <QismForm users={users} onSuccess={() => { setIsDeskModalOpen(false); fetchData(); }} onCancel={() => setIsDeskModalOpen(false)} />
       </Modal>
       <Modal isOpen={isTeamModalOpen} onClose={() => setIsTeamModalOpen(false)} title="إنشاء فريق عمل">
-        <TeamForm users={users} desks={desks} onSuccess={() => { setIsTeamModalOpen(false); fetchData(); }} onCancel={() => setIsTeamModalOpen(false)} />
+        <TeamForm users={users} qisms={desks} onSuccess={() => { setIsTeamModalOpen(false); fetchData(); }} onCancel={() => setIsTeamModalOpen(false)} />
       </Modal>
       <Modal isOpen={isUnitModalOpen} onClose={() => setIsUnitModalOpen(false)} title="إضافة وحدة إعلامية">
         <UnitForm onSuccess={() => { setIsUnitModalOpen(false); fetchData(); }} onCancel={() => setIsUnitModalOpen(false)} />
@@ -367,7 +367,7 @@ function EmptyState({ icon, text, btnLabel, onClick }: { icon: React.ReactNode; 
 
 // ========== FORMS ==========
 
-function DeskForm({ users, onSuccess, onCancel }: { users: UserType[]; onSuccess: () => void; onCancel: () => void }) {
+function QismForm({ users, onSuccess, onCancel }: { users: UserType[]; onSuccess: () => void; onCancel: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '', manager_id: '' });
   const handleSubmit = async (e: React.FormEvent) => {
@@ -388,7 +388,7 @@ function DeskForm({ users, onSuccess, onCancel }: { users: UserType[]; onSuccess
   );
 }
 
-function TeamForm({ users, desks, onSuccess, onCancel }: { users: UserType[]; desks: Desk[]; onSuccess: () => void; onCancel: () => void }) {
+function TeamForm({ users, qisms, onSuccess, onCancel }: { users: UserType[]; qisms: Qism[]; onSuccess: () => void; onCancel: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', desk_id: '', manager_id: '' });
   const handleSubmit = async (e: React.FormEvent) => {
@@ -399,7 +399,7 @@ function TeamForm({ users, desks, onSuccess, onCancel }: { users: UserType[]; de
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input label="اسم الفريق" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-      <Select label="القسم التابع له" required options={[{ value: '', label: 'اختر القسم...' }, ...desks.map(d => ({ value: d.id.toString(), label: d.name }))]} value={formData.desk_id} onChange={e => setFormData({ ...formData, desk_id: e.target.value })} />
+      <Select label="القسم التابع له" required options={[{ value: '', label: 'اختر القسم...' }, ...qisms.map(d => ({ value: d.id.toString(), label: d.name }))]} value={formData.desk_id} onChange={e => setFormData({ ...formData, desk_id: e.target.value })} />
       <Select label="مدير الفريق" required options={[{ value: '', label: 'اختر مدير...' }, ...users.map(u => ({ value: u.id.toString(), label: u.name }))]} value={formData.manager_id} onChange={e => setFormData({ ...formData, manager_id: e.target.value })} />
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
         <Button variant="ghost" type="button" onClick={onCancel}>إلغاء</Button>

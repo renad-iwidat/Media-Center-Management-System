@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://media-center-management-system.onrender.com';
+const BASE_URL = (import.meta.env.VITE_API_URL as string) || 'https://media-center-management-system.onrender.com';
 
 class ApiService {
   private getHeaders() {

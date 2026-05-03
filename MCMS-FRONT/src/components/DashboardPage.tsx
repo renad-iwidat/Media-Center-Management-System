@@ -278,7 +278,7 @@ export default function DashboardPage() {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <SummaryCard 
-          title="الأوردرات"
+          title="الطلبات"
           total={data?.orders.total || 0}
           icon={<ClipboardList className="text-blue-600" />}
           stats={[
@@ -336,7 +336,7 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-400">تتبع حجم العمل والإنتاج على مدار الأشهر</p>
             </div>
             <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-4 py-2 rounded-full">
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /> أوردرات</div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /> طلبات</div>
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-600" /> مهام</div>
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-600" /> محتوى</div>
             </div>
@@ -462,7 +462,7 @@ function CustomTooltip({ active, payload, label }: any) {
           {payload.map((p: any, i: number) => (
             <div key={i} className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.stroke }} />
-              <span className="text-xs text-slate-700 font-medium">{p.name === 'orders' ? 'الأوردرات' : p.name === 'tasks' ? 'المهام' : 'المحتوى'}:</span>
+              <span className="text-xs text-slate-700 font-medium">{p.name === 'orders' ? 'الطلبات' : p.name === 'tasks' ? 'المهام' : 'المحتوى'}:</span>
               <span className="text-xs font-mono font-bold mr-auto text-slate-900">{p.value}</span>
             </div>
           ))}

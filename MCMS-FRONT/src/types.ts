@@ -339,6 +339,32 @@ export interface UserWithRoles extends Omit<User, 'roles'> {
 
 export interface Status extends Lookup {}
 
+export interface TaskType extends Lookup {
+  category?: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface TaskShootingData {
+  id?: number;
+  task_id?: number;
+  location: string;
+  start_time: string;
+  end_time?: string;
+  equipment: string[];
+  crew: string[];
+  notes?: string;
+  created_at?: string;
+}
+
+export interface AISystemUsage {
+  id?: number;
+  task_id?: number;
+  used_by?: number;
+  used_by_name?: string;
+  used_at?: string;
+}
+
 export interface Shooting {
   id: number;
   order_id: number;

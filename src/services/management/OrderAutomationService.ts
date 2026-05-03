@@ -2,6 +2,10 @@ import pool from '../../config/database';
 import { Order } from '../../types/management';
 import { KPIService } from './KPIService';
 
+/**
+ * OrderAutomationService - طلب (Order)
+ * Handles automated operations for Order (orders/requests)
+ */
 export class OrderAutomationService {
   /**
    * Handle order status change
@@ -62,12 +66,12 @@ export class OrderAutomationService {
 
     // Update order
     const updateFields = Object.keys(updates);
-    const setClause = updateFields.map((field, i) => `${field} = $${i + 1}`).join(', ');
+    const setClause = updateFields.map((field, i) => `${field} = ${i + 1}`).join(', ');
     const values = updateFields.map(field => updates[field]);
     values.push(orderId);
 
     const updatedOrderResult = await pool.query(
-      `UPDATE orders SET ${setClause} WHERE id = $${updateFields.length + 1} RETURNING *`,
+      `UPDATE orders SET ${setClause} WHERE id = ${updateFields.length + 1} RETURNING *`,
       values
     );
 
