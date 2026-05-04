@@ -330,7 +330,7 @@ export default function ManualInputAudio() {
                     <select
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     >
                       <option value="">اختر اسمك</option>
                       {users.map(user => (
@@ -349,7 +349,7 @@ export default function ManualInputAudio() {
                     <select
                       value={mediaUnitId}
                       onChange={(e) => setMediaUnitId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     >
                       <option value="">اختر الوحدة</option>
                       {mediaUnits.map(unit => (
@@ -368,7 +368,7 @@ export default function ManualInputAudio() {
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       placeholder="مثال: تقرير من الميدان"
                       maxLength={100}
                     />

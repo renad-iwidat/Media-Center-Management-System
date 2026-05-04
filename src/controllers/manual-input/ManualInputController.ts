@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { ManualInputService } from '../../services/manual-input/ManualInputService';
 import { ManualInputData } from '../../models/manual-input/ManualInput';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { s3Client, S3_CONFIG, generateS3Key, generateS3Url } from '../../config/s3';
 
 /**
  * Manual Input Controller
@@ -536,6 +539,170 @@ export class ManualInputController {
       res.status(500).json({
         success: false,
         message: 'فشل في رفع الصورة',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * POST /api/manual-input/upload-video/presign
+   * توليد presigned URL لرفع الفيديو مباشرة من المتصفح على S3
+   * 
+   * Body: JSON
+   * - filename: اسم الملف الأصلي
+   * - content_type: نوع الملف (مثل video/mp4)
+   * - file_size: حجم الملف بالبايت
+   * - title: عنوان الفيديو (اختياري)
+   */
+  static async getVideoPresignedUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const { filename, content_type, file_size, title } = req.body;
+
+      // التحقق من البيانات المطلوبة
+      if (!filename || !content_type || !file_size) {
+        res.status(400).json({
+          success: false,
+          message: 'filename, content_type, و file_size مطلوبين'
+        });
+        return;
+      }
+
+      // التحقق من نوع الملف
+      if (!S3_CONFIG.ALLOWED_MIME_TYPES.VIDEO.includes(content_type)) {
+        res.status(400).json({
+          success: false,
+          message: 'نوع الملف غير مدعوم. الأنواع المسموحة: MP4, WebM, MOV, AVI'
+        });
+        return;
+      }
+
+      // التحقق من حجم الملف
+      if (file_size > S3_CONFIG.MAX_FILE_SIZE.VIDEO) {
+        res.status(400).json({
+          success: false,
+          message: 'حجم الملف كبير جداً. الحد الأقصى: 500 MB'
+        });
+        return;
+      }
+
+      // توليد مسار S3
+      const s3Key = generateS3Key('video', filename, title?.trim());
+
+      // توليد presigned URL (صالح لمدة 15 دقيقة)
+      const command = new PutObjectCommand({
+        Bucket: S3_CONFIG.BUCKET,
+        Key: s3Key,
+        ContentType: content_type,
+        ACL: 'public-read',
+      });
+
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+      const s3Url = generateS3Url(s3Key);
+
+      console.log(`🔗 تم توليد presigned URL للفيديو: ${s3Key}`);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          presigned_url: presignedUrl,
+          s3_key: s3Key,
+          s3_url: s3Url,
+          expires_in: 900
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في توليد presigned URL:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في توليد رابط الرفع',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * POST /api/manual-input/upload-video/confirm
+   * تأكيد رفع الفيديو وحفظ المعلومات في قاعدة البيانات
+   * 
+   * Body: JSON
+   * - s3_key: مسار الملف على S3
+   * - s3_url: رابط الملف العام
+   * - original_filename: اسم الملف الأصلي
+   * - file_size: حجم الملف
+   * - mime_type: نوع الملف
+   * - uploaded_by: معرف المستخدم
+   * - media_unit_id: معرف الوحدة الإعلامية
+   */
+  static async confirmVideoUpload(req: Request, res: Response): Promise<void> {
+    try {
+      const { s3_key, s3_url, original_filename, file_size, mime_type, uploaded_by, media_unit_id } = req.body;
+
+      // التحقق من البيانات المطلوبة
+      if (!s3_key || !s3_url || !original_filename || !file_size || !mime_type || !uploaded_by || !media_unit_id) {
+        res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+        return;
+      }
+
+      const uploadedById = parseInt(uploaded_by);
+      const mediaUnitId = parseInt(media_unit_id);
+
+      if (!uploadedById || !mediaUnitId) {
+        res.status(400).json({
+          success: false,
+          message: 'معرف المستخدم ومعرف الوحدة الإعلامية مطلوبين'
+        });
+        return;
+      }
+
+      // جلب معلومات المصدر
+      const sources = await ManualInputService.getManualInputSources();
+      if (!sources || !sources.video) {
+        res.status(500).json({
+          success: false,
+          message: 'مصدر الإدخال الفيديو غير موجود'
+        });
+        return;
+      }
+
+      // حفظ معلومات الملف في قاعدة البيانات
+      const fileRecord = await ManualInputService.saveUploadedFile({
+        source_id: sources.video.id,
+        source_type_id: sources.video.source_type_id,
+        file_type: 'video',
+        original_filename,
+        file_size,
+        mime_type,
+        s3_bucket: S3_CONFIG.BUCKET,
+        s3_key,
+        s3_url,
+        uploaded_by: uploadedById,
+        media_unit_id: mediaUnitId
+      });
+
+      console.log(`✅ تم تأكيد رفع الفيديو: ${s3_key}`);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: fileRecord.id,
+          file_url: fileRecord.s3_url,
+          file_size: fileRecord.file_size,
+          original_filename: fileRecord.original_filename,
+          processing_status: fileRecord.processing_status,
+          uploaded_at: fileRecord.uploaded_at
+        },
+        message: 'تم رفع ملف الفيديو بنجاح'
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في تأكيد رفع الفيديو:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في تأكيد رفع الفيديو',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }

@@ -40,11 +40,19 @@ router.post('/submit', ManualInputController.submitNews);
 // - uploaded_by: معرف المستخدم (required)
 router.post('/upload-audio', uploadAudio.single('file'), ManualInputController.uploadAudio);
 
-// POST /api/manual-input/upload-video - رفع ملف فيديو
+// POST /api/manual-input/upload-video - رفع ملف فيديو (الطريقة القديمة - للملفات الصغيرة)
 // Body: multipart/form-data
 // - file: ملف الفيديو (required)
 // - uploaded_by: معرف المستخدم (required)
 router.post('/upload-video', uploadVideo.single('file'), ManualInputController.uploadVideo);
+
+// POST /api/manual-input/upload-video/presign - توليد presigned URL لرفع الفيديو مباشرة على S3
+// Body: JSON { filename, content_type, file_size, title? }
+router.post('/upload-video/presign', ManualInputController.getVideoPresignedUrl);
+
+// POST /api/manual-input/upload-video/confirm - تأكيد رفع الفيديو وحفظ المعلومات
+// Body: JSON { s3_key, s3_url, original_filename, file_size, mime_type, uploaded_by, media_unit_id }
+router.post('/upload-video/confirm', ManualInputController.confirmVideoUpload);
 
 // POST /api/manual-input/upload-image - رفع صورة
 // Body: multipart/form-data

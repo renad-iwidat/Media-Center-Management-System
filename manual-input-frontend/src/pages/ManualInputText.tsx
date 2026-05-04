@@ -271,7 +271,7 @@ export default function ManualInputText() {
                 name="created_by"
                 value={formData.created_by}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 required
               >
                 <option value="">اختر اسمك</option>
@@ -293,7 +293,7 @@ export default function ManualInputText() {
                 name="media_unit_id"
                 value={formData.media_unit_id}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 required
               >
                 <option value="">اختر الوحدة</option>
@@ -316,7 +316,7 @@ export default function ManualInputText() {
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 placeholder="أدخل عنوان الخبر"
                 required
                 minLength={20}
@@ -336,7 +336,7 @@ export default function ManualInputText() {
                 name="category_id"
                 value={formData.category_id}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 required
               >
                 <option value="">اختر التصنيف</option>
@@ -410,7 +410,7 @@ export default function ManualInputText() {
                 name="content"
                 value={formData.content}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900"
                 placeholder="أدخل محتوى الخبر"
                 rows={16}
                 required

@@ -197,16 +197,40 @@ export default function ManualInputVideo() {
     setSuccess(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('uploaded_by', userId);
-      formData.append('media_unit_id', mediaUnitId);
-      formData.append('title', title.trim());
+      // الخطوة 1: الحصول على presigned URL من السيرفر
+      const presignRes = await apiClient.post('/manual-input/upload-video/presign', {
+        filename: selectedFile.name,
+        content_type: selectedFile.type,
+        file_size: selectedFile.size,
+        title: title.trim()
+      });
 
-      await apiClient.post('/manual-input/upload-video', formData, {
+      const { presigned_url, s3_key, s3_url } = presignRes.data.data;
+
+      // الخطوة 2: رفع الملف مباشرة على S3 باستخدام presigned URL
+      const uploadRes = await fetch(presigned_url, {
+        method: 'PUT',
+        body: selectedFile,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': selectedFile.type,
         },
+      });
+
+      if (!uploadRes.ok) {
+        const errorText = await uploadRes.text();
+        console.error('S3 upload failed:', uploadRes.status, errorText);
+        throw new Error('فشل في رفع الملف على التخزين السحابي');
+      }
+
+      // الخطوة 3: تأكيد الرفع وحفظ المعلومات بالداتابيس
+      await apiClient.post('/manual-input/upload-video/confirm', {
+        s3_key,
+        s3_url,
+        original_filename: selectedFile.name,
+        file_size: selectedFile.size,
+        mime_type: selectedFile.type,
+        uploaded_by: userId,
+        media_unit_id: mediaUnitId
       });
 
       setSuccess(`تم رفع الفيديو بنجاح`);
@@ -375,7 +399,7 @@ export default function ManualInputVideo() {
                     <select
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     >
                       <option value="">اختر اسمك</option>
                       {users.map(user => (
@@ -394,7 +418,7 @@ export default function ManualInputVideo() {
                     <select
                       value={mediaUnitId}
                       onChange={(e) => setMediaUnitId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     >
                       <option value="">اختر الوحدة</option>
                       {mediaUnits.map(unit => (
@@ -413,7 +437,7 @@ export default function ManualInputVideo() {
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       placeholder="مثال: تغطية مباشرة من الميدان"
                       maxLength={100}
                     />
