@@ -10,7 +10,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 
 interface OpenAISTTOptions {
   language?: string;
@@ -18,10 +17,36 @@ interface OpenAISTTOptions {
   response_format?: 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt';
   temperature?: number;
   prompt?: string;
+  includeTimestamps?: boolean; // Include timestamps in response
+}
+
+interface AudioSegment {
+  id: number;
+  seek: number;
+  start: number;
+  end: number;
+  text: string;
+  avg_logprob: number;
+  compression_ratio: number;
+  no_speech_prob: number;
 }
 
 interface OpenAISTTResponse {
   text: string;
+}
+
+interface OpenAIVerboseResponse {
+  task: string;
+  language: string;
+  duration: number;
+  text: string;
+  segments: AudioSegment[];
+}
+
+interface TranscriptionWithTimestamps {
+  text: string;
+  segments: AudioSegment[];
+  duration: number;
 }
 
 /**
@@ -31,7 +56,7 @@ interface OpenAISTTResponse {
 export async function transcribeAudioWithOpenAI(
   audioBuffer: Buffer,
   options: OpenAISTTOptions = {}
-): Promise<string> {
+): Promise<string | TranscriptionWithTimestamps> {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
     
@@ -44,14 +69,19 @@ export async function transcribeAudioWithOpenAI(
       model = 'whisper-1',
       response_format = 'json',
       temperature = 0,
-      prompt
+      prompt,
+      includeTimestamps = false // Default: return only text
     } = options;
+
+    // Use verbose_json if timestamps are requested
+    const actualFormat = includeTimestamps ? 'verbose_json' : response_format;
 
     console.log(`\n🤖 [${new Date().toISOString()}] Starting OpenAI Whisper Transcription`);
     console.log(`🌐 API: OpenAI Whisper API`);
     console.log(`📊 Audio Buffer Size: ${audioBuffer.length} bytes`);
     console.log(`🗣️  Language: ${language}`);
     console.log(`🎯 Model: ${model}`);
+    console.log(`⏱️  Include Timestamps: ${includeTimestamps}`);
 
     // Validate audio buffer
     validateAudioBuffer(audioBuffer);
@@ -61,7 +91,7 @@ export async function transcribeAudioWithOpenAI(
     formData.append('file', new Blob([new Uint8Array(audioBuffer)], { type: 'audio/mpeg' }), 'audio.mp3');
     formData.append('model', model);
     formData.append('language', language);
-    formData.append('response_format', response_format);
+    formData.append('response_format', actualFormat);
     formData.append('temperature', temperature.toString());
     
     if (prompt) {
@@ -112,15 +142,39 @@ export async function transcribeAudioWithOpenAI(
           throw new Error(errorMessage);
         }
 
-        const data: OpenAISTTResponse = await response.json();
+        const data = await response.json();
 
         console.log(`📥 OpenAI Response received`);
-        console.log(`📝 Transcript Length: ${data.text?.length || 0} characters`);
-
-        // Return the transcript
-        if (data.text) {
-          console.log(`✅ OpenAI Whisper transcription completed (${data.text.length} characters)`);
-          return data.text.trim();
+        
+        // Handle verbose_json response with timestamps
+        if (includeTimestamps && 'segments' in data) {
+          const verboseData = data as OpenAIVerboseResponse;
+          console.log(`📝 Transcript Length: ${verboseData.text?.length || 0} characters`);
+          console.log(`⏱️  Segments: ${verboseData.segments?.length || 0}`);
+          
+          if (verboseData.text && verboseData.segments) {
+            console.log(`✅ OpenAI Whisper transcription completed with timestamps`);
+            
+            // Log first few segments
+            verboseData.segments.slice(0, 3).forEach(seg => {
+              console.log(`  [${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s] ${seg.text}`);
+            });
+            
+            return {
+              text: verboseData.text.trim(),
+              segments: verboseData.segments,
+              duration: verboseData.duration
+            };
+          }
+        } else {
+          // Handle regular json response
+          const jsonData = data as OpenAISTTResponse;
+          console.log(`📝 Transcript Length: ${jsonData.text?.length || 0} characters`);
+          
+          if (jsonData.text) {
+            console.log(`✅ OpenAI Whisper transcription completed (${jsonData.text.length} characters)`);
+            return jsonData.text.trim();
+          }
         }
 
         throw new Error('No transcript returned from OpenAI Whisper API');
@@ -160,7 +214,7 @@ export async function transcribeAudioWithOpenAI(
 export async function transcribeAudioFileWithOpenAI(
   filePath: string,
   options: OpenAISTTOptions = {}
-): Promise<string> {
+): Promise<string | TranscriptionWithTimestamps> {
   try {
     if (!fs.existsSync(filePath)) {
       throw new Error(`Audio file not found: ${filePath}`);
@@ -316,4 +370,82 @@ export async function getOpenAIUsageInfo(): Promise<any> {
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+/**
+ * Transcribe audio and get timestamps for each segment
+ * تفريغ الصوت والحصول على الـ timestamps لكل جزء
+ * 
+ * @param audioBuffer - Audio file buffer
+ * @param options - Transcription options
+ * @returns Object with text and segments containing timestamps
+ * 
+ * Example:
+ * {
+ *   text: "النص الكامل...",
+ *   segments: [
+ *     { start: 0.0, end: 5.2, text: "أول جملة" },
+ *     { start: 5.2, end: 10.5, text: "جملة ثانية" }
+ *   ],
+ *   duration: 433.17
+ * }
+ */
+export async function transcribeAudioWithTimestamps(
+  audioBuffer: Buffer,
+  options: Omit<OpenAISTTOptions, 'includeTimestamps'> = {}
+): Promise<TranscriptionWithTimestamps> {
+  const result = await transcribeAudioWithOpenAI(audioBuffer, {
+    ...options,
+    includeTimestamps: true
+  });
+
+  if (typeof result === 'string') {
+    throw new Error('Failed to get timestamps from transcription');
+  }
+
+  return result;
+}
+
+/**
+ * Format timestamps for display
+ * تنسيق الـ timestamps للعرض
+ * 
+ * @param seconds - Time in seconds
+ * @returns Formatted time string (HH:MM:SS)
+ */
+export function formatTimestamp(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Create SRT subtitle format from segments
+ * إنشاء صيغة SRT من الـ segments
+ */
+export function createSRTSubtitles(segments: AudioSegment[]): string {
+  return segments
+    .map((seg, idx) => {
+      const startTime = formatTimestampSRT(seg.start);
+      const endTime = formatTimestampSRT(seg.end);
+      return `${idx + 1}\n${startTime} --> ${endTime}\n${seg.text}\n`;
+    })
+    .join('\n');
+}
+
+/**
+ * Format timestamp for SRT format (HH:MM:SS,mmm)
+ */
+function formatTimestampSRT(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
 }

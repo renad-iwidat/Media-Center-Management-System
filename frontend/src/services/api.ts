@@ -325,6 +325,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ audioBase64, language }),
     }),
+  transcribeAudioWithTimestamps: (audioUrl: string, language: string = 'ar', format: 'json' | 'srt' = 'json') =>
+    request<any>("/ai-hub/stt/transcribe-with-timestamps", {
+      method: "POST",
+      body: JSON.stringify({ audioUrl, language, format }),
+    }),
   getSTTLanguages: () => request<any>("/ai-hub/stt/languages"),
 
   // --- Production Streaming Audio Extraction ---

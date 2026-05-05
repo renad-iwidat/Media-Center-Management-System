@@ -49,10 +49,11 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string): 
       async (chunk) => {
         try {
           console.log(`  🎵 Processing chunk ${chunk.index + 1}/${chunks.length}...`);
-          const transcript = await transcribeAudioWithOpenAI(
+          const result = await transcribeAudioWithOpenAI(
             fs.readFileSync(chunk.filePath),
-            { language }
+            { language, includeTimestamps: false }
           );
+          const transcript = typeof result === 'string' ? result : result.text;
           console.log(`  ✅ Chunk ${chunk.index + 1} completed (${transcript.length} chars)`);
           return transcript;
         } catch (error) {
@@ -141,9 +142,11 @@ export class VideoToTextController {
       } else {
         // Step 2: Convert audio to text (normal processing)
         console.log('\n🎙️  Step 2: Converting audio to text...');
-        transcript = await transcribeAudioWithOpenAI(audioBuffer, {
+        const result = await transcribeAudioWithOpenAI(audioBuffer, {
           language,
+          includeTimestamps: false
         });
+        transcript = typeof result === 'string' ? result : result.text;
       }
 
       console.log(`✅ Transcription completed: ${transcript.length} characters`);
@@ -230,9 +233,11 @@ export class VideoToTextController {
       } else {
         // Step 2: Convert audio to text (normal processing)
         console.log('\n🎙️  Step 2: Converting audio to text...');
-        transcript = await transcribeAudioWithOpenAI(audioBuffer, {
+        const result = await transcribeAudioWithOpenAI(audioBuffer, {
           language,
+          includeTimestamps: false
         });
+        transcript = typeof result === 'string' ? result : result.text;
       }
 
       console.log(`✅ Transcription completed: ${transcript.length} characters`);

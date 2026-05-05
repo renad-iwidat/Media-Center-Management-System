@@ -280,7 +280,9 @@ export class StreamingExtractionController {
       const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-        return await transcribeAudioWithOpenAI(buffer, { language });
+        const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps: false });
+        // Ensure we return only the text string
+        return typeof result === 'string' ? result : result.text;
       };
 
       let result: any;
@@ -433,7 +435,9 @@ export class StreamingExtractionController {
       const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-        return await transcribeAudioWithOpenAI(buffer, { language });
+        const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps: false });
+        // Ensure we return only the text string
+        return typeof result === 'string' ? result : result.text;
       };
 
       // Process with download-first method

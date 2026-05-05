@@ -146,4 +146,41 @@ router.post('/transcribe-upload', upload.single('file'), createAILogger('stt', '
  */
 router.post('/transcribe-base64', createAILogger('stt', 'transcribe-base64'), STTController.transcribeFromBase64);
 
+/**
+ * POST /api/ai-hub/stt/transcribe-with-timestamps - تفريغ صوتي مع الـ timestamps
+ * Content-Type: application/json
+ * Body:
+ * {
+ *   "audioUrl": "audio URL (required)",
+ *   "language": "language code (optional, default: 'ar')",
+ *   "format": "json|srt (optional, default: 'json')"
+ * }
+ * Response (JSON format):
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "transcript": "string - The full transcript",
+ *     "segments": [
+ *       { "start": 0.0, "end": 5.2, "text": "...", "startFormatted": "00:00", "endFormatted": "00:05" }
+ *     ],
+ *     "duration": 433.17,
+ *     "language": "ar",
+ *     "segmentCount": 10
+ *   }
+ * }
+ * 
+ * Response (SRT format):
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "transcript": "string - The full transcript",
+ *     "srt": "1\n00:00:00,000 --> 00:00:05,200\n...\n",
+ *     "duration": 433.17,
+ *     "language": "ar",
+ *     "segmentCount": 10
+ *   }
+ * }
+ */
+router.post('/transcribe-with-timestamps', createAILogger('stt', 'transcribe-with-timestamps'), STTController.transcribeWithTimestamps);
+
 export default router;

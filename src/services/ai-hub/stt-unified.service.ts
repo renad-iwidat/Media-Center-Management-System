@@ -77,7 +77,8 @@ export async function transcribeAudioFromBuffer(
       // Decide chunking strategy
       if (!enableChunking || duration <= chunkDuration) {
         console.log('� Processing as single chunk (no chunking needed)...');
-        return await transcribeAudioWithOpenAI(audioBuffer, { language });
+        const result = await transcribeAudioWithOpenAI(audioBuffer, { language, includeTimestamps: false });
+        return typeof result === 'string' ? result : result.text;
       } else {
         console.log(`🔄 Audio requires chunking (${Math.round(duration)}s > ${chunkDuration}s)`);
         return await transcribeWithChunking(tempAudioPath, {
@@ -246,7 +247,8 @@ async function processChunksWithOpenAI(
       const chunkBuffer = fs.readFileSync(chunk.filePath);
       
       // Transcribe with OpenAI
-      const transcript = await transcribeAudioWithOpenAI(chunkBuffer, { language });
+      const transcriptionResult = await transcribeAudioWithOpenAI(chunkBuffer, { language, includeTimestamps: false });
+      const transcript = typeof transcriptionResult === 'string' ? transcriptionResult : transcriptionResult.text;
       
       const chunkDuration = Date.now() - chunkStartTime;
       completedCount++;
