@@ -24,7 +24,7 @@ import os from 'os';
  * Process large audio with chunking
  * معالجة الصوت الكبير بالتقسيم
  */
-async function processAudioWithChunking(audioBuffer: Buffer, language: string): Promise<string> {
+async function processAudioWithChunking(audioBuffer: Buffer, language: string, includeTimestamps: boolean = true): Promise<{ transcript: string; segments?: any[] }> {
   const tempDir = path.join(os.tmpdir(), 'media-center-video-processing');
   
   if (!fs.existsSync(tempDir)) {
@@ -47,6 +47,11 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string): 
 
     // Process chunks in parallel (3 at a time)
     console.log('\n🔄 Processing chunks in parallel...');
+    const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
+    
+    let allSegments: any[] = [];
+    let chunkOffset = 0;
+
     const processedChunks = await processAudioChunksInParallel(
       chunks,
       async (chunk) => {
@@ -54,9 +59,25 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string): 
           console.log(`  🎵 Processing chunk ${chunk.index + 1}/${chunks.length}...`);
           const result = await transcribeAudioWithOpenAI(
             fs.readFileSync(chunk.filePath),
-            { language, includeTimestamps: false }
+            { language, includeTimestamps }
           );
-          const transcript = typeof result === 'string' ? result : result.text;
+          
+          let transcript: string;
+          if (typeof result === 'string') {
+            transcript = result;
+          } else {
+            transcript = result.text;
+            // Adjust segment timestamps based on chunk offset
+            if (result.segments && includeTimestamps) {
+              const adjustedSegments = result.segments.map(seg => ({
+                ...seg,
+                start: seg.start + chunkOffset,
+                end: seg.end + chunkOffset
+              }));
+              allSegments.push(...adjustedSegments);
+            }
+          }
+          
           console.log(`  ✅ Chunk ${chunk.index + 1} completed (${transcript.length} chars)`);
           return transcript;
         } catch (error) {
@@ -78,7 +99,10 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string): 
     if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
     if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
 
-    return finalTranscript;
+    return {
+      transcript: finalTranscript,
+      segments: includeTimestamps ? allSegments : undefined
+    };
   } catch (error) {
     // Cleanup on error
     if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
@@ -145,7 +169,9 @@ export class VideoToTextController {
 
       if (shouldUseChunking) {
         console.log(`\n🔄 Audio is large (${audioSizeMB.toFixed(2)} MB) - using chunked processing...`);
-        transcript = await processAudioWithChunking(audioBuffer, language);
+        const result = await processAudioWithChunking(audioBuffer, language, includeTimestamps);
+        transcript = result.transcript;
+        segments = result.segments || [];
       } else {
         // Step 2: Convert audio to text (normal processing)
         console.log('\n🎙️  Step 2: Converting audio to text...');
@@ -260,7 +286,9 @@ export class VideoToTextController {
 
       if (shouldUseChunking) {
         console.log(`\n🔄 Audio is large (${audioSizeMB.toFixed(2)} MB) - using chunked processing...`);
-        transcript = await processAudioWithChunking(audioBuffer, language);
+        const result = await processAudioWithChunking(audioBuffer, language, includeTimestamps);
+        transcript = result.transcript;
+        segments = result.segments || [];
       } else {
         // Step 2: Convert audio to text (normal processing)
         console.log('\n🎙️  Step 2: Converting audio to text...');
