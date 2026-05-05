@@ -5,7 +5,6 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { authenticate } from '../../middleware/auth';
 import { StreamingExtractionController } from '../../controllers/ai-hub/streaming-extraction.controller';
 
 const router = Router();
@@ -40,7 +39,7 @@ router.use((req: Request, res: Response, next: NextFunction) => {
     event: 'streaming_extraction_request',
     timestamp: new Date().toISOString(),
     method: req.method,
-    path: req.path,
+    path: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('User-Agent')
   }));

@@ -36,7 +36,7 @@ export async function transcribeAudioFromUrl(
     }
 
     const language = options.language || 'ar'; // Default to Arabic
-    const timeout = options.timeout || 60000; // 60 seconds default
+    const timeout = options.timeout || 300000; // 5 minutes default (increased from 60s)
 
     console.log(`\n🎙️  [${new Date().toISOString()}] Starting STT Transcription`);
     console.log(`🌐 STT API URL: ${sttApiUrl}/stt`);
@@ -333,7 +333,7 @@ export async function transcribeAudioFromBuffer(
     }
 
     const language = options.language || 'ar';
-    const timeout = options.timeout || 60000;
+    const timeout = options.timeout || 300000; // 5 minutes default
 
     console.log(`\n🎙️  [${new Date().toISOString()}] Starting STT Transcription from Buffer`);
     console.log(`🌐 STT API URL: ${sttApiUrl}/stt`);
@@ -343,32 +343,9 @@ export async function transcribeAudioFromBuffer(
     // Validate audio buffer
     validateAudioBuffer(audioBuffer, 'Buffer');
 
-    // Check if we should use parallel processing
-    const enableParallel = process.env.ENABLE_PARALLEL_STT !== 'false';
-    const thresholdMB = parseInt(process.env.STT_PARALLEL_THRESHOLD_MB || '2');
-    const shouldUseParallel = enableParallel && audioBuffer.length > thresholdMB * 1024 * 1024;
-    
-    if (shouldUseParallel) {
-      console.log(`🚀 Using parallel processing for large audio file (>${thresholdMB}MB)...`);
-      
-      try {
-        // Import parallel processing service
-        const { transcribeAudioBufferParallel } = await import('./parallel-stt.service');
-        
-        return await transcribeAudioBufferParallel(audioBuffer, {
-          language,
-          chunkDurationSeconds: parseInt(process.env.STT_CHUNK_DURATION_SECONDS || '30'),
-          maxConcurrentRequests: parseInt(process.env.STT_MAX_CONCURRENT_REQUESTS || '3'),
-          timeout,
-          overlapSeconds: parseInt(process.env.STT_OVERLAP_SECONDS || '2')
-        });
-      } catch (parallelError) {
-        console.warn('⚠️  Parallel processing failed, falling back to single request:', parallelError);
-        // Fallback to single request
-      }
-    }
-
-    console.log('📝 Using single request...');
+    // DISABLE parallel processing to avoid nested chunking
+    // When we already chunk at video level, we don't need to chunk again at STT level
+    console.log('📝 Using single request (parallel processing disabled to avoid nested chunking)...');
     return await transcribeAudioBufferSingle(audioBuffer, { language });
 
   } catch (error) {

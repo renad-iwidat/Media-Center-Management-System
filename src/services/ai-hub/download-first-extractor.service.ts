@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { randomUUID } from 'crypto';
+import axios from 'axios';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 
@@ -65,9 +66,6 @@ async function downloadVideoFile(
   const tempDir = getTempDir();
   const videoFileName = `video-${randomUUID()}.mp4`;
   const videoFilePath = path.join(tempDir, videoFileName);
-
-  // Import axios dynamically
-  const axios = (await import('axios')).default;
 
   try {
     const startTime = Date.now();
