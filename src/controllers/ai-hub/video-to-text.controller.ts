@@ -7,6 +7,81 @@
 import { Request, Response } from 'express';
 import { extractAudioFromVideoUrl } from '../../services/ai-hub/audio-extraction.service';
 import { transcribeAudioFromBuffer } from '../../services/ai-hub/stt.service';
+import {
+  splitAudioIntoChunks,
+  processAudioChunksInParallel,
+  combineTranscripts,
+  cleanupChunks,
+} from '../../services/ai-hub/chunked-audio-processor.service';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+/**
+ * Process large audio with chunking
+ * معالجة الصوت الكبير بالتقسيم
+ */
+async function processAudioWithChunking(audioBuffer: Buffer, language: string): Promise<string> {
+  const tempDir = path.join(os.tmpdir(), 'media-center-video-processing');
+  
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+
+  const audioPath = path.join(tempDir, `audio-${Date.now()}.mp3`);
+
+  try {
+    // Save audio buffer to file
+    fs.writeFileSync(audioPath, audioBuffer);
+    console.log(`💾 Audio saved to: ${audioPath}`);
+
+    // Split audio into chunks (5 minutes each)
+    console.log('\n🎵 Splitting audio into chunks...');
+    const chunks = await splitAudioIntoChunks(audioPath, {
+      chunkDurationSeconds: 300, // 5 minutes
+    });
+    console.log(`✅ Audio split into ${chunks.length} chunks`);
+
+    // Process chunks in parallel (3 at a time)
+    console.log('\n🔄 Processing chunks in parallel...');
+    const processedChunks = await processAudioChunksInParallel(
+      chunks,
+      async (chunk) => {
+        try {
+          console.log(`  🎵 Processing chunk ${chunk.index + 1}/${chunks.length}...`);
+          const transcript = await transcribeAudioFromBuffer(
+            fs.readFileSync(chunk.filePath),
+            { language }
+          );
+          console.log(`  ✅ Chunk ${chunk.index + 1} completed (${transcript.length} chars)`);
+          return transcript;
+        } catch (error) {
+          console.error(`  ❌ Error processing chunk ${chunk.index + 1}:`, error);
+          throw error;
+        }
+      },
+      { maxConcurrentChunks: 3 }
+    );
+
+    // Combine transcripts
+    console.log('\n📝 Combining transcripts...');
+    const finalTranscript = combineTranscripts(processedChunks);
+    console.log(`✅ Final transcript: ${finalTranscript.length} characters`);
+
+    // Cleanup
+    console.log('\n🗑️  Cleaning up temporary files...');
+    await cleanupChunks(chunks);
+    if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+    if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
+
+    return finalTranscript;
+  } catch (error) {
+    // Cleanup on error
+    if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+    if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
+    throw error;
+  }
+}
 
 export class VideoToTextController {
   /**
@@ -19,7 +94,8 @@ export class VideoToTextController {
    *   "videoUrl": "https://example.com/video.mp4",
    *   "language": "ar" (optional, default: "ar"),
    *   "outputFormat": "mp3" (optional, default: "mp3"),
-   *   "bitrate": "128k" (optional, default: "128k")
+   *   "bitrate": "128k" (optional, default: "128k"),
+   *   "useChunking": boolean (optional, default: false) - استخدام التقسيم للفيديوهات الكبيرة
    * }
    */
   static async processVideoToText(req: Request, res: Response) {
@@ -28,7 +104,8 @@ export class VideoToTextController {
         videoUrl, 
         language = 'ar', 
         outputFormat = 'mp3', 
-        bitrate = '128k' 
+        bitrate = '128k',
+        useChunking = false
       } = req.body;
 
       if (!videoUrl) {
@@ -42,6 +119,7 @@ export class VideoToTextController {
       console.log(`🗣️  Language: ${language}`);
       console.log(`🎵 Audio Format: ${outputFormat}`);
       console.log(`📊 Bitrate: ${bitrate}`);
+      console.log(`🔄 Use Chunking: ${useChunking}`);
 
       // Step 1: Extract audio from video
       console.log('\n📹 Step 1: Extracting audio from video...');
@@ -51,11 +129,23 @@ export class VideoToTextController {
       });
       console.log(`✅ Audio extracted: ${audioBuffer.length} bytes`);
 
-      // Step 2: Convert audio to text
-      console.log('\n🎙️  Step 2: Converting audio to text...');
-      const transcript = await transcribeAudioFromBuffer(audioBuffer, {
-        language,
-      });
+      // Check if audio is large (> 20 MB) and chunking is enabled
+      const audioSizeMB = audioBuffer.length / (1024 * 1024);
+      const shouldUseChunking = useChunking || audioSizeMB > 20;
+
+      let transcript: string;
+
+      if (shouldUseChunking) {
+        console.log(`\n🔄 Audio is large (${audioSizeMB.toFixed(2)} MB) - using chunked processing...`);
+        transcript = await processAudioWithChunking(audioBuffer, language);
+      } else {
+        // Step 2: Convert audio to text (normal processing)
+        console.log('\n🎙️  Step 2: Converting audio to text...');
+        transcript = await transcribeAudioFromBuffer(audioBuffer, {
+          language,
+        });
+      }
+
       console.log(`✅ Transcription completed: ${transcript.length} characters`);
 
       res.json({
@@ -68,6 +158,7 @@ export class VideoToTextController {
           audioFormat: outputFormat,
           bitrate,
           transcriptLength: transcript.length,
+          usedChunking: shouldUseChunking,
         },
       });
     } catch (error) {
@@ -90,7 +181,8 @@ export class VideoToTextController {
    *   "s3Url": "https://s3.example.com/video.mp4",
    *   "language": "ar" (optional, default: "ar"),
    *   "outputFormat": "mp3" (optional, default: "mp3"),
-   *   "bitrate": "128k" (optional, default: "128k")
+   *   "bitrate": "128k" (optional, default: "128k"),
+   *   "useChunking": boolean (optional, default: false) - استخدام التقسيم للفيديوهات الكبيرة
    * }
    */
   static async processS3VideoToText(req: Request, res: Response) {
@@ -100,7 +192,8 @@ export class VideoToTextController {
         s3Url, 
         language = 'ar', 
         outputFormat = 'mp3', 
-        bitrate = '128k' 
+        bitrate = '128k',
+        useChunking = false
       } = req.body;
 
       if (!s3Url) {
@@ -115,6 +208,7 @@ export class VideoToTextController {
       console.log(`🗣️  Language: ${language}`);
       console.log(`🎵 Audio Format: ${outputFormat}`);
       console.log(`📊 Bitrate: ${bitrate}`);
+      console.log(`🔄 Use Chunking: ${useChunking}`);
 
       // Step 1: Extract audio from S3 video
       console.log('\n📹 Step 1: Extracting audio from S3 video...');
@@ -124,11 +218,23 @@ export class VideoToTextController {
       });
       console.log(`✅ Audio extracted: ${audioBuffer.length} bytes`);
 
-      // Step 2: Convert audio to text
-      console.log('\n🎙️  Step 2: Converting audio to text...');
-      const transcript = await transcribeAudioFromBuffer(audioBuffer, {
-        language,
-      });
+      // Check if audio is large (> 20 MB) and chunking is enabled
+      const audioSizeMB = audioBuffer.length / (1024 * 1024);
+      const shouldUseChunking = useChunking || audioSizeMB > 20;
+
+      let transcript: string;
+
+      if (shouldUseChunking) {
+        console.log(`\n🔄 Audio is large (${audioSizeMB.toFixed(2)} MB) - using chunked processing...`);
+        transcript = await processAudioWithChunking(audioBuffer, language);
+      } else {
+        // Step 2: Convert audio to text (normal processing)
+        console.log('\n🎙️  Step 2: Converting audio to text...');
+        transcript = await transcribeAudioFromBuffer(audioBuffer, {
+          language,
+        });
+      }
+
       console.log(`✅ Transcription completed: ${transcript.length} characters`);
 
       res.json({
@@ -142,6 +248,7 @@ export class VideoToTextController {
           audioFormat: outputFormat,
           bitrate,
           transcriptLength: transcript.length,
+          usedChunking: shouldUseChunking,
         },
       });
     } catch (error) {

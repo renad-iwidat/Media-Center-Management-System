@@ -34,8 +34,10 @@ interface ExtractionOptions {
 }
 
 /**
- * Extract audio from video file URL
- * استخرج الصوت من رابط فيديو
+ * Extract audio from video file URL (with streaming support)
+ * استخرج الصوت من رابط فيديو (مع دعم streaming)
+ * 
+ * يستخدم ffmpeg لقراءة الفيديو مباشرة من URL بدون تنزيل كامل
  */
 export async function extractAudioFromVideoUrl(
   videoUrl: string,
@@ -51,23 +53,60 @@ export async function extractAudioFromVideoUrl(
     console.log(`🎵 Output Format: ${outputFormat}`);
     console.log(`📊 Bitrate: ${bitrate}`);
 
-    // Download video file
-    console.log('📥 Downloading video file...');
-    const videoBuffer = await downloadVideoFile(videoUrl, timeout);
-    console.log(`✅ Video downloaded (${videoBuffer.length} bytes)`);
-
-    // Save video to temporary file
+    // Create temporary output file for audio
     const tempDir = getTempDir();
-    const tempVideoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
-    fs.writeFileSync(tempVideoPath, videoBuffer);
-    console.log(`💾 Video saved to: ${tempVideoPath}`);
+    const tempAudioPath = path.join(tempDir, `audio-${Date.now()}.${outputFormat}`);
 
-    // Extract audio
-    const audioBuffer = await extractAudioFromFile(tempVideoPath, options);
+    console.log('� Extracting audio directly from URL using ffmpeg (streaming)...');
+    const startTime = Date.now();
 
-    // Clean up temporary video file
-    fs.unlinkSync(tempVideoPath);
-    console.log(`🗑️  Temporary video file deleted`);
+    // Extract audio using ffmpeg directly from URL (no download needed!)
+    await new Promise<void>((resolve, reject) => {
+      const command = ffmpeg(videoUrl)  // ← ffmpeg يقرأ مباشرة من URL
+        .audioCodec('libmp3lame')
+        .audioBitrate(bitrate)
+        .format(outputFormat)
+        .output(tempAudioPath)
+        .on('start', (commandLine: string) => {
+          console.log('🎬 FFmpeg command:', commandLine.substring(0, 150) + '...');
+        })
+        .on('progress', (progress: any) => {
+          if (progress.percent) {
+            console.log(`📊 Progress: ${Math.round(progress.percent)}%`);
+          }
+        })
+        .on('end', () => {
+          console.log('✅ Audio extraction completed');
+          resolve();
+        })
+        .on('error', (err: Error) => {
+          console.error('❌ FFmpeg error:', err);
+          reject(err);
+        });
+
+      // Set timeout
+      setTimeout(() => {
+        command.kill('SIGKILL');
+        reject(new Error(`Audio extraction timeout after ${timeout}ms`));
+      }, timeout);
+
+      command.run();
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`⏱️  Extraction Time: ${duration}ms`);
+
+    // Read extracted audio file
+    if (!fs.existsSync(tempAudioPath)) {
+      throw new Error('Audio extraction failed: Output file not created');
+    }
+
+    const audioBuffer = fs.readFileSync(tempAudioPath);
+    console.log(`✅ Audio extracted (${audioBuffer.length} bytes)`);
+
+    // Clean up temporary audio file
+    fs.unlinkSync(tempAudioPath);
+    console.log(`🗑️  Temporary audio file deleted`);
 
     return audioBuffer;
   } catch (error) {
