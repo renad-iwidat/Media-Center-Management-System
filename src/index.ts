@@ -31,6 +31,11 @@ import uploadedFilesRoutes from './routes/manual-input/uploaded-files.routes';
 
 const app = express();
 
+// Trust proxy for production (Render, Heroku, etc.)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: false,

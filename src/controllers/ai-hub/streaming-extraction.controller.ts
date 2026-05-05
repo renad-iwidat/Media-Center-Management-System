@@ -273,91 +273,92 @@ export class StreamingExtractionController {
       });
 
       // Convert stream to buffer for transcription
-      // TODO: Implement streaming transcription to avoid buffer
       const chunks: Buffer[] = [];
       let totalSize = 0;
       const maxBufferSize = 50 * 1024 * 1024; // 50MB limit
 
-      audioStream.on('data', (chunk: Buffer) => {
-        totalSize += chunk.length;
-        if (totalSize > maxBufferSize) {
-          throw new ExtractionError('Audio stream too large for transcription', 'VALIDATION');
-        }
-        chunks.push(chunk);
-      });
-
-      audioStream.on('end', async () => {
-        try {
-          const audioBuffer = Buffer.concat(chunks);
-          
-          // Import transcription service
-          const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
-          
-          let transcript: string;
-          
-          if (enableChunking && audioBuffer.length > 10 * 1024 * 1024) { // 10MB threshold
-            // Use chunked processing for large files
-            const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
-            
-            const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-              return await transcribeAudioFromBuffer(buffer, { language });
-            };
-
-            // This is a workaround - ideally we'd stream directly to chunked processor
-            const result = await extractAudioWithChunkedProcessing(
-              videoUrl,
-              transcriptionFunction,
-              {
-                outputFormat,
-                bitrate,
-                enableChunking,
-                chunkDurationSeconds,
-                maxConcurrentChunks
-              }
-            );
-            
-            transcript = result.transcript || '';
-          } else {
-            // Direct transcription for smaller files
-            transcript = await transcribeAudioFromBuffer(audioBuffer, { language });
+      // Wait for stream to complete before processing
+      await new Promise<void>((resolve, reject) => {
+        audioStream.on('data', (chunk: Buffer) => {
+          totalSize += chunk.length;
+          if (totalSize > maxBufferSize) {
+            reject(new ExtractionError('Audio stream too large for transcription', 'VALIDATION'));
+            return;
           }
+          chunks.push(chunk);
+          console.log(`📊 Received chunk: ${chunk.length} bytes (total: ${totalSize} bytes)`);
+        });
 
-          // Update job with results
-          JobManager.updateJob(jobId, {
-            status: 'completed',
-            result: {
-              transcript,
-              size: audioBuffer.length,
-              duration: Math.round(audioBuffer.length / (128 * 1024 / 8)) // Rough estimate
-            }
-          });
+        audioStream.on('end', () => {
+          console.log(`✅ Stream completed: ${totalSize} bytes total`);
+          resolve();
+        });
 
-          res.json({
-            success: true,
-            data: {
-              jobId,
-              transcript,
-              audioSize: audioBuffer.length,
-              language,
-              processingMethod: enableChunking ? 'chunked' : 'direct'
-            }
-          });
+        audioStream.on('error', (err: Error) => {
+          console.error('❌ Stream error:', err);
+          reject(err);
+        });
+      });
 
-        } catch (transcriptionError) {
-          JobManager.updateJob(jobId, {
-            status: 'failed',
-            error: transcriptionError instanceof Error ? transcriptionError.message : 'Transcription failed'
-          });
-          throw transcriptionError;
+      // Check if we have audio data
+      if (chunks.length === 0 || totalSize === 0) {
+        throw new ExtractionError('No audio data received from stream', 'VALIDATION');
+      }
+
+      const audioBuffer = Buffer.concat(chunks);
+      console.log(`🎵 Final audio buffer: ${audioBuffer.length} bytes`);
+      
+      // Import transcription service
+      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
+      
+      let transcript: string;
+      
+      if (enableChunking && audioBuffer.length > 10 * 1024 * 1024) { // 10MB threshold
+        // Use chunked processing for large files
+        const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
+        
+        const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
+          return await transcribeAudioFromBuffer(buffer, { language });
+        };
+
+        // This is a workaround - ideally we'd stream directly to chunked processor
+        const result = await extractAudioWithChunkedProcessing(
+          videoUrl,
+          transcriptionFunction,
+          {
+            outputFormat,
+            bitrate,
+            enableChunking,
+            chunkDurationSeconds,
+            maxConcurrentChunks
+          }
+        );
+        
+        transcript = result.transcript || '';
+      } else {
+        // Direct transcription for smaller files
+        transcript = await transcribeAudioFromBuffer(audioBuffer, { language });
+      }
+
+      // Update job with results
+      JobManager.updateJob(jobId, {
+        status: 'completed',
+        result: {
+          transcript,
+          size: audioBuffer.length,
+          duration: Math.round(audioBuffer.length / (128 * 1024 / 8)) // Rough estimate
         }
       });
 
-      audioStream.on('error', (streamError) => {
-        JobManager.updateJob(jobId, {
-          status: 'failed',
-          error: streamError.message
-        });
-        throw streamError;
+      res.json({
+        success: true,
+        data: {
+          jobId,
+          transcript,
+          audioSize: audioBuffer.length,
+          language,
+          processingMethod: enableChunking ? 'chunked' : 'direct'
+        }
       });
 
     } catch (error) {
