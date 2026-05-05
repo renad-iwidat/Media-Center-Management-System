@@ -250,7 +250,8 @@ export class StreamingExtractionController {
         enableChunking = true,
         chunkDurationSeconds = 180,
         maxConcurrentChunks = 3,
-        forceDownloadFirst = false // Force download-first method
+        forceDownloadFirst = false, // Force download-first method
+        includeTimestamps = true // Include timestamps in response
       } = req.body;
 
       if (!videoUrl) {
@@ -264,6 +265,7 @@ export class StreamingExtractionController {
       console.log(`🌐 Video URL: ${videoUrl}`);
       console.log(`🗣️  Language: ${language}`);
       console.log(`🔄 Force Download-First: ${forceDownloadFirst}`);
+      console.log(`⏱️  Include Timestamps: ${includeTimestamps}`);
 
       // Create job for tracking
       const jobId = randomUUID();
@@ -276,13 +278,23 @@ export class StreamingExtractionController {
       JobManager.updateJob(jobId, { status: 'processing' });
 
       // Import services
-      const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
+      const { transcribeAudioWithOpenAI, formatTimestamp } = await import('../../services/ai-hub/openai-stt.service');
       const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
       
+      let allSegments: any[] = [];
+      
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-        const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps: false });
+        const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps });
         // Ensure we return only the text string
-        return typeof result === 'string' ? result : result.text;
+        if (typeof result === 'string') {
+          return result;
+        } else {
+          // Collect segments if timestamps are included
+          if (result.segments && includeTimestamps) {
+            allSegments.push(...result.segments);
+          }
+          return result.text;
+        }
       };
 
       let result: any;
@@ -359,18 +371,32 @@ export class StreamingExtractionController {
         }
       });
 
+      const responseData: any = {
+        jobId,
+        transcript: result.transcript,
+        audioSize: result.audioSize,
+        videoSize: result.videoSize || 0,
+        processingTime: result.processingTime || 0,
+        language,
+        processingMethod,
+        chunksProcessed: result.chunks?.length || 0
+      };
+
+      // Include segments with timestamps if available
+      if (includeTimestamps && allSegments.length > 0) {
+        responseData.segments = allSegments.map(seg => ({
+          start: seg.start,
+          end: seg.end,
+          text: seg.text,
+          startFormatted: formatTimestamp(seg.start),
+          endFormatted: formatTimestamp(seg.end),
+        }));
+        responseData.segmentCount = allSegments.length;
+      }
+
       res.json({
         success: true,
-        data: {
-          jobId,
-          transcript: result.transcript,
-          audioSize: result.audioSize,
-          videoSize: result.videoSize || 0,
-          processingTime: result.processingTime || 0,
-          language,
-          processingMethod,
-          chunksProcessed: result.chunks?.length || 0
-        }
+        data: responseData
       });
 
     } catch (error) {
@@ -407,7 +433,8 @@ export class StreamingExtractionController {
         enableChunking = true,
         chunkDurationSeconds = 180,
         maxConcurrentChunks = 3,
-        maxFileSize = 1024 * 1024 * 1024 // 1GB default
+        maxFileSize = 1024 * 1024 * 1024, // 1GB default
+        includeTimestamps = true
       } = req.body;
 
       if (!videoUrl) {
@@ -420,6 +447,7 @@ export class StreamingExtractionController {
       console.log(`\n🚀 [${new Date().toISOString()}] Download-First Extraction Request`);
       console.log(`🌐 Video URL: ${videoUrl}`);
       console.log(`📊 Max File Size: ${Math.round(maxFileSize / 1024 / 1024)}MB`);
+      console.log(`⏱️  Include Timestamps: ${includeTimestamps}`);
 
       // Create job for tracking
       const jobId = JobManager.createJob(videoUrl, {
@@ -432,12 +460,22 @@ export class StreamingExtractionController {
 
       // Import services
       const { processVideoWithDownloadFirst } = await import('../../services/ai-hub/download-first-extractor.service');
-      const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
+      const { transcribeAudioWithOpenAI, formatTimestamp } = await import('../../services/ai-hub/openai-stt.service');
+      
+      let allSegments: any[] = [];
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-        const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps: false });
+        const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps });
         // Ensure we return only the text string
-        return typeof result === 'string' ? result : result.text;
+        if (typeof result === 'string') {
+          return result;
+        } else {
+          // Collect segments if timestamps are included
+          if (result.segments && includeTimestamps) {
+            allSegments.push(...result.segments);
+          }
+          return result.text;
+        }
       };
 
       // Process with download-first method
@@ -466,19 +504,33 @@ export class StreamingExtractionController {
         }
       });
 
+      const responseData: any = {
+        jobId,
+        transcript: result.transcript,
+        audioSize: result.audioSize,
+        videoSize: result.videoSize,
+        processingTime: result.processingTime,
+        language,
+        processingMethod: 'download-first',
+        chunksProcessed: result.chunks?.length || 0,
+        enabledChunking: enableChunking
+      };
+
+      // Include segments with timestamps if available
+      if (includeTimestamps && allSegments.length > 0) {
+        responseData.segments = allSegments.map(seg => ({
+          start: seg.start,
+          end: seg.end,
+          text: seg.text,
+          startFormatted: formatTimestamp(seg.start),
+          endFormatted: formatTimestamp(seg.end),
+        }));
+        responseData.segmentCount = allSegments.length;
+      }
+
       res.json({
         success: true,
-        data: {
-          jobId,
-          transcript: result.transcript,
-          audioSize: result.audioSize,
-          videoSize: result.videoSize,
-          processingTime: result.processingTime,
-          language,
-          processingMethod: 'download-first',
-          chunksProcessed: result.chunks?.length || 0,
-          enabledChunking: enableChunking
-        }
+        data: responseData
       });
 
     } catch (error) {

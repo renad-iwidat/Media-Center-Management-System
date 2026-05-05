@@ -6,7 +6,10 @@
 
 import { Request, Response } from 'express';
 import { extractAudioFromVideoUrl } from '../../services/ai-hub/audio-extraction.service';
-import { transcribeAudioWithOpenAI } from '../../services/ai-hub/openai-stt.service';
+import { 
+  transcribeAudioWithOpenAI,
+  formatTimestamp
+} from '../../services/ai-hub/openai-stt.service';
 import {
   splitAudioIntoChunks,
   processAudioChunksInParallel,
@@ -97,6 +100,7 @@ export class VideoToTextController {
    *   "outputFormat": "mp3" (optional, default: "mp3"),
    *   "bitrate": "128k" (optional, default: "128k"),
    *   "useChunking": boolean (optional, default: false) - استخدام التقسيم للفيديوهات الكبيرة
+   *   "includeTimestamps": boolean (optional, default: true) - تضمين التايم كود
    * }
    */
   static async processVideoToText(req: Request, res: Response) {
@@ -106,7 +110,8 @@ export class VideoToTextController {
         language = 'ar', 
         outputFormat = 'mp3', 
         bitrate = '128k',
-        useChunking = false
+        useChunking = false,
+        includeTimestamps = true
       } = req.body;
 
       if (!videoUrl) {
@@ -121,6 +126,7 @@ export class VideoToTextController {
       console.log(`🎵 Audio Format: ${outputFormat}`);
       console.log(`📊 Bitrate: ${bitrate}`);
       console.log(`🔄 Use Chunking: ${useChunking}`);
+      console.log(`⏱️  Include Timestamps: ${includeTimestamps}`);
 
       // Step 1: Extract audio from video
       console.log('\n📹 Step 1: Extracting audio from video...');
@@ -135,6 +141,7 @@ export class VideoToTextController {
       const shouldUseChunking = useChunking || audioSizeMB > 20;
 
       let transcript: string;
+      let segments: any[] = [];
 
       if (shouldUseChunking) {
         console.log(`\n🔄 Audio is large (${audioSizeMB.toFixed(2)} MB) - using chunked processing...`);
@@ -144,25 +151,45 @@ export class VideoToTextController {
         console.log('\n🎙️  Step 2: Converting audio to text...');
         const result = await transcribeAudioWithOpenAI(audioBuffer, {
           language,
-          includeTimestamps: false
+          includeTimestamps
         });
-        transcript = typeof result === 'string' ? result : result.text;
+        
+        if (typeof result === 'string') {
+          transcript = result;
+        } else {
+          transcript = result.text;
+          segments = result.segments || [];
+        }
       }
 
       console.log(`✅ Transcription completed: ${transcript.length} characters`);
 
+      const responseData: any = {
+        videoUrl,
+        transcript,
+        language,
+        audioSize: audioBuffer.length,
+        audioFormat: outputFormat,
+        bitrate,
+        transcriptLength: transcript.length,
+        usedChunking: shouldUseChunking,
+      };
+
+      // Include segments with timestamps if available
+      if (includeTimestamps && segments.length > 0) {
+        responseData.segments = segments.map(seg => ({
+          start: seg.start,
+          end: seg.end,
+          text: seg.text,
+          startFormatted: formatTimestamp(seg.start),
+          endFormatted: formatTimestamp(seg.end),
+        }));
+        responseData.segmentCount = segments.length;
+      }
+
       res.json({
         success: true,
-        data: {
-          videoUrl,
-          transcript,
-          language,
-          audioSize: audioBuffer.length,
-          audioFormat: outputFormat,
-          bitrate,
-          transcriptLength: transcript.length,
-          usedChunking: shouldUseChunking,
-        },
+        data: responseData,
       });
     } catch (error) {
       console.error('❌ Error in video to text controller:', error);
@@ -186,6 +213,7 @@ export class VideoToTextController {
    *   "outputFormat": "mp3" (optional, default: "mp3"),
    *   "bitrate": "128k" (optional, default: "128k"),
    *   "useChunking": boolean (optional, default: false) - استخدام التقسيم للفيديوهات الكبيرة
+   *   "includeTimestamps": boolean (optional, default: true) - تضمين التايم كود
    * }
    */
   static async processS3VideoToText(req: Request, res: Response) {
@@ -196,7 +224,8 @@ export class VideoToTextController {
         language = 'ar', 
         outputFormat = 'mp3', 
         bitrate = '128k',
-        useChunking = false
+        useChunking = false,
+        includeTimestamps = true
       } = req.body;
 
       if (!s3Url) {
@@ -212,6 +241,7 @@ export class VideoToTextController {
       console.log(`🎵 Audio Format: ${outputFormat}`);
       console.log(`📊 Bitrate: ${bitrate}`);
       console.log(`🔄 Use Chunking: ${useChunking}`);
+      console.log(`⏱️  Include Timestamps: ${includeTimestamps}`);
 
       // Step 1: Extract audio from S3 video
       console.log('\n📹 Step 1: Extracting audio from S3 video...');
@@ -226,6 +256,7 @@ export class VideoToTextController {
       const shouldUseChunking = useChunking || audioSizeMB > 20;
 
       let transcript: string;
+      let segments: any[] = [];
 
       if (shouldUseChunking) {
         console.log(`\n🔄 Audio is large (${audioSizeMB.toFixed(2)} MB) - using chunked processing...`);
@@ -235,26 +266,46 @@ export class VideoToTextController {
         console.log('\n🎙️  Step 2: Converting audio to text...');
         const result = await transcribeAudioWithOpenAI(audioBuffer, {
           language,
-          includeTimestamps: false
+          includeTimestamps
         });
-        transcript = typeof result === 'string' ? result : result.text;
+        
+        if (typeof result === 'string') {
+          transcript = result;
+        } else {
+          transcript = result.text;
+          segments = result.segments || [];
+        }
       }
 
       console.log(`✅ Transcription completed: ${transcript.length} characters`);
 
+      const responseData: any = {
+        fileId,
+        s3Url,
+        transcript,
+        language,
+        audioSize: audioBuffer.length,
+        audioFormat: outputFormat,
+        bitrate,
+        transcriptLength: transcript.length,
+        usedChunking: shouldUseChunking,
+      };
+
+      // Include segments with timestamps if available
+      if (includeTimestamps && segments.length > 0) {
+        responseData.segments = segments.map(seg => ({
+          start: seg.start,
+          end: seg.end,
+          text: seg.text,
+          startFormatted: formatTimestamp(seg.start),
+          endFormatted: formatTimestamp(seg.end),
+        }));
+        responseData.segmentCount = segments.length;
+      }
+
       res.json({
         success: true,
-        data: {
-          fileId,
-          s3Url,
-          transcript,
-          language,
-          audioSize: audioBuffer.length,
-          audioFormat: outputFormat,
-          bitrate,
-          transcriptLength: transcript.length,
-          usedChunking: shouldUseChunking,
-        },
+        data: responseData,
       });
     } catch (error) {
       console.error('❌ Error in S3 video to text controller:', error);

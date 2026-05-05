@@ -290,15 +290,15 @@ export const api = {
   getGuest: (id: number) => request<any>(`/guests/${id}`),
 
   // --- Video-to-Text ---
-  processVideoToText: (videoUrl: string) =>
+  processVideoToText: (videoUrl: string, includeTimestamps: boolean = true) =>
     request<any>("/ai-hub/video-to-text/process", {
       method: "POST",
-      body: JSON.stringify({ videoUrl }),
+      body: JSON.stringify({ videoUrl, includeTimestamps }),
     }),
-  processVideoToTextFromS3: (s3Url: string, fileId: number) =>
+  processVideoToTextFromS3: (s3Url: string, fileId: number, includeTimestamps: boolean = true) =>
     request<any>("/ai-hub/video-to-text/process-s3", {
       method: "POST",
-      body: JSON.stringify({ s3Url, fileId }),
+      body: JSON.stringify({ s3Url, fileId, includeTimestamps }),
     }),
 
   // --- Text-to-Speech ---
@@ -382,6 +382,7 @@ export const api = {
     chunkDurationSeconds?: number;
     maxConcurrentChunks?: number;
     forceDownloadFirst?: boolean;
+    includeTimestamps?: boolean;
   } = {}) =>
     request<any>("/ai-hub/streaming-extraction/extract-and-transcribe", {
       method: "POST",
@@ -393,7 +394,8 @@ export const api = {
         enableChunking: options.enableChunking ?? true,
         chunkDurationSeconds: options.chunkDurationSeconds || 180,
         maxConcurrentChunks: options.maxConcurrentChunks || 3,
-        forceDownloadFirst: options.forceDownloadFirst || false
+        forceDownloadFirst: options.forceDownloadFirst || false,
+        includeTimestamps: options.includeTimestamps ?? true
       }),
     }),
 
@@ -406,6 +408,7 @@ export const api = {
     chunkDurationSeconds?: number;
     maxConcurrentChunks?: number;
     maxFileSize?: number;
+    includeTimestamps?: boolean;
   } = {}) =>
     request<any>("/ai-hub/streaming-extraction/download-first", {
       method: "POST",
@@ -417,7 +420,8 @@ export const api = {
         enableChunking: options.enableChunking ?? true,
         chunkDurationSeconds: options.chunkDurationSeconds || 180,
         maxConcurrentChunks: options.maxConcurrentChunks || 3,
-        maxFileSize: options.maxFileSize || 1024 * 1024 * 1024 // 1GB
+        maxFileSize: options.maxFileSize || 1024 * 1024 * 1024, // 1GB
+        includeTimestamps: options.includeTimestamps ?? true
       }),
     }),
 
@@ -465,6 +469,7 @@ export const api = {
       enableChunking?: boolean;
       chunkDurationSeconds?: number;
       maxConcurrentChunks?: number;
+      includeTimestamps?: boolean;
     } = {}
   ) =>
     request<any>("/ai-hub/audio-extraction/extract-and-transcribe", {
@@ -477,7 +482,8 @@ export const api = {
         language: options.language || 'ar',
         enableChunking: options.enableChunking ?? true,
         chunkDurationSeconds: options.chunkDurationSeconds || 180,
-        maxConcurrentChunks: options.maxConcurrentChunks || 3
+        maxConcurrentChunks: options.maxConcurrentChunks || 3,
+        includeTimestamps: options.includeTimestamps ?? true
       }),
     }),
   getLegacyVideoInfo: (videoFilePath: string) =>

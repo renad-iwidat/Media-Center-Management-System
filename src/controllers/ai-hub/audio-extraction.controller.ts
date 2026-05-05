@@ -132,7 +132,8 @@ export class AudioExtractionController {
    *   "language": "ar" (optional, default: "ar"),
    *   "enableChunking": true (optional, default: true),
    *   "chunkDurationSeconds": 180 (optional, default: 180),
-   *   "maxConcurrentChunks": 3 (optional, default: 3)
+   *   "maxConcurrentChunks": 3 (optional, default: 3),
+   *   "includeTimestamps": true (optional, default: true)
    * }
    */
   static async extractAndTranscribe(req: Request, res: Response) {
@@ -145,7 +146,8 @@ export class AudioExtractionController {
         language = 'ar',
         enableChunking = true,
         chunkDurationSeconds = 180,
-        maxConcurrentChunks = 3
+        maxConcurrentChunks = 3,
+        includeTimestamps = true
       } = req.body;
 
       if (!s3Url) {
@@ -157,14 +159,27 @@ export class AudioExtractionController {
 
       console.log(`\n🎬 [Audio Extraction Controller] Extract + Transcribe from S3: ${s3Url}`);
       console.log(`🔄 Chunking: ${enableChunking} | Duration: ${chunkDurationSeconds}s | Concurrent: ${maxConcurrentChunks}`);
+      console.log(`⏱️  Include Timestamps: ${includeTimestamps}`);
 
       // Import transcription service
-      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt-unified.service');
+      const { transcribeAudioWithOpenAI, formatTimestamp } = await import('../../services/ai-hub/openai-stt.service');
       const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
+
+      let allSegments: any[] = [];
 
       // Create transcription function
       const transcriptionFunction = async (audioBuffer: Buffer): Promise<string> => {
-        return await transcribeAudioFromBuffer(audioBuffer, { language });
+        const result = await transcribeAudioWithOpenAI(audioBuffer, { language, includeTimestamps });
+        
+        if (typeof result === 'string') {
+          return result;
+        } else {
+          // Collect segments if timestamps are included
+          if (result.segments && includeTimestamps) {
+            allSegments.push(...result.segments);
+          }
+          return result.text;
+        }
       };
 
       // Extract audio with integrated chunked processing
@@ -184,20 +199,34 @@ export class AudioExtractionController {
       // Convert buffer to base64 for JSON response
       const audioBase64 = result.audioBuffer.toString('base64');
 
+      const responseData: any = {
+        fileId,
+        audioBase64,
+        audioSize: result.audioBuffer.length,
+        format: outputFormat,
+        bitrate,
+        s3Url,
+        transcript: result.transcript,
+        language,
+        processingMethod: result.chunks ? 'chunked' : 'single',
+        chunksProcessed: result.chunks?.length || 0,
+      };
+
+      // Include segments with timestamps if available
+      if (includeTimestamps && allSegments.length > 0) {
+        responseData.segments = allSegments.map(seg => ({
+          start: seg.start,
+          end: seg.end,
+          text: seg.text,
+          startFormatted: formatTimestamp(seg.start),
+          endFormatted: formatTimestamp(seg.end),
+        }));
+        responseData.segmentCount = allSegments.length;
+      }
+
       res.json({
         success: true,
-        data: {
-          fileId,
-          audioBase64,
-          audioSize: result.audioBuffer.length,
-          format: outputFormat,
-          bitrate,
-          s3Url,
-          transcript: result.transcript,
-          language,
-          processingMethod: result.chunks ? 'chunked' : 'single',
-          chunksProcessed: result.chunks?.length || 0,
-        },
+        data: responseData,
       });
     } catch (error) {
       console.error('Error in extract and transcribe controller:', error);
