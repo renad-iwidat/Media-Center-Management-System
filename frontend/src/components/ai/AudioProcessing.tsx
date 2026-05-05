@@ -155,28 +155,58 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     try {
       console.log(`🎙️  Starting STT for file: ${mediaTitle}`);
       
-      // If it's a video file, extract audio and transcribe in one step
+      // If it's a video file, use production streaming extraction + transcription
       if (file.file_type === 'video') {
-        console.log('🎬 Video detected - using integrated extraction + transcription...');
+        console.log('🎬 Video detected - using production streaming extraction...');
         
-        const extractRes = await api.extractAudioAndTranscribe(file.id, file.s3_url, {
-          outputFormat: 'mp3',
-          bitrate: '128k',
-          language: 'ar',
-          enableChunking: true,
-          chunkDurationSeconds: 180, // 3 minutes per chunk
-          maxConcurrentChunks: 3     // Process 3 chunks in parallel
-        });
-        
-        if (!extractRes.success || !extractRes.data?.transcript) {
-          throw new Error(extractRes.error || 'Failed to extract audio and transcribe');
-        }
+        try {
+          // Use the new production API
+          const extractRes = await api.extractAndTranscribeProduction(file.s3_url, {
+            language: 'ar',
+            outputFormat: 'mp3',
+            bitrate: '128k',
+            enableChunking: true,
+            chunkDurationSeconds: 180, // 3 minutes per chunk
+            maxConcurrentChunks: 3     // Process 3 chunks in parallel
+          });
+          
+          if (!extractRes.success || !extractRes.data?.transcript) {
+            throw new Error(extractRes.error || 'Failed to extract and transcribe');
+          }
 
-        console.log(`✅ Integrated processing completed (${extractRes.data.processingMethod})`);
-        console.log(`📊 Chunks processed: ${extractRes.data.chunksProcessed || 0}`);
-        
-        setResult(extractRes.data.transcript);
-        console.log('✅ Video-to-text completed successfully');
+          console.log(`✅ Production processing completed (${extractRes.data.processingMethod})`);
+          console.log(`📊 Audio size: ${extractRes.data.audioSize} bytes`);
+          
+          setResult(extractRes.data.transcript);
+          console.log('✅ Video-to-text completed successfully');
+          
+        } catch (productionError) {
+          console.warn('⚠️ Production API failed, falling back to legacy method...');
+          console.warn('Production error:', productionError);
+          
+          // Fallback to legacy method
+          try {
+            const extractRes = await api.extractAudioAndTranscribe(file.id, file.s3_url, {
+              outputFormat: 'mp3',
+              bitrate: '128k',
+              language: 'ar',
+              enableChunking: true,
+              chunkDurationSeconds: 180,
+              maxConcurrentChunks: 3
+            });
+            
+            if (!extractRes.success || !extractRes.data?.transcript) {
+              throw new Error(extractRes.error || 'Failed to extract and transcribe with legacy method');
+            }
+
+            console.log('✅ Legacy method succeeded');
+            setResult(extractRes.data.transcript);
+            
+          } catch (legacyError) {
+            console.error('❌ Both production and legacy methods failed');
+            throw legacyError;
+          }
+        }
       } else {
         // For audio files, transcribe directly
         const res = await api.transcribeAudioFromFile(file.id, file.s3_url, 'ar');

@@ -11,8 +11,22 @@
 - [x] `frontend/src/services/api.ts` - يدعم `window.ENV` ✅
 
 ### 2. المتغيرات البيئية
+
+#### **Frontend Environment Variables:**
 - [ ] `VITE_API_URL` - محدد في Render
 - [ ] `VITE_MANAGEMENT_API_URL` - محدد في Render
+
+#### **Backend Environment Variables (الجديدة - Production Streaming):**
+- [ ] `MAX_FFMPEG_PROCESSES=3` - عدد عمليات FFmpeg المتوازية
+- [ ] `FFMPEG_TIMEOUT_MS=300000` - مهلة انتظار FFmpeg (5 دقائق)
+- [ ] `MAX_AUDIO_SIZE_MB=100` - حد أقصى لحجم الصوت
+- [ ] `ALLOWED_DOMAINS=s3.amazonaws.com,s3.eu-north-1.amazonaws.com,media-center-management-system.s3.eu-north-1.amazonaws.com` - الدومينات المسموحة
+- [ ] `ENABLE_DOMAIN_WHITELIST=true` - تفعيل قائمة الدومينات البيضاء
+- [ ] `EXTRACTION_RATE_LIMIT_MAX=10` - حد الطلبات (10 كل 15 دقيقة)
+- [ ] `STREAMING_RATE_LIMIT_MAX=3` - حد طلبات الـ Streaming (3 كل 5 دقائق)
+- [ ] `MAX_CONCURRENT_CHUNKS=3` - عدد الأجزاء المتوازية
+- [ ] `DEFAULT_AUDIO_BITRATE=128k` - جودة الصوت الافتراضية
+- [ ] `LOG_LEVEL=info` - مستوى السجلات
 
 ### 3. إعدادات Render
 - [ ] Web Service تم إنشاؤه
@@ -57,6 +71,13 @@ curl https://your-frontend-url.onrender.com/health
 - [ ] الـ Authentication token يُحفظ
 - [ ] Logout يعمل بشكل صحيح
 
+#### **فحص Production Streaming APIs الجديدة:**
+- [ ] `GET /api/ai-hub/streaming-extraction/stats` - إحصائيات النظام
+- [ ] `POST /api/ai-hub/streaming-extraction/extract-and-transcribe` - الاستخراج والتفريغ
+- [ ] Rate limiting يعمل (يرفض الطلبات الزائدة)
+- [ ] استخراج الصوت من فيديوهات S3 يعمل
+- [ ] التفريغ الصوتي للأجزاء المقسمة يعمل
+
 ### 3. فحص المتغيرات البيئية
 افتح Console في المتصفح:
 ```javascript
@@ -73,6 +94,13 @@ console.log(window.ENV);
 - [ ] Static assets تُحمّل من cache
 - [ ] Gzip compression مفعّل
 - [ ] Health check يستجيب بسرعة
+
+#### **فحص أداء Production Streaming:**
+- [ ] استخراج الصوت من فيديو 100MB يكتمل في أقل من 3 دقائق
+- [ ] معالجة الأجزاء المتوازية تعمل (3 أجزاء بنفس الوقت)
+- [ ] استهلاك الذاكرة أقل من 200MB أثناء المعالجة
+- [ ] لا توجد ملفات مؤقتة متبقية بعد المعالجة
+- [ ] Rate limiting يمنع الإفراط في الطلبات
 
 ---
 
@@ -109,6 +137,27 @@ location / {
 1. امسح localStorage
 2. سجل دخول من جديد
 3. تحقق من `JWT_SECRET` في Backend
+
+### ❌ المشكلة: "ffmpeg exited with code 251" (Production Streaming)
+**السبب:** مشكلة في استخراج الصوت من S3 URLs
+**الحل:**
+1. تحقق من `ALLOWED_DOMAINS` يشمل S3 domain
+2. تحقق من `MAX_FFMPEG_PROCESSES` لا يتجاوز قدرة السيرفر
+3. تحقق من `FFMPEG_TIMEOUT_MS` كافي للملفات الكبيرة
+4. النظام الجديد يحل هذه المشكلة تلقائياً بـ fallback mechanisms
+
+### ❌ المشكلة: "Too many requests" (Rate Limiting)
+**السبب:** تجاوز حد الطلبات المسموح
+**الحل:**
+1. انتظر انتهاء النافزة الزمنية (15 دقيقة للاستخراج، 5 دقائق للـ streaming)
+2. أو زيد `EXTRACTION_RATE_LIMIT_MAX` و `STREAMING_RATE_LIMIT_MAX` في البيئة
+
+### ❌ المشكلة: "Audio extraction timeout"
+**السبب:** الفيديو كبير جداً أو الاتصال بطيء
+**الحل:**
+1. زيد `FFMPEG_TIMEOUT_MS` (مثلاً 600000 = 10 دقائق)
+2. قلل `MAX_CONCURRENT_CHUNKS` لتوفير موارد أكثر لكل عملية
+3. استخدم `enableChunking: true` للفيديوهات الطويلة
 
 ---
 

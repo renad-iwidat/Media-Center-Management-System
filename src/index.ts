@@ -26,6 +26,7 @@ import systemSettingsRoutes from './routes/news/system-settings.routes';
 import schedulerRoutes from './routes/news/scheduler.routes';
 import { chatRoutes, ttsRoutes, sttRoutes, audioExtractionRoutes, videoToTextRoutes, analyticsRoutes } from './routes/ai-hub';
 import ideasRoutes from './routes/ai-hub/ideas.routes';
+import streamingExtractionRoutes from './routes/ai-hub/streaming-extraction.routes';
 import uploadedFilesRoutes from './routes/manual-input/uploaded-files.routes';
 
 const app = express();
@@ -282,6 +283,7 @@ app.use('/api/ai-hub/chat', chatRoutes);
 app.use('/api/ai-hub/tts', ttsRoutes);
 app.use('/api/ai-hub/stt', sttRoutes);
 app.use('/api/ai-hub/audio-extraction', audioExtractionRoutes);
+app.use('/api/ai-hub/streaming-extraction', streamingExtractionRoutes);
 app.use('/api/ai-hub/video-to-text', videoToTextRoutes);
 app.use('/api/ai-hub/ideas', ideasRoutes);
 app.use('/api/ai-hub/analytics', analyticsRoutes);

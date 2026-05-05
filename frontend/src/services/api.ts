@@ -327,7 +327,74 @@ export const api = {
     }),
   getSTTLanguages: () => request<any>("/ai-hub/stt/languages"),
 
-  // --- Audio Extraction ---
+  // --- Production Streaming Audio Extraction ---
+  
+  // Start async extraction job
+  startExtractionJob: (videoUrl: string, options: {
+    outputFormat?: string;
+    bitrate?: string;
+    timeout?: number;
+    maxSize?: number;
+  } = {}) =>
+    request<any>("/ai-hub/streaming-extraction/start", {
+      method: "POST",
+      body: JSON.stringify({ 
+        videoUrl,
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        timeout: options.timeout || 300000,
+        maxSize: options.maxSize || 100 * 1024 * 1024
+      }),
+    }),
+
+  // Get job status
+  getExtractionJobStatus: (jobId: string) =>
+    request<any>(`/ai-hub/streaming-extraction/status/${jobId}`),
+
+  // Stream audio directly
+  streamAudio: (videoUrl: string, options: {
+    outputFormat?: string;
+    bitrate?: string;
+    timeout?: number;
+  } = {}) => {
+    // Return a URL for direct streaming
+    const params = new URLSearchParams({
+      videoUrl,
+      outputFormat: options.outputFormat || 'mp3',
+      bitrate: options.bitrate || '128k',
+      timeout: (options.timeout || 300000).toString()
+    });
+    
+    return `${API_BASE}/ai-hub/streaming-extraction/stream?${params}`;
+  },
+
+  // Production extract and transcribe
+  extractAndTranscribeProduction: (videoUrl: string, options: {
+    language?: string;
+    outputFormat?: string;
+    bitrate?: string;
+    enableChunking?: boolean;
+    chunkDurationSeconds?: number;
+    maxConcurrentChunks?: number;
+  } = {}) =>
+    request<any>("/ai-hub/streaming-extraction/extract-and-transcribe", {
+      method: "POST",
+      body: JSON.stringify({ 
+        videoUrl,
+        language: options.language || 'ar',
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        enableChunking: options.enableChunking ?? true,
+        chunkDurationSeconds: options.chunkDurationSeconds || 180,
+        maxConcurrentChunks: options.maxConcurrentChunks || 3
+      }),
+    }),
+
+  // Get system stats
+  getStreamingStats: () =>
+    request<any>("/ai-hub/streaming-extraction/stats"),
+
+  // --- Legacy Audio Extraction (kept for compatibility) ---
   extractAudioFromFile: (videoFilePath: string, outputFormat: string = 'mp3', bitrate: string = '128k') =>
     request<any>("/ai-hub/audio-extraction/extract-from-file", {
       method: "POST",
