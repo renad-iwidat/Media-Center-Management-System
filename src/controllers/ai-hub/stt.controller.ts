@@ -4,7 +4,8 @@
  */
 
 import { Request, Response } from 'express';
-import { transcribeAudioFromUrl, transcribeAudioFromFile, transcribeAudioFromBuffer, SUPPORTED_LANGUAGES } from '../../services/ai-hub/stt.service';
+import { transcribeAudioWithOpenAI } from '../../services/ai-hub/openai-stt.service';
+import { OPENAI_SUPPORTED_LANGUAGES } from '../../services/ai-hub/openai-stt.service';
 
 export class STTController {
   /**
@@ -30,7 +31,16 @@ export class STTController {
 
       console.log(`\n📝 [STT Controller] Transcribing from URL: ${audioUrl}`);
 
-      const transcript = await transcribeAudioFromUrl(audioUrl, { language });
+      // Download audio from URL
+      const response = await fetch(audioUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download audio: ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = Buffer.from(arrayBuffer);
+
+      const transcript = await transcribeAudioWithOpenAI(audioBuffer, { language });
 
       res.json({
         success: true,
@@ -73,7 +83,16 @@ export class STTController {
 
       console.log(`\n📝 [STT Controller] Transcribing file ${fileId} from S3: ${s3Url}`);
 
-      const transcript = await transcribeAudioFromUrl(s3Url, { language });
+      // Download audio from S3 URL
+      const response = await fetch(s3Url);
+      if (!response.ok) {
+        throw new Error(`Failed to download audio from S3: ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = Buffer.from(arrayBuffer);
+
+      const transcript = await transcribeAudioWithOpenAI(audioBuffer, { language });
 
       res.json({
         success: true,
@@ -101,7 +120,7 @@ export class STTController {
     try {
       res.json({
         success: true,
-        data: SUPPORTED_LANGUAGES,
+        data: OPENAI_SUPPORTED_LANGUAGES,
       });
     } catch (error) {
       console.error('Error fetching supported languages:', error);
@@ -137,7 +156,7 @@ export class STTController {
       console.log(`📊 File size: ${file.size} bytes`);
       console.log(`🗣️  Language: ${language}`);
 
-      const transcript = await transcribeAudioFromBuffer(file.buffer, { language });
+      const transcript = await transcribeAudioWithOpenAI(file.buffer, { language });
 
       res.json({
         success: true,
@@ -186,7 +205,7 @@ export class STTController {
       const audioBuffer = Buffer.from(audioBase64, 'base64');
       console.log(`📊 Audio buffer size: ${audioBuffer.length} bytes`);
 
-      const transcript = await transcribeAudioFromBuffer(audioBuffer, { language });
+      const transcript = await transcribeAudioWithOpenAI(audioBuffer, { language });
 
       res.json({
         success: true,

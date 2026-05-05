@@ -276,11 +276,11 @@ export class StreamingExtractionController {
       JobManager.updateJob(jobId, { status: 'processing' });
 
       // Import services
-      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
+      const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
       const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-        return await transcribeAudioFromBuffer(buffer, { language });
+        return await transcribeAudioWithOpenAI(buffer, { language });
       };
 
       let result: any;
@@ -430,10 +430,10 @@ export class StreamingExtractionController {
 
       // Import services
       const { processVideoWithDownloadFirst } = await import('../../services/ai-hub/download-first-extractor.service');
-      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
+      const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-        return await transcribeAudioFromBuffer(buffer, { language });
+        return await transcribeAudioWithOpenAI(buffer, { language });
       };
 
       // Process with download-first method

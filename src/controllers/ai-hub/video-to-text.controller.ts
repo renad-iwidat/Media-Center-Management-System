@@ -6,7 +6,7 @@
 
 import { Request, Response } from 'express';
 import { extractAudioFromVideoUrl } from '../../services/ai-hub/audio-extraction.service';
-import { transcribeAudioFromBuffer } from '../../services/ai-hub/stt.service';
+import { transcribeAudioWithOpenAI } from '../../services/ai-hub/openai-stt.service';
 import {
   splitAudioIntoChunks,
   processAudioChunksInParallel,
@@ -49,7 +49,7 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string): 
       async (chunk) => {
         try {
           console.log(`  🎵 Processing chunk ${chunk.index + 1}/${chunks.length}...`);
-          const transcript = await transcribeAudioFromBuffer(
+          const transcript = await transcribeAudioWithOpenAI(
             fs.readFileSync(chunk.filePath),
             { language }
           );
@@ -141,7 +141,7 @@ export class VideoToTextController {
       } else {
         // Step 2: Convert audio to text (normal processing)
         console.log('\n🎙️  Step 2: Converting audio to text...');
-        transcript = await transcribeAudioFromBuffer(audioBuffer, {
+        transcript = await transcribeAudioWithOpenAI(audioBuffer, {
           language,
         });
       }
@@ -230,7 +230,7 @@ export class VideoToTextController {
       } else {
         // Step 2: Convert audio to text (normal processing)
         console.log('\n🎙️  Step 2: Converting audio to text...');
-        transcript = await transcribeAudioFromBuffer(audioBuffer, {
+        transcript = await transcribeAudioWithOpenAI(audioBuffer, {
           language,
         });
       }
