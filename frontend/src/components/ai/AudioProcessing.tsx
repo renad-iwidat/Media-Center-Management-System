@@ -181,30 +181,59 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
           console.log('✅ Video-to-text completed successfully');
           
         } catch (productionError) {
-          console.warn('⚠️ Production API failed, falling back to legacy method...');
+          console.warn('⚠️ Production streaming failed, trying download-first method...');
           console.warn('Production error:', productionError);
           
-          // Fallback to legacy method
           try {
-            const extractRes = await api.extractAudioAndTranscribe(file.id, file.s3_url, {
+            // Try download-first method
+            const downloadFirstRes = await api.extractWithDownloadFirst(file.s3_url, {
+              language: 'ar',
               outputFormat: 'mp3',
               bitrate: '128k',
-              language: 'ar',
               enableChunking: true,
               chunkDurationSeconds: 180,
-              maxConcurrentChunks: 3
+              maxConcurrentChunks: 3,
+              maxFileSize: 1024 * 1024 * 1024 // 1GB
             });
             
-            if (!extractRes.success || !extractRes.data?.transcript) {
-              throw new Error(extractRes.error || 'Failed to extract and transcribe with legacy method');
+            if (!downloadFirstRes.success || !downloadFirstRes.data?.transcript) {
+              throw new Error(downloadFirstRes.error || 'Failed to extract with download-first method');
             }
 
-            console.log('✅ Legacy method succeeded');
-            setResult(extractRes.data.transcript);
+            console.log(`✅ Download-first processing completed`);
+            console.log(`📊 Video size: ${downloadFirstRes.data.videoSize} bytes`);
+            console.log(`📊 Audio size: ${downloadFirstRes.data.audioSize} bytes`);
+            console.log(`⏱️  Processing time: ${Math.round(downloadFirstRes.data.processingTime / 1000)}s`);
             
-          } catch (legacyError) {
-            console.error('❌ Both production and legacy methods failed');
-            throw legacyError;
+            setResult(downloadFirstRes.data.transcript);
+            console.log('✅ Download-first method succeeded');
+            
+          } catch (downloadFirstError) {
+            console.warn('⚠️ Download-first method also failed, falling back to legacy method...');
+            console.warn('Download-first error:', downloadFirstError);
+            
+            // Final fallback to legacy method
+            try {
+              const extractRes = await api.extractAudioAndTranscribe(file.id, file.s3_url, {
+                outputFormat: 'mp3',
+                bitrate: '128k',
+                language: 'ar',
+                enableChunking: true,
+                chunkDurationSeconds: 180,
+                maxConcurrentChunks: 3
+              });
+              
+              if (!extractRes.success || !extractRes.data?.transcript) {
+                throw new Error(extractRes.error || 'Failed to extract and transcribe with legacy method');
+              }
+
+              console.log('✅ Legacy method succeeded');
+              setResult(extractRes.data.transcript);
+              
+            } catch (legacyError) {
+              console.error('❌ All methods failed (streaming, download-first, legacy)');
+              throw legacyError;
+            }
           }
         }
       } else {

@@ -376,22 +376,55 @@ export const api = {
     enableChunking?: boolean;
     chunkDurationSeconds?: number;
     maxConcurrentChunks?: number;
+    forceDownloadFirst?: boolean;
   } = {}) =>
     request<any>("/ai-hub/streaming-extraction/extract-and-transcribe", {
       method: "POST",
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         videoUrl,
         language: options.language || 'ar',
         outputFormat: options.outputFormat || 'mp3',
         bitrate: options.bitrate || '128k',
         enableChunking: options.enableChunking ?? true,
         chunkDurationSeconds: options.chunkDurationSeconds || 180,
-        maxConcurrentChunks: options.maxConcurrentChunks || 3
+        maxConcurrentChunks: options.maxConcurrentChunks || 3,
+        forceDownloadFirst: options.forceDownloadFirst || false
       }),
     }),
 
+  // Download-first extraction method
+  extractWithDownloadFirst: (videoUrl: string, options: {
+    language?: string;
+    outputFormat?: string;
+    bitrate?: string;
+    enableChunking?: boolean;
+    chunkDurationSeconds?: number;
+    maxConcurrentChunks?: number;
+    maxFileSize?: number;
+  } = {}) =>
+    request<any>("/ai-hub/streaming-extraction/download-first", {
+      method: "POST",
+      body: JSON.stringify({
+        videoUrl,
+        language: options.language || 'ar',
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        enableChunking: options.enableChunking ?? true,
+        chunkDurationSeconds: options.chunkDurationSeconds || 180,
+        maxConcurrentChunks: options.maxConcurrentChunks || 3,
+        maxFileSize: options.maxFileSize || 1024 * 1024 * 1024 // 1GB
+      }),
+    }),
+
+  // Get video information
+  getVideoInfo: (videoUrl: string) =>
+    request<any>("/ai-hub/streaming-extraction/video-info", {
+      method: "POST",
+      body: JSON.stringify({ videoUrl }),
+    }),
+
   // Get system stats
-  getStreamingStats: () =>
+  getStreamingExtractionStats: () =>
     request<any>("/ai-hub/streaming-extraction/stats"),
 
   // --- Legacy Audio Extraction (kept for compatibility) ---
@@ -435,7 +468,7 @@ export const api = {
         maxConcurrentChunks: options.maxConcurrentChunks || 3
       }),
     }),
-  getVideoInfo: (videoFilePath: string) =>
+  getLegacyVideoInfo: (videoFilePath: string) =>
     request<any>("/ai-hub/audio-extraction/video-info", {
       method: "POST",
       body: JSON.stringify({ videoFilePath }),

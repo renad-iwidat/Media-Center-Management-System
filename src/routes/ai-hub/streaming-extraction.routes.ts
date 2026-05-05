@@ -149,6 +149,71 @@ router.post('/stream', streamingLimiter, StreamingExtractionController.streamAud
 router.post('/extract-and-transcribe', extractionLimiter, StreamingExtractionController.extractAndTranscribe);
 
 /**
+ * POST /api/ai-hub/streaming-extraction/download-first
+ * Extract with download-first method (for problematic URLs)
+ * استخراج بطريقة التحميل أولاً (للروابط المشكلة)
+ * 
+ * Body:
+ * {
+ *   "videoUrl": "string (required)",
+ *   "language": "string (optional, default: ar)",
+ *   "outputFormat": "mp3|wav|aac (optional, default: mp3)",
+ *   "bitrate": "string (optional, default: 128k)",
+ *   "enableChunking": "boolean (optional, default: true)",
+ *   "chunkDurationSeconds": "number (optional, default: 180)",
+ *   "maxConcurrentChunks": "number (optional, default: 3)",
+ *   "maxFileSize": "number (optional, default: 1GB)"
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "jobId": "uuid",
+ *     "transcript": "string",
+ *     "audioSize": "number",
+ *     "videoSize": "number",
+ *     "processingTime": "number",
+ *     "language": "string",
+ *     "processingMethod": "download-first",
+ *     "chunksProcessed": "number",
+ *     "enabledChunking": "boolean"
+ *   }
+ * }
+ */
+router.post('/download-first', extractionLimiter, StreamingExtractionController.extractWithDownloadFirst);
+
+/**
+ * POST /api/ai-hub/streaming-extraction/video-info
+ * Get video information using download-first method
+ * الحصول على معلومات الفيديو باستخدام طريقة التحميل أولاً
+ * 
+ * Body:
+ * {
+ *   "videoUrl": "string (required)"
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "videoInfo": {
+ *       "format": "object",
+ *       "streams": "array",
+ *       "duration": "number",
+ *       "bitrate": "number",
+ *       "hasAudio": "boolean",
+ *       "hasVideo": "boolean",
+ *       "estimatedSize": "number"
+ *     },
+ *     "url": "string",
+ *     "timestamp": "ISO date"
+ *   }
+ * }
+ */
+router.post('/video-info', StreamingExtractionController.getVideoInfo);
+
+/**
  * GET /api/ai-hub/streaming-extraction/stats
  * Get system statistics
  * احصل على إحصائيات النظام

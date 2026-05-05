@@ -21,7 +21,10 @@ interface ExtractionJob {
     audioUrl?: string;
     transcript?: string;
     size?: number;
+    videoSize?: number;
     duration?: number;
+    processingTime?: number;
+    processingMethod?: string;
   };
   error?: string;
   createdAt: Date;
@@ -244,7 +247,8 @@ export class StreamingExtractionController {
         bitrate = '128k',
         enableChunking = true,
         chunkDurationSeconds = 180,
-        maxConcurrentChunks = 3
+        maxConcurrentChunks = 3,
+        forceDownloadFirst = false // New option to force download-first method
       } = req.body;
 
       if (!videoUrl) {
@@ -263,90 +267,150 @@ export class StreamingExtractionController {
 
       JobManager.updateJob(jobId, { status: 'processing' });
 
-      const extractor = new StreamingAudioExtractor();
-      
-      // Get audio stream
-      const audioStream = await extractor.extractAsStream(videoUrl, {
-        outputFormat,
-        bitrate,
-        timeout: 600000 // 10 minutes for large files
-      });
-
-      // Convert stream to buffer for transcription
-      const chunks: Buffer[] = [];
-      let totalSize = 0;
-      const maxBufferSize = 50 * 1024 * 1024; // 50MB limit
-
-      // Wait for stream to complete before processing
-      await new Promise<void>((resolve, reject) => {
-        audioStream.on('data', (chunk: Buffer) => {
-          totalSize += chunk.length;
-          if (totalSize > maxBufferSize) {
-            reject(new ExtractionError('Audio stream too large for transcription', 'VALIDATION'));
-            return;
-          }
-          chunks.push(chunk);
-          console.log(`📊 Received chunk: ${chunk.length} bytes (total: ${totalSize} bytes)`);
-        });
-
-        audioStream.on('end', () => {
-          console.log(`✅ Stream completed: ${totalSize} bytes total`);
-          resolve();
-        });
-
-        audioStream.on('error', (err: Error) => {
-          console.error('❌ Stream error:', err);
-          reject(err);
-        });
-      });
-
-      // Check if we have audio data
-      if (chunks.length === 0 || totalSize === 0) {
-        throw new ExtractionError('No audio data received from stream', 'VALIDATION');
-      }
-
-      const audioBuffer = Buffer.concat(chunks);
-      console.log(`🎵 Final audio buffer: ${audioBuffer.length} bytes`);
-      
       // Import transcription service
       const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
       
-      let transcript: string;
-      
-      if (enableChunking && audioBuffer.length > 10 * 1024 * 1024) { // 10MB threshold
-        // Use chunked processing for large files
-        const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
-        
-        const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
-          return await transcribeAudioFromBuffer(buffer, { language });
-        };
+      const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
+        return await transcribeAudioFromBuffer(buffer, { language });
+      };
 
-        // This is a workaround - ideally we'd stream directly to chunked processor
-        const result = await extractAudioWithChunkedProcessing(
-          videoUrl,
-          transcriptionFunction,
-          {
+      let result: any;
+      let processingMethod = 'streaming';
+
+      // Try streaming method first (unless forced to use download-first)
+      if (!forceDownloadFirst) {
+        try {
+          console.log('🌊 Attempting streaming extraction method...');
+          
+          const extractor = new StreamingAudioExtractor();
+          
+          // Get audio stream
+          const audioStream = await extractor.extractAsStream(videoUrl, {
             outputFormat,
             bitrate,
-            enableChunking,
-            chunkDurationSeconds,
-            maxConcurrentChunks
+            timeout: 1200000 // 20 minutes for large files
+          });
+
+          // Convert stream to buffer for transcription
+          const chunks: Buffer[] = [];
+          let totalSize = 0;
+          const maxBufferSize = 50 * 1024 * 1024; // 50MB limit
+
+          // Wait for stream to complete before processing
+          await new Promise<void>((resolve, reject) => {
+            audioStream.on('data', (chunk: Buffer) => {
+              totalSize += chunk.length;
+              if (totalSize > maxBufferSize) {
+                reject(new ExtractionError('Audio stream too large for transcription', 'VALIDATION'));
+                return;
+              }
+              chunks.push(chunk);
+              console.log(`📊 Received chunk: ${chunk.length} bytes (total: ${totalSize} bytes)`);
+            });
+
+            audioStream.on('end', () => {
+              console.log(`✅ Stream completed: ${totalSize} bytes total`);
+              resolve();
+            });
+
+            audioStream.on('error', (err: Error) => {
+              console.error('❌ Stream error:', err);
+              reject(err);
+            });
+          });
+
+          // Check if we have audio data
+          if (chunks.length === 0 || totalSize === 0) {
+            throw new ExtractionError('No audio data received from stream', 'VALIDATION');
           }
-        );
-        
-        transcript = result.transcript || '';
-      } else {
-        // Direct transcription for smaller files
-        transcript = await transcribeAudioFromBuffer(audioBuffer, { language });
+
+          const audioBuffer = Buffer.concat(chunks);
+          console.log(`🎵 Final audio buffer: ${audioBuffer.length} bytes`);
+          
+          let transcript: string;
+          
+          if (enableChunking && audioBuffer.length > 10 * 1024 * 1024) { // 10MB threshold
+            // Use chunked processing for large files
+            const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
+            
+            // This is a workaround - ideally we'd stream directly to chunked processor
+            const chunkResult = await extractAudioWithChunkedProcessing(
+              videoUrl,
+              transcriptionFunction,
+              {
+                outputFormat,
+                bitrate,
+                enableChunking,
+                chunkDurationSeconds,
+                maxConcurrentChunks
+              }
+            );
+            
+            transcript = chunkResult.transcript || '';
+            processingMethod = 'streaming-chunked';
+          } else {
+            // Direct transcription for smaller files
+            transcript = await transcribeAudioFromBuffer(audioBuffer, { language });
+            processingMethod = 'streaming-direct';
+          }
+
+          result = {
+            transcript,
+            audioSize: audioBuffer.length,
+            videoSize: 0, // Not available in streaming mode
+            processingTime: 0 // Will be calculated below
+          };
+
+          console.log('✅ Streaming extraction successful');
+
+        } catch (streamingError) {
+          console.log('⚠️  Streaming extraction failed, falling back to download-first method...');
+          console.log(`❌ Streaming error: ${streamingError instanceof Error ? streamingError.message : streamingError}`);
+          
+          // Fallback to download-first method
+          processingMethod = 'download-first-fallback';
+          throw streamingError; // This will trigger the catch block below
+        }
+      }
+
+      // If streaming failed or was skipped, use download-first method
+      if (forceDownloadFirst || !result) {
+        try {
+          console.log('📥 Using download-first extraction method...');
+          
+          const { processVideoWithDownloadFirst } = await import('../../services/ai-hub/download-first-extractor.service');
+          
+          result = await processVideoWithDownloadFirst(
+            videoUrl,
+            transcriptionFunction,
+            {
+              outputFormat,
+              bitrate,
+              enableChunking,
+              chunkDurationSeconds,
+              maxConcurrentChunks,
+              timeout: 1200000, // 20 minutes
+              maxFileSize: 1024 * 1024 * 1024 // 1GB max
+            }
+          );
+
+          processingMethod = forceDownloadFirst ? 'download-first' : 'download-first-fallback';
+          console.log('✅ Download-first extraction successful');
+
+        } catch (downloadError) {
+          console.error('❌ Both streaming and download-first methods failed!');
+          throw downloadError;
+        }
       }
 
       // Update job with results
       JobManager.updateJob(jobId, {
         status: 'completed',
         result: {
-          transcript,
-          size: audioBuffer.length,
-          duration: Math.round(audioBuffer.length / (128 * 1024 / 8)) // Rough estimate
+          transcript: result.transcript,
+          size: result.audioSize,
+          videoSize: result.videoSize,
+          duration: Math.round(result.audioSize / (128 * 1024 / 8)) // Rough estimate
         }
       });
 
@@ -354,15 +418,27 @@ export class StreamingExtractionController {
         success: true,
         data: {
           jobId,
-          transcript,
-          audioSize: audioBuffer.length,
+          transcript: result.transcript,
+          audioSize: result.audioSize,
+          videoSize: result.videoSize || 0,
+          processingTime: result.processingTime || 0,
           language,
-          processingMethod: enableChunking ? 'chunked' : 'direct'
+          processingMethod,
+          chunksProcessed: result.chunks?.length || 0
         }
       });
 
     } catch (error) {
       console.error('Error in extract and transcribe:', error);
+      
+      // Update job with error
+      const jobId = req.body.jobId;
+      if (jobId) {
+        JobManager.updateJob(jobId, {
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Processing failed'
+        });
+      }
       
       if (error instanceof ExtractionError) {
         const statusCode = error.type === 'VALIDATION' || error.type === 'SECURITY' ? 400 : 500;
@@ -377,6 +453,154 @@ export class StreamingExtractionController {
           error: error instanceof Error ? error.message : 'Failed to extract and transcribe'
         });
       }
+    }
+  }
+
+  /**
+   * Extract with download-first method (for problematic URLs)
+   * استخراج بطريقة التحميل أولاً (للروابط المشكلة)
+   * POST /api/ai-hub/streaming-extraction/download-first
+   */
+  static async extractWithDownloadFirst(req: Request, res: Response) {
+    try {
+      const {
+        videoUrl,
+        language = 'ar',
+        outputFormat = 'mp3',
+        bitrate = '128k',
+        enableChunking = true,
+        chunkDurationSeconds = 180,
+        maxConcurrentChunks = 3,
+        maxFileSize = 1024 * 1024 * 1024 // 1GB default
+      } = req.body;
+
+      if (!videoUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'videoUrl is required'
+        });
+      }
+
+      console.log(`\n🚀 [${new Date().toISOString()}] Download-First Extraction Request`);
+      console.log(`🌐 Video URL: ${videoUrl}`);
+      console.log(`📊 Max File Size: ${Math.round(maxFileSize / 1024 / 1024)}MB`);
+
+      // Create job for tracking
+      const jobId = JobManager.createJob(videoUrl, {
+        outputFormat,
+        bitrate,
+        sessionId: randomUUID()
+      });
+
+      JobManager.updateJob(jobId, { status: 'processing' });
+
+      // Import services
+      const { processVideoWithDownloadFirst } = await import('../../services/ai-hub/download-first-extractor.service');
+      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
+      
+      const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
+        return await transcribeAudioFromBuffer(buffer, { language });
+      };
+
+      // Process with download-first method
+      const result = await processVideoWithDownloadFirst(
+        videoUrl,
+        transcriptionFunction,
+        {
+          outputFormat,
+          bitrate,
+          enableChunking,
+          chunkDurationSeconds,
+          maxConcurrentChunks,
+          timeout: 1200000, // 20 minutes
+          maxFileSize
+        }
+      );
+
+      // Update job with results
+      JobManager.updateJob(jobId, {
+        status: 'completed',
+        result: {
+          transcript: result.transcript,
+          size: result.audioSize,
+          videoSize: result.videoSize,
+          duration: Math.round(result.audioSize / (128 * 1024 / 8)) // Rough estimate
+        }
+      });
+
+      res.json({
+        success: true,
+        data: {
+          jobId,
+          transcript: result.transcript,
+          audioSize: result.audioSize,
+          videoSize: result.videoSize,
+          processingTime: result.processingTime,
+          language,
+          processingMethod: 'download-first',
+          chunksProcessed: result.chunks?.length || 0,
+          enabledChunking: enableChunking
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in download-first extraction:', error);
+      
+      // Update job with error
+      const jobId = req.body.jobId;
+      if (jobId) {
+        JobManager.updateJob(jobId, {
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Processing failed'
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to extract with download-first method'
+      });
+    }
+  }
+
+  /**
+   * Get video information using download-first method
+   * الحصول على معلومات الفيديو باستخدام طريقة التحميل أولاً
+   * POST /api/ai-hub/streaming-extraction/video-info
+   */
+  static async getVideoInfo(req: Request, res: Response) {
+    try {
+      const { videoUrl } = req.body;
+
+      if (!videoUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'videoUrl is required'
+        });
+      }
+
+      console.log(`\n📊 [${new Date().toISOString()}] Video Info Request`);
+      console.log(`🌐 Video URL: ${videoUrl}`);
+
+      const { getVideoInfoFromUrl } = await import('../../services/ai-hub/download-first-extractor.service');
+      
+      const videoInfo = await getVideoInfoFromUrl(videoUrl);
+
+      res.json({
+        success: true,
+        data: {
+          videoInfo,
+          url: videoUrl,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      console.error('Error getting video info:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get video information'
+      });
     }
   }
 
