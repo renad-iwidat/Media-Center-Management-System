@@ -605,10 +605,45 @@ export class StreamingExtractionController {
   }
 
   /**
-   * Get system stats
-   * احصل على إحصائيات النظام
-   * GET /api/ai-hub/streaming-extraction/stats
+   * Diagnose S3 URL for potential issues
+   * تشخيص رابط S3 للمشاكل المحتملة
+   * POST /api/ai-hub/streaming-extraction/diagnose
    */
+  static async diagnoseUrl(req: Request, res: Response) {
+    try {
+      const { videoUrl } = req.body;
+
+      if (!videoUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'videoUrl is required'
+        });
+      }
+
+      console.log(`\n🔍 [${new Date().toISOString()}] URL Diagnostic Request`);
+      console.log(`🌐 Video URL: ${videoUrl}`);
+
+      const { diagnoseS3Url } = await import('../../utils/diagnose-s3-url');
+      
+      const diagnosticResult = await diagnoseS3Url(videoUrl);
+
+      res.json({
+        success: true,
+        data: {
+          diagnostic: diagnosticResult,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in URL diagnosis:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to diagnose URL'
+      });
+    }
+  }
   static async getSystemStats(req: Request, res: Response) {
     try {
       const extractor = new StreamingAudioExtractor();

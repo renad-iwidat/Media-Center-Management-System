@@ -55,8 +55,8 @@ interface ProcessingResult {
 }
 
 /**
- * Download video file from URL with progress tracking
- * تحميل ملف الفيديو من الرابط مع تتبع التقدم
+ * Download video file from URL with progress tracking using axios
+ * تحميل ملف الفيديو من الرابط مع تتبع التقدم باستخدام axios
  */
 async function downloadVideoFile(
   videoUrl: string,
@@ -74,49 +74,71 @@ async function downloadVideoFile(
   const videoFileName = `video-${randomUUID()}.mp4`;
   const videoFilePath = path.join(tempDir, videoFileName);
 
-  return new Promise((resolve, reject) => {
+  // Import axios dynamically
+  const axios = (await import('axios')).default;
+
+  try {
     const startTime = Date.now();
     let downloadedBytes = 0;
     let totalBytes = 0;
+    let lastProgressTime = Date.now();
 
-    // Choose appropriate module based on URL protocol
-    const client = videoUrl.startsWith('https:') ? https : http;
+    // First, get headers to check content type and size
+    console.log('🔍 Checking video URL headers...');
+    const headResponse = await axios.head(videoUrl, {
+      timeout: 30000, // 30 seconds for head request
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'video/*, */*',
+      }
+    });
 
-    const request = client.get(videoUrl, {
+    // Check content type
+    const contentType = headResponse.headers['content-type'] || '';
+    console.log(`📋 Content-Type: ${contentType}`);
+    
+    if (!contentType.includes('video') && !contentType.includes('octet-stream')) {
+      throw new Error(`Invalid content type: ${contentType}. Expected video/* but got HTML/text response. This indicates S3 is returning an error page or redirect.`);
+    }
+
+    // Get total file size
+    const contentLength = headResponse.headers['content-length'];
+    if (contentLength) {
+      totalBytes = parseInt(contentLength, 10);
+      console.log(`📊 Video file size: ${Math.round(totalBytes / 1024 / 1024)}MB`);
+
+      // Check if file is too large
+      if (totalBytes > maxFileSize) {
+        throw new Error(`Video file too large: ${Math.round(totalBytes / 1024 / 1024)}MB (max: ${Math.round(maxFileSize / 1024 / 1024)}MB)`);
+      }
+    } else {
+      console.log('⚠️  Content-Length header not found, downloading without size limit');
+    }
+
+    // Now download the actual file
+    console.log('📥 Starting actual video download...');
+    const response = await axios.get(videoUrl, {
+      responseType: 'stream',
+      timeout: timeout,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'video/*, */*',
         'Accept-Encoding': 'identity', // Disable compression for accurate size tracking
-      },
-      timeout: timeout
-    }, (response) => {
-      // Check response status
-      if (response.statusCode !== 200) {
-        reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
-        return;
       }
+    });
 
-      // Get total file size
-      const contentLength = response.headers['content-length'];
-      if (contentLength) {
-        totalBytes = parseInt(contentLength, 10);
-        console.log(`📊 Video file size: ${Math.round(totalBytes / 1024 / 1024)}MB`);
+    // Double-check content type from actual response
+    const actualContentType = response.headers['content-type'] || '';
+    if (!actualContentType.includes('video') && !actualContentType.includes('octet-stream')) {
+      throw new Error(`Download failed: Got ${actualContentType} instead of video. S3 returned an error page or redirect.`);
+    }
 
-        // Check if file is too large
-        if (totalBytes > maxFileSize) {
-          reject(new Error(`Video file too large: ${Math.round(totalBytes / 1024 / 1024)}MB (max: ${Math.round(maxFileSize / 1024 / 1024)}MB)`));
-          return;
-        }
-      } else {
-        console.log('⚠️  Content-Length header not found, downloading without size limit');
-      }
+    // Create write stream
+    const writeStream = fs.createWriteStream(videoFilePath);
 
-      // Create write stream
-      const writeStream = fs.createWriteStream(videoFilePath);
-      let lastProgressTime = Date.now();
-
+    return new Promise((resolve, reject) => {
       // Track download progress
-      response.on('data', (chunk: Buffer) => {
+      response.data.on('data', (chunk: Buffer) => {
         downloadedBytes += chunk.length;
 
         // Check size limit during download
@@ -136,13 +158,17 @@ async function downloadVideoFile(
           const speedMB = Math.round(speed / 1024 / 1024 * 100) / 100; // MB/s
 
           console.log(`📥 Download Progress: ${Math.round(downloadedBytes / 1024 / 1024)}MB${totalBytes > 0 ? ` (${percentage}%)` : ''} - ${speedMB}MB/s`);
+          
+          // Validate download speed (should not be too fast for large files)
+          if (downloadedBytes > 50 * 1024 * 1024 && speedMB > 100) { // If >50MB downloaded at >100MB/s
+            console.warn(`⚠️  Suspiciously fast download speed: ${speedMB}MB/s - this might indicate a redirect or error response`);
+          }
+          
           lastProgressTime = now;
         }
-
-        writeStream.write(chunk);
       });
 
-      response.on('end', () => {
+      response.data.on('end', () => {
         writeStream.end();
         const duration = Date.now() - startTime;
         const avgSpeed = downloadedBytes / (duration / 1000); // bytes per second
@@ -150,13 +176,18 @@ async function downloadVideoFile(
 
         console.log(`✅ Download completed: ${Math.round(downloadedBytes / 1024 / 1024)}MB in ${Math.round(duration / 1000)}s (avg: ${avgSpeedMB}MB/s)`);
         
+        // Final validation: check if download speed was realistic
+        if (downloadedBytes > 100 * 1024 * 1024 && avgSpeedMB > 80) { // Files >100MB shouldn't download at >80MB/s on cloud
+          console.warn(`⚠️  Warning: Very fast download speed (${avgSpeedMB}MB/s) might indicate the file is not a real video`);
+        }
+        
         resolve({
           filePath: videoFilePath,
           size: downloadedBytes
         });
       });
 
-      response.on('error', (error) => {
+      response.data.on('error', (error: Error) => {
         writeStream.destroy();
         if (fs.existsSync(videoFilePath)) {
           fs.unlinkSync(videoFilePath);
@@ -165,28 +196,42 @@ async function downloadVideoFile(
       });
 
       // Pipe response to file
-      response.pipe(writeStream);
+      response.data.pipe(writeStream);
 
-      writeStream.on('error', (error) => {
+      writeStream.on('error', (error: Error) => {
         if (fs.existsSync(videoFilePath)) {
           fs.unlinkSync(videoFilePath);
         }
         reject(new Error(`Write stream error: ${error.message}`));
       });
+
+      writeStream.on('finish', () => {
+        // File write completed
+        console.log(`💾 File written to disk: ${videoFilePath}`);
+      });
     });
 
-    request.on('error', (error) => {
-      reject(new Error(`Request error: ${error.message}`));
-    });
-
-    request.on('timeout', () => {
-      request.destroy();
-      if (fs.existsSync(videoFilePath)) {
-        fs.unlinkSync(videoFilePath);
+  } catch (error) {
+    // Clean up on error
+    if (fs.existsSync(videoFilePath)) {
+      fs.unlinkSync(videoFilePath);
+    }
+    
+    if (error instanceof Error) {
+      // Provide more specific error messages
+      if (error.message.includes('timeout')) {
+        throw new Error(`Download timeout after ${timeout / 1000}s. The file might be too large or the connection is slow.`);
+      } else if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+        throw new Error(`Network error: Cannot reach S3 server. Check the URL and network connection.`);
+      } else if (error.message.includes('403')) {
+        throw new Error(`Access denied (403): The S3 file is not publicly accessible or the URL has expired.`);
+      } else if (error.message.includes('404')) {
+        throw new Error(`File not found (404): The video file does not exist on S3.`);
       }
-      reject(new Error(`Download timeout after ${timeout / 1000}s`));
-    });
-  });
+    }
+    
+    throw error;
+  }
 }
 
 /**
@@ -206,6 +251,51 @@ async function extractAudioFromDownloadedVideo(
   console.log(`🎵 Output Format: ${outputFormat}`);
   console.log(`📊 Bitrate: ${bitrate}`);
 
+  // First, validate the downloaded file
+  if (!fs.existsSync(videoFilePath)) {
+    throw new Error(`Video file not found: ${videoFilePath}`);
+  }
+
+  const fileStats = fs.statSync(videoFilePath);
+  console.log(`📊 File size on disk: ${Math.round(fileStats.size / 1024 / 1024)}MB`);
+
+  // Check if file is suspiciously small (might be an error page)
+  if (fileStats.size < 1024 * 1024) { // Less than 1MB
+    console.warn(`⚠️  Warning: File is very small (${Math.round(fileStats.size / 1024)}KB) - might be an error response`);
+  }
+
+  // Try to get video info first to validate it's a real video
+  try {
+    console.log('🔍 Validating video file with ffprobe...');
+    const videoInfo = await new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(videoFilePath, (err: Error | null, metadata: any) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(metadata);
+      });
+    });
+
+    console.log('✅ Video file validation successful');
+    console.log(`📋 Video info: ${JSON.stringify({
+      duration: (videoInfo as any).format?.duration,
+      bitrate: (videoInfo as any).format?.bit_rate,
+      hasAudio: (videoInfo as any).streams?.some((s: any) => s.codec_type === 'audio'),
+      hasVideo: (videoInfo as any).streams?.some((s: any) => s.codec_type === 'video')
+    }, null, 2)}`);
+
+    // Check if video has audio
+    const hasAudio = (videoInfo as any).streams?.some((s: any) => s.codec_type === 'audio');
+    if (!hasAudio) {
+      throw new Error('Video file has no audio stream');
+    }
+
+  } catch (probeError) {
+    console.error('❌ Video validation failed:', probeError);
+    throw new Error(`Invalid video file: ${probeError instanceof Error ? probeError.message : 'Unknown error'}. The downloaded file might be corrupted or not a valid video.`);
+  }
+
   const tempDir = getTempDir();
   const audioFileName = `audio-${randomUUID()}.${outputFormat}`;
   const audioFilePath = path.join(tempDir, audioFileName);
@@ -213,7 +303,7 @@ async function extractAudioFromDownloadedVideo(
   try {
     const startTime = Date.now();
 
-    // Extract audio using FFmpeg
+    // Extract audio using FFmpeg with debug logging
     await new Promise<void>((resolve, reject) => {
       const command = ffmpeg(videoFilePath)
         .audioCodec('libmp3lame')
@@ -225,14 +315,24 @@ async function extractAudioFromDownloadedVideo(
           '-ac', '2',         // stereo
           '-ar', '44100',     // sample rate
           '-avoid_negative_ts', 'make_zero',
-          '-fflags', '+genpts'
+          '-fflags', '+genpts',
+          '-loglevel', 'info'  // Add debug logging
         ])
         .on('start', (commandLine: string) => {
-          console.log('🎬 FFmpeg command:', commandLine.substring(0, 150) + '...');
+          console.log('🎬 FFmpeg command:', commandLine.substring(0, 200) + '...');
         })
         .on('progress', (progress: any) => {
           if (progress.percent) {
             console.log(`📊 Audio Extraction Progress: ${Math.round(progress.percent)}%`);
+          }
+          if (progress.timemark) {
+            console.log(`⏱️  Processing time: ${progress.timemark}`);
+          }
+        })
+        .on('stderr', (stderrLine: string) => {
+          // Log important FFmpeg messages
+          if (stderrLine.includes('Input #0') || stderrLine.includes('Stream #0') || stderrLine.includes('Output #0')) {
+            console.log(`🔧 FFmpeg: ${stderrLine}`);
           }
         })
         .on('end', () => {
@@ -241,6 +341,7 @@ async function extractAudioFromDownloadedVideo(
         })
         .on('error', (err: Error) => {
           console.error('❌ FFmpeg error:', err.message);
+          console.error('💡 This error suggests the downloaded file is not a valid video or is corrupted');
           reject(err);
         });
 
@@ -263,6 +364,11 @@ async function extractAudioFromDownloadedVideo(
 
     const audioBuffer = fs.readFileSync(audioFilePath);
     console.log(`✅ Audio extracted: ${Math.round(audioBuffer.length / 1024)}KB`);
+
+    // Validate audio file size
+    if (audioBuffer.length < 1024) { // Less than 1KB
+      throw new Error('Audio extraction produced a very small file - extraction likely failed');
+    }
 
     // Clean up audio file
     fs.unlinkSync(audioFilePath);

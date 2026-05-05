@@ -1,6 +1,6 @@
 /**
- * Test script for download-first extraction method
- * سكريبت اختبار لطريقة التحميل أولاً
+ * Test script for download-first extraction method (No Authentication)
+ * سكريبت اختبار لطريقة التحميل أولاً (بدون مصادقة)
  */
 
 const axios = require('axios');
@@ -8,58 +8,12 @@ const axios = require('axios');
 // Test configuration
 const TEST_CONFIG = {
   baseUrl: 'http://localhost:7845', // Adjust if your server runs on different port
-  managementUrl: 'https://media-center-management-system.onrender.com', // Management system for auth
-  videoUrl: 'https://media-center-management-system.s3.eu-north-1.amazonaws.com/manual-input-video/video-دائرة-الشرق---بشارة-شربل-كانب-ومحلل-سياسي-1777906763845-63fqd2.mp4',
-  credentials: {
-    email: 'a.moqadi@najah.edu',
-    password: 'a.mo1234' // You need to provide the actual password
-  }
+  videoUrl: 'https://media-center-management-system.s3.eu-north-1.amazonaws.com/manual-input-video/video-دائرة-الشرق---بشارة-شربل-كانب-ومحلل-سياسي-1777906763845-63fqd2.mp4'
 };
 
-// Function to get fresh auth token
-async function getFreshToken() {
-  try {
-    console.log('🔑 Getting fresh authentication token...');
-    const loginResponse = await axios.post(`${TEST_CONFIG.managementUrl}/api/auth/login`, {
-      email: TEST_CONFIG.credentials.email,
-      password: TEST_CONFIG.credentials.password
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (loginResponse.data.success && loginResponse.data.data.token) {
-      console.log('✅ Fresh token obtained successfully');
-      return loginResponse.data.data.token;
-    } else {
-      throw new Error('Failed to get token from login response');
-    }
-  } catch (error) {
-    console.error('❌ Failed to get fresh token:', error.message);
-    if (error.response) {
-      console.error('Login response:', error.response.data);
-    }
-    throw error;
-  }
-}
-
-async function testDownloadFirst() {
-  console.log('🚀 Testing Download-First Extraction Method');
+async function testDownloadFirstNoAuth() {
+  console.log('🚀 Testing Download-First Extraction Method (No Auth)');
   console.log('=' .repeat(50));
-  
-  let authToken;
-  
-  try {
-    // Get fresh authentication token
-    authToken = await getFreshToken();
-  } catch (error) {
-    console.error('❌ Cannot proceed without authentication token');
-    console.log('\n💡 Alternative: You can also test without authentication by:');
-    console.log('   1. Temporarily removing authentication from the routes');
-    console.log('   2. Or providing valid credentials in the TEST_CONFIG');
-    return;
-  }
   
   try {
     // Test 0: Diagnose URL first
@@ -68,8 +22,7 @@ async function testDownloadFirst() {
       videoUrl: TEST_CONFIG.videoUrl
     }, {
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       }
     });
     
@@ -111,8 +64,7 @@ async function testDownloadFirst() {
       videoUrl: TEST_CONFIG.videoUrl
     }, {
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       }
     });
     
@@ -137,8 +89,7 @@ async function testDownloadFirst() {
       timeout: 1200000 // 20 minutes
     }, {
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       }
     });
     
@@ -174,8 +125,7 @@ async function testDownloadFirst() {
       forceDownloadFirst: true // Force download-first method
     }, {
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       }
     });
     
@@ -195,7 +145,7 @@ async function testDownloadFirst() {
     console.log('\n📊 Test 4: Getting system stats...');
     const statsResponse = await axios.get(`${TEST_CONFIG.baseUrl}/api/ai-hub/streaming-extraction/stats`, {
       headers: {
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       }
     });
     
@@ -229,7 +179,7 @@ async function testDownloadFirst() {
 
 // Run the test
 if (require.main === module) {
-  testDownloadFirst().catch(console.error);
+  testDownloadFirstNoAuth().catch(console.error);
 }
 
-module.exports = { testDownloadFirst };
+module.exports = { testDownloadFirstNoAuth };

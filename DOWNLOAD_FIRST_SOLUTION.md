@@ -98,7 +98,62 @@ try {
 }
 ```
 
-## كيفية الاستخدام (How to Use)
+## الحلول المطبقة (Implemented Solutions)
+
+### 1. تشخيص متقدم للروابط (Advanced URL Diagnosis)
+```typescript
+// تشخيص الرابط قبل المعالجة
+const diagnostic = await api.diagnoseS3Url(videoUrl);
+if (!diagnostic.accessible || !diagnostic.isValidVideo) {
+  // معالجة المشاكل المكتشفة
+}
+```
+
+### 2. تحميل محسن باستخدام Axios (Enhanced Download with Axios)
+```typescript
+// فحص Content-Type قبل التحميل
+const headResponse = await axios.head(videoUrl);
+if (!headResponse.headers['content-type']?.includes('video')) {
+  throw new Error('S3 returning error page instead of video');
+}
+
+// تحميل مع مراقبة السرعة
+const response = await axios.get(videoUrl, { responseType: 'stream' });
+```
+
+### 3. التحقق من صحة الملف (File Validation)
+```typescript
+// التحقق من الملف باستخدام ffprobe
+const videoInfo = await ffprobe(videoFilePath);
+if (!videoInfo.streams?.some(s => s.codec_type === 'audio')) {
+  throw new Error('Video has no audio stream');
+}
+```
+
+### 4. رسائل خطأ محسنة (Enhanced Error Messages)
+- تحديد نوع المشكلة بدقة (S3 redirect, corrupted file, etc.)
+- اقتراحات حلول عملية
+- تسجيل مفصل للتشخيص
+
+## أدوات التشخيص الجديدة (New Diagnostic Tools)
+
+### 1. سكريبت التشخيص السريع (Quick Diagnosis Script)
+```bash
+node quick-diagnose.js
+```
+
+### 2. أداة التشخيص المتقدمة (Advanced Diagnostic Tool)
+```bash
+npx ts-node src/utils/diagnose-s3-url.ts "S3_URL"
+```
+
+### 3. API endpoint للتشخيص (Diagnostic API Endpoint)
+```bash
+POST /api/ai-hub/streaming-extraction/diagnose
+{
+  "videoUrl": "https://..."
+}
+```
 
 ### 1. من الواجهة الأمامية (From Frontend)
 ```typescript
@@ -200,27 +255,109 @@ MAX_DOWNLOAD_FILE_SIZE=1073741824
 - مراقبة استخدام الذاكرة (Memory usage monitoring)
 - إحصائيات المعالجة (Processing statistics)
 
-## استكشاف الأخطاء (Troubleshooting)
+## استكشاف الأخطاء المحدث (Updated Troubleshooting)
 
-### مشاكل شائعة (Common Issues)
+### مشاكل شائعة وحلولها (Common Issues & Solutions)
 
-#### 1. فشل التحميل (Download Failure)
+#### 1. تحميل سريع جداً + ملف فاسد (Very Fast Download + Corrupted File)
 ```
-Error: Download timeout after 600s
+✅ Download completed: 277MB in 6s (avg: 50MB/s)
+❌ FFmpeg error: Invalid data found when processing input
 ```
-**الحل:** زيادة المهلة الزمنية أو تقليل حجم الملف الأقصى
+**السبب:** S3 يرجع redirect أو error page بدلاً من الفيديو
+**الحل:**
+```bash
+# تشخيص الرابط أولاً
+node quick-diagnose.js
 
-#### 2. نفاد مساحة القرص (Disk Space)
+# أو استخدام API
+curl -X POST http://localhost:3001/api/ai-hub/streaming-extraction/diagnose \
+  -H "Content-Type: application/json" \
+  -d '{"videoUrl": "YOUR_S3_URL"}'
 ```
-Error: ENOSPC: no space left on device
-```
-**الحل:** تنظيف الملفات المؤقتة أو زيادة مساحة القرص
 
-#### 3. فشل FFmpeg (FFmpeg Failure)
+#### 2. FFmpeg Code 251 (Input/Output Error)
 ```
-Error: ffmpeg exited with code 1
+❌ ffmpeg exited with code 251: Error opening input file
 ```
-**الحل:** التحقق من تثبيت FFmpeg وصحة الملف
+**الأسباب المحتملة:**
+- S3 bucket غير public
+- الملف غير موجود
+- مشاكل في تشفير الرابط
+- CloudFront/CDN issues
+
+**الحل:**
+```typescript
+// استخدام download-first method
+const result = await api.extractWithDownloadFirst(videoUrl, {
+  forceDownloadFirst: true
+});
+```
+
+#### 3. Content-Type خاطئ (Wrong Content-Type)
+```
+❌ Content-Type: text/html (expected video/*)
+```
+**السبب:** S3 يرجع error page
+**الحل:** فحص إعدادات S3 bucket والصلاحيات
+
+#### 4. ملف صغير جداً (Very Small File)
+```
+⚠️  File is very small (15KB) - might be an error response
+```
+**السبب:** تم تحميل error page بدلاً من الفيديو
+**الحل:** التحقق من صحة الرابط والصلاحيات
+
+### خطوات التشخيص المنهجية (Systematic Diagnosis Steps)
+
+#### الخطوة 1: تشخيص سريع
+```bash
+node quick-diagnose.js
+```
+
+#### الخطوة 2: فحص الرابط يدوياً
+```bash
+curl -I "YOUR_S3_URL"
+```
+
+#### الخطوة 3: تحميل عينة
+```bash
+curl -r 0-1023 "YOUR_S3_URL" | hexdump -C
+```
+
+#### الخطوة 4: اختبار FFmpeg مباشرة
+```bash
+ffmpeg -i "YOUR_S3_URL" -t 5 test_output.mp3
+```
+
+### حلول حسب نوع المشكلة (Solutions by Problem Type)
+
+#### مشكلة S3 Permissions
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::your-bucket/*"
+    }
+  ]
+}
+```
+
+#### مشكلة CloudFront
+- تأكد من إعدادات Origin
+- فحص Cache Behaviors
+- التحقق من Headers المسموحة
+
+#### مشكلة URL Encoding
+```typescript
+// تشفير صحيح للأحرف العربية
+const encodedUrl = encodeURI(videoUrl);
+```
 
 ## الأمان (Security)
 

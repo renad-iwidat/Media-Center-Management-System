@@ -427,6 +427,13 @@ export const api = {
   getStreamingExtractionStats: () =>
     request<any>("/ai-hub/streaming-extraction/stats"),
 
+  // Diagnose S3 URL
+  diagnoseS3Url: (videoUrl: string) =>
+    request<any>("/ai-hub/streaming-extraction/diagnose", {
+      method: "POST",
+      body: JSON.stringify({ videoUrl }),
+    }),
+
   // --- Legacy Audio Extraction (kept for compatibility) ---
   extractAudioFromFile: (videoFilePath: string, outputFormat: string = 'mp3', bitrate: string = '128k') =>
     request<any>("/ai-hub/audio-extraction/extract-from-file", {
