@@ -50,7 +50,7 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string, i
     const { transcribeAudioWithOpenAI } = await import('../../services/ai-hub/openai-stt.service');
     
     let allSegments: any[] = [];
-    let chunkOffset = 0;
+    const chunkDurations: number[] = [];
 
     const processedChunks = await processAudioChunksInParallel(
       chunks,
@@ -67,14 +67,13 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string, i
             transcript = result;
           } else {
             transcript = result.text;
-            // Adjust segment timestamps based on chunk offset
+            // Store chunk duration and segments
+            if (result.duration) {
+              chunkDurations[chunk.index] = result.duration;
+            }
+            // Segments will be adjusted after all chunks are processed
             if (result.segments && includeTimestamps) {
-              const adjustedSegments = result.segments.map(seg => ({
-                ...seg,
-                start: seg.start + chunkOffset,
-                end: seg.end + chunkOffset
-              }));
-              allSegments.push(...adjustedSegments);
+              allSegments[chunk.index] = result.segments;
             }
           }
           
@@ -87,6 +86,28 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string, i
       },
       { maxConcurrentChunks: 3 }
     );
+
+    // Adjust segment timestamps based on chunk positions
+    const adjustedSegments: any[] = [];
+    if (includeTimestamps && allSegments.length > 0) {
+      let cumulativeTime = 0;
+      for (let i = 0; i < allSegments.length; i++) {
+        if (allSegments[i]) {
+          const chunkSegments = allSegments[i];
+          chunkSegments.forEach((seg: any) => {
+            adjustedSegments.push({
+              ...seg,
+              start: seg.start + cumulativeTime,
+              end: seg.end + cumulativeTime
+            });
+          });
+          // Add chunk duration to cumulative time for next chunk
+          if (chunkDurations[i]) {
+            cumulativeTime += chunkDurations[i];
+          }
+        }
+      }
+    }
 
     // Combine transcripts
     console.log('\n📝 Combining transcripts...');
@@ -101,7 +122,7 @@ async function processAudioWithChunking(audioBuffer: Buffer, language: string, i
 
     return {
       transcript: finalTranscript,
-      segments: includeTimestamps ? allSegments : undefined
+      segments: includeTimestamps && adjustedSegments.length > 0 ? adjustedSegments : undefined
     };
   } catch (error) {
     // Cleanup on error

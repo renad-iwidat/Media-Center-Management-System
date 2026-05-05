@@ -282,6 +282,8 @@ export class StreamingExtractionController {
       const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
       
       let allSegments: any[] = [];
+      let chunkSegments: any[] = [];
+      let cumulativeTime = 0;
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
         const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps });
@@ -291,7 +293,11 @@ export class StreamingExtractionController {
         } else {
           // Collect segments if timestamps are included
           if (result.segments && includeTimestamps) {
-            allSegments.push(...result.segments);
+            // Store segments with their chunk index for later adjustment
+            chunkSegments.push({
+              segments: result.segments,
+              duration: result.duration || 0
+            });
           }
           return result.text;
         }
@@ -382,16 +388,28 @@ export class StreamingExtractionController {
         chunksProcessed: result.chunks?.length || 0
       };
 
-      // Include segments with timestamps if available
-      if (includeTimestamps && allSegments.length > 0) {
-        responseData.segments = allSegments.map(seg => ({
-          start: seg.start,
-          end: seg.end,
-          text: seg.text,
-          startFormatted: formatTimestamp(seg.start),
-          endFormatted: formatTimestamp(seg.end),
-        }));
-        responseData.segmentCount = allSegments.length;
+      // Adjust segment timestamps based on chunk positions
+      if (includeTimestamps && chunkSegments.length > 0) {
+        let cumulativeTime = 0;
+        const adjustedSegments: any[] = [];
+        
+        for (const chunkData of chunkSegments) {
+          chunkData.segments.forEach((seg: any) => {
+            adjustedSegments.push({
+              start: seg.start + cumulativeTime,
+              end: seg.end + cumulativeTime,
+              text: seg.text,
+              startFormatted: formatTimestamp(seg.start + cumulativeTime),
+              endFormatted: formatTimestamp(seg.end + cumulativeTime),
+            });
+          });
+          cumulativeTime += chunkData.duration;
+        }
+        
+        if (adjustedSegments.length > 0) {
+          responseData.segments = adjustedSegments;
+          responseData.segmentCount = adjustedSegments.length;
+        }
       }
 
       res.json({
@@ -463,6 +481,7 @@ export class StreamingExtractionController {
       const { transcribeAudioWithOpenAI, formatTimestamp } = await import('../../services/ai-hub/openai-stt.service');
       
       let allSegments: any[] = [];
+      let chunkSegments: any[] = [];
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
         const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps });
@@ -472,7 +491,10 @@ export class StreamingExtractionController {
         } else {
           // Collect segments if timestamps are included
           if (result.segments && includeTimestamps) {
-            allSegments.push(...result.segments);
+            chunkSegments.push({
+              segments: result.segments,
+              duration: result.duration || 0
+            });
           }
           return result.text;
         }
@@ -516,16 +538,28 @@ export class StreamingExtractionController {
         enabledChunking: enableChunking
       };
 
-      // Include segments with timestamps if available
-      if (includeTimestamps && allSegments.length > 0) {
-        responseData.segments = allSegments.map(seg => ({
-          start: seg.start,
-          end: seg.end,
-          text: seg.text,
-          startFormatted: formatTimestamp(seg.start),
-          endFormatted: formatTimestamp(seg.end),
-        }));
-        responseData.segmentCount = allSegments.length;
+      // Adjust segment timestamps based on chunk positions
+      if (includeTimestamps && chunkSegments.length > 0) {
+        let cumulativeTime = 0;
+        const adjustedSegments: any[] = [];
+        
+        for (const chunkData of chunkSegments) {
+          chunkData.segments.forEach((seg: any) => {
+            adjustedSegments.push({
+              start: seg.start + cumulativeTime,
+              end: seg.end + cumulativeTime,
+              text: seg.text,
+              startFormatted: formatTimestamp(seg.start + cumulativeTime),
+              endFormatted: formatTimestamp(seg.end + cumulativeTime),
+            });
+          });
+          cumulativeTime += chunkData.duration;
+        }
+        
+        if (adjustedSegments.length > 0) {
+          responseData.segments = adjustedSegments;
+          responseData.segmentCount = adjustedSegments.length;
+        }
       }
 
       res.json({
