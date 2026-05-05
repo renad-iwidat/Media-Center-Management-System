@@ -159,7 +159,7 @@ export class AudioExtractionController {
       console.log(`🔄 Chunking: ${enableChunking} | Duration: ${chunkDurationSeconds}s | Concurrent: ${maxConcurrentChunks}`);
 
       // Import transcription service
-      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
+      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt-unified.service');
       const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
 
       // Create transcription function

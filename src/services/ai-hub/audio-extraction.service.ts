@@ -125,8 +125,8 @@ export async function extractAudioWithChunkedProcessing(
   } = {}
 ): Promise<{ audioBuffer: Buffer; transcript?: string; chunks?: any[] }> {
   const enableChunking = options.enableChunking ?? true;
-  const chunkDuration = options.chunkDurationSeconds || 180; // 3 minutes default
-  const maxConcurrent = options.maxConcurrentChunks || 3;
+  const chunkDuration = options.chunkDurationSeconds || 300; // 5 minutes for OpenAI (optimal)
+  const maxConcurrent = options.maxConcurrentChunks || 2; // 2 concurrent for OpenAI (balanced)
 
   console.log(`\n🎯 [${new Date().toISOString()}] Starting Audio Extraction with Chunked Processing`);
   console.log(`🔄 Chunking Enabled: ${enableChunking}`);

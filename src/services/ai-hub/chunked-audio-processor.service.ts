@@ -174,58 +174,111 @@ export async function processAudioChunksInParallel(
   options: ChunkProcessingOptions = {}
 ): Promise<AudioChunk[]> {
   try {
-    const maxConcurrent = options.maxConcurrentChunks || 3;
+    const maxConcurrent = options.maxConcurrentChunks || 2; // Default to 2 for OpenAI balance
 
-    console.log(`\n🔄 [${new Date().toISOString()}] Starting Parallel Chunk Processing`);
+    console.log(`\n🔄 [${new Date().toISOString()}] Starting Chunk Processing`);
     console.log(`📊 Total Chunks: ${chunks.length}`);
     console.log(`⚡ Max Concurrent: ${maxConcurrent}`);
+    
+    if (maxConcurrent === 1) {
+      console.log(`📝 Sequential processing mode (for stability)`);
+    } else {
+      console.log(`🚀 Parallel processing mode (${maxConcurrent} concurrent)`);
+    }
 
-    const processedChunks: AudioChunk[] = [];
+    const processedChunks: AudioChunk[] = new Array(chunks.length);
     const startTime = Date.now();
+    let completedCount = 0;
 
-    // Process chunks in batches
-    for (let i = 0; i < chunks.length; i += maxConcurrent) {
-      const batch = chunks.slice(i, i + maxConcurrent);
-      const batchNumber = Math.floor(i / maxConcurrent) + 1;
-      const totalBatches = Math.ceil(chunks.length / maxConcurrent);
+    if (maxConcurrent === 1) {
+      // Sequential processing for maximum stability
+      for (const chunk of chunks) {
+        try {
+          console.log(`🎵 Processing Chunk ${chunk.index + 1}/${chunks.length} sequentially...`);
+          const chunkStartTime = Date.now();
+          const transcript = await processingFunction(chunk);
+          const chunkDuration = Date.now() - chunkStartTime;
+          
+          processedChunks[chunk.index] = { ...chunk, transcript };
+          completedCount++;
+          
+          console.log(`✅ Chunk ${chunk.index + 1} completed in ${formatDuration(chunkDuration)} (${transcript.length} chars)`);
 
-      console.log(`\n📦 Processing Batch ${batchNumber}/${totalBatches} (${batch.length} chunks)`);
+          // Calculate progress
+          const progress = Math.round((completedCount / chunks.length) * 100);
+          const elapsedTime = Date.now() - startTime;
+          const estimatedTotalTime = (elapsedTime / completedCount) * chunks.length;
+          const estimatedRemaining = estimatedTotalTime - elapsedTime;
 
-      const batchStartTime = Date.now();
-      const results = await Promise.all(
-        batch.map(async (chunk) => {
-          try {
-            console.log(`  🎵 Processing Chunk ${chunk.index + 1}/${chunks.length}...`);
-            const transcript = await processingFunction(chunk);
-            console.log(`  ✅ Chunk ${chunk.index + 1} completed (${transcript.length} chars)`);
-            return { ...chunk, transcript };
-          } catch (error) {
-            console.error(`  ❌ Error processing chunk ${chunk.index + 1}:`, error);
-            throw error;
+          console.log(`📊 Progress: ${progress}% | Elapsed: ${formatDuration(elapsedTime)} | Remaining: ${formatDuration(estimatedRemaining)}`);
+          
+          // Small delay between chunks to be respectful to APIs
+          if (chunk.index < chunks.length - 1) {
+            console.log(`⏳ Waiting 1s before next chunk...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
-        })
-      );
+        } catch (error) {
+          console.error(`❌ Error processing chunk ${chunk.index + 1}:`, error);
+          throw error;
+        }
+      }
+    } else {
+      // Parallel processing with concurrency control (good for OpenAI)
+      const queue = [...chunks];
+      const activePromises = new Set<Promise<void>>();
 
-      const batchDuration = Date.now() - batchStartTime;
-      console.log(`⏱️  Batch Duration: ${formatDuration(batchDuration)}`);
+      const processChunk = async (chunk: AudioChunk): Promise<void> => {
+        try {
+          console.log(`🎵 Processing Chunk ${chunk.index + 1}/${chunks.length} (parallel)...`);
+          const chunkStartTime = Date.now();
+          const transcript = await processingFunction(chunk);
+          const chunkDuration = Date.now() - chunkStartTime;
+          
+          processedChunks[chunk.index] = { ...chunk, transcript };
+          completedCount++;
+          
+          console.log(`✅ Chunk ${chunk.index + 1} completed in ${formatDuration(chunkDuration)} (${transcript.length} chars)`);
 
-      processedChunks.push(...results);
+          // Calculate progress
+          const progress = Math.round((completedCount / chunks.length) * 100);
+          const elapsedTime = Date.now() - startTime;
+          const estimatedTotalTime = (elapsedTime / completedCount) * chunks.length;
+          const estimatedRemaining = estimatedTotalTime - elapsedTime;
 
-      // Calculate progress
-      const progress = Math.round((processedChunks.length / chunks.length) * 100);
-      const elapsedTime = Date.now() - startTime;
-      const estimatedTotalTime = (elapsedTime / processedChunks.length) * chunks.length;
-      const estimatedRemaining = estimatedTotalTime - elapsedTime;
+          console.log(`📊 Progress: ${progress}% | Elapsed: ${formatDuration(elapsedTime)} | Remaining: ${formatDuration(estimatedRemaining)}`);
+        } catch (error) {
+          console.error(`❌ Error processing chunk ${chunk.index + 1}:`, error);
+          throw error;
+        }
+      };
 
-      console.log(`📊 Progress: ${progress}% | Elapsed: ${formatDuration(elapsedTime)} | Remaining: ${formatDuration(estimatedRemaining)}`);
+      // Process all chunks with concurrency control
+      while (queue.length > 0 || activePromises.size > 0) {
+        // Fill up to maxConcurrent active promises
+        while (queue.length > 0 && activePromises.size < maxConcurrent) {
+          const chunk = queue.shift()!;
+          const promise = processChunk(chunk).then(() => {
+            activePromises.delete(promise);
+          }).catch((error) => {
+            activePromises.delete(promise);
+            throw error;
+          });
+          activePromises.add(promise);
+        }
+
+        // Wait for at least one to complete before processing more
+        if (activePromises.size > 0) {
+          await Promise.race(activePromises);
+        }
+      }
     }
 
     const totalDuration = Date.now() - startTime;
     console.log(`\n✅ All chunks processed in ${formatDuration(totalDuration)}`);
 
-    return processedChunks;
+    return processedChunks.filter(Boolean);
   } catch (error) {
-    console.error('❌ Parallel Processing Error:', error);
+    console.error('❌ Chunk Processing Error:', error);
     throw error;
   }
 }
