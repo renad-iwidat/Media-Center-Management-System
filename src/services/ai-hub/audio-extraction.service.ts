@@ -45,7 +45,6 @@ export async function extractAudioFromVideoUrl(
 ): Promise<Buffer> {
   const outputFormat = options.outputFormat || 'mp3';
   const bitrate = options.bitrate || '128k';
-  const timeout = options.timeout || 300000; // 5 minutes default
 
   console.log(`\n🎬 [${new Date().toISOString()}] Starting Streaming Audio Extraction`);
   console.log(`🌐 Video URL: ${videoUrl}`);
@@ -64,16 +63,37 @@ export async function extractAudioFromVideoUrl(
       console.log('⚠️  Direct ffmpeg failed, trying streaming extraction...');
       console.log(`❌ Direct error: ${directErrorMessage}`);
       
-      // Fallback: Stream video and extract audio on-the-fly
+      // Fallback 1: Stream video and extract audio on-the-fly
       try {
         const result = await extractAudioWithStreamingDownload(videoUrl, options);
         return result;
       } catch (streamError) {
         const streamErrorMessage = streamError instanceof Error ? streamError.message : String(streamError);
-        console.error('❌ Both methods failed!');
-        console.error('Direct method error:', directErrorMessage);
-        console.error('Streaming method error:', streamErrorMessage);
-        throw new Error(`Audio extraction failed: ${streamErrorMessage}`);
+        console.log('⚠️  Streaming extraction failed, trying download-first method...');
+        console.log(`❌ Streaming error: ${streamErrorMessage}`);
+        
+        // Fallback 2: Download-first method (for problematic URLs on cloud platforms)
+        try {
+          console.log('📥 Using download-first extraction method as final fallback...');
+          const { extractAudioWithDownloadFirst } = await import('./download-first-extractor.service');
+          
+          const downloadResult = await extractAudioWithDownloadFirst(videoUrl, {
+            outputFormat: options.outputFormat,
+            bitrate: options.bitrate,
+            timeout: options.timeout || 1200000, // 20 minutes for large files
+            maxFileSize: 1024 * 1024 * 1024 // 1GB max
+          });
+          
+          console.log('✅ Download-first method succeeded!');
+          return downloadResult.audioBuffer;
+        } catch (downloadError) {
+          const downloadErrorMessage = downloadError instanceof Error ? downloadError.message : String(downloadError);
+          console.error('❌ All three methods failed!');
+          console.error('Direct method error:', directErrorMessage);
+          console.error('Streaming method error:', streamErrorMessage);
+          console.error('Download-first method error:', downloadErrorMessage);
+          throw new Error(`Audio extraction failed after trying all methods: ${downloadErrorMessage}`);
+        }
       }
     }
   } finally {
@@ -92,6 +112,8 @@ export async function extractAudioFromVideoUrl(
 /**
  * Extract audio with automatic chunked processing for large files
  * استخراج الصوت مع معالجة مقسمة تلقائية للملفات الكبيرة
+ * 
+ * This function now includes download-first fallback for problematic URLs
  */
 export async function extractAudioWithChunkedProcessing(
   videoUrl: string,
@@ -115,7 +137,7 @@ export async function extractAudioWithChunkedProcessing(
   let chunks: any[] = [];
 
   try {
-    // Step 1: Extract audio from video
+    // Step 1: Extract audio from video (with all fallback methods)
     console.log('🎵 Step 1: Extracting audio from video...');
     const audioBuffer = await extractAudioFromVideoUrl(videoUrl, options);
     
@@ -147,8 +169,7 @@ export async function extractAudioWithChunkedProcessing(
     const { 
       splitAudioIntoChunks, 
       processAudioChunksInParallel, 
-      combineTranscripts, 
-      cleanupChunks 
+      combineTranscripts
     } = await import('./chunked-audio-processor.service');
 
     // Split into chunks

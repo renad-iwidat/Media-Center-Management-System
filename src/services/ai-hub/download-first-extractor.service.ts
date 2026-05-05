@@ -9,8 +9,6 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import https from 'https';
-import http from 'http';
 import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
@@ -37,12 +35,6 @@ interface DownloadFirstOptions {
   enableChunking?: boolean;
   chunkDurationSeconds?: number;
   maxConcurrentChunks?: number;
-}
-
-interface DownloadProgress {
-  downloaded: number;
-  total: number;
-  percentage: number;
 }
 
 interface ProcessingResult {

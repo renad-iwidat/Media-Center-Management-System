@@ -64,6 +64,8 @@ export async function transcribeAudioFromUrl(
     const response = await fetch(`${sttApiUrl}/stt`, {
       method: 'POST',
       body: formData,
+      // Increase timeout to 5 minutes for large audio files
+      signal: AbortSignal.timeout(300000), // 5 minutes
     });
 
     const duration = Date.now() - startTime;
@@ -156,6 +158,8 @@ export async function transcribeAudioFromFile(
     const response = await fetch(`${sttApiUrl}/stt`, {
       method: 'POST',
       body: formData,
+      // Increase timeout to 5 minutes for large audio files
+      signal: AbortSignal.timeout(300000), // 5 minutes
     });
 
     const duration = Date.now() - startTime;
@@ -314,8 +318,8 @@ export const SUPPORTED_LANGUAGES = {
 };
 
 /**
- * Transcribe audio from buffer
- * تحويل الصوت من Buffer إلى نص
+ * Transcribe audio from buffer with automatic parallel processing
+ * تحويل الصوت من Buffer إلى نص مع معالجة متوازية تلقائية
  */
 export async function transcribeAudioFromBuffer(
   audioBuffer: Buffer,
@@ -328,7 +332,8 @@ export async function transcribeAudioFromBuffer(
       throw new Error('AI_MODEL environment variable is not configured');
     }
 
-    const language = options.language || 'ar'; // Default to Arabic
+    const language = options.language || 'ar';
+    const timeout = options.timeout || 60000;
 
     console.log(`\n🎙️  [${new Date().toISOString()}] Starting STT Transcription from Buffer`);
     console.log(`🌐 STT API URL: ${sttApiUrl}/stt`);
@@ -338,61 +343,106 @@ export async function transcribeAudioFromBuffer(
     // Validate audio buffer
     validateAudioBuffer(audioBuffer, 'Buffer');
 
-    // Create FormData with audio file
-    const formData = new FormData();
-    const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/mpeg' });
-    formData.append('file', audioBlob, 'audio.mp3');
-    formData.append('language', language);
-
-    console.log('📤 Sending to STT API...');
-    console.log(`📦 FormData created with file size: ${audioBuffer.length} bytes`);
-    const startTime = Date.now();
-
-    const response = await fetch(`${sttApiUrl}/stt`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const duration = Date.now() - startTime;
-    console.log(`⏱️  Response Time: ${duration}ms`);
-    console.log(`📊 Status: ${response.status} ${response.statusText}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ API Response Error:', errorText);
-      console.error('🔍 Request Details:', {
-        url: `${sttApiUrl}/stt`,
-        method: 'POST',
-        audioSize: audioBuffer.length,
-        language: language,
-      });
-      throw new Error(`STT API error: ${response.status} ${response.statusText} - ${errorText}`);
+    // Check if we should use parallel processing
+    const enableParallel = process.env.ENABLE_PARALLEL_STT !== 'false';
+    const thresholdMB = parseInt(process.env.STT_PARALLEL_THRESHOLD_MB || '2');
+    const shouldUseParallel = enableParallel && audioBuffer.length > thresholdMB * 1024 * 1024;
+    
+    if (shouldUseParallel) {
+      console.log(`🚀 Using parallel processing for large audio file (>${thresholdMB}MB)...`);
+      
+      try {
+        // Import parallel processing service
+        const { transcribeAudioBufferParallel } = await import('./parallel-stt.service');
+        
+        return await transcribeAudioBufferParallel(audioBuffer, {
+          language,
+          chunkDurationSeconds: parseInt(process.env.STT_CHUNK_DURATION_SECONDS || '30'),
+          maxConcurrentRequests: parseInt(process.env.STT_MAX_CONCURRENT_REQUESTS || '3'),
+          timeout,
+          overlapSeconds: parseInt(process.env.STT_OVERLAP_SECONDS || '2')
+        });
+      } catch (parallelError) {
+        console.warn('⚠️  Parallel processing failed, falling back to single request:', parallelError);
+        // Fallback to single request
+      }
     }
 
-    const data: STTResponse = await response.json();
+    console.log('📝 Using single request...');
+    return await transcribeAudioBufferSingle(audioBuffer, { language });
 
-    console.log(`📥 STT Response:`, {
-      id: data.id,
-      status: data.status,
-      language: data.language,
-      transcriptLength: data.transcript?.length || 0,
-      hasError: !!data.error,
-    });
-
-    // Check for errors in response
-    if (data.error) {
-      throw new Error(`STT error: ${data.error}`);
-    }
-
-    // Return the transcript
-    if (data.transcript) {
-      console.log(`✅ Transcription completed (${data.transcript.length} characters)`);
-      return data.transcript;
-    }
-
-    throw new Error('No transcript returned from STT API');
   } catch (error) {
     console.error('❌ STT Service Error:', error);
     throw error;
   }
+}
+
+/**
+ * Single request transcription (for smaller files or fallback)
+ * تفريغ بطلب واحد (للملفات الصغيرة أو كاحتياط)
+ */
+async function transcribeAudioBufferSingle(
+  audioBuffer: Buffer,
+  options: { language: string }
+): Promise<string> {
+  const sttApiUrl = process.env.AI_MODEL;
+  const { language } = options;
+
+  console.log('✅ Audio buffer validated:', audioBuffer.length, 'bytes');
+
+  // Create FormData with audio file
+  const formData = new FormData();
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/mpeg' });
+  formData.append('file', audioBlob, 'audio.mp3');
+  formData.append('language', language);
+
+  console.log('📤 Sending to STT API...');
+  console.log(`📦 FormData created with file size: ${audioBuffer.length} bytes`);
+  const startTime = Date.now();
+
+  const response = await fetch(`${sttApiUrl}/stt`, {
+    method: 'POST',
+    body: formData,
+    // Increase timeout to 5 minutes for large audio files
+    signal: AbortSignal.timeout(300000), // 5 minutes
+  });
+
+  const duration = Date.now() - startTime;
+  console.log(`⏱️  Response Time: ${duration}ms`);
+  console.log(`📊 Status: ${response.status} ${response.statusText}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ API Response Error:', errorText);
+    console.error('🔍 Request Details:', {
+      url: `${sttApiUrl}/stt`,
+      method: 'POST',
+      audioSize: audioBuffer.length,
+      language: language,
+    });
+    throw new Error(`STT API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const data: STTResponse = await response.json();
+
+  console.log(`📥 STT Response:`, {
+    id: data.id,
+    status: data.status,
+    language: data.language,
+    transcriptLength: data.transcript?.length || 0,
+    hasError: !!data.error,
+  });
+
+  // Check for errors in response
+  if (data.error) {
+    throw new Error(`STT error: ${data.error}`);
+  }
+
+  // Return the transcript
+  if (data.transcript) {
+    console.log(`✅ Transcription completed (${data.transcript.length} characters)`);
+    return data.transcript;
+  }
+
+  throw new Error('No transcript returned from STT API');
 }
