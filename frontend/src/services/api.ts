@@ -343,6 +343,31 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ fileId, s3Url, outputFormat, bitrate }),
     }),
+  extractAudioAndTranscribe: (
+    fileId: number, 
+    s3Url: string, 
+    options: {
+      outputFormat?: string;
+      bitrate?: string;
+      language?: string;
+      enableChunking?: boolean;
+      chunkDurationSeconds?: number;
+      maxConcurrentChunks?: number;
+    } = {}
+  ) =>
+    request<any>("/ai-hub/audio-extraction/extract-and-transcribe", {
+      method: "POST",
+      body: JSON.stringify({ 
+        fileId, 
+        s3Url, 
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        language: options.language || 'ar',
+        enableChunking: options.enableChunking ?? true,
+        chunkDurationSeconds: options.chunkDurationSeconds || 180,
+        maxConcurrentChunks: options.maxConcurrentChunks || 3
+      }),
+    }),
   getVideoInfo: (videoFilePath: string) =>
     request<any>("/ai-hub/audio-extraction/video-info", {
       method: "POST",

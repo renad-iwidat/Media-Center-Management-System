@@ -119,21 +119,34 @@ export class AudioExtractionController {
   }
 
   /**
-   * Extract audio from S3 video file and return downloadable URL
-   * استخرج الصوت من ملف فيديو في S3 وأرجع رابط قابل للتحميل
-   * POST /api/ai-hub/audio-extraction/extract-from-s3
+   * Extract audio from S3 video file with integrated transcription
+   * استخرج الصوت من ملف فيديو في S3 مع تفريغ متكامل
+   * POST /api/ai-hub/audio-extraction/extract-and-transcribe
    * 
    * Body:
    * {
    *   "fileId": 123,
    *   "s3Url": "https://s3.example.com/video.mp4",
    *   "outputFormat": "mp3" (optional, default: "mp3"),
-   *   "bitrate": "128k" (optional, default: "128k")
+   *   "bitrate": "128k" (optional, default: "128k"),
+   *   "language": "ar" (optional, default: "ar"),
+   *   "enableChunking": true (optional, default: true),
+   *   "chunkDurationSeconds": 180 (optional, default: 180),
+   *   "maxConcurrentChunks": 3 (optional, default: 3)
    * }
    */
-  static async extractFromS3(req: Request, res: Response) {
+  static async extractAndTranscribe(req: Request, res: Response) {
     try {
-      const { fileId, s3Url, outputFormat = 'mp3', bitrate = '128k' } = req.body;
+      const { 
+        fileId, 
+        s3Url, 
+        outputFormat = 'mp3', 
+        bitrate = '128k',
+        language = 'ar',
+        enableChunking = true,
+        chunkDurationSeconds = 180,
+        maxConcurrentChunks = 3
+      } = req.body;
 
       if (!s3Url) {
         return res.status(400).json({
@@ -142,51 +155,55 @@ export class AudioExtractionController {
         });
       }
 
-      console.log(`\n🎬 [Audio Extraction Controller] Extracting from S3: ${s3Url}`);
+      console.log(`\n🎬 [Audio Extraction Controller] Extract + Transcribe from S3: ${s3Url}`);
+      console.log(`🔄 Chunking: ${enableChunking} | Duration: ${chunkDurationSeconds}s | Concurrent: ${maxConcurrentChunks}`);
 
-      const audioBuffer = await extractAudioFromVideoUrl(s3Url, {
-        outputFormat,
-        bitrate,
-      });
+      // Import transcription service
+      const { transcribeAudioFromBuffer } = await import('../../services/ai-hub/stt.service');
+      const { extractAudioWithChunkedProcessing } = await import('../../services/ai-hub/audio-extraction.service');
 
-      // Save audio to temporary file and create URL
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
-      
-      const tempDir = path.join(os.tmpdir(), 'media-center-extracted-audio');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-      
-      const audioFileName = `extracted-audio-${Date.now()}.${outputFormat}`;
-      const audioFilePath = path.join(tempDir, audioFileName);
-      fs.writeFileSync(audioFilePath, audioBuffer);
-      
-      // Create URL for the audio file
-      const audioUrl = `http://localhost:${process.env.PORT || 4000}/temp-audio/${audioFileName}`;
+      // Create transcription function
+      const transcriptionFunction = async (audioBuffer: Buffer): Promise<string> => {
+        return await transcribeAudioFromBuffer(audioBuffer, { language });
+      };
 
-      // Convert buffer to base64 for JSON response (fallback)
-      const audioBase64 = audioBuffer.toString('base64');
+      // Extract audio with integrated chunked processing
+      const result = await extractAudioWithChunkedProcessing(
+        s3Url,
+        transcriptionFunction,
+        {
+          outputFormat,
+          bitrate,
+          enableChunking,
+          chunkDurationSeconds,
+          maxConcurrentChunks,
+          timeout: 600000 // 10 minutes for large files
+        }
+      );
+
+      // Convert buffer to base64 for JSON response
+      const audioBase64 = result.audioBuffer.toString('base64');
 
       res.json({
         success: true,
         data: {
           fileId,
-          audioUrl,
           audioBase64,
-          audioSize: audioBuffer.length,
+          audioSize: result.audioBuffer.length,
           format: outputFormat,
           bitrate,
           s3Url,
-          audioFilePath,
+          transcript: result.transcript,
+          language,
+          processingMethod: result.chunks ? 'chunked' : 'single',
+          chunksProcessed: result.chunks?.length || 0,
         },
       });
     } catch (error) {
-      console.error('Error in audio extraction controller:', error);
+      console.error('Error in extract and transcribe controller:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to extract audio',
+        error: error instanceof Error ? error.message : 'Failed to extract audio and transcribe',
       });
     }
   }
@@ -248,6 +265,52 @@ export class AudioExtractionController {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch supported formats',
+      });
+    }
+  }
+
+  /**
+   * Extract audio from S3 video file (legacy method - audio only)
+   * استخرج الصوت من ملف فيديو في S3 (طريقة قديمة - صوت فقط)
+   * POST /api/ai-hub/audio-extraction/extract-from-s3
+   */
+  static async extractFromS3(req: Request, res: Response) {
+    try {
+      const { fileId, s3Url, outputFormat = 'mp3', bitrate = '128k' } = req.body;
+
+      if (!s3Url) {
+        return res.status(400).json({
+          success: false,
+          error: 's3Url is required',
+        });
+      }
+
+      console.log(`\n🎬 [Audio Extraction Controller] Extracting from S3 (audio only): ${s3Url}`);
+
+      const audioBuffer = await extractAudioFromVideoUrl(s3Url, {
+        outputFormat,
+        bitrate,
+      });
+
+      // Convert buffer to base64 for JSON response
+      const audioBase64 = audioBuffer.toString('base64');
+
+      res.json({
+        success: true,
+        data: {
+          fileId,
+          audioBase64,
+          audioSize: audioBuffer.length,
+          format: outputFormat,
+          bitrate,
+          s3Url,
+        },
+      });
+    } catch (error) {
+      console.error('Error in audio extraction controller:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to extract audio',
       });
     }
   }

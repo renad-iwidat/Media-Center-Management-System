@@ -155,27 +155,28 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     try {
       console.log(`🎙️  Starting STT for file: ${mediaTitle}`);
       
-      // If it's a video file, extract audio first
+      // If it's a video file, extract audio and transcribe in one step
       if (file.file_type === 'video') {
-        console.log('🎬 Video detected - extracting audio first...');
-        const extractRes = await api.extractAudioFromS3(file.id, file.s3_url, 'mp3', '128k');
+        console.log('🎬 Video detected - using integrated extraction + transcription...');
         
-        if (!extractRes.success || !extractRes.data?.audioBase64) {
-          throw new Error(extractRes.error || 'Failed to extract audio from video');
+        const extractRes = await api.extractAudioAndTranscribe(file.id, file.s3_url, {
+          outputFormat: 'mp3',
+          bitrate: '128k',
+          language: 'ar',
+          enableChunking: true,
+          chunkDurationSeconds: 180, // 3 minutes per chunk
+          maxConcurrentChunks: 3     // Process 3 chunks in parallel
+        });
+        
+        if (!extractRes.success || !extractRes.data?.transcript) {
+          throw new Error(extractRes.error || 'Failed to extract audio and transcribe');
         }
 
-        console.log('✅ Audio extracted successfully');
+        console.log(`✅ Integrated processing completed (${extractRes.data.processingMethod})`);
+        console.log(`📊 Chunks processed: ${extractRes.data.chunksProcessed || 0}`);
         
-        // Now transcribe the extracted audio using base64
-        console.log('🎙️  Transcribing extracted audio...');
-        const transcribeRes = await api.transcribeAudioFromBase64(extractRes.data.audioBase64, 'ar');
-        
-        if (transcribeRes.success && transcribeRes.data?.transcript) {
-          setResult(transcribeRes.data.transcript);
-          console.log('✅ STT completed successfully');
-        } else {
-          throw new Error(transcribeRes.error || 'Failed to transcribe audio');
-        }
+        setResult(extractRes.data.transcript);
+        console.log('✅ Video-to-text completed successfully');
       } else {
         // For audio files, transcribe directly
         const res = await api.transcribeAudioFromFile(file.id, file.s3_url, 'ar');
