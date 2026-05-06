@@ -10,6 +10,12 @@ import {
   ExtractionError,
   StreamingExtractionOptions 
 } from '../../services/ai-hub/streaming-audio-extractor.service';
+import { 
+  deduplicateSegments, 
+  cleanTranscript, 
+  processChunkedTranscript,
+  validateTranscriptQuality 
+} from '../../utils/deduplication.service';
 
 // Job Management (Simple in-memory for now, use Redis/DB for production)
 interface ExtractionJob {
@@ -283,12 +289,14 @@ export class StreamingExtractionController {
       
       let allSegments: any[] = [];
       let chunkSegments: any[] = [];
+      let chunkTexts: string[] = []; // Track chunk texts for overlap detection
       let cumulativeTime = 0;
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
         const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps });
         // Ensure we return only the text string
         if (typeof result === 'string') {
+          chunkTexts.push(result);
           return result;
         } else {
           // Collect segments if timestamps are included
@@ -299,6 +307,7 @@ export class StreamingExtractionController {
               duration: result.duration || 0
             });
           }
+          chunkTexts.push(result.text);
           return result.text;
         }
       };
@@ -377,15 +386,38 @@ export class StreamingExtractionController {
         }
       });
 
+      // Clean transcript from duplicates
+      console.log('🧹 Cleaning transcript from duplicates...');
+      const cleanedTranscript = processChunkedTranscript(chunkTexts, {
+        removeOverlap: true,
+        cleanDuplicates: true,
+        overlapThreshold: 0.8
+      });
+
+      // Validate transcript quality
+      const quality = validateTranscriptQuality(cleanedTranscript);
+      console.log(`📊 Transcript Quality Report:`);
+      console.log(`   - Total Lines: ${quality.totalLines}`);
+      console.log(`   - Duplicate Percentage: ${quality.duplicatePercentage.toFixed(2)}%`);
+      console.log(`   - Average Line Length: ${quality.averageLineLength.toFixed(0)} characters`);
+      if (quality.warnings.length > 0) {
+        quality.warnings.forEach(w => console.log(`   ${w}`));
+      }
+
       const responseData: any = {
         jobId,
-        transcript: result.transcript,
+        transcript: cleanedTranscript,
         audioSize: result.audioSize,
         videoSize: result.videoSize || 0,
         processingTime: result.processingTime || 0,
         language,
         processingMethod,
-        chunksProcessed: result.chunks?.length || 0
+        chunksProcessed: result.chunks?.length || 0,
+        quality: {
+          duplicatePercentage: quality.duplicatePercentage,
+          totalLines: quality.totalLines,
+          isValid: quality.isValid
+        }
       };
 
       // Adjust segment timestamps based on chunk positions
@@ -406,9 +438,13 @@ export class StreamingExtractionController {
           cumulativeTime += chunkData.duration;
         }
         
-        if (adjustedSegments.length > 0) {
-          responseData.segments = adjustedSegments;
-          responseData.segmentCount = adjustedSegments.length;
+        // Deduplicate segments
+        const deduplicatedSegments = deduplicateSegments(adjustedSegments);
+        
+        if (deduplicatedSegments.length > 0) {
+          responseData.segments = deduplicatedSegments;
+          responseData.segmentCount = deduplicatedSegments.length;
+          console.log(`✅ Segments deduplicated: ${adjustedSegments.length} → ${deduplicatedSegments.length}`);
         }
       }
 
@@ -482,11 +518,13 @@ export class StreamingExtractionController {
       
       let allSegments: any[] = [];
       let chunkSegments: any[] = [];
+      let chunkTexts: string[] = []; // Track chunk texts for overlap detection
       
       const transcriptionFunction = async (buffer: Buffer): Promise<string> => {
         const result = await transcribeAudioWithOpenAI(buffer, { language, includeTimestamps });
         // Ensure we return only the text string
         if (typeof result === 'string') {
+          chunkTexts.push(result);
           return result;
         } else {
           // Collect segments if timestamps are included
@@ -496,6 +534,7 @@ export class StreamingExtractionController {
               duration: result.duration || 0
             });
           }
+          chunkTexts.push(result.text);
           return result.text;
         }
       };
@@ -526,16 +565,39 @@ export class StreamingExtractionController {
         }
       });
 
+      // Clean transcript from duplicates
+      console.log('🧹 Cleaning transcript from duplicates...');
+      const cleanedTranscript = processChunkedTranscript(chunkTexts, {
+        removeOverlap: true,
+        cleanDuplicates: true,
+        overlapThreshold: 0.8
+      });
+
+      // Validate transcript quality
+      const quality = validateTranscriptQuality(cleanedTranscript);
+      console.log(`📊 Transcript Quality Report:`);
+      console.log(`   - Total Lines: ${quality.totalLines}`);
+      console.log(`   - Duplicate Percentage: ${quality.duplicatePercentage.toFixed(2)}%`);
+      console.log(`   - Average Line Length: ${quality.averageLineLength.toFixed(0)} characters`);
+      if (quality.warnings.length > 0) {
+        quality.warnings.forEach(w => console.log(`   ${w}`));
+      }
+
       const responseData: any = {
         jobId,
-        transcript: result.transcript,
+        transcript: cleanedTranscript,
         audioSize: result.audioSize,
         videoSize: result.videoSize,
         processingTime: result.processingTime,
         language,
         processingMethod: 'download-first',
         chunksProcessed: result.chunks?.length || 0,
-        enabledChunking: enableChunking
+        enabledChunking: enableChunking,
+        quality: {
+          duplicatePercentage: quality.duplicatePercentage,
+          totalLines: quality.totalLines,
+          isValid: quality.isValid
+        }
       };
 
       // Adjust segment timestamps based on chunk positions
@@ -556,9 +618,13 @@ export class StreamingExtractionController {
           cumulativeTime += chunkData.duration;
         }
         
-        if (adjustedSegments.length > 0) {
-          responseData.segments = adjustedSegments;
-          responseData.segmentCount = adjustedSegments.length;
+        // Deduplicate segments
+        const deduplicatedSegments = deduplicateSegments(adjustedSegments);
+        
+        if (deduplicatedSegments.length > 0) {
+          responseData.segments = deduplicatedSegments;
+          responseData.segmentCount = deduplicatedSegments.length;
+          console.log(`✅ Segments deduplicated: ${adjustedSegments.length} → ${deduplicatedSegments.length}`);
         }
       }
 
