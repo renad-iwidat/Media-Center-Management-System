@@ -51,11 +51,35 @@ export default function TranscriptWithTimestamps({
     navigator.clipboard.writeText(transcript);
   };
 
+  const copySegmentsWithTimestamps = () => {
+    // تنسيق الـ segments مع التايم كود
+    const formattedSegments = segments
+      .map(seg => `[${seg.startFormatted} - ${seg.endFormatted}] ${seg.text}`)
+      .join('\n\n');
+    
+    navigator.clipboard.writeText(formattedSegments);
+  };
+
   const downloadTranscript = () => {
     const element = document.createElement('a');
     const file = new Blob([transcript], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     element.download = 'transcript.txt';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const downloadSegmentsWithTimestamps = () => {
+    // تنسيق الـ segments مع التايم كود
+    const formattedSegments = segments
+      .map(seg => `[${seg.startFormatted} - ${seg.endFormatted}] ${seg.text}`)
+      .join('\n\n');
+    
+    const element = document.createElement('a');
+    const file = new Blob([formattedSegments], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = 'transcript-with-timestamps.txt';
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -145,7 +169,7 @@ export default function TranscriptWithTimestamps({
               onClick={copyToClipboard}
               className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors text-sm font-medium"
             >
-              <Copy size={16} /> نسخ
+              <Copy size={16} /> نسخ النص
             </button>
             <button
               onClick={downloadTranscript}
@@ -156,46 +180,62 @@ export default function TranscriptWithTimestamps({
           </div>
         </div>
       ) : segments.length > 0 ? (
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {segments.map((segment, index) => (
-            <div
-              key={index}
-              onClick={() => handleSegmentClick(segment.start)}
-              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                highlightCurrentSegment(segment)
-                  ? 'bg-blue-50 border-blue-500 shadow-md'
-                  : 'bg-white border-gray-200 hover:border-blue-300'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 pt-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSegmentClick(segment.start);
-                    }}
-                    className="w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <Play size={14} className="translate-x-0.5" />
-                  </button>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                      {segment.startFormatted}
-                    </span>
-                    <span className="text-xs text-gray-500">→</span>
-                    <span className="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                      {segment.endFormatted}
-                    </span>
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {segments.map((segment, index) => (
+              <div
+                key={index}
+                onClick={() => handleSegmentClick(segment.start)}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  highlightCurrentSegment(segment)
+                    ? 'bg-blue-50 border-blue-500 shadow-md'
+                    : 'bg-white border-gray-200 hover:border-blue-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 pt-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSegmentClick(segment.start);
+                      }}
+                      className="w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors"
+                    >
+                      <Play size={14} className="translate-x-0.5" />
+                    </button>
                   </div>
-                  <p className="text-gray-900 leading-relaxed font-arabic text-right text-sm">
-                    {segment.text}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        {segment.startFormatted}
+                      </span>
+                      <span className="text-xs text-gray-500">→</span>
+                      <span className="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                        {segment.endFormatted}
+                      </span>
+                    </div>
+                    <p className="text-gray-900 leading-relaxed font-arabic text-right text-sm">
+                      {segment.text}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={copySegmentsWithTimestamps}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors text-sm font-medium"
+            >
+              <Copy size={16} /> نسخ مع التايم كود
+            </button>
+            <button
+              onClick={downloadSegmentsWithTimestamps}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors text-sm font-medium"
+            >
+              <Download size={16} /> تحميل
+            </button>
+          </div>
         </div>
       ) : (
         <div className="bg-gray-50 rounded-xl p-8 text-center text-gray-500">
