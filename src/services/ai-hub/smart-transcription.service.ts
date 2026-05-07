@@ -7,7 +7,7 @@
  * 2. Output Generation: Uses AI_MODEL first, falls back to OpenAI if it fails
  */
 
-import { transcribeAudioWithOpenAI } from './openai-stt.service';
+import { transcribeAudioBufferParallel } from './parallel-stt.service';
 import { extractAudioFromVideoUrl } from './audio-extraction.service';
 
 interface OutputConfig {
@@ -147,7 +147,7 @@ export async function generateSmartTranscriptionOutputs(
 
   let transcript = providedTranscript;
 
-  // Step 1: Extract audio and transcribe using OpenAI STT
+  // Step 1: Extract audio and transcribe using Parallel STT (handles large files)
   if (!transcript && fileUrl) {
     console.log(`\n🎬 [Smart Transcription] Processing ${fileType} file...`);
     
@@ -155,16 +155,15 @@ export async function generateSmartTranscriptionOutputs(
       try {
         console.log(`📹 [Smart Transcription] Extracting audio from video...`);
         const audioBuffer = await extractAudioFromVideoUrl(fileUrl);
-        console.log(`✅ [Smart Transcription] Audio extracted successfully`);
+        console.log(`✅ [Smart Transcription] Audio extracted successfully (${audioBuffer.length} bytes)`);
         
-        // Transcribe using OpenAI STT
-        console.log(`🎤 [Smart Transcription] Transcribing with OpenAI STT...`);
-        const result = await transcribeAudioWithOpenAI(audioBuffer, {
+        // Transcribe using Parallel STT (handles chunking for large files)
+        console.log(`🎤 [Smart Transcription] Transcribing with Parallel STT...`);
+        transcript = await transcribeAudioBufferParallel(audioBuffer, {
           language,
-          includeTimestamps: true,
+          chunkDurationSeconds: 30,
+          maxConcurrentRequests: 3,
         });
-        
-        transcript = typeof result === 'string' ? result : result.text;
       } catch (error: any) {
         console.error(`⚠️ [Smart Transcription] Video processing failed: ${error.message}`);
         throw new Error(`Failed to process video: ${error.message}`);
@@ -177,12 +176,12 @@ export async function generateSmartTranscriptionOutputs(
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = Buffer.from(arrayBuffer);
         
-        const result = await transcribeAudioWithOpenAI(audioBuffer, {
+        // Use Parallel STT for large audio files
+        transcript = await transcribeAudioBufferParallel(audioBuffer, {
           language,
-          includeTimestamps: true,
+          chunkDurationSeconds: 30,
+          maxConcurrentRequests: 3,
         });
-        
-        transcript = typeof result === 'string' ? result : result.text;
       } catch (error: any) {
         console.error(`⚠️ [Smart Transcription] Audio processing failed: ${error.message}`);
         throw new Error(`Failed to process audio: ${error.message}`);
