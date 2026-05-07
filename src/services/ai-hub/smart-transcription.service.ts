@@ -161,7 +161,7 @@ export async function generateSmartTranscriptionOutputs(
         console.log(`🎤 [Smart Transcription] Transcribing with Parallel STT...`);
         transcript = await transcribeAudioBufferParallel(audioBuffer, {
           language,
-          chunkDurationSeconds: 30,
+          chunkDurationSeconds: 300, // 5 minutes per chunk
           maxConcurrentRequests: 3,
         });
       } catch (error: any) {
@@ -179,7 +179,7 @@ export async function generateSmartTranscriptionOutputs(
         // Use Parallel STT for large audio files
         transcript = await transcribeAudioBufferParallel(audioBuffer, {
           language,
-          chunkDurationSeconds: 30,
+          chunkDurationSeconds: 300, // 5 minutes per chunk
           maxConcurrentRequests: 3,
         });
       } catch (error: any) {

@@ -12,6 +12,7 @@ import os from 'os';
 import { randomUUID } from 'crypto';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
+import { transcribeAudioWithOpenAI } from './openai-stt.service';
 
 // Set FFmpeg path
 if (ffmpegStatic) {
@@ -338,39 +339,24 @@ async function transcribeAudioBufferSingle(
   audioBuffer: Buffer,
   options: { language: string; timeout: number }
 ): Promise<string> {
-  const sttApiUrl = process.env.AI_MODEL;
-  
-  if (!sttApiUrl) {
-    throw new Error('AI_MODEL environment variable is not configured');
-  }
-
   const { language, timeout } = options;
 
-  // Create FormData with audio file
-  const formData = new FormData();
-  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/mpeg' });
-  formData.append('file', audioBlob, 'audio.mp3');
-  formData.append('language', language);
+  try {
+    // Use OpenAI Whisper for transcription
+    const result = await transcribeAudioWithOpenAI(audioBuffer, {
+      language,
+      model: 'whisper-1',
+      response_format: 'json',
+      temperature: 0,
+    });
 
-  const response = await fetch(`${sttApiUrl}/stt`, {
-    method: 'POST',
-    body: formData,
-    // Increase timeout to 5 minutes for large audio files
-    signal: AbortSignal.timeout(Math.max(timeout, 300000)), // At least 5 minutes
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`STT API error: ${response.status} ${response.statusText} - ${errorText}`);
+    // Handle both string and object responses
+    const transcript = typeof result === 'string' ? result : result.text;
+    return transcript;
+  } catch (error) {
+    console.error(`❌ OpenAI Whisper transcription failed:`, error);
+    throw error;
   }
-
-  const data = await response.json();
-
-  if (data.error) {
-    throw new Error(`STT error: ${data.error}`);
-  }
-
-  return data.transcript || '';
 }
 
 /**
