@@ -49,6 +49,7 @@ import SocialMedia from './components/ai/SocialMedia';
 import AudioProcessing from './components/ai/AudioProcessing';
 import NewsRoom from './components/ai/NewsRoom';
 import ChatInterface from './components/ai/ChatInterface';
+import SmartTranscription from './components/ai/SmartTranscription';
 
 import { api, getAuthToken, getCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
@@ -65,7 +66,7 @@ const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
 
 type SectionId =
   | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published'
-  | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat';
+  | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat' | 'smart-transcription';
 
 interface NavGroup {
   label: string;
@@ -97,6 +98,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: 'audio',        label: 'المختبر الصوتي',     icon: Mic2 },
       { id: 'newsroom',     label: 'غرفة الأخبار',       icon: Newspaper },
       { id: 'chat',         label: 'مساعد AI ذكي',       icon: MessageSquare },
+      { id: 'smart-transcription', label: 'التفريغ الذكي', icon: Sparkles },
     ],
   },
 ];
@@ -766,6 +768,7 @@ export default function App() {
               {activeSection === 'audio'        && <AudioProcessing mediaUnitId={selectedMediaUnitId} />}
               {activeSection === 'newsroom'     && <NewsRoom mediaUnitId={selectedMediaUnitId} />}
               {activeSection === 'chat'         && <ChatInterface />}
+              {activeSection === 'smart-transcription' && <SmartTranscription mediaUnitId={selectedMediaUnitId} />}
             </motion.div>
           </AnimatePresence>
         </div>

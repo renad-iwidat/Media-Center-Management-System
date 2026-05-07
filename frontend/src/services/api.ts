@@ -493,6 +493,52 @@ export const api = {
     }),
   getAudioExtractionFormats: () => request<any>("/ai-hub/audio-extraction/formats"),
 
+  // --- Smart Transcription ---
+  smartTranscriptionProcess: (data: {
+    fileUrl: string;
+    fileType?: 'audio' | 'video';
+    language?: string;
+    outputs: Array<{
+      type: 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
+      enabled: boolean;
+      count?: number;
+    }>;
+    editorialPolicy?: string;
+    customInfo?: string;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/process", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  smartTranscriptionGenerateOutputs: (data: {
+    transcript: string;
+    outputs: Array<{
+      type: 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
+      enabled: boolean;
+      count?: number;
+    }>;
+    editorialPolicy?: string;
+    customInfo?: string;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/generate-outputs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  smartTranscriptionExport: (data: {
+    outputs: Array<{
+      type: string;
+      content: string;
+    }>;
+    editorialPolicy?: string;
+    customInfo?: string;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/export", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   // --- Authentication (Management System) ---
   login: (email: string, password: string) =>
     request<any>("/auth/login", {

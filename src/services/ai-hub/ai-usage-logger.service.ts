@@ -5,7 +5,7 @@
 
 import { query } from '../../config/database';
 
-export type AIFeature = 'chat' | 'tts' | 'stt' | 'ideas' | 'audio_extraction' | 'text_tools' | 'video_to_text';
+export type AIFeature = 'chat' | 'tts' | 'stt' | 'ideas' | 'audio_extraction' | 'text_tools' | 'video_to_text' | 'smart-transcription';
 export type ResponseStatus = 'success' | 'error' | 'rate_limited';
 
 export interface AIUsageLogData {
