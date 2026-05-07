@@ -21,12 +21,10 @@ import {
   CheckCircle2,
   Plus,
   Hash,
-  FileDown,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { parseNumberedList } from '../../lib/markdown-parser';
-import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
 
 type OutputType = 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
@@ -340,74 +338,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     }
   };
 
-  // تصدير PDF
-  const exportPDF = () => {
-    if (generatedOutputs.length === 0) return;
-
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    doc.addFont('https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvalIhTp2mxdt0UX8.woff2', 'Cairo', 'normal');
-
-    const outputLabels: Record<string, string> = {
-      executive_summary: 'ملخص تنفيذي',
-      news_article: 'خبر صحفي',
-      detailed_report: 'تقرير صحفي',
-      social_media: 'منشورات سوشيال ميديا',
-      video_clips: 'مقاطع فيديو',
-      policy_alerts: 'تنبيهات سياسة التحرير',
-    };
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    const maxWidth = pageWidth - margin * 2;
-    let y = 20;
-
-    // Title
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Smart Transcription Output', pageWidth / 2, y, { align: 'center' });
-    y += 10;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(new Date().toLocaleDateString('ar-SA'), pageWidth / 2, y, { align: 'center' });
-    y += 12;
-
-    generatedOutputs.forEach((output) => {
-      // Section heading
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setFontSize(13);
-      doc.setFont('helvetica', 'bold');
-      const label = outputLabels[output.type] || output.type;
-      doc.text(label, margin, y);
-      y += 2;
-      doc.setDrawColor(59, 130, 246);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 6;
-
-      // Content lines
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(30, 30, 30);
-
-      // Strip markdown symbols for PDF plain text
-      const plainText = output.content
-        .replace(/#{1,6}\s+/g, '')
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/\*(.*?)\*/g, '$1');
-
-      const lines = doc.splitTextToSize(plainText, maxWidth);
-      lines.forEach((line: string) => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.text(line, margin, y);
-        y += 5.5;
-      });
-      y += 8;
-    });
-
-    doc.save(`smart-transcription-${Date.now()}.pdf`);
-  };
-
-  // تصدير DOCX
+  // تصدير DOCX - RTL عربي
   const exportDOCX = async () => {
     if (generatedOutputs.length === 0) return;
 
@@ -420,18 +351,24 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
       policy_alerts: 'تنبيهات سياسة التحرير',
     };
 
+    // خصائص RTL مشتركة لكل paragraph
+    const rtlProps = {
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+    };
+
     const children: Paragraph[] = [];
 
-    // Document title
+    // عنوان الوثيقة
     children.push(
       new Paragraph({
-        text: 'التفريغ الذكي',
-        heading: HeadingLevel.TITLE,
-        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: 'التفريغ الذكي', bold: true, size: 36, rightToLeft: true })],
+        ...rtlProps,
+        spacing: { after: 200 },
       }),
       new Paragraph({
-        text: new Date().toLocaleDateString('ar-SA'),
-        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: new Date().toLocaleDateString('ar-SA'), size: 22, rightToLeft: true })],
+        ...rtlProps,
         spacing: { after: 400 },
       })
     );
@@ -439,67 +376,73 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     generatedOutputs.forEach((output) => {
       const label = outputLabels[output.type] || output.type;
 
-      // Section heading
+      // عنوان القسم
       children.push(
         new Paragraph({
-          text: label,
-          heading: HeadingLevel.HEADING_1,
+          children: [new TextRun({ text: label, bold: true, size: 30, rightToLeft: true })],
+          ...rtlProps,
           spacing: { before: 400, after: 200 },
+          border: {
+            bottom: { color: '3B82F6', size: 6, space: 4, style: 'single' },
+          },
         })
       );
 
-      // Parse content lines and handle markdown
+      // محتوى السطور مع دعم markdown
       const lines = output.content.split('\n');
       lines.forEach((line) => {
         if (!line.trim()) {
-          children.push(new Paragraph({ text: '' }));
+          children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
           return;
         }
 
-        // Heading lines
+        // عناوين # ## ###
         const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
         if (headingMatch) {
           const level = headingMatch[1].length;
-          const headingLevels: Record<number, typeof HeadingLevel[keyof typeof HeadingLevel]> = {
-            1: HeadingLevel.HEADING_2,
-            2: HeadingLevel.HEADING_3,
-            3: HeadingLevel.HEADING_4,
-          };
+          const sizes: Record<number, number> = { 1: 28, 2: 26, 3: 24 };
           children.push(
             new Paragraph({
-              text: headingMatch[2],
-              heading: headingLevels[level] || HeadingLevel.HEADING_4,
+              children: [new TextRun({ text: headingMatch[2], bold: true, size: sizes[level] || 24, rightToLeft: true })],
+              ...rtlProps,
+              spacing: { before: 240, after: 120 },
             })
           );
           return;
         }
 
-        // Build runs with bold support
+        // بناء الـ runs مع دعم **bold**
         const runs: TextRun[] = [];
         const boldRegex = /\*\*(.*?)\*\*/g;
         let lastIndex = 0;
         let match;
         while ((match = boldRegex.exec(line)) !== null) {
           if (match.index > lastIndex) {
-            runs.push(new TextRun({ text: line.slice(lastIndex, match.index) }));
+            runs.push(new TextRun({ text: line.slice(lastIndex, match.index), size: 22, rightToLeft: true }));
           }
-          runs.push(new TextRun({ text: match[1], bold: true }));
+          runs.push(new TextRun({ text: match[1], bold: true, size: 22, rightToLeft: true }));
           lastIndex = match.index + match[0].length;
         }
         if (lastIndex < line.length) {
-          runs.push(new TextRun({ text: line.slice(lastIndex) }));
+          runs.push(new TextRun({ text: line.slice(lastIndex), size: 22, rightToLeft: true }));
         }
 
         children.push(
           new Paragraph({
-            children: runs.length > 0 ? runs : [new TextRun({ text: line })],
+            children: runs.length > 0 ? runs : [new TextRun({ text: line, size: 22, rightToLeft: true })],
+            ...rtlProps,
             spacing: { after: 120 },
           })
         );
       });
     });
 
-    const doc = new Document({ sections: [{ children }] });
+    const doc = new Document({
+      sections: [{
+        children,
+      }],
+    });
+
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `smart-transcription-${Date.now()}.docx`);
   };
@@ -870,27 +813,20 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
               </div>
 
               {/* Export Buttons */}
-              <div className="mt-6 grid grid-cols-3 gap-3">
+              <div className="mt-6 grid grid-cols-2 gap-3">
                 <button
                   onClick={exportUnifiedFile}
                   className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
                 >
                   <Download className="w-4 h-4" />
-                  TXT
-                </button>
-                <button
-                  onClick={exportPDF}
-                  className="bg-red-700 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-                >
-                  <FileDown className="w-4 h-4" />
-                  PDF
+                  تحميل TXT
                 </button>
                 <button
                   onClick={exportDOCX}
                   className="bg-blue-700 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
                 >
                   <FileText className="w-4 h-4" />
-                  DOCX
+                  تحميل DOCX
                 </button>
               </div>
 
@@ -928,10 +864,8 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 text-slate-300 text-sm leading-relaxed">
-              <div className="prose prose-invert max-w-none">
-                {parseNumberedList(previewOutput.content)}
-              </div>
+            <div className="p-4 text-sm leading-relaxed [&_p]:text-slate-200 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_h4]:text-white [&_strong]:text-white [&_em]:text-slate-300 [&_li]:text-slate-200 [&_span]:text-slate-200 [&_div]:text-slate-200">
+              {parseNumberedList(previewOutput.content)}
             </div>
           </div>
         </div>
