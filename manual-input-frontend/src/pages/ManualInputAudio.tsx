@@ -45,8 +45,8 @@ export default function ManualInputAudio() {
         return;
       }
 
-      if (file.size > 50 * 1024 * 1024) {
-        setError('حجم الملف كبير جداً. الحد الأقصى: 50 MB');
+      if (file.size > 150 * 1024 * 1024) {
+        setError('حجم الملف كبير جداً. الحد الأقصى: 150 MB');
         return;
       }
 
@@ -146,16 +146,38 @@ export default function ManualInputAudio() {
     setSuccess(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('uploaded_by', userId);
-      formData.append('media_unit_id', mediaUnitId);
-      formData.append('title', title.trim());
+      // الخطوة 1: الحصول على presigned URL من السيرفر
+      const presignRes = await apiClient.post('/manual-input/upload-audio/presign', {
+        filename: selectedFile.name,
+        content_type: selectedFile.type,
+        file_size: selectedFile.size,
+        title: title.trim()
+      });
 
-      await apiClient.post('/manual-input/upload-audio', formData, {
+      const { presigned_url, s3_key, s3_url } = presignRes.data.data;
+
+      // الخطوة 2: رفع الملف مباشرة على S3 باستخدام presigned URL
+      const uploadRes = await fetch(presigned_url, {
+        method: 'PUT',
+        body: selectedFile,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': selectedFile.type,
         },
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('فشل في رفع الملف على التخزين السحابي');
+      }
+
+      // الخطوة 3: تأكيد الرفع وحفظ المعلومات بالداتابيس
+      await apiClient.post('/manual-input/upload-audio/confirm', {
+        s3_key,
+        s3_url,
+        original_filename: selectedFile.name,
+        file_size: selectedFile.size,
+        mime_type: selectedFile.type,
+        uploaded_by: userId,
+        media_unit_id: mediaUnitId
       });
 
       setSuccess(`تم رفع الملف بنجاح`);
@@ -285,7 +307,7 @@ export default function ManualInputAudio() {
                 <label htmlFor="audio-file" className="cursor-pointer block">
                   <div className="text-4xl mb-2">📁</div>
                   <p className="text-white">اضغط لاختيار ملف</p>
-                  <p className="text-sm text-gray-500 mt-1">MP3, WAV, M4A (حتى 50 MB)</p>
+                  <p className="text-sm text-gray-500 mt-1">MP3, WAV, M4A (حتى 150 MB)</p>
                 </label>
               </div>
             </div>
@@ -293,7 +315,7 @@ export default function ManualInputAudio() {
             {/* ملاحظات */}
             <div className="bg-brand-orange-pale border-r-4 border-brand-blue p-4 rounded-lg">
               <p className="text-sm text-gray-700">
-                <strong>ملاحظة:</strong> الحد الأقصى 50 MB
+                <strong>ملاحظة:</strong> الحد الأقصى 150 MB
               </p>
             </div>
           </div>

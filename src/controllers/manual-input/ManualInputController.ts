@@ -622,6 +622,147 @@ export class ManualInputController {
   }
 
   /**
+   * POST /api/manual-input/upload-audio/presign
+   * توليد presigned URL لرفع الصوت مباشرة من المتصفح على S3
+   */
+  static async getAudioPresignedUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const { filename, content_type, file_size, title } = req.body;
+
+      if (!filename || !content_type || !file_size) {
+        res.status(400).json({
+          success: false,
+          message: 'filename, content_type, و file_size مطلوبين'
+        });
+        return;
+      }
+
+      if (!S3_CONFIG.ALLOWED_MIME_TYPES.AUDIO.includes(content_type)) {
+        res.status(400).json({
+          success: false,
+          message: 'نوع الملف غير مدعوم. الأنواع المسموحة: MP3, M4A, WAV, WebM, OGG'
+        });
+        return;
+      }
+
+      if (file_size > S3_CONFIG.MAX_FILE_SIZE.AUDIO) {
+        res.status(400).json({
+          success: false,
+          message: 'حجم الملف كبير جداً. الحد الأقصى: 150 MB'
+        });
+        return;
+      }
+
+      const s3Key = generateS3Key('audio', filename, title?.trim());
+
+      const command = new PutObjectCommand({
+        Bucket: S3_CONFIG.BUCKET,
+        Key: s3Key,
+        ContentType: content_type,
+        ACL: 'public-read',
+      });
+
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+      const s3Url = generateS3Url(s3Key);
+
+      console.log(`🔗 تم توليد presigned URL للصوت: ${s3Key}`);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          presigned_url: presignedUrl,
+          s3_key: s3Key,
+          s3_url: s3Url,
+          expires_in: 900
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في توليد presigned URL للصوت:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في توليد رابط الرفع',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * POST /api/manual-input/upload-audio/confirm
+   * تأكيد رفع الصوت وحفظ المعلومات في قاعدة البيانات
+   */
+  static async confirmAudioUpload(req: Request, res: Response): Promise<void> {
+    try {
+      const { s3_key, s3_url, original_filename, file_size, mime_type, uploaded_by, media_unit_id } = req.body;
+
+      if (!s3_key || !s3_url || !original_filename || !file_size || !mime_type || !uploaded_by || !media_unit_id) {
+        res.status(400).json({
+          success: false,
+          message: 'جميع الحقول مطلوبة'
+        });
+        return;
+      }
+
+      const uploadedById = parseInt(uploaded_by);
+      const mediaUnitId = parseInt(media_unit_id);
+
+      if (!uploadedById || !mediaUnitId) {
+        res.status(400).json({
+          success: false,
+          message: 'معرف المستخدم ومعرف الوحدة الإعلامية مطلوبين'
+        });
+        return;
+      }
+
+      const sources = await ManualInputService.getManualInputSources();
+      if (!sources || !sources.audio) {
+        res.status(500).json({
+          success: false,
+          message: 'مصدر الإدخال الصوتي غير موجود'
+        });
+        return;
+      }
+
+      const fileRecord = await ManualInputService.saveUploadedFile({
+        source_id: sources.audio.id,
+        source_type_id: sources.audio.source_type_id,
+        file_type: 'audio',
+        original_filename,
+        file_size,
+        mime_type,
+        s3_bucket: S3_CONFIG.BUCKET,
+        s3_key,
+        s3_url,
+        uploaded_by: uploadedById,
+        media_unit_id: mediaUnitId
+      });
+
+      console.log(`✅ تم تأكيد رفع الصوت: ${s3_key}`);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: fileRecord.id,
+          file_url: fileRecord.s3_url,
+          file_size: fileRecord.file_size,
+          original_filename: fileRecord.original_filename,
+          processing_status: fileRecord.processing_status,
+          uploaded_at: fileRecord.uploaded_at
+        },
+        message: 'تم رفع الملف الصوتي بنجاح'
+      });
+
+    } catch (error) {
+      console.error('❌ خطأ في تأكيد رفع الصوت:', error);
+      res.status(500).json({
+        success: false,
+        message: 'فشل في تأكيد رفع الصوت',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
    * POST /api/manual-input/upload-video/confirm
    * تأكيد رفع الفيديو وحفظ المعلومات في قاعدة البيانات
    * 

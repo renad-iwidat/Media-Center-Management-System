@@ -30,7 +30,7 @@ export const S3_CONFIG = {
   
   // الحد الأقصى لحجم الملفات (بالـ bytes)
   MAX_FILE_SIZE: {
-    AUDIO: 50 * 1024 * 1024, // 50 MB
+    AUDIO: 150 * 1024 * 1024, // 150 MB
     VIDEO: 500 * 1024 * 1024, // 500 MB
     IMAGE: 10 * 1024 * 1024, // 10 MB
   },

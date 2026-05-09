@@ -34,11 +34,17 @@ router.get('/users', ManualInputController.getAllUsers);
 // POST /api/manual-input/submit - إرسال خبر نصي جديد
 router.post('/submit', ManualInputController.submitNews);
 
-// POST /api/manual-input/upload-audio - رفع ملف صوتي
+// POST /api/manual-input/upload-audio - رفع ملف صوتي (الطريقة القديمة)
 // Body: multipart/form-data
 // - file: الملف الصوتي (required)
 // - uploaded_by: معرف المستخدم (required)
 router.post('/upload-audio', uploadAudio.single('file'), ManualInputController.uploadAudio);
+
+// POST /api/manual-input/upload-audio/presign - توليد presigned URL لرفع الصوت مباشرة على S3
+router.post('/upload-audio/presign', ManualInputController.getAudioPresignedUrl);
+
+// POST /api/manual-input/upload-audio/confirm - تأكيد رفع الصوت وحفظ المعلومات
+router.post('/upload-audio/confirm', ManualInputController.confirmAudioUpload);
 
 // POST /api/manual-input/upload-video - رفع ملف فيديو (الطريقة القديمة - للملفات الصغيرة)
 // Body: multipart/form-data

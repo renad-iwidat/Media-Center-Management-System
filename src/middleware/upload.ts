@@ -15,7 +15,7 @@ const storage = multer.memoryStorage();
 export const uploadAudio = multer({
   storage: storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50 MB
+    fileSize: 150 * 1024 * 1024, // 150 MB
   },
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
