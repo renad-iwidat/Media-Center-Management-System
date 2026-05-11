@@ -312,8 +312,8 @@ export function validateCorrectionQuality(result: CorrectionResult): {
   let score = 100;
 
   // Check if corrected text is too different
-  const lengthDiff = Math.abs(result.correctedLength - result.originalLength);
-  const lengthDiffPercent = (lengthDiff / result.originalLength) * 100;
+  const lengthDiff = Math.abs(result.metadata.correctedLength - result.metadata.originalLength);
+  const lengthDiffPercent = (lengthDiff / result.metadata.originalLength) * 100;
 
   if (lengthDiffPercent > 30) {
     issues.push(`النص المصحح مختلف جداً عن الأصلي (${lengthDiffPercent.toFixed(1)}%)`);
@@ -327,7 +327,7 @@ export function validateCorrectionQuality(result: CorrectionResult): {
   }
 
   // Check if too many corrections
-  if (result.metadata.correctionCount > result.originalLength / 10) {
+  if (result.metadata.correctionCount > result.metadata.originalLength / 10) {
     issues.push('عدد التصحيحات كبير جداً');
     score -= 10;
   }

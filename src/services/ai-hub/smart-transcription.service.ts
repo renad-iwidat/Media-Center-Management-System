@@ -36,7 +36,7 @@ interface GeneratedOutput {
 /**
  * Call OpenAI Chat API for text generation
  */
-async function callOpenAIChatAPI(prompt: string): Promise<string> {
+export async function callOpenAIChatAPI(prompt: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   
   if (!apiKey) {
@@ -78,7 +78,7 @@ async function callOpenAIChatAPI(prompt: string): Promise<string> {
 /**
  * Call AI_MODEL first, fallback to OpenAI if it fails
  */
-async function callAIWithFallback(prompt: string): Promise<string> {
+export async function callAIWithFallback(prompt: string): Promise<string> {
   const aiModelUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
   
   // Try AI_MODEL first
