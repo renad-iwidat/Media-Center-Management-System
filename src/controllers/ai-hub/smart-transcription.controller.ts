@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { generateSmartTranscriptionOutputs } from '../../services/ai-hub/smart-transcription.service';
+import { correctTranscript, correctTranscriptsBatch, validateCorrectionQuality, getCorrectionStats } from '../../services/ai-hub/transcript-correction.service';
 
 export class SmartTranscriptionController {
   /**
@@ -192,6 +193,136 @@ export class SmartTranscriptionController {
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to export file',
+      });
+    }
+  }
+
+  /**
+   * Correct transcript using linguistic correction layer
+   * POST /api/ai-hub/smart-transcription/correct
+   * 
+   * Body:
+   * {
+   *   "transcript": "string",
+   *   "language": "ar" (optional),
+   *   "preserveMeaning": true (optional),
+   *   "fixPunctuation": true (optional),
+   *   "fixGrammar": true (optional),
+   *   "fixSpelling": true (optional),
+   *   "improveClarity": true (optional)
+   * }
+   */
+  static async correctTranscriptEndpoint(req: Request, res: Response) {
+    try {
+      const {
+        transcript,
+        language = 'ar',
+        preserveMeaning = true,
+        fixPunctuation = true,
+        fixGrammar = true,
+        fixSpelling = true,
+        improveClarity = true,
+      } = req.body;
+
+      if (!transcript) {
+        return res.status(400).json({
+          success: false,
+          error: 'transcript is required',
+        });
+      }
+
+      console.log(`\n🔧 [Smart Transcription] Correcting transcript`);
+
+      // Correct transcript
+      const result = await correctTranscript(transcript, {
+        language,
+        preserveMeaning,
+        fixPunctuation,
+        fixGrammar,
+        fixSpelling,
+        improveClarity,
+      });
+
+      // Validate correction quality
+      const validation = validateCorrectionQuality(result);
+
+      res.json({
+        success: true,
+        data: {
+          ...result,
+          validation,
+        },
+      });
+    } catch (error: any) {
+      console.error('❌ [Smart Transcription] Correction Error:', error.message);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to correct transcript',
+      });
+    }
+  }
+
+  /**
+   * Correct multiple transcripts in batch
+   * POST /api/ai-hub/smart-transcription/correct-batch
+   * 
+   * Body:
+   * {
+   *   "transcripts": ["string", "string", ...],
+   *   "language": "ar" (optional),
+   *   "preserveMeaning": true (optional),
+   *   "fixPunctuation": true (optional),
+   *   "fixGrammar": true (optional),
+   *   "fixSpelling": true (optional),
+   *   "improveClarity": true (optional)
+   * }
+   */
+  static async correctTranscriptsBatchEndpoint(req: Request, res: Response) {
+    try {
+      const {
+        transcripts = [],
+        language = 'ar',
+        preserveMeaning = true,
+        fixPunctuation = true,
+        fixGrammar = true,
+        fixSpelling = true,
+        improveClarity = true,
+      } = req.body;
+
+      if (!transcripts || transcripts.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'transcripts array is required',
+        });
+      }
+
+      console.log(`\n🔧 [Smart Transcription] Correcting ${transcripts.length} transcripts in batch`);
+
+      // Correct transcripts
+      const results = await correctTranscriptsBatch(transcripts, {
+        language,
+        preserveMeaning,
+        fixPunctuation,
+        fixGrammar,
+        fixSpelling,
+        improveClarity,
+      });
+
+      // Get statistics
+      const stats = getCorrectionStats(results);
+
+      res.json({
+        success: true,
+        data: {
+          results,
+          stats,
+        },
+      });
+    } catch (error: any) {
+      console.error('❌ [Smart Transcription] Batch Correction Error:', error.message);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to correct transcripts',
       });
     }
   }

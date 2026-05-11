@@ -120,4 +120,82 @@ router.post(
   SmartTranscriptionController.exportUnified
 );
 
+/**
+ * POST /api/ai-hub/smart-transcription/correct
+ * Correct transcript using linguistic correction layer
+ * 
+ * Request body:
+ * {
+ *   "transcript": "string (required) - The transcript to correct",
+ *   "language": "string (optional, default: 'ar')",
+ *   "preserveMeaning": boolean (optional, default: true),
+ *   "fixPunctuation": boolean (optional, default: true),
+ *   "fixGrammar": boolean (optional, default: true),
+ *   "fixSpelling": boolean (optional, default: true),
+ *   "improveClarity": boolean (optional, default: true)
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "originalTranscript": "string",
+ *     "correctedTranscript": "string",
+ *     "corrections": [
+ *       {
+ *         "type": "string",
+ *         "original": "string",
+ *         "corrected": "string",
+ *         "explanation": "string"
+ *       }
+ *     ],
+ *     "metadata": { ... },
+ *     "validation": { ... }
+ *   },
+ *   "error": "string (if failed)"
+ * }
+ */
+router.post(
+  '/correct',
+  createAILogger('smart-transcription', 'correct'),
+  SmartTranscriptionController.correctTranscriptEndpoint
+);
+
+/**
+ * POST /api/ai-hub/smart-transcription/correct-batch
+ * Correct multiple transcripts in batch
+ * 
+ * Request body:
+ * {
+ *   "transcripts": ["string", "string", ...] (required),
+ *   "language": "string (optional, default: 'ar')",
+ *   "preserveMeaning": boolean (optional, default: true),
+ *   "fixPunctuation": boolean (optional, default: true),
+ *   "fixGrammar": boolean (optional, default: true),
+ *   "fixSpelling": boolean (optional, default: true),
+ *   "improveClarity": boolean (optional, default: true)
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "results": [ ... ],
+ *     "stats": {
+ *       "totalTranscripts": number,
+ *       "totalCorrections": number,
+ *       "averageCorrectionsPerTranscript": number,
+ *       "averageProcessingTime": number,
+ *       "totalCharactersProcessed": number
+ *     }
+ *   },
+ *   "error": "string (if failed)"
+ * }
+ */
+router.post(
+  '/correct-batch',
+  createAILogger('smart-transcription', 'correct-batch'),
+  SmartTranscriptionController.correctTranscriptsBatchEndpoint
+);
+
 export default router;

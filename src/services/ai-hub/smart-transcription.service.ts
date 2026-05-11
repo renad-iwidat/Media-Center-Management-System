@@ -9,6 +9,7 @@
 
 import { transcribeAudioBufferParallel } from './parallel-stt.service';
 import { extractAudioFromVideoUrl } from './audio-extraction.service';
+import { correctTranscript } from './transcript-correction.service';
 
 interface OutputConfig {
   type: 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
@@ -132,6 +133,7 @@ export async function generateSmartTranscriptionOutputs(
   options: SmartTranscriptionOptions
 ): Promise<{
   transcript: string;
+  originalTranscript?: string;
   outputs: GeneratedOutput[];
   metadata: Record<string, any>;
 }> {
@@ -195,6 +197,30 @@ export async function generateSmartTranscriptionOutputs(
     throw new Error('No transcript available for output generation');
   }
 
+  // Step 1.5: Correct transcript using AI_MODEL (linguistic correction layer)
+  console.log(`\n🔧 [Smart Transcription] Applying linguistic correction layer...`);
+  
+  let correctedTranscript = transcript;
+  try {
+    const correctionResult = await correctTranscript(transcript, {
+      language,
+      preserveMeaning: true,
+      fixPunctuation: true,
+      fixGrammar: true,
+      fixSpelling: true,
+      improveClarity: true,
+    });
+
+    correctedTranscript = correctionResult.correctedTranscript;
+    
+    console.log(`✅ [Smart Transcription] Linguistic correction completed`);
+    console.log(`📊 Corrections applied: ${correctionResult.metadata.correctionCount}`);
+    console.log(`📝 Original: ${correctionResult.metadata.originalLength} chars → Corrected: ${correctionResult.metadata.correctedLength} chars`);
+  } catch (error: any) {
+    console.warn(`⚠️ [Smart Transcription] Linguistic correction failed, using original transcript: ${error.message}`);
+    // Continue with original transcript if correction fails
+  }
+
   // Step 2: Generate requested outputs using AI_MODEL (with OpenAI fallback)
   console.log(`\n🔄 [Smart Transcription] Generating ${outputs.length} output types...`);
   
@@ -206,7 +232,7 @@ export async function generateSmartTranscriptionOutputs(
       
       const content = await generateOutput(
         output.type,
-        transcript,
+        correctedTranscript,
         output.count || 10,
         editorialPolicy,
         customInfo
@@ -238,7 +264,8 @@ export async function generateSmartTranscriptionOutputs(
   }
 
   return {
-    transcript,
+    transcript: correctedTranscript,
+    originalTranscript: transcript,
     outputs: generatedOutputs,
     metadata: {
       generatedAt: new Date().toISOString(),
@@ -247,6 +274,7 @@ export async function generateSmartTranscriptionOutputs(
       customInfo: !!customInfo,
       outputsGenerated: generatedOutputs.filter(o => !o.metadata?.error).length,
       outputsFailed: generatedOutputs.filter(o => o.metadata?.error).length,
+      transcriptCorrected: transcript !== correctedTranscript,
     },
   };
 }
