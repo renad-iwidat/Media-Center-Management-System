@@ -260,17 +260,17 @@ export default function App() {
   // ═══ Loading Screen ═══
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[#f0f4f8] flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-3xl flex items-center justify-center shadow-2xl shadow-[#FF9F4A]/40 mx-auto">
-            <TrendingUp className="text-white w-10 h-10" />
+      <div className="min-h-screen bg-gradient-to-br from-[#1f3a4f] via-[#2d5570] to-[#1f3a4f] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-2xl shadow-[#FF9F4A]/40 mx-auto">
+            <TrendingUp className="text-white w-8 h-8" />
           </div>
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-3 h-3 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-3 h-3 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-3 h-3 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
-          <p className="text-[#1e293b] text-xl font-bold">جاري التحقق من بيانات الدخول...</p>
+          <p className="text-white/60 text-sm">جاري التحقق من بيانات الدخول...</p>
         </div>
       </div>
     );
@@ -287,53 +287,53 @@ export default function App() {
       {/* ══ SIDEBAR ══ */}
       <motion.aside
         initial={false}
-        animate={{ width: isSidebarOpen ? 320 : 88 }}
+        animate={{ width: isSidebarOpen ? 272 : 72 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="bg-gradient-to-b from-[#1f3a4f] to-[#0f2535] flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden shadow-2xl"
         role="navigation"
         aria-label="القائمة الرئيسية"
       >
         {/* Logo Header */}
-        <div className="h-20 flex items-center justify-between px-5 shrink-0 border-b border-white/10">
+        <div className="h-16 flex items-center justify-between px-4 shrink-0 border-b border-white/8">
           <AnimatePresence>
             {isSidebarOpen && (
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="flex items-center gap-4 min-w-0"
+                className="flex items-center gap-3 min-w-0"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 shrink-0">
-                  <TrendingUp className="text-white w-6 h-6" />
+                <div className="w-9 h-9 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 shrink-0">
+                  <TrendingUp className="text-white w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-arabic font-bold text-xl text-white leading-tight">مركز <span className="text-[#FF9F4A]">الإعلام</span></p>
-                  <p className="text-white/50 text-sm mt-0.5">نظام إدارة الأخبار</p>
+                  <p className="font-arabic font-bold text-base text-white leading-none">مركز <span className="text-[#FF9F4A]">الإعلام</span></p>
+                  <p className="text-white/40 text-[10px] mt-0.5">نظام الأخبار</p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {!isSidebarOpen && (
-            <div className="w-12 h-12 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 mx-auto">
-              <TrendingUp className="text-white w-6 h-6" />
+            <div className="w-9 h-9 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF9F4A]/30 mx-auto">
+              <TrendingUp className="text-white w-5 h-5" />
             </div>
           )}
 
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-3 hover:bg-white/10 rounded-xl transition-colors shrink-0"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
             aria-label={isSidebarOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
           >
-            {isSidebarOpen ? <ChevronLeft size={22} className="text-white/70" /> : <Menu size={22} className="text-white/70" />}
+            {isSidebarOpen ? <ChevronLeft size={18} className="text-white/60" /> : <Menu size={18} className="text-white/60" />}
           </button>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar space-y-2">
+        <nav className="flex-1 overflow-y-auto py-3 px-3 custom-scrollbar space-y-1">
           {/* News Management Group */}
           {isSidebarOpen && (
-            <p className="text-sm font-bold text-[#FF9F4A] uppercase tracking-wider px-3 mb-3">
+            <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
               إدارة الأخبار
             </p>
           )}
@@ -347,35 +347,30 @@ export default function App() {
                 title={!isSidebarOpen ? item.label : undefined}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-200 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
                   isActive
-                    ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/30'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
-                } ${!isSidebarOpen ? 'justify-center px-3' : ''}`}
+                    ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white'
+                } ${!isSidebarOpen ? 'justify-center' : ''}`}
               >
-                <div className={`shrink-0 flex items-center justify-center w-11 h-11 rounded-xl ${
-                  isActive ? 'bg-white/20' : 'bg-white/5'
+                <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
+                  isActive ? 'bg-white/20' : 'group-hover:bg-white/8'
                 }`}>
-                  <Icon size={22} />
+                  <Icon size={16} />
                 </div>
                 {isSidebarOpen && (
-                  <div className="flex-1 text-right min-w-0">
-                    <span className="text-base font-bold block truncate">{item.label}</span>
-                    <span className={`text-sm block truncate ${isActive ? 'text-white/80' : 'text-white/40'}`}>
-                      {item.description}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium truncate">{item.label}</span>
                 )}
               </button>
             );
           })}
 
           {/* Divider */}
-          <div className="mx-3 my-4 h-px bg-white/10" />
+          <div className="mx-3 my-3 h-px bg-white/8" />
 
           {/* AI Tools Group */}
           {isSidebarOpen && (
-            <p className="text-sm font-bold text-[#FF9F4A] uppercase tracking-wider px-3 mb-3">
+            <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
               أدوات الذكاء الاصطناعي
             </p>
           )}
@@ -389,24 +384,19 @@ export default function App() {
                 title={!isSidebarOpen ? item.label : undefined}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-200 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
                   isActive
-                    ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/30'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
-                } ${!isSidebarOpen ? 'justify-center px-3' : ''}`}
+                    ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white'
+                } ${!isSidebarOpen ? 'justify-center' : ''}`}
               >
-                <div className={`shrink-0 flex items-center justify-center w-11 h-11 rounded-xl ${
-                  isActive ? 'bg-white/20' : 'bg-white/5'
+                <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
+                  isActive ? 'bg-white/20' : 'group-hover:bg-white/8'
                 }`}>
-                  <Icon size={22} />
+                  <Icon size={16} />
                 </div>
                 {isSidebarOpen && (
-                  <div className="flex-1 text-right min-w-0">
-                    <span className="text-base font-bold block truncate">{item.label}</span>
-                    <span className={`text-sm block truncate ${isActive ? 'text-white/80' : 'text-white/40'}`}>
-                      {item.description}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium truncate">{item.label}</span>
                 )}
               </button>
             );
@@ -415,35 +405,35 @@ export default function App() {
 
 
         {/* Settings + User Footer */}
-        <div className="border-t border-white/10 p-3 space-y-2 shrink-0">
+        <div className="border-t border-white/8 p-3 space-y-1 shrink-0">
           <button
             onClick={() => setIsSettingsOpen(true)}
             title="إعدادات النظام"
             aria-label="إعدادات النظام"
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all text-white/60 hover:bg-white/10 hover:text-white ${!isSidebarOpen ? 'justify-center' : ''}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-white/50 hover:bg-white/8 hover:text-white group ${!isSidebarOpen ? 'justify-center' : ''}`}
           >
-            <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5">
-              <Settings2 size={22} />
+            <div className="w-8 h-8 flex items-center justify-center rounded-lg group-hover:bg-white/8">
+              <Settings2 size={16} />
             </div>
-            {isSidebarOpen && <span className="text-base font-bold">إعدادات النظام</span>}
+            {isSidebarOpen && <span className="text-sm font-medium">إعدادات النظام</span>}
           </button>
 
           {isSidebarOpen ? (
-            <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#4A7C9E] to-[#3d6a8a] flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-lg">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#4A7C9E] to-[#3d6a8a] flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-lg">
                 {currentUser?.name?.charAt(0) || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-white truncate">{currentUser?.name || 'المستخدم'}</p>
-                <p className="text-sm text-[#FF9F4A] truncate">{currentUser?.roles?.[0]?.name || 'موظف'}</p>
+                <p className="text-xs font-semibold text-white truncate">{currentUser?.name || 'المستخدم'}</p>
+                <p className="text-[10px] text-[#FF9F4A]/80 truncate">{currentUser?.roles?.[0]?.name || 'موظف'}</p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-3 hover:bg-red-500/20 rounded-xl transition-colors text-white/40 hover:text-red-400 shrink-0"
+                className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-white/30 hover:text-red-400 shrink-0"
                 title="تسجيل الخروج"
                 aria-label="تسجيل الخروج"
               >
-                <LogOut size={22} />
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
@@ -451,9 +441,9 @@ export default function App() {
               onClick={handleLogout}
               title="تسجيل الخروج"
               aria-label="تسجيل الخروج"
-              className="w-full flex items-center justify-center p-3.5 rounded-2xl transition-all text-white/40 hover:bg-red-500/15 hover:text-red-400"
+              className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all text-white/30 hover:bg-red-500/15 hover:text-red-400"
             >
-              <LogOut size={22} />
+              <LogOut size={16} />
             </button>
           )}
         </div>
@@ -464,78 +454,77 @@ export default function App() {
         id="main-content"
         className="flex-1 flex flex-col h-screen overflow-hidden"
         style={{
-          paddingRight: isSidebarOpen ? '320px' : '88px',
+          paddingRight: isSidebarOpen ? '272px' : '72px',
           transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         {/* Top Header - Simple & Clear */}
-        <header className="shrink-0 bg-white border-b-2 border-[#e2e8f0] shadow-sm">
+        <header className="shrink-0 bg-white border-b border-[#e2e8f0] shadow-sm">
           {/* Main header row */}
-          <div className="h-20 flex items-center justify-between px-8">
-            {/* Breadcrumb - Large & Clear */}
-            <div className="flex items-center gap-4 min-w-0">
+          <div className="h-14 flex items-center justify-between px-5 sm:px-6">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() => setActiveSection('overview')}
-                className="p-3 rounded-xl hover:bg-[#f0f4f8] transition-colors"
+                className="p-2 rounded-lg hover:bg-[#f0f4f8] transition-colors"
                 aria-label="الصفحة الرئيسية"
               >
-                <Home size={24} className="text-[#3d6a8a]" />
+                <Home size={18} className="text-[#3d6a8a]" />
               </button>
-              <ArrowRight size={20} className="text-[#cbd5e1] shrink-0" />
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+              <ArrowRight size={14} className="text-[#cbd5e1] shrink-0" />
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                   isAISection ? 'bg-purple-100' : 'bg-[#3d6a8a]/10'
                 }`}>
-                  <ActiveIcon size={24} className={isAISection ? 'text-purple-600' : 'text-[#3d6a8a]'} />
+                  <ActiveIcon size={16} className={isAISection ? 'text-purple-600' : 'text-[#3d6a8a]'} />
                 </div>
-                <h1 className="text-2xl font-bold text-[#1e293b] truncate">
+                <span className="text-sm font-semibold text-[#1e293b] truncate">
                   {SECTION_LABELS[activeSection]}
-                </h1>
+                </span>
               </div>
             </div>
 
             {/* Right side - Status */}
-            <div className="flex items-center gap-4 shrink-0">
-              {/* System Status */}
-              <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 text-base font-bold ${
+            <div className="flex items-center gap-3 shrink-0">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${
                 isSystemOnline
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-500'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                  : 'bg-gray-50 border-gray-200 text-gray-400'
               }`}>
-                <div className={`w-3 h-3 rounded-full shrink-0 ${isSystemOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+                <div className={`w-2 h-2 rounded-full shrink-0 ${isSystemOnline ? 'bg-emerald-400 animate-pulse' : 'bg-gray-300'}`} />
                 <span>{isSystemOnline ? 'النظام نشط' : 'النظام متوقف'}</span>
               </div>
             </div>
           </div>
 
-          {/* Media Unit Selector - Clear horizontal bar */}
-          <div className="px-8 py-3 bg-[#f8fafc] border-t border-[#e2e8f0]">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 shrink-0">
-                <Building2 size={22} className="text-[#3d6a8a]" />
-                <span className="text-base font-bold text-[#1e293b]">الوحدة الإعلامية:</span>
+          {/* Media Unit Selector - Horizontal tabs */}
+          <div className="px-5 sm:px-6 py-2.5 bg-[#f8fafc] border-t border-[#e2e8f0]">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
+                <Building2 size={15} className="text-[#3d6a8a]" />
+                <span className="text-xs font-bold text-[#64748b]">الوحدة:</span>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setSelectedMediaUnitId(null)}
-                  className={`px-5 py-3 rounded-xl text-base font-bold transition-all border-2 min-h-[48px] ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                     selectedMediaUnitId === null
-                      ? 'bg-[#3d6a8a] text-white border-[#3d6a8a] shadow-md'
+                      ? 'bg-[#3d6a8a] text-white border-[#3d6a8a] shadow-sm'
                       : 'bg-white text-[#64748b] border-[#e2e8f0] hover:border-[#3d6a8a] hover:text-[#1e293b]'
                   }`}
                 >
-                  جميع الوحدات
+                  الكل
                 </button>
                 {loading ? (
-                  <span className="text-base text-[#94a3b8] px-4">جاري التحميل...</span>
+                  <span className="text-xs text-[#94a3b8]">تحميل...</span>
                 ) : (
                   mediaUnits.map((mu: { id: number; name: string }) => (
                     <button
                       key={mu.id}
                       onClick={() => setSelectedMediaUnitId(mu.id)}
-                      className={`px-5 py-3 rounded-xl text-base font-bold transition-all border-2 min-h-[48px] ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                         selectedMediaUnitId === mu.id
-                          ? 'bg-[#3d6a8a] text-white border-[#3d6a8a] shadow-md'
+                          ? 'bg-[#3d6a8a] text-white border-[#3d6a8a] shadow-sm'
                           : 'bg-white text-[#64748b] border-[#e2e8f0] hover:border-[#3d6a8a] hover:text-[#1e293b]'
                       }`}
                     >
@@ -553,24 +542,22 @@ export default function App() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="max-w-6xl mx-auto p-6 sm:p-8"
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="max-w-7xl mx-auto p-4 sm:p-6"
             >
               {/* Page Header */}
               {!isAISection && activeSection !== 'overview' && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-[#3d6a8a] to-[#2d5570] rounded-2xl flex items-center justify-center shadow-lg shadow-[#3d6a8a]/20 shrink-0">
-                      <ActiveIcon size={28} className="text-white" />
+                <div className="mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#3d6a8a] to-[#2d5570] rounded-2xl flex items-center justify-center shadow-lg shadow-[#3d6a8a]/20 shrink-0">
+                      <ActiveIcon size={20} className="text-white" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-[#1e293b]">{SECTION_LABELS[activeSection]}</h2>
-                      <p className="text-[#64748b] text-base mt-1">
-                        {NAV_ITEMS.find(i => i.id === activeSection)?.description}
-                      </p>
+                      <h2 className="text-xl font-bold text-[#1e293b]">{SECTION_LABELS[activeSection]}</h2>
+                      <p className="text-[#64748b] text-xs mt-0.5">نظام الأخبار</p>
                     </div>
                   </div>
                 </div>
@@ -674,43 +661,48 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Hero - Large & Clear */}
-      <div className="bg-gradient-to-bl from-[#2d5570] via-[#3d6a8a] to-[#1f3a4f] rounded-3xl p-8 sm:p-10 relative overflow-hidden">
+      <div className="bg-gradient-to-bl from-[#2d5570] via-[#3d6a8a] to-[#1f3a4f] rounded-2xl p-6 sm:p-8 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-80 h-80 bg-[#FF9F4A]/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute top-0 left-0 w-64 h-64 bg-[#FF9F4A]/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
         </div>
-        <div className="relative z-10 flex items-center gap-5">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/30 shrink-0">
-            <Sparkles className="text-white w-8 h-8" />
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-[#FF9F4A] to-[#FF8C2E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF9F4A]/30 shrink-0">
+            <Sparkles className="text-white w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-arabic font-bold text-white">أدوات الذكاء الاصطناعي</h1>
-            <p className="text-white/70 text-lg mt-2">اختر الأداة التي تريد استخدامها</p>
+            <h1 className="text-xl sm:text-2xl font-arabic font-bold text-white">أدوات الذكاء الاصطناعي</h1>
+            <p className="text-white/60 text-sm mt-1">استخدم قوة الـ AI لتسريع عملك الإعلامي</p>
           </div>
         </div>
       </div>
 
-      {/* Cards Grid - Large touch targets */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((card) => (
-          <button
+          <motion.button
             key={card.id}
+            whileHover={{ y: -3, scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setActiveSection(card.id)}
-            className={`${card.bg} border-2 ${card.border} rounded-3xl p-7 text-right group hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col gap-5 min-h-[180px]`}
+            className={`${card.bg} border ${card.border} rounded-2xl p-5 text-right group hover:shadow-lg transition-all duration-200 flex flex-col gap-4`}
             aria-label={`فتح ${card.title}`}
           >
             <div className="flex items-start justify-between">
-              <div className={`w-14 h-14 ${card.iconBg} rounded-2xl flex items-center justify-center shrink-0`}>
-                <card.icon className={`${card.iconColor} w-7 h-7`} />
-              </div>
-              <ChevronLeft size={22} className="text-gray-300 group-hover:text-gray-500 transition-colors mt-2" />
+              <motion.div
+                whileHover={{ rotate: 10 }}
+                className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center shrink-0`}
+              >
+                <card.icon className={`${card.iconColor} w-5 h-5`} />
+              </motion.div>
+              <ChevronLeft size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors mt-1" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-[#1e293b] mb-2">{card.title}</h3>
-              <p className="text-[#64748b] text-base leading-relaxed">{card.desc}</p>
+              <h3 className="text-sm font-bold text-[#1e293b] mb-1.5">{card.title}</h3>
+              <p className="text-[#64748b] text-xs leading-relaxed">{card.desc}</p>
             </div>
-          </button>
+          </motion.button>
         ))}
       </div>
     </div>
