@@ -7,9 +7,17 @@ import { generateAIContent } from '../../lib/ai-client';
 import { parseNumberedList } from '../../lib/markdown-parser';
 import { getAuthToken } from '../../services/api';
 
+// دعم runtime environment variables من Docker
+const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
+  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+    return window.ENV[key];
+  }
+  return import.meta.env[key];
+};
+
 // استخدام VITE_API_URL من environment variables
-const API_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
+const API_URL = getEnvVar('VITE_API_URL')
+  ? `${getEnvVar('VITE_API_URL')}/api`
   : '/api';
 
 // Helper function to get headers with Authorization

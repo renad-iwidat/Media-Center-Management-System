@@ -42,6 +42,17 @@ export async function summarizeText(
       return;
     }
 
+    // Limit input text to prevent context overflow (8192 token limit)
+    // Approximate: 1 token ≈ 4 characters, so 4000 chars ≈ 1000 tokens
+    const MAX_INPUT_CHARS = 4000;
+    if (text.length > MAX_INPUT_CHARS) {
+      res.status(400).json({ 
+        success: false, 
+        error: `النص طويل جداً. الحد الأقصى ${MAX_INPUT_CHARS} حرف. النص الحالي: ${text.length} حرف.` 
+      });
+      return;
+    }
+
     const styleLabel = SUMMARIZE_STYLE_LABELS[style] ?? SUMMARIZE_STYLE_LABELS.bullet_points;
     const langNote  = language === 'ar' ? 'باللغة العربية' : `in ${language}`;
 
@@ -102,6 +113,17 @@ export async function rewriteText(
       return;
     }
 
+    // Limit input text to prevent context overflow (8192 token limit)
+    // Approximate: 1 token ≈ 4 characters, so 4000 chars ≈ 1000 tokens
+    const MAX_INPUT_CHARS = 4000;
+    if (text.length > MAX_INPUT_CHARS) {
+      res.status(400).json({ 
+        success: false, 
+        error: `النص طويل جداً. الحد الأقصى ${MAX_INPUT_CHARS} حرف. النص الحالي: ${text.length} حرف.` 
+      });
+      return;
+    }
+
     const styleLabel = REWRITE_STYLE_LABELS[style] ?? REWRITE_STYLE_LABELS.radio_broadcast;
     const langNote   = language === 'ar' ? 'باللغة العربية' : `in ${language}`;
 
@@ -111,7 +133,7 @@ export async function rewriteText(
     console.log(`\n✏️  [REWRITE] style=${style} | textLength=${text.length}`);
 
     const result = await generateAIResponse(`${system}\n\n${prompt}`, {
-      max_tokens: 1200,
+      max_tokens: 800,
       temperature: 0.5,
     });
 

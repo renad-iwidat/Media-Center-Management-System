@@ -17,11 +17,11 @@ COPY frontend/ ./
 
 # Build arguments for environment variables
 ARG VITE_API_URL
-ARG VITE_APP_URL
+ARG VITE_MANAGEMENT_API_URL
 
 # Set environment variables for build
 ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_APP_URL=$VITE_APP_URL
+ENV VITE_MANAGEMENT_API_URL=$VITE_MANAGEMENT_API_URL
 
 # Build the application
 RUN npm run build
@@ -43,7 +43,7 @@ RUN echo '#!/bin/sh' > /docker-entrypoint.d/40-inject-env.sh && \
     echo 'ROOT_DIR=/usr/share/nginx/html' >> /docker-entrypoint.d/40-inject-env.sh && \
     echo 'echo "window.ENV = {" > $ROOT_DIR/env-config.js' >> /docker-entrypoint.d/40-inject-env.sh && \
     echo 'echo "  VITE_API_URL: \"${VITE_API_URL}\"," >> $ROOT_DIR/env-config.js' >> /docker-entrypoint.d/40-inject-env.sh && \
-    echo 'echo "  VITE_APP_URL: \"${VITE_APP_URL}\"" >> $ROOT_DIR/env-config.js' >> /docker-entrypoint.d/40-inject-env.sh && \
+    echo 'echo "  VITE_MANAGEMENT_API_URL: \"${VITE_MANAGEMENT_API_URL}\"" >> $ROOT_DIR/env-config.js' >> /docker-entrypoint.d/40-inject-env.sh && \
     echo 'echo "};" >> $ROOT_DIR/env-config.js' >> /docker-entrypoint.d/40-inject-env.sh && \
     chmod +x /docker-entrypoint.d/40-inject-env.sh
 

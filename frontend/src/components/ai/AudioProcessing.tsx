@@ -3,6 +3,7 @@ import { Mic, Volume2, Loader2, Play, Pause, Download, Music, FileText, Search, 
 import { generateAIContent } from '../../lib/ai-client';
 import { api } from '../../services/api';
 import { useLocalStorageBatch } from '../../lib/useLocalStorageBatch';
+import TranscriptWithTimestamps from './TranscriptWithTimestamps';
 
 type AudioMode = 'STT' | 'TTS';
 type FileTypeFilter = 'all' | 'audio' | 'video';
@@ -43,6 +44,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFileId, setSelectedFileId] = useState<number | null>(() => loadFromStorage('selectedFileId', null));
   const [result, setResult] = useState<string | null>(() => loadFromStorage('result', null));
+  const [resultSegments, setResultSegments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -155,26 +157,89 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     try {
       console.log(`🎙️  Starting STT for file: ${mediaTitle}`);
       
-      // If it's a video file, extract audio first
+      // If it's a video file, use production streaming extraction + transcription
       if (file.file_type === 'video') {
-        console.log('🎬 Video detected - extracting audio first...');
-        const extractRes = await api.extractAudioFromS3(file.id, file.s3_url, 'mp3', '128k');
+        console.log('🎬 Video detected - using production streaming extraction...');
         
-        if (!extractRes.success || !extractRes.data?.audioBase64) {
-          throw new Error(extractRes.error || 'Failed to extract audio from video');
-        }
+        try {
+          // Use the new production API
+          const extractRes = await api.extractAndTranscribeProduction(file.s3_url, {
+            language: 'ar',
+            outputFormat: 'mp3',
+            bitrate: '128k',
+            enableChunking: true,
+            chunkDurationSeconds: 180, // 3 minutes per chunk
+            maxConcurrentChunks: 3     // Process 3 chunks in parallel
+          });
+          
+          if (!extractRes.success || !extractRes.data?.transcript) {
+            throw new Error(extractRes.error || 'Failed to extract and transcribe');
+          }
 
-        console.log('✅ Audio extracted successfully');
-        
-        // Now transcribe the extracted audio using base64
-        console.log('🎙️  Transcribing extracted audio...');
-        const transcribeRes = await api.transcribeAudioFromBase64(extractRes.data.audioBase64, 'ar');
-        
-        if (transcribeRes.success && transcribeRes.data?.transcript) {
-          setResult(transcribeRes.data.transcript);
-          console.log('✅ STT completed successfully');
-        } else {
-          throw new Error(transcribeRes.error || 'Failed to transcribe audio');
+          console.log(`✅ Production processing completed (${extractRes.data.processingMethod})`);
+          console.log(`📊 Audio size: ${extractRes.data.audioSize} bytes`);
+          
+          setResult(extractRes.data.transcript);
+          setResultSegments(extractRes.data.segments || []);
+          console.log('✅ Video-to-text completed successfully');
+          
+        } catch (productionError) {
+          console.warn('⚠️ Production streaming failed, trying download-first method...');
+          console.warn('Production error:', productionError);
+          
+          try {
+            // Try download-first method
+            const downloadFirstRes = await api.extractWithDownloadFirst(file.s3_url, {
+              language: 'ar',
+              outputFormat: 'mp3',
+              bitrate: '128k',
+              enableChunking: true,
+              chunkDurationSeconds: 180,
+              maxConcurrentChunks: 3,
+              maxFileSize: 1024 * 1024 * 1024 // 1GB
+            });
+            
+            if (!downloadFirstRes.success || !downloadFirstRes.data?.transcript) {
+              throw new Error(downloadFirstRes.error || 'Failed to extract with download-first method');
+            }
+
+            console.log(`✅ Download-first processing completed`);
+            console.log(`📊 Video size: ${downloadFirstRes.data.videoSize} bytes`);
+            console.log(`📊 Audio size: ${downloadFirstRes.data.audioSize} bytes`);
+            console.log(`⏱️  Processing time: ${Math.round(downloadFirstRes.data.processingTime / 1000)}s`);
+            
+            setResult(downloadFirstRes.data.transcript);
+            setResultSegments(downloadFirstRes.data.segments || []);
+            console.log('✅ Download-first method succeeded');
+            
+          } catch (downloadFirstError) {
+            console.warn('⚠️ Download-first method also failed, falling back to legacy method...');
+            console.warn('Download-first error:', downloadFirstError);
+            
+            // Final fallback to legacy method
+            try {
+              const extractRes = await api.extractAudioAndTranscribe(file.id, file.s3_url, {
+                outputFormat: 'mp3',
+                bitrate: '128k',
+                language: 'ar',
+                enableChunking: true,
+                chunkDurationSeconds: 180,
+                maxConcurrentChunks: 3
+              });
+              
+              if (!extractRes.success || !extractRes.data?.transcript) {
+                throw new Error(extractRes.error || 'Failed to extract and transcribe with legacy method');
+              }
+
+              console.log('✅ Legacy method succeeded');
+              setResult(extractRes.data.transcript);
+              setResultSegments(extractRes.data.segments || []);
+              
+            } catch (legacyError) {
+              console.error('❌ All methods failed (streaming, download-first, legacy)');
+              throw legacyError;
+            }
+          }
         }
       } else {
         // For audio files, transcribe directly
@@ -182,6 +247,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
         
         if (res.success && res.data?.transcript) {
           setResult(res.data.transcript);
+          setResultSegments(res.data.segments || []);
           console.log('✅ STT completed successfully');
         } else {
           throw new Error(res.error || 'Failed to transcribe audio');
@@ -190,6 +256,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     } catch (error) {
       console.error('Error in STT:', error);
       setResult('حدث خطأ أثناء التفريغ الصوتي: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      setResultSegments([]);
     } finally {
       setIsLoading(false);
     }
@@ -287,7 +354,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
 
       <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit mr-auto ml-0 flex-row-reverse">
         <button
-          onClick={() => { setActiveMode('STT'); setResult(null); setSearchTerm(''); }}
+          onClick={() => { setActiveMode('STT'); setResult(null); setResultSegments([]); setSearchTerm(''); }}
           className={`px-5 py-2 rounded-lg text-xs font-arabic transition-all flex items-center gap-1.5 ${activeMode === 'STT' ? 'bg-[#FF9F43] text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
         >
           <Mic size={14} /> صوت لنص (STT)
@@ -556,8 +623,14 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                       </span>
                     )}
                   </div>
-                  <div className="flex-1 bg-white rounded-xl p-4 border border-gray-300 overflow-y-auto custom-scrollbar font-arabic leading-loose text-gray-900 text-sm">
-                    {result}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <TranscriptWithTimestamps
+                      transcript={result}
+                      segments={resultSegments}
+                      onSegmentClick={(startTime) => {
+                        console.log('Segment clicked at:', startTime);
+                      }}
+                    />
                   </div>
                 </div>
               ) : (

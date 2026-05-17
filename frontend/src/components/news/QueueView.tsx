@@ -5,6 +5,7 @@ import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { EmptyState } from "../shared/EmptyState";
 import { Notification, NotificationData } from "../shared/Notification";
+import { getStatusLabel, getStatusColor, getStatusBgColor } from "../../lib/statusTranslations";
 
 export function QueueView({ unitId }: { unitId: number | null }) {
   const [queue, setQueue] = useState<any[]>([]);
@@ -30,6 +31,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   // Filter states
   const [searchTitle, setSearchTitle] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
@@ -41,7 +43,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
-      api.getPendingQueue(unitId).catch(() => ({ data: [] })),
+      api.getEditorialStudio(unitId).catch(() => ({ data: [] })),
       api.getPolicies().catch(() => ({ policies: [] })),
       api.getCategories().catch(() => ({ data: [] })),
     ]).then(([q, p, c]) => {
@@ -75,6 +77,11 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       filtered = filtered.filter(item => item.category_name === selectedCategory);
     }
 
+    // Filter by status
+    if (selectedStatus) {
+      filtered = filtered.filter(item => item.status === selectedStatus);
+    }
+
     // Filter by date
     if (selectedDate) {
       filtered = filtered.filter(item => {
@@ -93,7 +100,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
     setFilteredQueue(filtered);
     setCurrentPage(1);
-  }, [queue, searchTitle, selectedCategory, selectedDate, sortBy]);
+  }, [queue, searchTitle, selectedCategory, selectedStatus, selectedDate, sortBy]);
 
   // منع السكرول عند فتح التحرير - مع cleanup صحيح
   useEffect(() => {
@@ -277,7 +284,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
         <div className="space-y-6 pb-6">
           <div className="flex items-center justify-between">
-            <button onClick={() => setEditingItem(null)} className="text-gray-600 hover:text-gray-900 text-sm flex items-center gap-2 transition-colors">
+            <button onClick={() => setEditingItem(null)} className="text-[#64748b] hover:text-[#1e293b] text-sm flex items-center gap-2 transition-colors">
               <ArrowRight size={16} /> العودة للطابور
             </button>
           </div>
@@ -296,20 +303,20 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         </div>
 
         {/* Meta: صورة + معلومات + عنوان */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-5">
           <div className="flex gap-5 items-start">
             {/* صورة الخبر */}
             <div className="space-y-2">
-              <label className="text-xs text-gray-700 font-bold uppercase">صورة الخبر</label>
+              <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">صورة الخبر</label>
               {editedImageUrl && (
-                <div className="w-full h-80 shrink-0 rounded-2xl overflow-hidden border border-gray-300 bg-gray-100">
+                <div className="w-full h-80 shrink-0 rounded-2xl overflow-hidden border border-[#e2e8f0] bg-[#f8fafc]">
                   <img src={editedImageUrl} alt="صورة الخبر" className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%239ca3af" text-anchor="middle" dy=".3em"%3Eلا يمكن تحميل الصورة%3C/text%3E%3C/svg%3E'; }} />
                 </div>
               )}
               {!editedImageUrl && (
-                <div className="w-full h-80 shrink-0 rounded-2xl overflow-hidden border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                  <p className="text-sm text-gray-500">لا توجد صورة</p>
+                <div className="w-full h-80 shrink-0 rounded-2xl overflow-hidden border border-dashed border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-center">
+                  <p className="text-sm text-[#94a3b8]">لا توجد صورة</p>
                 </div>
               )}
               <input 
@@ -317,20 +324,20 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 value={editedImageUrl} 
                 onChange={(e) => setEditedImageUrl(e.target.value)}
                 placeholder="أدخل رابط الصورة (URL)"
-                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-gray-400 font-mono"
+                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs text-[#1e293b] focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 placeholder:text-[#cbd5e1] font-mono"
               />
               {editedImageUrl && (
-                <p className="text-[10px] text-gray-600 font-mono truncate">{editedImageUrl}</p>
+                <p className="text-[10px] text-[#94a3b8] font-mono truncate">{editedImageUrl}</p>
               )}
             </div>
             {/* المعلومات */}
             <div className="flex-1 min-w-0 space-y-3">
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">التصنيف</label>
                 <select
                   value={editedCategoryId || ""}
                   onChange={(e) => setEditedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
                 >
                   <option value="">-- اختر التصنيف --</option>
                   {categories.map((cat) => (
@@ -347,11 +354,11 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 )}
               </div>
               <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-gray-500"
+                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 placeholder:text-[#cbd5e1]"
                 placeholder="عنوان الخبر" />
               {editingItem?.url && (
                 <a href={editingItem.url} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-700 truncate block">
+                  className="text-xs text-[#3d6a8a] hover:text-[#2d5570] truncate block">
                   {editingItem.url}
                 </a>
               )}
@@ -360,21 +367,21 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         </div>
 
         {/* شريط السياسات */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 space-y-3">
           {/* سطر سياسات التعديل */}
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 shrink-0">
-              <FileEdit size={13} className="text-blue-600" /> تعديل:
+            <span className="text-xs font-semibold text-[#1e293b] flex items-center gap-1.5 shrink-0">
+              <FileEdit size={13} className="text-[#3d6a8a]" /> تعديل:
             </span>
             {policies.map((p: any) => (
               <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all text-xs
-                ${selectedPolicies.includes(p.id) ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"}`}>
-                <input type="checkbox" checked={selectedPolicies.includes(p.id)} onChange={() => togglePolicy(p.id)} className="accent-blue-600 w-3 h-3" />
+                ${selectedPolicies.includes(p.id) ? "bg-[#3d6a8a]/10 border-[#3d6a8a] text-[#3d6a8a]" : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#4A7C9E]"}`}>
+                <input type="checkbox" checked={selectedPolicies.includes(p.id)} onChange={() => togglePolicy(p.id)} className="accent-[#3d6a8a] w-3 h-3" />
                 {p.name}
               </label>
             ))}
             <button onClick={applySequentially} disabled={isProcessingAI || selectedPolicies.length === 0}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0">
+              className="px-4 py-1.5 bg-[#3d6a8a] hover:bg-[#2d5570] text-white rounded-lg font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0">
               {isProcessingAI && selectedPolicies.length > 0
                 ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 : <><Sparkles size={13} /> تطبيق</>}
@@ -389,12 +396,12 @@ export function QueueView({ unitId }: { unitId: number | null }) {
             {inspectionPolicies.map((p: any) => (
               <button key={p.id} onClick={() => setSelectedInspectionPolicy(selectedInspectionPolicy === p.id ? null : p.id)}
                 className={`px-3 py-1.5 rounded-lg border text-xs transition-all
-                  ${selectedInspectionPolicy === p.id ? "bg-orange-100 border-orange-300 text-orange-700" : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"}`}>
+                  ${selectedInspectionPolicy === p.id ? "bg-[#FF9F4A]/10 border-[#FF9F4A] text-[#FF8C2E]" : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#FF9F4A]"}`}>
                 {p.name}
               </button>
             ))}
             <button onClick={applyInspection} disabled={isProcessingAI || !selectedInspectionPolicy}
-              className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0">
+              className="px-4 py-1.5 bg-[#FF9F4A] hover:bg-[#FF8C2E] text-white rounded-lg font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0">
               {isProcessingAI && selectedInspectionPolicy
                 ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 : <><Eye size={13} /> فحص</>}
@@ -405,24 +412,24 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         {/* Main: النص المعدّل | النتائج */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* النص المعدّل */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-900">النص المعدّل</span>
-              <span className="text-xs text-gray-600 font-mono">{editedContent.length} حرف</span>
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#1e293b]">النص المعدّل</span>
+              <span className="text-xs text-[#94a3b8] font-mono">{editedContent.length} حرف</span>
             </div>
             <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-[500px] bg-white p-4 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none leading-relaxed placeholder:text-gray-500"
+              className="w-full h-[500px] bg-white p-4 text-sm text-[#1e293b] focus:outline-none resize-none leading-relaxed placeholder:text-[#cbd5e1]"
               placeholder="محتوى الخبر..." />
           </div>
 
           {/* النتائج */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <span className="text-sm font-semibold text-gray-900">نتائج السياسات</span>
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e2e8f0]">
+              <span className="text-sm font-semibold text-[#1e293b]">نتائج السياسات</span>
             </div>
             <div className="p-4 h-[500px] overflow-y-auto space-y-4">
               {policyResults.length === 0 && !inspectionResult && (
-                <div className="flex items-center justify-center h-full text-gray-600 text-sm">
+                <div className="flex items-center justify-center h-full text-[#94a3b8] text-sm">
                   اختر سياسة وطبّقها لعرض النتائج
                 </div>
               )}
@@ -551,8 +558,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       <div className="space-y-6">
       <div className="flex justify-between items-end mb-2">
         <div>
-          <h3 className="text-xl font-bold mb-1">ستوديو التحرير</h3>
-          <p className="text-gray-600 text-sm">الأخبار المعلقة بانتظار مراجعة المحرر.</p>
+          <h3 className="text-lg font-bold text-[#1e293b] mb-1">ستوديو التحرير</h3>
+          <p className="text-[#64748b] text-sm">الأخبار المعلقة بانتظار مراجعة المحرر.</p>
         </div>
       </div>
 
@@ -561,32 +568,32 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       ) : (
         <div className="space-y-6">
           {/* Filters */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <Search size={16} className="text-blue-600" />
+          <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-[#1e293b] flex items-center gap-2">
+              <Search size={14} className="text-[#4A7C9E]" />
               البحث والفلترة
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Search by title */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold uppercase">البحث عن عنوان</label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">البحث عن عنوان</label>
                 <input
                   type="text"
                   value={searchTitle}
                   onChange={(e) => setSearchTitle(e.target.value)}
                   placeholder="ابحث عن عنوان..."
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900 placeholder:text-gray-500"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
                 />
               </div>
 
               {/* Filter by category */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold uppercase">التصنيف</label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">التصنيف</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
                 >
                   <option value="">كل التصنيفات</option>
                   {[...new Set(queue.map(item => item.category_name))].map(cat => (
@@ -595,24 +602,41 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 </select>
               </div>
 
+              {/* Filter by status */}
+              <div className="space-y-2">
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الحالة</label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+                >
+                  <option value="">كل الحالات</option>
+                  <option value="pending">في الانتظار</option>
+                  <option value="in_review">قيد المراجعة</option>
+                  <option value="incomplete">غير مكتمل</option>
+                  <option value="approved">موافق عليه</option>
+                  <option value="rejected">مرفوض</option>
+                </select>
+              </div>
+
               {/* Filter by date */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold uppercase">التاريخ</label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">التاريخ</label>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
                 />
               </div>
 
               {/* Sort */}
               <div className="space-y-2">
-                <label className="text-xs text-gray-700 font-bold uppercase">الترتيب</label>
+                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الترتيب</label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-900"
+                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
                 >
                   <option value="newest">الأحدث أولاً</option>
                   <option value="oldest">الأقدم أولاً</option>
@@ -621,25 +645,26 @@ export function QueueView({ unitId }: { unitId: number | null }) {
             </div>
 
             {/* Clear filters */}
-            {(searchTitle || selectedCategory || selectedDate || sortBy !== "newest") && (
+            {(searchTitle || selectedCategory || selectedStatus || selectedDate || sortBy !== "newest") && (
               <button
                 onClick={() => {
                   setSearchTitle("");
                   setSelectedCategory("");
+                  setSelectedStatus("");
                   setSelectedDate("");
                   setSortBy("newest");
                 }}
-                className="text-xs text-blue-600 hover:text-blue-700 font-bold"
+                className="text-xs text-[#FF9F4A] hover:text-[#FF8C2E] font-bold flex items-center gap-1"
               >
-                مسح الفلاتر
+                × مسح الفلاتر
               </button>
             )}
           </div>
 
           {/* Results count and pagination info */}
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-400">
-              عدد النتائج: <span className="text-gray-900 font-bold">{filteredQueue.length}</span> من <span className="text-gray-900 font-bold">{queue.length}</span>
+            <div className="text-xs text-[#94a3b8]">
+              عدد النتائج: <span className="text-[#1e293b] font-bold">{filteredQueue.length}</span> من <span className="text-[#1e293b] font-bold">{queue.length}</span>
             </div>
             {filteredQueue.length > 0 && (
               <div className="flex items-center gap-2">
@@ -649,8 +674,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                 >
                   <Trash size={14} /> حذف الكل
                 </button>
-                <div className="text-sm text-gray-400">
-                  الصفحة <span className="text-gray-900 font-bold">{currentPage}</span> من <span className="text-gray-900 font-bold">{Math.ceil(filteredQueue.length / itemsPerPage)}</span>
+                <div className="text-xs text-[#94a3b8]">
+                  الصفحة <span className="text-[#1e293b] font-bold">{currentPage}</span> من <span className="text-[#1e293b] font-bold">{Math.ceil(filteredQueue.length / itemsPerPage)}</span>
                 </div>
               </div>
             )}
@@ -661,61 +686,67 @@ export function QueueView({ unitId }: { unitId: number | null }) {
           ) : (
             <div className="space-y-4">
               {/* Table */}
-              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">#</th>
-                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">العنوان</th>
-                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">التصنيف</th>
-                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">المصدر</th>
-                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">الحالة</th>
-                        <th className="text-center py-4 px-6 text-gray-700 font-semibold">التاريخ</th>
-                        <th className="text-center py-4 px-6 text-gray-700 font-semibold">الإجراءات</th>
+                      <tr className="border-b border-[#e2e8f0] bg-[#f8fafc]">
+                        <th className="text-right py-3 px-5 text-[10px] font-semibold text-[#64748b] uppercase">#</th>
+                        <th className="text-right py-3 px-5 text-[10px] font-semibold text-[#64748b] uppercase">العنوان</th>
+                        <th className="text-right py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">التصنيف</th>
+                        <th className="text-right py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">المصدر</th>
+                        <th className="text-right py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">الحالة</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">التاريخ</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredQueue
                         .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                         .map((item: any, idx: number) => (
-                          <tr key={item.id} className="border-b border-gray-200 hover:bg-blue-50 transition-colors">
-                            <td className="py-4 px-6 text-gray-600 font-mono text-xs">
+                          <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">
+                            <td className="py-3 px-5 text-[#94a3b8] font-mono text-xs">
                               {(currentPage - 1) * itemsPerPage + idx + 1}
                             </td>
-                            <td className="py-4 px-6 text-gray-900 max-w-xs truncate">
+                            <td className="py-3 px-5 text-[#1e293b] font-medium max-w-xs truncate">
                               {item.title || 'بدون عنوان'}
                             </td>
                             <td className="py-4 px-6 text-gray-700">
-                              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">
+                              <span className="bg-[#f0f4f8] text-[#3d6a8a] px-2 py-1 rounded-lg text-[10px] font-bold border border-[#e2e8f0]">
                                 {item.category_name || '—'}
                               </span>
                             </td>
-                            <td className="py-4 px-6 text-gray-600 text-xs">
+                            <td className="py-3 px-4 text-[#64748b] text-xs">
                               {item.source_name || '—'}
                             </td>
-                            <td className="py-4 px-6 text-gray-700">
-                              <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">
-                                {item.status || 'pending'}
+                            <td className="py-3 px-4">
+                              <span 
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold"
+                                style={{
+                                  color: getStatusColor(item.status || 'pending'),
+                                  backgroundColor: getStatusBgColor(item.status || 'pending'),
+                                }}
+                              >
+                                {getStatusLabel(item.status || 'pending')}
                               </span>
                             </td>
-                            <td className="py-4 px-6 text-center text-gray-600 text-xs font-mono">
+                            <td className="py-3 px-4 text-center text-[#64748b] text-xs font-mono">
                               {item.pub_date
                                 ? new Date(item.pub_date).toLocaleDateString('ar-SA')
                                 : new Date(item.created_at).toLocaleDateString('ar-SA')}
                             </td>
-                            <td className="py-4 px-6 text-center">
+                            <td className="py-3 px-4 text-center">
                               <div className="flex gap-2 justify-center">
                                 <button
                                   onClick={() => handleOpenEditor(item)}
-                                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                                  className="bg-[#3d6a8a]/10 hover:bg-[#3d6a8a]/20 text-[#3d6a8a] px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
                                   title="فتح المحرر"
                                 >
                                   تحرير
                                 </button>
                                 <button
                                   onClick={() => handleDelete(item.id)}
-                                  className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                                  className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
                                   title="حذف الخبر"
                                 >
                                   حذف
@@ -753,10 +784,10 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                          className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
                             currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900'
+                              ? 'bg-[#3d6a8a] text-white shadow-sm'
+                              : 'bg-[#f8fafc] hover:bg-[#f1f5f9] border border-[#e2e8f0] text-[#64748b]'
                           }`}
                         >
                           {page}

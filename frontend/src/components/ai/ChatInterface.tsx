@@ -23,13 +23,21 @@ interface ChatResponse {
   resetTime?: number;
 }
 
+// دعم runtime environment variables من Docker
+const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
+  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+    return window.ENV[key];
+  }
+  return import.meta.env[key];
+};
+
 // استخدام VITE_API_URL من environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
+const API_BASE_URL = getEnvVar('VITE_API_URL')
+  ? `${getEnvVar('VITE_API_URL')}/api`
   : '/api';
 
 console.log('🔗 [ChatInterface] API_BASE_URL:', API_BASE_URL);
-console.log('🔗 [ChatInterface] VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('🔗 [ChatInterface] VITE_API_URL:', getEnvVar('VITE_API_URL'));
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([

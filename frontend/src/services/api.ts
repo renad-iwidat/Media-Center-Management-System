@@ -2,14 +2,24 @@
  * API Service - ربط الفرونت اند بالباكند
  */
 
+// دعم runtime environment variables من Docker
+const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
+  // أولاً: جرب window.ENV (runtime من Docker)
+  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+    return window.ENV[key];
+  }
+  // ثانياً: استخدم import.meta.env (build time)
+  return import.meta.env[key];
+};
+
 // استخدام VITE_MANAGEMENT_API_URL لسيرفر الإدارة و VITE_API_URL لسيرفر الأخبار
-const MANAGEMENT_API_BASE = import.meta.env.VITE_MANAGEMENT_API_URL 
-  ? `${import.meta.env.VITE_MANAGEMENT_API_URL}/api`
+const MANAGEMENT_API_BASE = getEnvVar('VITE_MANAGEMENT_API_URL')
+  ? `${getEnvVar('VITE_MANAGEMENT_API_URL')}/api`
   : "https://media-center-management-system.onrender.com/api";
 
-const API_BASE = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "http://localhost:4000/api";
+const API_BASE = getEnvVar('VITE_API_URL')
+  ? `${getEnvVar('VITE_API_URL')}/api`
+  : "https://automation-and-ai-hub-backend.onrender.com/api";
 
 console.log('🔗 Management API Base URL:', MANAGEMENT_API_BASE);
 console.log('🔗 News API Base URL:', API_BASE);
@@ -177,6 +187,8 @@ export const api = {
     request<any>("/flow/process", { method: "POST" }),
   getPendingQueue: (mediaUnitId?: number | null) =>
     request<any>(`/flow/queue/pending${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
+  getEditorialStudio: (mediaUnitId?: number | null, status?: string) =>
+    request<any>(`/flow/editorial${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}${status ? `${mediaUnitId ? '&' : '?'}status=${status}` : ""}`),
   getQueueStats: () => request<any>("/flow/queue/stats"),
   getQueueItem: (id: number) => request<any>(`/flow/queue/${id}`),
   approveQueueItem: (id: number, data?: any) =>
@@ -278,15 +290,15 @@ export const api = {
   getGuest: (id: number) => request<any>(`/guests/${id}`),
 
   // --- Video-to-Text ---
-  processVideoToText: (videoUrl: string) =>
+  processVideoToText: (videoUrl: string, includeTimestamps: boolean = true) =>
     request<any>("/ai-hub/video-to-text/process", {
       method: "POST",
-      body: JSON.stringify({ videoUrl }),
+      body: JSON.stringify({ videoUrl, includeTimestamps }),
     }),
-  processVideoToTextFromS3: (s3Url: string, fileId: number) =>
+  processVideoToTextFromS3: (s3Url: string, fileId: number, includeTimestamps: boolean = true) =>
     request<any>("/ai-hub/video-to-text/process-s3", {
       method: "POST",
-      body: JSON.stringify({ s3Url, fileId }),
+      body: JSON.stringify({ s3Url, fileId, includeTimestamps }),
     }),
 
   // --- Text-to-Speech ---
@@ -313,9 +325,125 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ audioBase64, language }),
     }),
+  transcribeAudioWithTimestamps: (audioUrl: string, language: string = 'ar', format: 'json' | 'srt' = 'json') =>
+    request<any>("/ai-hub/stt/transcribe-with-timestamps", {
+      method: "POST",
+      body: JSON.stringify({ audioUrl, language, format }),
+    }),
   getSTTLanguages: () => request<any>("/ai-hub/stt/languages"),
 
-  // --- Audio Extraction ---
+  // --- Production Streaming Audio Extraction ---
+  
+  // Start async extraction job
+  startExtractionJob: (videoUrl: string, options: {
+    outputFormat?: string;
+    bitrate?: string;
+    timeout?: number;
+    maxSize?: number;
+  } = {}) =>
+    request<any>("/ai-hub/streaming-extraction/start", {
+      method: "POST",
+      body: JSON.stringify({ 
+        videoUrl,
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        timeout: options.timeout || 300000,
+        maxSize: options.maxSize || 100 * 1024 * 1024
+      }),
+    }),
+
+  // Get job status
+  getExtractionJobStatus: (jobId: string) =>
+    request<any>(`/ai-hub/streaming-extraction/status/${jobId}`),
+
+  // Stream audio directly
+  streamAudio: (videoUrl: string, options: {
+    outputFormat?: string;
+    bitrate?: string;
+    timeout?: number;
+  } = {}) => {
+    // Return a URL for direct streaming
+    const params = new URLSearchParams({
+      videoUrl,
+      outputFormat: options.outputFormat || 'mp3',
+      bitrate: options.bitrate || '128k',
+      timeout: (options.timeout || 300000).toString()
+    });
+    
+    return `${API_BASE}/ai-hub/streaming-extraction/stream?${params}`;
+  },
+
+  // Production extract and transcribe
+  extractAndTranscribeProduction: (videoUrl: string, options: {
+    language?: string;
+    outputFormat?: string;
+    bitrate?: string;
+    enableChunking?: boolean;
+    chunkDurationSeconds?: number;
+    maxConcurrentChunks?: number;
+    forceDownloadFirst?: boolean;
+    includeTimestamps?: boolean;
+  } = {}) =>
+    request<any>("/ai-hub/streaming-extraction/extract-and-transcribe", {
+      method: "POST",
+      body: JSON.stringify({
+        videoUrl,
+        language: options.language || 'ar',
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        enableChunking: options.enableChunking ?? true,
+        chunkDurationSeconds: options.chunkDurationSeconds || 180,
+        maxConcurrentChunks: options.maxConcurrentChunks || 3,
+        forceDownloadFirst: options.forceDownloadFirst || false,
+        includeTimestamps: options.includeTimestamps ?? true
+      }),
+    }),
+
+  // Download-first extraction method
+  extractWithDownloadFirst: (videoUrl: string, options: {
+    language?: string;
+    outputFormat?: string;
+    bitrate?: string;
+    enableChunking?: boolean;
+    chunkDurationSeconds?: number;
+    maxConcurrentChunks?: number;
+    maxFileSize?: number;
+    includeTimestamps?: boolean;
+  } = {}) =>
+    request<any>("/ai-hub/streaming-extraction/download-first", {
+      method: "POST",
+      body: JSON.stringify({
+        videoUrl,
+        language: options.language || 'ar',
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        enableChunking: options.enableChunking ?? true,
+        chunkDurationSeconds: options.chunkDurationSeconds || 180,
+        maxConcurrentChunks: options.maxConcurrentChunks || 3,
+        maxFileSize: options.maxFileSize || 1024 * 1024 * 1024, // 1GB
+        includeTimestamps: options.includeTimestamps ?? true
+      }),
+    }),
+
+  // Get video information
+  getVideoInfo: (videoUrl: string) =>
+    request<any>("/ai-hub/streaming-extraction/video-info", {
+      method: "POST",
+      body: JSON.stringify({ videoUrl }),
+    }),
+
+  // Get system stats
+  getStreamingExtractionStats: () =>
+    request<any>("/ai-hub/streaming-extraction/stats"),
+
+  // Diagnose S3 URL
+  diagnoseS3Url: (videoUrl: string) =>
+    request<any>("/ai-hub/streaming-extraction/diagnose", {
+      method: "POST",
+      body: JSON.stringify({ videoUrl }),
+    }),
+
+  // --- Legacy Audio Extraction (kept for compatibility) ---
   extractAudioFromFile: (videoFilePath: string, outputFormat: string = 'mp3', bitrate: string = '128k') =>
     request<any>("/ai-hub/audio-extraction/extract-from-file", {
       method: "POST",
@@ -331,12 +459,85 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ fileId, s3Url, outputFormat, bitrate }),
     }),
-  getVideoInfo: (videoFilePath: string) =>
+  extractAudioAndTranscribe: (
+    fileId: number, 
+    s3Url: string, 
+    options: {
+      outputFormat?: string;
+      bitrate?: string;
+      language?: string;
+      enableChunking?: boolean;
+      chunkDurationSeconds?: number;
+      maxConcurrentChunks?: number;
+      includeTimestamps?: boolean;
+    } = {}
+  ) =>
+    request<any>("/ai-hub/audio-extraction/extract-and-transcribe", {
+      method: "POST",
+      body: JSON.stringify({ 
+        fileId, 
+        s3Url, 
+        outputFormat: options.outputFormat || 'mp3',
+        bitrate: options.bitrate || '128k',
+        language: options.language || 'ar',
+        enableChunking: options.enableChunking ?? true,
+        chunkDurationSeconds: options.chunkDurationSeconds || 180,
+        maxConcurrentChunks: options.maxConcurrentChunks || 3,
+        includeTimestamps: options.includeTimestamps ?? true
+      }),
+    }),
+  getLegacyVideoInfo: (videoFilePath: string) =>
     request<any>("/ai-hub/audio-extraction/video-info", {
       method: "POST",
       body: JSON.stringify({ videoFilePath }),
     }),
   getAudioExtractionFormats: () => request<any>("/ai-hub/audio-extraction/formats"),
+
+  // --- Smart Transcription ---
+  smartTranscriptionProcess: (data: {
+    fileUrl: string;
+    fileType?: 'audio' | 'video';
+    language?: string;
+    outputs: Array<{
+      type: 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
+      enabled: boolean;
+      count?: number;
+    }>;
+    editorialPolicy?: string;
+    customInfo?: string;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/process", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  smartTranscriptionGenerateOutputs: (data: {
+    transcript: string;
+    outputs: Array<{
+      type: 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
+      enabled: boolean;
+      count?: number;
+    }>;
+    editorialPolicy?: string;
+    customInfo?: string;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/generate-outputs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  smartTranscriptionExport: (data: {
+    outputs: Array<{
+      type: string;
+      content: string;
+    }>;
+    editorialPolicy?: string;
+    customInfo?: string;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/export", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // --- Authentication (Management System) ---
   login: (email: string, password: string) =>

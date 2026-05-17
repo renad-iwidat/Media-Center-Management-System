@@ -73,8 +73,44 @@ router.post('/extract-from-file', AudioExtractionController.extractFromFile);
 router.post('/extract-from-url', AudioExtractionController.extractFromUrl);
 
 /**
+ * POST /api/ai-hub/audio-extraction/extract-and-transcribe
+ * استخرج الصوت من ملف فيديو في S3 مع تفريغ متكامل
+ * 
+ * Request body:
+ * {
+ *   "fileId": "number (optional) - ID of the uploaded file",
+ *   "s3Url": "string (required) - S3 URL to video file",
+ *   "outputFormat": "string (optional, default: 'mp3') - Output audio format",
+ *   "bitrate": "string (optional, default: '128k') - Audio bitrate",
+ *   "language": "string (optional, default: 'ar') - Transcription language",
+ *   "enableChunking": "boolean (optional, default: true) - Enable chunked processing",
+ *   "chunkDurationSeconds": "number (optional, default: 180) - Chunk duration in seconds",
+ *   "maxConcurrentChunks": "number (optional, default: 3) - Max parallel chunks"
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "fileId": "number - The file ID",
+ *     "audioBase64": "string - Base64 encoded audio",
+ *     "audioSize": "number - Size in bytes",
+ *     "format": "string - Output format",
+ *     "bitrate": "string - Bitrate used",
+ *     "s3Url": "string - The S3 URL",
+ *     "transcript": "string - Transcribed text",
+ *     "language": "string - Language used",
+ *     "processingMethod": "string - 'chunked' or 'single'",
+ *     "chunksProcessed": "number - Number of chunks processed"
+ *   },
+ *   "error": "string (if failed)"
+ * }
+ */
+router.post('/extract-and-transcribe', AudioExtractionController.extractAndTranscribe);
+
+/**
  * POST /api/ai-hub/audio-extraction/extract-from-s3
- * استخرج الصوت من ملف فيديو في S3
+ * استخرج الصوت من ملف فيديو في S3 (بدون تفريغ)
  * 
  * Request body:
  * {

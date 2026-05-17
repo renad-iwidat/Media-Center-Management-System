@@ -342,7 +342,7 @@ export async function updateArticleContent(req: Request, res: Response): Promise
       [articleId]
     );
 
-    // إذا ما في سجلات incomplete، ننشئ سجلات جديدة
+    // إذا ما في سجلات incomplete، ننشئ سجلات جديدة بحالة in_review
     if (queueRecords.rows.length === 0) {
       const mediaUnitsResult = await query(
         `SELECT id, name FROM media_units WHERE is_active = true`
@@ -353,12 +353,13 @@ export async function updateArticleContent(req: Request, res: Response): Promise
           [articleId, unit.id]
         );
         if (existsResult.rows.length === 0) {
+          // إنشاء سجل جديد بحالة in_review مباشرة (لأن الخبر تم إكماله)
           const insertResult = await query(
             `INSERT INTO editorial_queue
-             (media_unit_id, raw_data_id, policy_id, status, created_at, updated_at)
-             VALUES ($1, $2, NULL, 'pending', NOW(), NOW())
+             (media_unit_id, raw_data_id, policy_id, status, user_id, task_id, created_at, updated_at)
+             VALUES ($1, $2, NULL, 'in_review', $3, $4, NOW(), NOW())
              RETURNING id`,
-            [unit.id, articleId]
+            [unit.id, articleId, userId ? parseInt(userId) : null, taskId || null]
           );
           queueRecords.rows.push({
             id: insertResult.rows[0].id,
@@ -416,11 +417,15 @@ export async function updateArticleContent(req: Request, res: Response): Promise
       // تحريري: incomplete → in_review (ينتظر المحرر)
       console.log(`📝 الخبر ${articleId} — تحريري → in_review بواسطة المستخدم ${userId}`);
 
-      await query(
-        `UPDATE editorial_queue SET status = 'in_review', user_id = $1, task_id = $2, updated_at = NOW()
-         WHERE raw_data_id = $3 AND status = 'incomplete'`,
-        [userId ? parseInt(userId) : null, taskId || null, articleId]
-      );
+      // تحديث السجلات الموجودة أو الجديدة إلى in_review
+      for (const record of queueRecords.rows) {
+        await query(
+          `UPDATE editorial_queue SET status = 'in_review', user_id = $1, task_id = $2, updated_at = NOW()
+           WHERE id = $3`,
+          [userId ? parseInt(userId) : null, taskId || null, record.id]
+        );
+        console.log(`   ✅ تم تحديث السجل ${record.id} للوحدة ${record.media_unit_name} إلى in_review`);
+      }
 
       await query(
         `UPDATE raw_data SET fetch_status = 'processed' WHERE id = $1`,
