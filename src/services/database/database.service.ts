@@ -154,6 +154,49 @@ export class SourceService {
     );
     return result.rows[0] || null;
   }
+
+  /**
+   * البحث عن مصدر بالـ slug — أو إنشاؤه إذا ما كان موجود
+   * يُستخدم لربط الأخبار القادمة من NewsDesk API بمصادرها
+   */
+  static async findOrCreateBySlug(slug: string, name: string, baseUrl: string): Promise<Source> {
+    // أولاً: البحث بالـ slug
+    const existing = await query(
+      `SELECT * FROM sources WHERE slug = $1 LIMIT 1`,
+      [slug]
+    );
+    if (existing.rows.length > 0) {
+      return existing.rows[0];
+    }
+
+    // ثانياً: البحث بالاسم (للمصادر القديمة بدون slug)
+    const byName = await query(
+      `SELECT * FROM sources WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1`,
+      [name]
+    );
+    if (byName.rows.length > 0) {
+      // تحديث الـ slug للمصدر الموجود
+      await query(`UPDATE sources SET slug = $1 WHERE id = $2`, [slug, byName.rows[0].id]);
+      return { ...byName.rows[0], slug };
+    }
+
+    // ثالثاً: إنشاء مصدر جديد
+    const result = await query(
+      `INSERT INTO sources (source_type_id, url, name, slug, is_active, created_at) 
+       VALUES ($1, $2, $3, $4, true, NOW()) 
+       RETURNING *`,
+      [2, baseUrl, name, slug] // source_type_id = 2 (API)
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * البحث عن مصدر بالـ slug
+   */
+  static async getBySlug(slug: string): Promise<Source | null> {
+    const result = await query('SELECT * FROM sources WHERE slug = $1', [slug]);
+    return result.rows[0] || null;
+  }
 }
 
 /**
@@ -182,13 +225,16 @@ export class RawDataService {
   static async create(data: Omit<RawData, 'id' | 'fetched_at'>): Promise<RawData> {
     const result = await query(
       `INSERT INTO raw_data 
-       (source_id, source_type_id, category_id, url, title, content, image_url, tags, fetch_status, pub_date, fetched_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) 
+       (source_id, source_type_id, category_id, geo_scope_id, url, title, content, image_url, tags, fetch_status, pub_date,
+        summary, authors, language, source_slug, geo_scope_slug, ai_confidence, newsdesk_article_id, category_slug,
+        fetched_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW()) 
        RETURNING *`,
       [
-        data.source_id,
+        data.source_id || null,
         data.source_type_id,
         data.category_id,
+        data.geo_scope_id || null,
         data.url,
         data.title,
         data.content,
@@ -196,6 +242,14 @@ export class RawDataService {
         data.tags,
         data.fetch_status || 'pending',
         data.pub_date || null,
+        data.summary || '',
+        data.authors || '',
+        data.language || 'ar',
+        data.source_slug || '',
+        data.geo_scope_slug || '',
+        data.ai_confidence || null,
+        data.newsdesk_article_id || null,
+        data.category_slug || '',
       ]
     );
     return result.rows[0];
@@ -219,6 +273,17 @@ export class RawDataService {
     const result = await query(
       'SELECT id FROM raw_data WHERE url = $1 LIMIT 1',
       [url]
+    );
+    return result.rows.length > 0;
+  }
+
+  /**
+   * التحقق من وجود خبر بـ newsdesk_article_id
+   */
+  static async existsByNewsDeskId(newsDeskId: number): Promise<boolean> {
+    const result = await query(
+      'SELECT id FROM raw_data WHERE newsdesk_article_id = $1 LIMIT 1',
+      [newsDeskId]
     );
     return result.rows.length > 0;
   }
@@ -269,6 +334,44 @@ export class RawDataService {
       [category_id, id]
     );
     return result.rows[0] || null;
+  }
+}
+
+/**
+ * GeoScope Service
+ * خدمة النطاقات الجغرافية
+ */
+export class GeoScopeService {
+  /**
+   * جلب كل النطاقات الجغرافية
+   */
+  static async getAll(): Promise<any[]> {
+    const result = await query('SELECT * FROM geographic_scopes WHERE is_active = true ORDER BY sort_order');
+    return result.rows;
+  }
+
+  /**
+   * البحث بالـ slug
+   */
+  static async getBySlug(slug: string): Promise<any | null> {
+    const result = await query('SELECT * FROM geographic_scopes WHERE slug = $1', [slug]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * البحث بالـ ID
+   */
+  static async getById(id: number): Promise<any | null> {
+    const result = await query('SELECT * FROM geographic_scopes WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * فلترة حسب scope_level
+   */
+  static async getByLevel(level: string): Promise<any[]> {
+    const result = await query('SELECT * FROM geographic_scopes WHERE scope_level = $1 AND is_active = true ORDER BY sort_order', [level]);
+    return result.rows;
   }
 }
 

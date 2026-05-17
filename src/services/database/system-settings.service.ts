@@ -82,7 +82,7 @@ export class SystemSettingsService {
     classifier_enabled: boolean;
     flow_enabled: boolean;
     scheduler_interval_minutes: number;
-    articles_per_source: number;
+    articles_per_source: number; // حجم الصفحة من الـ API
   }> {
     const result = await query(
       `SELECT key, value FROM system_settings 
@@ -94,7 +94,7 @@ export class SystemSettingsService {
       classifier_enabled: true,
       flow_enabled: true,
       scheduler_interval_minutes: 15,
-      articles_per_source: 20,
+      articles_per_source: 20, // حجم الصفحة من الـ API
     };
 
     for (const row of result.rows) {

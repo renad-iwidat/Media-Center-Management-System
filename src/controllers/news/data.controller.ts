@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from 'express';
-import { SourceService, RawDataService, CategoryService } from '../../services/database/database.service';
+import { SourceService, RawDataService, CategoryService, GeoScopeService } from '../../services/database/database.service';
 import { query } from '../../config/database';
 
 /**
@@ -73,21 +73,24 @@ export async function getMediaUnits(req: Request, res: Response): Promise<void> 
 
 /**
  * الحصول على الأخبار ذات المحتوى الناقص
- * الآن يجلب من editorial_queue بحالة 'incomplete'
  */
 export async function getIncompleteArticles(_req: Request, res: Response): Promise<void> {
   try {
     const queryStr = `
       SELECT DISTINCT ON (rd.id)
-        rd.id, rd.title, rd.content, rd.url, rd.image_url,
-        rd.fetch_status, rd.fetched_at, rd.category_id,
-        rd.is_incomplete,
+        rd.id, rd.title, rd.content, rd.summary, rd.url, rd.image_url,
+        rd.fetch_status, rd.fetched_at, rd.category_id, rd.geo_scope_id,
+        rd.is_incomplete, rd.language, rd.authors,
         c.name  AS category_name,
         c.flow  AS category_flow,
-        s.name  AS source_name
+        s.name  AS source_name,
+        gs.name_ar AS geo_name_ar,
+        gs.slug AS geo_slug,
+        gs.scope_level AS geo_scope_level
       FROM raw_data rd
       LEFT JOIN categories  c  ON rd.category_id = c.id
       LEFT JOIN sources     s  ON rd.source_id   = s.id
+      LEFT JOIN geographic_scopes gs ON rd.geo_scope_id = gs.id
       WHERE rd.is_incomplete = true
         AND rd.fetch_status = 'processed'
       ORDER BY rd.id, rd.fetched_at DESC
@@ -106,7 +109,7 @@ export async function getIncompleteArticles(_req: Request, res: Response): Promi
 }
 
 /**
- * جلب خبر واحد بالـ ID مع تفاصيل المصدر والفئة
+ * جلب خبر واحد بالـ ID مع تفاصيل المصدر والفئة والمنطقة
  */
 export async function getArticleById(req: Request, res: Response): Promise<void> {
   try {
@@ -116,10 +119,15 @@ export async function getArticleById(req: Request, res: Response): Promise<void>
       return;
     }
     const result = await query(
-      `SELECT rd.*, c.name as category_name, c.flow as category_flow, s.name as source_name
+      `SELECT rd.*, 
+              c.name as category_name, c.slug as category_slug_local, c.flow as category_flow,
+              s.name as source_name, s.slug as source_slug_local,
+              gs.slug as geo_slug, gs.name_ar as geo_name_ar, gs.name_en as geo_name_en, 
+              gs.scope_level as geo_scope_level, gs.country_code as geo_country_code
        FROM raw_data rd
        LEFT JOIN categories c ON rd.category_id = c.id
        LEFT JOIN sources s ON rd.source_id = s.id
+       LEFT JOIN geographic_scopes gs ON rd.geo_scope_id = gs.id
        WHERE rd.id = $1`,
       [articleId]
     );
@@ -721,5 +729,70 @@ export async function updateArticleCategory(req: Request, res: Response): Promis
       message: 'فشل تحديث التصنيف',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
+  }
+}
+
+
+/**
+ * الحصول على جميع النطاقات الجغرافية
+ * GET /api/data/geo-scopes
+ * GET /api/data/geo-scopes?scope_level=local
+ */
+export async function getGeoScopes(req: Request, res: Response): Promise<void> {
+  try {
+    const scopeLevel = req.query.scope_level as string | undefined;
+    let data;
+    
+    if (scopeLevel) {
+      data = await GeoScopeService.getByLevel(scopeLevel);
+    } else {
+      data = await GeoScopeService.getAll();
+    }
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error('❌ خطأ في جلب النطاقات الجغرافية:', error);
+    res.status(500).json({ success: false, message: 'فشل جلب النطاقات الجغرافية' });
+  }
+}
+
+/**
+ * الحصول على الأخبار حسب النطاق الجغرافي
+ * GET /api/data/articles/geo-scope/:slug
+ */
+export async function getArticlesByGeoScope(req: Request, res: Response): Promise<void> {
+  try {
+    const slug = req.params.slug;
+    const limit = parseInt(req.query.limit as string) || 100;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const result = await query(
+      `SELECT rd.*, 
+              c.name as category_name, c.flow as category_flow,
+              s.name as source_name,
+              gs.name_ar as geo_name_ar, gs.scope_level as geo_scope_level
+       FROM raw_data rd
+       LEFT JOIN categories c ON rd.category_id = c.id
+       LEFT JOIN sources s ON rd.source_id = s.id
+       LEFT JOIN geographic_scopes gs ON rd.geo_scope_id = gs.id
+       WHERE gs.slug = $1
+       ORDER BY rd.fetched_at DESC
+       LIMIT $2 OFFSET $3`,
+      [slug, limit, offset]
+    );
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      geo_scope: slug,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error('❌ خطأ في جلب أخبار المنطقة:', error);
+    res.status(500).json({ success: false, message: 'فشل جلب أخبار المنطقة' });
   }
 }

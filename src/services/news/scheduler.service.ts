@@ -7,7 +7,7 @@
  * 2. معالجة (تصنيف + فحص اكتمال + تنظيف + توجيه) → ستيتوس 'processed' أو 'published'
  */
 
-import { rssPipelineService } from './rss-pipeline.service';
+import { newsPipelineService } from './news-pipeline.service';
 import { articleSaverService } from './article-saver.service';
 import FlowRouterService from './flow-router.service';
 import { SystemSettingsService } from '../database/system-settings.service';
@@ -158,10 +158,10 @@ class SchedulerService {
       }
 
       const articlesPerSource = await SystemSettingsService.getNumber('articles_per_source', 20);
-      console.log(`📰 عدد الأخبار لكل مصدر: ${articlesPerSource} (من الداتابيس)`);
+      console.log(`📰 حجم الصفحة: ${articlesPerSource} مقالة (من الداتابيس)`);
 
       console.log('\n📡 المرحلة 1: سحب الأخبار وحفظها...');
-      const pipelineResult = await rssPipelineService.runPipeline(articlesPerSource);
+      const pipelineResult = await newsPipelineService.runPipeline(articlesPerSource);
       console.log(`   ✅ ${pipelineResult.newArticles.length} خبر جديد`);
 
       if (pipelineResult.newArticles.length > 0) {

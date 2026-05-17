@@ -22,6 +22,8 @@ import {
   deleteArticle,
   deleteIncompleteArticles,
   deleteAllArticles,
+  getGeoScopes,
+  getArticlesByGeoScope,
 } from '../../controllers/news/data.controller';
 
 const router = Router();
@@ -329,5 +331,9 @@ router.delete('/articles/incomplete', deleteIncompleteArticles);
  *                       type: number
  */
 router.delete('/articles', deleteAllArticles);
+
+// النطاقات الجغرافية
+router.get('/geo-scopes', getGeoScopes);
+router.get('/articles/geo-scope/:slug', getArticlesByGeoScope);
 
 export default router;

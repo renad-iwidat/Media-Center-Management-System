@@ -15,6 +15,7 @@ export interface Source {
   source_type_id: number;
   url: string;
   name: string;
+  slug: string;
   is_active: boolean;
   created_at: Date;
   default_category_id: number;
@@ -31,20 +32,43 @@ export interface Category {
   is_active: boolean;
 }
 
+// GeoScope - النطاقات الجغرافية
+export interface GeoScope {
+  id: number;
+  slug: string;
+  name_ar: string;
+  name_en: string;
+  scope_level: string;    // local, regional, international
+  country_code: string | null;
+  region_slug: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
 // RawData - البيانات الخام
 export interface RawData {
   id: number;
   source_id: number;
   source_type_id: number;
   category_id: number | null;
+  geo_scope_id?: number | null;  // FK → geographic_scopes
   url: string;
   title: string;
-  content: string;
+  content: string;           // النص الكامل للخبر
   image_url: string;
   tags: string[];
   fetch_status: string;
   fetched_at: Date;
-  pub_date: Date | null;  // تاريخ نشر الخبر على الموقع الأصلي
+  pub_date: Date | null;
+  // ── حقول جديدة من NewsDesk API ──────────────────────────────
+  summary?: string;           // الملخص القصير
+  authors?: string;           // الكاتب
+  language?: string;          // اللغة (ar, en, he)
+  source_slug?: string;       // slug المصدر في NewsDesk API
+  geo_scope_slug?: string;    // النطاق الجغرافي (slug)
+  ai_confidence?: number;     // ثقة التصنيف (0-1)
+  newsdesk_article_id?: number; // ID المقالة في NewsDesk API
+  category_slug?: string;     // slug التصنيف
 }
 
 // EditorialPolicy - سياسات التحرير

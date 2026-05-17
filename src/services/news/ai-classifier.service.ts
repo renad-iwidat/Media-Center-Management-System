@@ -27,7 +27,8 @@ export interface ClassificationResult {
 }
 
 /**
- * خريطة التصنيفات من الاسم إلى الـ ID
+ * خريطة التصنيفات من الاسم العربي إلى الـ ID
+ * (تطابق جدول categories الحالي بالداتابيس)
  */
 const CATEGORY_MAP: Record<string, number> = {
   'سياسي': 11,
@@ -41,6 +42,25 @@ const CATEGORY_MAP: Record<string, number> = {
   'دولي': 2,
   'محلي': 1,
 };
+
+/**
+ * تحويل slug تصنيف من الـ API إلى category_id المحلي
+ * يبحث بجدول categories بالـ slug — إذا ما لقى يرجع null
+ * (الخبر يتخزن بـ category_slug ويبقى category_id = null لحد ما يتصنف)
+ */
+export async function mapApiCategoryToLocalId(apiSlug: string | undefined | null): Promise<number | null> {
+  if (!apiSlug) return null;
+  
+  try {
+    const { CategoryService } = await import('../database/database.service');
+    const category = await CategoryService.getBySlug(apiSlug);
+    if (category) return category.id;
+  } catch {
+    // تجاهل — ما لقى
+  }
+  
+  return null;
+}
 
 /**
  * فئة AI Classifier Service
@@ -90,13 +110,12 @@ USER:
     const categories = Object.keys(CATEGORY_MAP);
     
     for (const category of categories) {
-      // البحث الدقيق: كلمة كاملة أو جزء من النتيجة
       if (cleanResult.includes(category.toLowerCase())) {
         return category;
       }
     }
 
-    // إذا لم نجد تصنيف، نرجع محلي كقيمة افتراضية
+    // fallback
     console.warn(`⚠️  لم يتم العثور على تصنيف معروف في النتيجة: "${result}"`);
     return 'غير مصنف';
   }

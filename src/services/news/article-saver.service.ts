@@ -1,13 +1,16 @@
 /**
  * Article Saver Service
- * حفظ الأخبار الجديدة في الداتابيس — بدون تصنيف AI
+ * حفظ الأخبار الجديدة في الداتابيس
  * 
- * المسؤولية: فقط حفظ الأخبار بستيتوس 'fetched'
+ * المسؤولية: حفظ الأخبار بستيتوس 'fetched'
  * التصنيف والتنظيف والتوجيه = مسؤولية FlowRouterService
+ * 
+ * يدعم المقالات القادمة من NewsDesk API (مصنفة مسبقاً بالـ AI)
  */
 
-import { RawDataService } from '../database/database.service';
-import { ArticleToSave } from './rss-pipeline.service';
+import { RawDataService, CategoryService, GeoScopeService } from '../database/database.service';
+import { ArticleToSave } from './news-pipeline.service';
+import { mapApiCategoryToLocalId } from './ai-classifier.service';
 
 export interface ArticleWithSource extends ArticleToSave {}
 
@@ -31,8 +34,8 @@ class ArticleSaverService {
   /**
    * حفظ مجموعة من الأخبار في الداتابيس
    * - فحص التكرار بالعنوان/المحتوى
-   * - حفظ بستيتوس 'fetched' مع category_id الافتراضي (أو null)
-   * - بدون تصنيف AI — التصنيف يصير لاحقاً بمرحلة المعالجة
+   * - حفظ بستيتوس 'fetched' مع category_id (من AI أو الافتراضي)
+   * - المقالات من NewsDesk API تأتي مصنفة مسبقاً — نحاول ربط التصنيف
    */
   async saveArticles(articles: ArticleToSave[]): Promise<SaveResult> {
     if (articles.length === 0) {
@@ -63,27 +66,63 @@ class ArticleSaverService {
       const batch = toSave.slice(i, i + DB_SAVE_BATCH);
 
       const results = await Promise.allSettled(
-        batch.map((article) => {
-          // نستخدم الـ default_category_id إذا موجود، وإلا null
-          const categoryId = article.source.default_category_id || null;
+        batch.map(async (article) => {
+          // ربط التصنيف: أولاً من الـ API (ai_category_slug) → ثانياً default
+          let categoryId: number | null = null;
+          
+          // أولاً: بحث بالـ slug من الـ API بجدول categories
+          if (article.ai_category_slug) {
+            categoryId = await mapApiCategoryToLocalId(article.ai_category_slug);
+          }
+          
+          // ثانياً: fallback للـ default_category_id من المصدر
+          if (!categoryId && article.source.default_category_id) {
+            categoryId = article.source.default_category_id;
+          }
+
+          // categoryId يبقى null إذا ما لقى تطابق → FlowRouter بيصنفه بالـ AI المحلي لاحقاً
+          // بس الـ category_slug محفوظ بالداتابيس للمرجعية
+
+          // ربط النطاق الجغرافي
+          let geoScopeId: number | null = null;
+          if (article.geo_scope_slug) {
+            try {
+              const geoScope = await GeoScopeService.getBySlug(article.geo_scope_slug);
+              if (geoScope) geoScopeId = geoScope.id;
+            } catch { /* تجاهل */ }
+          }
+
           return RawDataService.create({
-            source_id: article.source.id,
+            source_id: article.source.id, // مربوط بجدول sources (تم ربطه بالـ pipeline)
             source_type_id: article.source.source_type_id,
             category_id: categoryId,
+            geo_scope_id: geoScopeId,
             url: article.link,
             title: article.title,
-            content: article.description,
+            content: article.full_text || article.description, // النص الكامل (أو الملخص إذا ما في نص كامل)
             image_url: article.image_url || '',
             tags: article.tags || [],
             fetch_status: 'fetched',
             pub_date: parsePubDate(article.pubDate),
+            // ── الحقول الجديدة ──────────────────────────────
+            summary: article.summary || article.description || '',
+            authors: article.authors || '',
+            language: article.language || 'ar',
+            source_slug: article.source_slug || '',
+            geo_scope_slug: article.geo_scope_slug || '',
+            ai_confidence: article.ai_confidence || undefined,
+            newsdesk_article_id: article.newsdesk_article_id || undefined,
+            category_slug: article.ai_category_slug || '',
           });
         })
       );
 
       for (const r of results) {
         if (r.status === 'fulfilled') savedCount++;
-        else failedCount++;
+        else {
+          failedCount++;
+          console.log(`   ❌ خطأ حفظ: ${r.reason?.message || r.reason}`);
+        }
       }
     }
 

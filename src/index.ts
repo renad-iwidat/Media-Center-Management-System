@@ -27,6 +27,7 @@ import schedulerRoutes from './routes/news/scheduler.routes';
 import { chatRoutes, ttsRoutes, sttRoutes, audioExtractionRoutes, videoToTextRoutes, analyticsRoutes } from './routes/ai-hub';
 import ideasRoutes from './routes/ai-hub/ideas.routes';
 import uploadedFilesRoutes from './routes/manual-input/uploaded-files.routes';
+import newsDeskProxyRoutes from './routes/news/newsdesk-proxy.routes';
 
 const app = express();
 
@@ -296,6 +297,7 @@ app.use('/api/flow', (req, res, next) => {
 }, flowRoutes);
 app.use('/api/settings', systemSettingsRoutes);
 app.use('/api/scheduler', schedulerRoutes);
+app.use('/api/newsdesk', newsDeskProxyRoutes);
 
 // 404 Handler
 app.use((req, res) => {
