@@ -95,6 +95,22 @@ export default function SocialMedia({ mediaUnitId }: { mediaUnitId: number | nul
   const [showDropdown, setShowDropdown] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
+  // ── prefill from قسم النشر ──
+  useEffect(() => {
+    const prefill = localStorage.getItem('ai_prefill_content');
+    if (prefill) {
+      try {
+        const { title, content: prefillContent } = JSON.parse(prefill);
+        const text = title ? `${title}\n\n${prefillContent}` : prefillContent;
+        if (text) {
+          setContent(text);
+          setInputMode('MANUAL');
+        }
+      } catch {}
+      localStorage.removeItem('ai_prefill_content');
+    }
+  }, []);
+
   // تعريف fetchArticles قبل استخدامها في useEffect
   const fetchArticles = useCallback(async () => {
     setIsLoadingArticles(true);

@@ -78,9 +78,9 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'overview',   label: 'نظرة عامة',         description: 'ملخص الأخبار والإحصائيات',    icon: LayoutDashboard, group: 'news' },
   { id: 'sources',    label: 'مصادر المحتوى',      description: 'إدارة مصادر الأخبار',         icon: Rss,            group: 'news' },
   { id: 'incomplete', label: 'أخبار غير مكتملة',   description: 'أخبار تحتاج إكمال',           icon: AlertTriangle,  group: 'news' },
-  { id: 'queue',      label: 'ستوديو التحرير',     description: 'تحرير ومراجعة الأخبار',       icon: FileEdit,       group: 'news' },
+  { id: 'queue',      label: 'قسم التحرير',         description: 'تحرير ومراجعة الأخبار',       icon: FileEdit,       group: 'news' },
   { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
-  { id: 'published',  label: 'الأرشيف المنشور',    description: 'الأخبار المنشورة سابقاً',     icon: CheckCircle,    group: 'news' },
+  { id: 'published',  label: 'قسم النشر',           description: 'الأخبار المنشورة سابقاً',     icon: CheckCircle,    group: 'news' },
   { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
   { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },
   { id: 'editing',    label: 'التحرير الصحفي',     description: 'إعادة صياغة وتلخيص',          icon: PenTool,        group: 'ai' },
@@ -569,7 +569,10 @@ export default function App() {
               {activeSection === 'incomplete' && <IncompleteView unitId={selectedMediaUnitId} />}
               {activeSection === 'queue'      && <QueueView unitId={selectedMediaUnitId} />}
               {activeSection === 'policies'   && <PoliciesView unitId={selectedMediaUnitId} />}
-              {activeSection === 'published'  && <PublishedView unitId={selectedMediaUnitId} />}
+              {activeSection === 'published'  && <PublishedView unitId={selectedMediaUnitId} onNavigateToAI={(section, content) => {
+                localStorage.setItem('ai_prefill_content', JSON.stringify(content));
+                setActiveSection(section as SectionId);
+              }} />}
 
               {/* AI Views */}
               {activeSection === 'ai-dashboard' && <AIDashboard setActiveSection={setActiveSection} />}

@@ -49,6 +49,21 @@ export default function ChatInterface() {
   const [resetTime, setResetTime] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // ── prefill from قسم النشر ──
+  useEffect(() => {
+    const prefill = localStorage.getItem('ai_prefill_content');
+    if (prefill) {
+      try {
+        const { title, content } = JSON.parse(prefill);
+        const text = title ? `هذا خبر بعنوان "${title}":\n\n${content}\n\nكيف يمكنني مساعدتك بهذا الخبر؟` : content;
+        if (text) {
+          setInput(text);
+        }
+      } catch {}
+      localStorage.removeItem('ai_prefill_content');
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     

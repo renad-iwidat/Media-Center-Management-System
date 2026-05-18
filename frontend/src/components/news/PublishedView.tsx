@@ -1,11 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, Search, Zap, Eye, X } from "lucide-react";
+import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, Lightbulb, Newspaper, MessageSquare } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { EmptyState } from "../shared/EmptyState";
 
-export function PublishedView({ unitId }: { unitId: number | null }) {
+interface PublishedViewProps {
+  unitId: number | null;
+  onNavigateToAI?: (section: string, content: { title: string; content: string }) => void;
+}
+
+export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const [items, setItems] = useState<any[]>([]);
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +137,7 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
 
         {/* Table */}
         {filteredItems.length === 0 ? (
-          <EmptyState icon={CheckCircle} title="لا يوجد محتوى منشور" description="سيظهر هنا المحتوى بعد الموافقة عليه من ستوديو التحرير." />
+          <EmptyState icon={CheckCircle} title="لا يوجد محتوى منشور" description="سيظهر هنا المحتوى بعد الموافقة عليه من قسم التحرير." />
         ) : (
           <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -300,6 +305,65 @@ export function PublishedView({ unitId }: { unitId: number | null }) {
                     className="text-xs text-[#3d6a8a] hover:text-[#2d5570] break-all transition-colors">
                     {selectedItem.url}
                   </a>
+                </div>
+              )}
+
+              {/* AI Actions */}
+              {onNavigateToAI && (
+                <div>
+                  <p className="text-[10px] text-[#94a3b8] font-bold uppercase mb-3">أدوات الذكاء الاصطناعي</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button
+                      onClick={() => {
+                        onNavigateToAI('editing', { title: selectedItem.title || '', content: selectedItem.content || '' });
+                        setSelectedItem(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-bold text-[#4A7C9E] transition-all"
+                    >
+                      <PenTool size={14} />
+                      <span>إعادة صياغة</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigateToAI('social', { title: selectedItem.title || '', content: selectedItem.content || '' });
+                        setSelectedItem(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl text-xs font-bold text-[#FF9F4A] transition-all"
+                    >
+                      <Share2 size={14} />
+                      <span>منشور اجتماعي</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigateToAI('ideas', { title: selectedItem.title || '', content: selectedItem.content || '' });
+                        setSelectedItem(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-xs font-bold text-amber-600 transition-all"
+                    >
+                      <Lightbulb size={14} />
+                      <span>توليد أفكار</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigateToAI('newsroom', { title: selectedItem.title || '', content: selectedItem.content || '' });
+                        setSelectedItem(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl text-xs font-bold text-teal-600 transition-all"
+                    >
+                      <Newspaper size={14} />
+                      <span>نشرة إخبارية</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigateToAI('chat', { title: selectedItem.title || '', content: selectedItem.content || '' });
+                        setSelectedItem(null);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-xl text-xs font-bold text-pink-600 transition-all"
+                    >
+                      <MessageSquare size={14} />
+                      <span>مساعد AI</span>
+                    </button>
+                  </div>
                 </div>
               )}
 

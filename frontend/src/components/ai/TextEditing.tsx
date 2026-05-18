@@ -91,6 +91,22 @@ export default function TextEditing({ mediaUnitId }: { mediaUnitId?: number | nu
   const [isLoading, setIsLoading] = useState(false);
   const [copied,    setCopied]    = useState(false);
 
+  // ── prefill from قسم النشر ──
+  useEffect(() => {
+    const prefill = localStorage.getItem('ai_prefill_content');
+    if (prefill) {
+      try {
+        const { title, content } = JSON.parse(prefill);
+        const text = title ? `${title}\n\n${content}` : content;
+        if (text) {
+          setManualText(text);
+          setInputMode('MANUAL');
+        }
+      } catch {}
+      localStorage.removeItem('ai_prefill_content');
+    }
+  }, []);
+
   // ── fetch articles - مع useCallback لمنع إعادة التصيير ──
   const fetchArticles = useCallback(async () => {
     setIsLoadingDB(true);

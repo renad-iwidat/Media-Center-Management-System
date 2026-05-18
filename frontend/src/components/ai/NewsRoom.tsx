@@ -71,6 +71,26 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
     fetchNews();
   }, [mediaUnitId]);
 
+  // ── prefill from قسم النشر ──
+  useEffect(() => {
+    const prefill = localStorage.getItem('ai_prefill_content');
+    if (prefill) {
+      try {
+        const { title, content } = JSON.parse(prefill);
+        if (title || content) {
+          const newItem: NewsItem = {
+            id: `prefill_${Date.now()}`,
+            title: title || 'بدون عنوان',
+            content: content || '',
+            selected: true,
+          };
+          setNewsItems(prev => [newItem, ...prev]);
+        }
+      } catch {}
+      localStorage.removeItem('ai_prefill_content');
+    }
+  }, []);
+
   useLocalStorageBatch([
     { key: 'newsRoom_activeMode', value: activeMode },
     { key: 'newsRoom_timeOfDay', value: timeOfDay },

@@ -156,7 +156,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       // إظهار رسالة نجاح حسب نوع الفلو
       const message = response.flowType === 'automated' 
         ? 'تم إكمال الخبر ونشره مباشرة ✅'
-        : 'تم حفظ الخبر وإرساله لستوديو التحرير';
+        : 'تم حفظ الخبر وإرساله لقسم التحرير';
       setNotification({ type: 'success', message });
     } catch (err) {
       setNotification({ type: 'error', message: 'حدث خطأ أثناء الحفظ' });

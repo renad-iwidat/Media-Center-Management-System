@@ -558,7 +558,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       <div className="space-y-6">
       <div className="flex justify-between items-end mb-2">
         <div>
-          <h3 className="text-lg font-bold text-[#1e293b] mb-1">ستوديو التحرير</h3>
+          <h3 className="text-lg font-bold text-[#1e293b] mb-1">قسم التحرير</h3>
           <p className="text-[#64748b] text-sm">الأخبار المعلقة بانتظار مراجعة المحرر.</p>
         </div>
       </div>
