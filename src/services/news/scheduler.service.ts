@@ -183,6 +183,19 @@ class SchedulerService {
         const flowResult = await FlowRouterService.processNewArticles();
         console.log(`   ✅ تمت معالجة ${flowResult.processedCount} خبر`);
         console.log(`      🤖 تصنيف: ${flowResult.classifiedCount} | ⚡ أوتو: ${flowResult.automatedCount} | 📝 تحرير: ${flowResult.editorialCount} | ⚠️ ناقص: ${flowResult.incompleteCount}`);
+
+        // ══════════════════════════════════════════════════════════════════════
+        // المرحلة 3: نشر الأخبار الأوتوماتيكية العالقة
+        // أي خبر أوتوماتيكي مكتمل بقي في editorial_queue بحالة pending
+        // يتم نشره تلقائياً — لا يجب أن يبقى بقسم التحرير
+        // ══════════════════════════════════════════════════════════════════════
+        console.log('\n⚡ المرحلة 3: نشر الأخبار الأوتوماتيكية العالقة...');
+        const autoPublishResult = await FlowRouterService.autoPublishStuckItems();
+        if (autoPublishResult.published > 0) {
+          console.log(`   ✅ تم نشر ${autoPublishResult.published} خبر أوتوماتيكي عالق`);
+        } else {
+          console.log(`   ✅ لا يوجد أخبار أوتوماتيكية عالقة`);
+        }
       } else {
         console.log('\n⏸️  المرحلة 2: المعالجة متوقفة (flow_enabled = false) — تخطي');
       }

@@ -7,16 +7,57 @@ import { aiClassifierService } from './ai-classifier.service';
  * FlowRouterService
  * معالجة الأخبار الجديدة (fetched) وتوجيهها للمسار الصحيح
  *
- * الفلو الجديد — كل الأخبار تمر عبر editorial_queue:
+ * قاعدة التوجيه (حسب التصنيف):
+ * ─────────────────────────────────────────────
+ * سياسي / محلي / دولي  →  editorial (قسم التحرير)
+ * اقتصاد / رياضة / صحة / علوم وتكنولوجيا / فن و ثقافة / بيئة / غذاء  →  automated (نشر أوتوماتيكي)
+ * ─────────────────────────────────────────────
+ *
+ * الفلو:
  * 1. تصنيف AI (لكل الأخبار بدون تصنيف)
  * 2. تنظيف النص
  * 3. فحص اكتمال المحتوى
- * 4. التوزيع على كل media_units النشطة عبر editorial_queue
+ * 4. التوزيع على كل media_units عبر editorial_queue
  *    - ناقص → status = 'incomplete' (ينتظر المحرر)
  *    - مكتمل + automated → status = 'pending' → 'approved' تلقائياً → published_items
  *    - مكتمل + editorial → status = 'pending' (ينتظر المحرر)
  * 5. تحديث fetch_status
  */
+
+/**
+ * ═══════════════════════════════════════════════════════════════════
+ * MAP التوجيه — التصنيف هو اللي بيحدد الفلو
+ * 
+ * editorial = يروح لقسم التحرير (المحرر لازم يوافق)
+ * automated = ينشر أوتوماتيكي بدون تدخل المحرر
+ * ═══════════════════════════════════════════════════════════════════
+ */
+const CATEGORY_FLOW_MAP: Record<number, 'automated' | 'editorial'> = {
+  // ── تحريري (editorial) ──────────────────────
+  1:  'editorial',   // محلي
+  2:  'editorial',   // دولي
+  11: 'editorial',   // سياسي
+
+  // ── أوتوماتيكي (automated) ──────────────────
+  3:  'automated',   // اقتصاد
+  4:  'automated',   // رياضة
+  5:  'automated',   // صحة
+  6:  'automated',   // علوم وتكنولوجيا
+  7:  'automated',   // فن و ثقافة
+  9:  'automated',   // بيئة
+  10: 'automated',   // غذاء
+};
+
+/** الفلو الافتراضي لأي تصنيف غير معروف */
+const DEFAULT_FLOW: 'automated' | 'editorial' = 'editorial';
+
+/**
+ * تحديد الفلو من category_id مباشرة
+ */
+function getFlowByCategory(categoryId: number | null): 'automated' | 'editorial' {
+  if (!categoryId) return DEFAULT_FLOW;
+  return CATEGORY_FLOW_MAP[categoryId] || DEFAULT_FLOW;
+}
 
 /**
  * source_type_ids الخاصة بالإدخال اليدوي (Manual Input)
@@ -46,7 +87,6 @@ interface RawDataItem {
 interface Category {
   id: number;
   name: string;
-  flow: 'automated' | 'editorial';
   is_active: boolean;
 }
 
@@ -77,6 +117,81 @@ export class FlowRouterService {
    * content_type_id للأخبار — ثابت = 1
    */
   private readonly NEWS_CONTENT_TYPE_ID = 1;
+
+  /**
+   * نشر الأخبار الأوتوماتيكية العالقة في editorial_queue
+   * 
+   * هذه الدالة تُستدعى دورياً (من الـ scheduler) لضمان عدم بقاء
+   * أي خبر أوتوماتيكي مكتمل في قسم التحرير.
+   * 
+   * تعالج:
+   * - أخبار بتصنيف automated + حالة pending + محتوى مكتمل
+   * - تنشرها مباشرة بدون انتظار المحرر
+   */
+  async autoPublishStuckItems(): Promise<{ published: number; errors: number }> {
+    let published = 0;
+    let errors = 0;
+
+    try {
+      // التصنيفات الأوتوماتيكية (من CATEGORY_FLOW_MAP)
+      const automatedCategoryIds = Object.entries(CATEGORY_FLOW_MAP)
+        .filter(([_, flow]) => flow === 'automated')
+        .map(([id]) => parseInt(id));
+
+      // جلب الأخبار الأوتوماتيكية العالقة (pending + مكتملة + غير منشورة)
+      const stuckItems = await query(
+        `SELECT eq.id as queue_id, eq.media_unit_id, eq.raw_data_id,
+                rd.title, rd.content, rd.tags
+         FROM editorial_queue eq
+         JOIN raw_data rd ON eq.raw_data_id = rd.id
+         WHERE rd.category_id = ANY($1)
+           AND eq.status = 'pending'
+           AND LENGTH(rd.content) >= $2
+           AND NOT EXISTS (
+             SELECT 1 FROM published_items pi 
+             WHERE pi.raw_data_id = eq.raw_data_id AND pi.media_unit_id = eq.media_unit_id
+           )
+         ORDER BY eq.created_at ASC
+         LIMIT 200`,
+        [automatedCategoryIds, this.MIN_CONTENT_LENGTH]
+      );
+
+      if (stuckItems.rows.length === 0) return { published: 0, errors: 0 };
+
+      console.log(`🔄 [Auto-Publish] وجدنا ${stuckItems.rows.length} خبر أوتوماتيكي عالق — جاري النشر...`);
+
+      for (const item of stuckItems.rows) {
+        try {
+          // تحديث الحالة إلى approved
+          await query(
+            `UPDATE editorial_queue SET status = 'approved', updated_at = NOW() WHERE id = $1`,
+            [item.queue_id]
+          );
+
+          // نشر في published_items
+          await query(
+            `INSERT INTO published_items 
+             (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())`,
+            [item.media_unit_id, item.raw_data_id, item.queue_id, this.NEWS_CONTENT_TYPE_ID, item.title, item.content, item.tags || []]
+          );
+
+          published++;
+        } catch (error) {
+          errors++;
+          console.error(`  ❌ [Auto-Publish] خطأ في نشر queue_id=${item.queue_id}:`, error);
+        }
+      }
+
+      if (published > 0) {
+        console.log(`✅ [Auto-Publish] تم نشر ${published} خبر أوتوماتيكي (أخطاء: ${errors})`);
+      }
+    } catch (error) {
+      console.error('❌ [Auto-Publish] خطأ عام:', error);
+    }
+
+    return { published, errors };
+  }
 
   /**
    * معالجة جميع الأخبار الجديدة (fetched)
@@ -168,26 +283,23 @@ export class FlowRouterService {
           await this.markAsIncomplete(article.id, !isComplete);
 
           // ── ب. تحديد نوع الفلو ────────────────────────────────────────
-          const category = article.category_id ? categoryMap.get(article.category_id) : null;
+          // الفلو يتحدد من التصنيف مباشرة عبر CATEGORY_FLOW_MAP
           let flowType: 'automated' | 'editorial' = 'editorial'; // افتراضي
 
           // الإدخال اليدوي → تحرير إجباري (دائماً)
           if (USER_INPUT_SOURCE_TYPE_IDS.has(article.source_type_id)) {
             flowType = 'editorial';
             console.log(`📝 الخبر ${article.id} — إدخال يدوي → تحرير إجباري`);
-          } else if (category && category.is_active) {
-            // استخدام flow من التصنيف فقط إذا كان التصنيف موجود وفعال
-            flowType = category.flow;
-            console.log(`   ${flowType === 'automated' ? '⚡' : '📝'} الخبر ${article.id} — تصنيف: ${category.name} → ${flowType}`);
-          } else if (!article.category_id) {
-            // تصنيف غير موجود → تحرير (fallback)
+          } else if (article.category_id) {
+            // تحديد الفلو من التصنيف مباشرة
+            flowType = getFlowByCategory(article.category_id);
+            const category = categoryMap.get(article.category_id);
+            const categoryName = category?.name || `ID:${article.category_id}`;
+            console.log(`   ${flowType === 'automated' ? '⚡' : '📝'} الخبر ${article.id} — تصنيف: ${categoryName} → ${flowType}`);
+          } else {
+            // بدون تصنيف → تحرير (fallback)
             console.warn(`⚠️  الخبر ${article.id} — بدون تصنيف → تحرير (fallback)`);
             result.errors.push(`الخبر ${article.id}: بدون تصنيف — تم توجيهه للتحرير`);
-            flowType = 'editorial';
-          } else {
-            // التصنيف موجود لكن غير فعال → تحرير (fallback)
-            console.warn(`⚠️  الخبر ${article.id} — تصنيف غير فعال (id=${article.category_id}) → تحرير (fallback)`);
-            result.errors.push(`الخبر ${article.id}: تصنيف غير فعال — تم توجيهه للتحرير`);
             flowType = 'editorial';
           }
 
@@ -448,7 +560,7 @@ export class FlowRouterService {
 
   private async getActiveCategories(): Promise<Category[]> {
     const result = await query(
-      `SELECT id, name, flow, is_active FROM categories WHERE is_active = true`
+      `SELECT id, name, is_active FROM categories WHERE is_active = true`
     );
     return result.rows;
   }
