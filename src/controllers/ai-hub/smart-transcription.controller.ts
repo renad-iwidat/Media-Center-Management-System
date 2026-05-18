@@ -171,14 +171,31 @@ export class SmartTranscriptionController {
 
       const outputLabels: Record<string, string> = {
         executive_summary: 'ملخص تنفيذي',
-        news_article: 'خبر صحفي',
         detailed_report: 'تقرير صحفي',
+        news_article: 'خبر صحفي',
+        video_clips: 'مقاطع مقترحة للنشر',
         social_media: 'منشورات سوشيال ميديا',
-        video_clips: 'مقاطع فيديو',
         policy_alerts: 'تنبيهات سياسة التحرير',
       };
 
-      outputs.forEach((output: any) => {
+      // الترتيب المطلوب للمخرجات حسب سياسة التحرير
+      const requiredOrder = [
+        'executive_summary',
+        'detailed_report',
+        'news_article',
+        'video_clips',
+        'social_media',
+        'policy_alerts',
+      ];
+
+      // ترتيب المخرجات حسب الترتيب المطلوب
+      const orderedOutputs = [...outputs].sort((a: any, b: any) => {
+        const indexA = requiredOrder.indexOf(a.type);
+        const indexB = requiredOrder.indexOf(b.type);
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+      });
+
+      orderedOutputs.forEach((output: any) => {
         const label = outputLabels[output.type] || output.type;
         content += `## ${label}\n`;
         content += `${output.content}\n\n`;

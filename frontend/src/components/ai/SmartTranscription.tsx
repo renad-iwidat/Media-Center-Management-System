@@ -27,7 +27,7 @@ import { parseNumberedList } from '../../lib/markdown-parser';
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
 
-type OutputType = 'executive_summary' | 'news_article' | 'detailed_report' | 'social_media' | 'video_clips' | 'policy_alerts';
+type OutputType = 'executive_summary' | 'detailed_report' | 'news_article' | 'video_clips' | 'social_media' | 'policy_alerts';
 type FileTypeFilter = 'all' | 'audio' | 'video';
 type ProcessingStep = 'select' | 'transcribing' | 'outputs' | 'complete';
 
@@ -69,32 +69,32 @@ const OUTPUT_TYPES: Record<OutputType, { label: string; icon: any; description: 
   executive_summary: {
     label: 'ملخص تنفيذي',
     icon: FileText,
-    description: '4-6 أسطر تبرز أهم ما ورد في المادة',
-  },
-  news_article: {
-    label: 'خبر صحفي',
-    icon: FileText,
-    description: 'خبر مكتمل وفق بنية الهرم المقلوب',
+    description: 'ملخص مهني من 4-6 أسطر يوضح أصل القصة والعقدة الأساسية',
   },
   detailed_report: {
     label: 'تقرير صحفي',
     icon: FileText,
-    description: 'تقرير معمّق باحترافية صحفية',
+    description: 'تقرير جاهز للنشر بعناوين صحفية احترافية',
+  },
+  news_article: {
+    label: 'خبر صحفي',
+    icon: FileText,
+    description: 'خبر مختصر ومباشر بأسلوب الهرم المقلوب',
+  },
+  video_clips: {
+    label: 'مقاطع مقترحة للنشر',
+    icon: Clock,
+    description: 'مقاطع مع توقيت وعنوان ونص كامل للمونتير',
   },
   social_media: {
     label: 'منشورات سوشيال ميديا',
     icon: Share2,
-    description: 'منشورات مع تصريحات منسوبة',
-  },
-  video_clips: {
-    label: 'مقاطع فيديو',
-    icon: Clock,
-    description: 'مقاطع مع تايم كود وعناوين',
+    description: 'منشورات منسوبة إلى مصادرها',
   },
   policy_alerts: {
     label: 'تنبيهات سياسة التحرير',
     icon: AlertCircle,
-    description: 'تقرير بمخالفات السياسة التحريرية',
+    description: 'رصد العبارات المخالفة لسياسة التحرير',
   },
 };
 
@@ -344,12 +344,29 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
 
     const outputLabels: Record<string, string> = {
       executive_summary: 'ملخص تنفيذي',
-      news_article: 'خبر صحفي',
       detailed_report: 'تقرير صحفي',
+      news_article: 'خبر صحفي',
+      video_clips: 'مقاطع مقترحة للنشر',
       social_media: 'منشورات سوشيال ميديا',
-      video_clips: 'مقاطع فيديو',
       policy_alerts: 'تنبيهات سياسة التحرير',
     };
+
+    // الترتيب المطلوب للمخرجات حسب سياسة التحرير
+    const requiredOrder: OutputType[] = [
+      'executive_summary',
+      'detailed_report',
+      'news_article',
+      'video_clips',
+      'social_media',
+      'policy_alerts',
+    ];
+
+    // ترتيب المخرجات حسب الترتيب المطلوب
+    const orderedOutputs = [...generatedOutputs].sort((a, b) => {
+      const indexA = requiredOrder.indexOf(a.type as OutputType);
+      const indexB = requiredOrder.indexOf(b.type as OutputType);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
 
     // خصائص RTL مشتركة لكل paragraph
     const rtlProps = {
@@ -373,7 +390,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
       })
     );
 
-    generatedOutputs.forEach((output) => {
+    orderedOutputs.forEach((output) => {
       const label = outputLabels[output.type] || output.type;
 
       // عنوان القسم
@@ -446,6 +463,23 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `smart-transcription-${Date.now()}.docx`);
   };
+
+  // الترتيب المطلوب لعرض المخرجات حسب سياسة التحرير
+  const REQUIRED_OUTPUT_ORDER: OutputType[] = [
+    'executive_summary',
+    'detailed_report',
+    'news_article',
+    'video_clips',
+    'social_media',
+    'policy_alerts',
+  ];
+
+  // ترتيب المخرجات المولدة حسب الترتيب المطلوب
+  const orderedGeneratedOutputs = [...generatedOutputs].sort((a, b) => {
+    const indexA = REQUIRED_OUTPUT_ORDER.indexOf(a.type as OutputType);
+    const indexB = REQUIRED_OUTPUT_ORDER.indexOf(b.type as OutputType);
+    return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
@@ -787,7 +821,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
               <h2 className="text-xl font-semibold text-white mb-6">المخرجات المولدة</h2>
               <div className="space-y-3">
-                {generatedOutputs.map((output, idx) => (
+                {orderedGeneratedOutputs.map((output, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition cursor-pointer group"
