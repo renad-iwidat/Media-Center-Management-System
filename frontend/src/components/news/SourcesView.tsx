@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Rss, Clock, CheckCircle2, XCircle, Wifi } from "lucide-react";
+import { Rss, Clock, CheckCircle2, Wifi, Globe, ExternalLink } from "lucide-react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { EmptyState } from "../shared/EmptyState";
@@ -9,26 +9,24 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   const [loading, setLoading] = useState(true);
 
   // دالة لتنسيق التاريخ
-  const formatLastFetched = (dateString: string | null) => {
+  const formatLastFetched = (dateString: string | null | undefined) => {
     if (!dateString) return null;
     
     try {
       const date = new Date(dateString);
+      // التحقق من صحة التاريخ
+      if (isNaN(date.getTime())) return null;
+      
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
 
-      // إذا أقل من دقيقة
       if (diffMins < 1) return 'الآن';
-      // إذا أقل من ساعة
       if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
-      // إذا أقل من 24 ساعة
       if (diffHours < 24) return `منذ ${diffHours} ساعة`;
-      // إذا أقل من 7 أيام
       if (diffDays < 7) return `منذ ${diffDays} يوم`;
-      // إذا أكثر من 7 أيام، عرض التاريخ
       return date.toLocaleDateString('ar-SA', { 
         year: 'numeric', 
         month: 'short', 
@@ -42,14 +40,15 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
   };
 
   // دالة للتحقق من أن السحب حديث (آخر ساعة)
-  const isRecentlyFetched = (dateString: string | null) => {
+  const isRecentlyFetched = (dateString: string | null | undefined) => {
     if (!dateString) return false;
     try {
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return false;
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffHours = diffMs / 3600000;
-      return diffHours < 1; // آخر ساعة
+      return diffHours < 1;
     } catch {
       return false;
     }
@@ -64,7 +63,8 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
           last_fetched_formatted: formatLastFetched(source.last_fetched_at),
           is_recently_fetched: isRecentlyFetched(source.last_fetched_at),
         }));
-        setSources(sourcesWithFormatted);
+        // عرض المصادر النشطة فقط
+        setSources(sourcesWithFormatted.filter((s: any) => s.is_active));
       })
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
@@ -74,111 +74,90 @@ export function SourcesView({ autoEnabled }: { autoEnabled: boolean }) {
 
   if (loading) return <LoadingSpinner />;
 
-  const activeSources = sources.filter(s => s.is_active).length;
-  const inactiveSources = sources.filter(s => !s.is_active).length;
-
   return (
-    <div className="space-y-5">
-      {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl px-5 py-4 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 bg-[#3d6a8a]/10 rounded-xl flex items-center justify-center shrink-0">
-            <Rss size={18} className="text-[#3d6a8a]" />
+    <div className="space-y-6">
+      {/* Header with count */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+            <CheckCircle2 size={20} className="text-emerald-600" />
           </div>
           <div>
-            <p className="text-2xl font-black text-[#1e293b]">{sources.length}</p>
-            <p className="text-xs text-[#64748b] font-medium">إجمالي المصادر</p>
+            <h2 className="text-lg font-bold text-[#1e293b]">المصادر النشطة</h2>
+            <p className="text-xs text-[#64748b]">{sources.length} مصدر يعمل حالياً</p>
           </div>
         </div>
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl px-5 py-4 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-            <CheckCircle2 size={18} className="text-emerald-600" />
+
+        {autoEnabled && (
+          <div className="flex items-center gap-2 bg-[#3d6a8a]/8 border border-[#3d6a8a]/20 rounded-xl px-3.5 py-2">
+            <div className="w-2 h-2 bg-[#3d6a8a] rounded-full animate-pulse" />
+            <Wifi size={14} className="text-[#3d6a8a]" />
+            <span className="text-xs text-[#2d5570] font-semibold">مراقبة تلقائية</span>
           </div>
-          <div>
-            <p className="text-2xl font-black text-[#1e293b]">{activeSources}</p>
-            <p className="text-xs text-[#64748b] font-medium">نشطة</p>
-          </div>
-        </div>
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl px-5 py-4 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-            <XCircle size={18} className="text-gray-400" />
-          </div>
-          <div>
-            <p className="text-2xl font-black text-[#1e293b]">{inactiveSources}</p>
-            <p className="text-xs text-[#64748b] font-medium">متوقفة</p>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Auto System Banner */}
-      {autoEnabled && (
-        <div className="bg-gradient-to-r from-[#3d6a8a]/8 to-[#4A7C9E]/8 border border-[#3d6a8a]/20 rounded-2xl px-5 py-3.5 flex items-center gap-3">
-          <div className="w-2 h-2 bg-[#3d6a8a] rounded-full animate-pulse shrink-0" />
-          <Wifi size={15} className="text-[#3d6a8a] shrink-0" />
-          <span className="text-sm text-[#2d5570] font-semibold">النظام الآلي يراقب جميع المصادر ويسحب المحتوى دورياً</span>
-        </div>
-      )}
-
-      {/* Sources Grid */}
+      {/* Sources Table */}
       {sources.length === 0 ? (
-        <EmptyState icon={Rss} title="لا توجد مصادر" description="لم يتم العثور على أي مصادر محتوى في النظام." />
+        <EmptyState icon={Rss} title="لا توجد مصادر نشطة" description="لا يوجد أي مصدر نشط حالياً في النظام." />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sources.map((source: any) => (
-            <div
-              key={source.id}
-              className="bg-white rounded-2xl p-5 border border-[#e2e8f0] hover:border-[#4A7C9E]/30 hover:shadow-md transition-all group relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-28 h-28 bg-[#4A7C9E]/4 blur-2xl rounded-full -mr-14 -mt-14" />
+        <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm">
+          {/* Table Header */}
+          <div className="grid grid-cols-[1fr_120px_140px] gap-4 px-6 py-3.5 bg-[#f8fafc] border-b border-[#e2e8f0]">
+            <span className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">المصدر</span>
+            <span className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider text-center">النوع</span>
+            <span className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider text-center">آخر سحب</span>
+          </div>
 
-              <div className="flex items-start justify-between mb-4 relative z-10">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  source.is_active ? 'bg-[#3d6a8a]/10' : 'bg-gray-100'
-                }`}>
-                  <Rss size={18} className={source.is_active ? 'text-[#3d6a8a]' : 'text-gray-400'} />
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${
-                  source.is_active
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-gray-100 text-gray-500 border-gray-200'
-                }`}>
-                  {source.is_active ? 'نشط' : 'متوقف'}
-                </span>
-              </div>
-
-              <h4 className={`font-bold text-sm mb-1 transition-colors ${
-                source.is_active ? 'text-[#1e293b] group-hover:text-[#3d6a8a]' : 'text-[#94a3b8]'
-              }`}>
-                {source.name}
-              </h4>
-              <p className="text-[11px] text-[#94a3b8] font-mono mb-4 truncate">{source.url || source.rss_url || '—'}</p>
-
-              <div className="space-y-2.5 pt-4 border-t border-[#f1f5f9]">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-[#94a3b8]">النوع</span>
-                  <span className="text-[11px] font-bold text-[#64748b] bg-[#f8fafc] px-2 py-0.5 rounded-lg border border-[#e2e8f0]">
-                    {source.type || 'RSS'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-[#94a3b8] flex items-center gap-1">
-                    <Clock size={10} />
-                    آخر سحب
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {source.is_recently_fetched && (
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    )}
-                    <span className={`text-[11px] font-mono ${
-                      source.last_fetched_at ? 'text-[#64748b]' : 'text-[#94a3b8] italic'
-                    }`}>
-                      {source.last_fetched_formatted || 'لم يسحب بعد'}
-                    </span>
+          {/* Table Rows */}
+          <div className="divide-y divide-[#f1f5f9]">
+            {sources.map((source: any) => (
+              <div
+                key={source.id}
+                className="grid grid-cols-[1fr_120px_140px] gap-4 px-6 py-4 hover:bg-[#f8fafc]/60 transition-colors group"
+              >
+                {/* Source Info */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 bg-[#3d6a8a]/8 rounded-lg flex items-center justify-center shrink-0">
+                    <Globe size={16} className="text-[#3d6a8a]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-semibold text-sm text-[#1e293b] group-hover:text-[#3d6a8a] transition-colors truncate">
+                      {source.name}
+                    </h4>
+                    <p className="text-[11px] text-[#94a3b8] font-mono truncate flex items-center gap-1">
+                      {source.url ? (
+                        <>
+                          <ExternalLink size={9} className="shrink-0" />
+                          <span className="truncate">{source.url}</span>
+                        </>
+                      ) : '—'}
+                    </p>
                   </div>
                 </div>
+
+                {/* Type */}
+                <div className="flex items-center justify-center">
+                  <span className="text-[11px] font-bold text-[#64748b] bg-[#f1f5f9] px-2.5 py-1 rounded-lg border border-[#e2e8f0]">
+                    {source.source_type_name || 'RSS'}
+                  </span>
+                </div>
+
+                {/* Last Fetched */}
+                <div className="flex items-center justify-center gap-1.5" title={source.last_fetched_at ? new Date(source.last_fetched_at).toLocaleString('ar-SA') : ''}>
+                  {source.is_recently_fetched && (
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  )}
+                  <Clock size={11} className="text-[#94a3b8]" />
+                  <span className={`text-[11px] font-mono ${
+                    source.last_fetched_at ? 'text-[#64748b]' : 'text-[#94a3b8] italic'
+                  }`}>
+                    {source.last_fetched_formatted || 'لم يسحب بعد'}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
