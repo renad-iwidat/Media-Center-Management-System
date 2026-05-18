@@ -253,19 +253,19 @@ export class TaskAutomationService {
 
   /**
    * Mark all content linked to a task as final and archive them
+   * + Archive all task attachments by copying them to content table
    * Called when task status changes to "Done"
    */
   static async markTaskContentAsFinal(taskId: bigint): Promise<void> {
     try {
-      // Get all content linked to this task
+      // 1) أرشفة الـ content الموجود المرتبط بالمهمة (سواء عن طريق content_tasks أو task_id مباشرة)
       const contentResult = await pool.query(
-        `SELECT c.id FROM content c
-         JOIN content_tasks ct ON c.id = ct.content_id
-         WHERE ct.task_id = $1 AND c.is_archived = false`,
+        `SELECT DISTINCT c.id FROM content c
+         LEFT JOIN content_tasks ct ON c.id = ct.content_id
+         WHERE (ct.task_id = $1 OR c.task_id = $1) AND c.is_archived = false`,
         [taskId]
       );
 
-      // Mark each content as final and archive it
       for (const row of contentResult.rows) {
         await pool.query(
           `UPDATE content 
@@ -274,10 +274,80 @@ export class TaskAutomationService {
           [row.id]
         );
       }
+
+      // 2) أرشفة كل المرفقات التابعة للمهمة → نسخها كـ content مؤرشف
+      await this.archiveTaskAttachments(taskId);
     } catch (error) {
       console.error(`Error marking content as final for task ${taskId}:`, error);
       // Don't throw - this shouldn't block task completion
     }
+  }
+
+  /**
+   * Archive all attachments of a task by creating content records for them
+   * This makes them appear in the smart archive
+   */
+  static async archiveTaskAttachments(taskId: bigint): Promise<void> {
+    try {
+      // جلب كل المرفقات اللي ما تأرشفت بعد (مش موجودة في content بنفس الـ owner_id)
+      const attachments = await pool.query(
+        `SELECT ta.* FROM task_attachments ta
+         WHERE ta.task_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM content c 
+           WHERE c.owner_type = 'task_attachment' 
+           AND c.owner_id = ta.id
+         )`,
+        [taskId]
+      );
+
+      console.log(`📦 أرشفة ${attachments.rows.length} مرفقات للمهمة ${taskId}`);
+
+      for (const att of attachments.rows) {
+        // تحديد نوع المحتوى بناءً على نوع الملف
+        const contentTypeId = this.detectContentTypeId(att.file_type);
+
+        await pool.query(
+          `INSERT INTO content (
+            title, content_type_id, owner_type, owner_id, 
+            is_final, created_by, tags, task_id, 
+            cloud_url, file_size, version, 
+            is_archived, archived_at, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
+          [
+            att.title || `مرفق - ${att.file_type || 'ملف'}`,
+            contentTypeId,
+            'task_attachment',
+            att.id,
+            true,
+            att.uploaded_by,
+            ['attachment', att.title || 'مرفق'].filter(Boolean),
+            taskId,
+            att.file_url,
+            0,
+            1,
+            true, // is_archived = true مباشرة
+            new Date(), // archived_at = الآن
+          ]
+        );
+      }
+    } catch (error) {
+      console.error(`Error archiving task attachments for task ${taskId}:`, error);
+    }
+  }
+
+  /**
+   * Detect content_type_id based on file mime type
+   */
+  static detectContentTypeId(fileType?: string): number {
+    if (!fileType) return 5; // مواد إعلامية (default)
+    
+    const type = fileType.toLowerCase();
+    if (type.includes('video')) return 4; // تغطية
+    if (type.includes('image')) return 5; // مواد إعلامية
+    if (type.includes('audio')) return 5; // مواد إعلامية
+    if (type.includes('pdf') || type.includes('doc')) return 2; // تقرير
+    return 5; // افتراضي: مواد إعلامية
   }
 
   /**

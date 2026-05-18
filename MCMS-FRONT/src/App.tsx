@@ -22,8 +22,9 @@ import TeamDetailsPage from './components/TeamDetailsPage';
 import UsersPage from './components/UsersPage';
 import UserDetailsPage from './components/UserDetailsPage';
 import PermissionsPage from './components/PermissionsPage';
+import NotificationsPage from './components/NotificationsPage';
 import {
-  NotificationsPage
+  NotificationsPage as NotificationsPlaceholder
 } from './components/Placeholders';
 
 export default function App() {

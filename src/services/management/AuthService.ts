@@ -198,4 +198,12 @@ export class AuthService {
       permissions: permsResult.rows.map((r: any) => r.name),
     };
   }
+
+  /**
+   * تسجيل خروج
+   * تحديث آخر وقت خروج للمستخدم
+   */
+  static async logout(userId: bigint): Promise<void> {
+    await pool.query('UPDATE users SET last_logout = NOW() WHERE id = $1', [userId]);
+  }
 }

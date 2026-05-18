@@ -66,12 +66,12 @@ export class OrderAutomationService {
 
     // Update order
     const updateFields = Object.keys(updates);
-    const setClause = updateFields.map((field, i) => `${field} = ${i + 1}`).join(', ');
+    const setClause = updateFields.map((field, i) => `${field} = $${i + 1}`).join(', ');
     const values = updateFields.map(field => updates[field]);
     values.push(orderId);
 
     const updatedOrderResult = await pool.query(
-      `UPDATE orders SET ${setClause} WHERE id = ${updateFields.length + 1} RETURNING *`,
+      `UPDATE orders SET ${setClause} WHERE id = $${updateFields.length + 1} RETURNING *`,
       values
     );
 
@@ -93,6 +93,7 @@ export class OrderAutomationService {
   /**
    * Handle order archiving
    * Automatically sets archive flags and timestamps
+   * + Archives all attachments from order's tasks
    */
   static async handleOrderArchive(
     orderId: bigint,
@@ -114,7 +115,57 @@ export class OrderAutomationService {
       [orderId]
     );
 
+    // Archive all attachments from order's tasks → نسخها لـ content
+    const tasksResult = await pool.query(
+      'SELECT id FROM tasks WHERE order_id = $1',
+      [orderId]
+    );
+
+    // Import dynamically to avoid circular dependency
+    const { TaskAutomationService } = await import('./TaskAutomationService');
+    
+    for (const task of tasksResult.rows) {
+      await TaskAutomationService.archiveTaskAttachments(BigInt(task.id));
+    }
+
+    console.log(`📦 تم أرشفة ${tasksResult.rows.length} مهام مع مرفقاتها للأوردر ${orderId}`);
+
     return result.rows[0];
+  }
+
+  /**
+   * Auto-archive when order status becomes "Done"
+   * يستدعى تلقائياً لما يصير الأوردر منجز
+   */
+  static async autoArchiveOnDone(
+    orderId: bigint,
+    changedBy: bigint
+  ): Promise<void> {
+    try {
+      // فحص الحالة الحالية للأوردر
+      const orderRes = await pool.query(
+        `SELECT o.is_archived, os.name as status_name 
+         FROM orders o 
+         LEFT JOIN order_statuses os ON o.status_id = os.id
+         WHERE o.id = $1`,
+        [orderId]
+      );
+
+      const order = orderRes.rows[0];
+      if (!order) return;
+
+      const isDone = ['Done', 'Completed', 'منجز', 'مكتمل'].some(name =>
+        (order.status_name || '').toLowerCase().includes(name.toLowerCase())
+      );
+
+      // إذا الأوردر منجز ومش مؤرشف بعد → أرشفه تلقائياً
+      if (isDone && !order.is_archived) {
+        await this.handleOrderArchive(orderId, changedBy);
+        console.log(`✅ تم أرشفة الأوردر ${orderId} تلقائياً عند اكتماله`);
+      }
+    } catch (error) {
+      console.error(`Error auto-archiving order ${orderId}:`, error);
+    }
   }
 
   /**

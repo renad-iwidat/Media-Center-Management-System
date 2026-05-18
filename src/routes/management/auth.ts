@@ -10,6 +10,7 @@ router.post('/login', (req: Request, res: Response) => { authController.login(re
 
 // محمي — لازم تكون مسجل دخول
 router.get('/me', authenticate, (req: Request, res: Response) => { authController.getMe(req, res); });
+router.post('/logout', authenticate, (req: Request, res: Response) => { authController.logout(req, res); });
 router.post('/change-password', authenticate, (req: Request, res: Response) => { authController.changePassword(req, res); });
 
 // محمي — لازم صلاحية إدارة مستخدمين

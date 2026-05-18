@@ -302,10 +302,10 @@ export default function ProgramsPage() {
                         <td className="px-6 py-5 border border-[#FF9F4A]">
                           <Badge variant="blue">{p.media_unit_name || 'غير محدد'}</Badge>
                         </td>
-                        <td className="px-6 py-5 border border-[#FF9F4A]">
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-[#FF9F4A]" />
-                            <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg">
+                        <td className="px-6 py-5 border border-[#FF9F4A] whitespace-nowrap">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <Clock size={16} className="text-[#FF9F4A] flex-shrink-0" />
+                            <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
                               {formatTime12(p.air_time)}
                             </span>
                           </div>
@@ -458,10 +458,10 @@ export default function ProgramsPage() {
                             {ep.program_title || 'غير محدد'}
                           </span>
                         </td>
-                        <td className="px-6 py-5 border border-[#FF9F4A]">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={16} className="text-[#FF9F4A]" />
-                            <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg">
+                        <td className="px-6 py-5 border border-[#FF9F4A] whitespace-nowrap">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <Calendar size={16} className="text-[#FF9F4A] flex-shrink-0" />
+                            <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
                               {ep.air_date ? format(new Date(ep.air_date), 'yyyy/MM/dd') : 'غير محدد'}
                             </span>
                           </div>

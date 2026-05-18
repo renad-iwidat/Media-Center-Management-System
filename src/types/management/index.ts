@@ -103,6 +103,21 @@ export interface TaskComment {
   user_id?: bigint;
   comment?: string;
   created_at?: Date;
+  updated_at?: Date;
+  user_name?: string;
+}
+
+export interface Mention {
+  id: bigint;
+  comment_id: bigint;
+  mentioned_user_id: bigint;
+  mentioned_by_user_id: bigint;
+  entity_type: 'task' | 'order';
+  entity_id: bigint;
+  created_at?: Date;
+  // Joined fields
+  mentioned_user_name?: string;
+  mentioned_by_user_name?: string;
 }
 
 export interface TaskAttachment {
@@ -114,6 +129,7 @@ export interface TaskAttachment {
   file_type?: string;
   uploaded_by?: bigint;
   created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface TaskRelation {

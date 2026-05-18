@@ -17,11 +17,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    setUser(null);
-    socketService.disconnect();
-    window.location.href = '/login';
+  const logout = useCallback(async () => {
+    try {
+      // استدعاء الـ logout endpoint
+      await api.post('/api/auth/logout', {});
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // حذف الـ token والـ user بغض النظر عن نتيجة الـ API call
+      localStorage.removeItem('token');
+      setUser(null);
+      socketService.disconnect();
+      window.location.href = '/login';
+    }
   }, []);
 
   const fetchProfile = useCallback(async () => {

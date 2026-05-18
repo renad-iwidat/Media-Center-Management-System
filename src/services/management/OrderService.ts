@@ -105,6 +105,14 @@ export class OrderService {
       new_status_id: newStatusId,
     });
 
+    // Auto-archive: لو الحالة الجديدة "Done" → أرشف الأوردر مع كل مرفقاته
+    try {
+      const { OrderAutomationService } = await import('./OrderAutomationService');
+      await OrderAutomationService.autoArchiveOnDone(orderId, changedBy);
+    } catch (err) {
+      console.error('Auto-archive failed but order status updated:', err);
+    }
+
     return updated;
   }
 

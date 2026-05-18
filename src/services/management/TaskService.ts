@@ -1,9 +1,10 @@
 import { TaskModel } from '../../models/management/Task';
 import { OrderModel } from '../../models/management/Order';
-import { Task, TaskStatus, TaskType, TaskHistory, TaskAssignment, TaskComment, TaskAttachment, TaskRelation } from '../../types/management';
+import { Task, TaskStatus, TaskType, TaskHistory, TaskAssignment, TaskComment, TaskAttachment, TaskRelation, Mention } from '../../types/management';
 import { TaskValidator } from './validators/TaskValidator';
 import { DependencyHelper } from './helpers/DependencyHelper';
 import { OrderStatusHelper } from './helpers/OrderStatusHelper';
+import { NotificationService } from './NotificationService';
 import pool from '../../config/database';
 
 export class TaskService {
@@ -170,15 +171,113 @@ export class TaskService {
       throw new Error('Comment cannot be empty');
     }
 
-    return await TaskModel.addComment({
+    const taskComment = await TaskModel.addComment({
       task_id: taskId,
       user_id: userId,
       comment,
     });
+
+    // استخراج المنشنات من التعليق (@username)
+    // يدعم الحروف العربية والإنجليزية والأرقام والشرطات السفلية
+    const mentionRegex = /@([\u0600-\u06FF\w_-]+)/g;
+    const matches = comment.matchAll(mentionRegex);
+    
+    for (const match of matches) {
+      const mentionedUsername = match[1];
+      
+      try {
+        // البحث عن المستخدم بالاسم (يبحث عن أي اسم يبدأ بـ أو يحتوي على الكلمة المنشنة)
+        const mentionedUser = await pool.query(
+          'SELECT id, name FROM users WHERE name ILIKE $1 LIMIT 1',
+          [`%${mentionedUsername}%`]
+        );
+
+        if (mentionedUser.rows.length > 0) {
+          const mentionedUserId = mentionedUser.rows[0].id;
+          
+          // إضافة المنشن في الـ database
+          await this.addMention({
+            comment_id: taskComment.id,
+            mentioned_user_id: BigInt(mentionedUserId),
+            mentioned_by_user_id: userId,
+            entity_type: 'task',
+            entity_id: taskId,
+          });
+
+          // إرسال إشعار للمستخدم المنشن
+          const task = await this.getTask(taskId);
+          const commentingUser = await pool.query(
+            'SELECT name FROM users WHERE id = $1',
+            [userId]
+          );
+
+          await NotificationService.notifyMention(
+            BigInt(mentionedUserId),
+            commentingUser.rows[0]?.name || 'مستخدم',
+            'task',
+            taskId,
+            task.title || ''
+          );
+        }
+      } catch (mentionError) {
+        console.error(`Error processing mention for ${mentionedUsername}:`, mentionError);
+        // Continue with next mention if one fails
+      }
+    }
+
+    return taskComment;
   }
 
   async getComments(taskId: bigint): Promise<TaskComment[]> {
     return await TaskModel.getComments(taskId);
+  }
+
+  async updateComment(commentId: bigint, userId: bigint, newText: string): Promise<TaskComment> {
+    if (!newText || newText.trim().length === 0) {
+      throw new Error('Comment cannot be empty');
+    }
+
+    // تحقق إن المستخدم هو صاحب التعليق
+    const comment = await TaskModel.getCommentById(commentId);
+    if (!comment) {
+      throw new Error('Comment not found');
+    }
+    if (comment.user_id?.toString() !== userId.toString()) {
+      throw new Error('You can only edit your own comments');
+    }
+
+    const updated = await TaskModel.updateComment(commentId, newText);
+    if (!updated) {
+      throw new Error('Failed to update comment');
+    }
+    return updated;
+  }
+
+  async deleteComment(commentId: bigint, userId: bigint): Promise<boolean> {
+    // تحقق إن المستخدم هو صاحب التعليق
+    const comment = await TaskModel.getCommentById(commentId);
+    if (!comment) {
+      throw new Error('Comment not found');
+    }
+    if (comment.user_id?.toString() !== userId.toString()) {
+      throw new Error('You can only delete your own comments');
+    }
+
+    return await TaskModel.deleteComment(commentId);
+  }
+
+  // ============ Mentions ============
+
+  async addMention(mention: Omit<Mention, 'id' | 'created_at'>): Promise<Mention> {
+    return await TaskModel.addMention(mention);
+  }
+
+  async getMentions(entityType: 'task' | 'order', entityId: bigint): Promise<Mention[]> {
+    return await TaskModel.getMentions(entityType, entityId);
+  }
+
+  async getUserMentions(userId: bigint): Promise<Mention[]> {
+    return await TaskModel.getUserMentions(userId);
   }
 
   async addAttachment(
@@ -209,13 +308,44 @@ export class TaskService {
     return await TaskModel.getAttachments(taskId);
   }
 
-  async deleteAttachment(attachmentId: bigint): Promise<boolean> {
+  async deleteAttachment(attachmentId: bigint, userId?: bigint): Promise<boolean> {
+    // إذا فيه userId، تحقق من إن المستخدم هو من رفع الملف
+    if (userId) {
+      const attachment = await TaskModel.getAttachmentById(attachmentId);
+      if (!attachment) {
+        throw new Error('Attachment not found');
+      }
+      if (attachment.uploaded_by?.toString() !== userId.toString()) {
+        throw new Error('You can only delete your own attachments');
+      }
+    }
+
     // Delete from database
     const result = await pool.query(
       'DELETE FROM task_attachments WHERE id = $1',
       [attachmentId]
     );
     return result.rowCount! > 0;
+  }
+
+  async updateAttachment(
+    attachmentId: bigint,
+    userId: bigint,
+    updates: { title?: string; description?: string }
+  ): Promise<TaskAttachment> {
+    const attachment = await TaskModel.getAttachmentById(attachmentId);
+    if (!attachment) {
+      throw new Error('Attachment not found');
+    }
+    if (attachment.uploaded_by?.toString() !== userId.toString()) {
+      throw new Error('You can only edit your own attachments');
+    }
+
+    const updated = await TaskModel.updateAttachment(attachmentId, updates);
+    if (!updated) {
+      throw new Error('Failed to update attachment');
+    }
+    return updated;
   }
 
   // ============ Task Relations & Dependencies ============

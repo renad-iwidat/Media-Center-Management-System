@@ -13,7 +13,8 @@ export class TeamService {
 
   async getTeamsByDeskId(deskId: bigint): Promise<any[]> {
     const result = await pool.query(
-      `SELECT t.*, u.name as manager_name
+      `SELECT t.*, u.name as manager_name,
+       (SELECT COUNT(*) FROM team_users tu WHERE tu.team_id = t.id) as member_count
        FROM teams t LEFT JOIN users u ON t.manager_id = u.id
        WHERE t.desk_id = $1 ORDER BY t.created_at DESC`,
       [deskId]

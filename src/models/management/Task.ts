@@ -1,5 +1,5 @@
 import pool from '../../config/database';
-import { Task, TaskStatus, TaskType, TaskHistory, TaskAssignment, TaskComment, TaskAttachment, TaskRelation } from '../../types/management';
+import { Task, TaskStatus, TaskType, TaskHistory, TaskAssignment, TaskComment, TaskAttachment, TaskRelation, Mention } from '../../types/management';
 
 export class TaskModel {
   static async findById(id: bigint): Promise<Task | null> {
@@ -219,7 +219,7 @@ export class TaskModel {
        LEFT JOIN task_statuses ts ON t.status_id = ts.id
        LEFT JOIN priority_levels pl ON t.priority_id = pl.id
        WHERE t.deadline < NOW() 
-       AND t.status_id NOT IN (SELECT id FROM task_statuses WHERE name IN ('Done', 'Cancelled'))
+       AND t.status_id NOT IN (SELECT id FROM task_statuses WHERE name IN ('Done', 'Cancelled', 'منجز', 'مرفوض', 'مكتمل', 'ملغي'))
        ORDER BY t.deadline ASC`
     );
     return result.rows;
@@ -268,7 +268,11 @@ export class TaskModel {
 
   static async getComments(taskId: bigint): Promise<TaskComment[]> {
     const result = await pool.query(
-      'SELECT * FROM task_comments WHERE task_id = $1 ORDER BY created_at DESC',
+      `SELECT tc.*, u.name as user_name 
+       FROM task_comments tc
+       LEFT JOIN users u ON tc.user_id = u.id
+       WHERE tc.task_id = $1 
+       ORDER BY tc.created_at DESC`,
       [taskId]
     );
     return result.rows;
@@ -282,6 +286,76 @@ export class TaskModel {
       [comment.task_id, comment.user_id, comment.comment]
     );
     return result.rows[0];
+  }
+
+  static async updateComment(commentId: bigint, newText: string): Promise<TaskComment | null> {
+    const result = await pool.query(
+      `UPDATE task_comments SET comment = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [newText, commentId]
+    );
+    return result.rows[0] || null;
+  }
+
+  static async deleteComment(commentId: bigint): Promise<boolean> {
+    // حذف المنشنات المرتبطة بالكومنت أولاً
+    await pool.query('DELETE FROM mentions WHERE comment_id = $1', [commentId]);
+    const result = await pool.query('DELETE FROM task_comments WHERE id = $1', [commentId]);
+    return result.rowCount! > 0;
+  }
+
+  static async getCommentById(commentId: bigint): Promise<TaskComment | null> {
+    const result = await pool.query(
+      `SELECT tc.*, u.name as user_name 
+       FROM task_comments tc
+       LEFT JOIN users u ON tc.user_id = u.id
+       WHERE tc.id = $1`,
+      [commentId]
+    );
+    return result.rows[0] || null;
+  }
+
+  // ============ Mentions ============
+
+  static async addMention(mention: Omit<Mention, 'id' | 'created_at'>): Promise<Mention> {
+    const result = await pool.query(
+      `INSERT INTO mentions (comment_id, mentioned_user_id, mentioned_by_user_id, entity_type, entity_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [mention.comment_id, mention.mentioned_user_id, mention.mentioned_by_user_id, mention.entity_type, mention.entity_id]
+    );
+    return result.rows[0];
+  }
+
+  static async getMentions(entityType: 'task' | 'order', entityId: bigint): Promise<Mention[]> {
+    const result = await pool.query(
+      `SELECT 
+        m.*,
+        u.name as mentioned_user_name,
+        u2.name as mentioned_by_user_name
+       FROM mentions m
+       LEFT JOIN users u ON m.mentioned_user_id = u.id
+       LEFT JOIN users u2 ON m.mentioned_by_user_id = u2.id
+       WHERE m.entity_type = $1 AND m.entity_id = $2
+       ORDER BY m.created_at DESC`,
+      [entityType, entityId]
+    );
+    return result.rows;
+  }
+
+  static async getUserMentions(userId: bigint): Promise<Mention[]> {
+    const result = await pool.query(
+      `SELECT 
+        m.*,
+        u.name as mentioned_user_name,
+        u2.name as mentioned_by_user_name
+       FROM mentions m
+       LEFT JOIN users u ON m.mentioned_user_id = u.id
+       LEFT JOIN users u2 ON m.mentioned_by_user_id = u2.id
+       WHERE m.mentioned_user_id = $1
+       ORDER BY m.created_at DESC`,
+      [userId]
+    );
+    return result.rows;
   }
 
   static async getAttachments(taskId: bigint): Promise<TaskAttachment[]> {
@@ -325,6 +399,30 @@ export class TaskModel {
       console.error('Unexpected error in addAttachment:', err);
       throw err;
     }
+  }
+
+  static async getAttachmentById(attachmentId: bigint): Promise<TaskAttachment | null> {
+    const result = await pool.query(
+      `SELECT * FROM task_attachments WHERE id = $1`,
+      [attachmentId]
+    );
+    return result.rows[0] || null;
+  }
+
+  static async updateAttachment(attachmentId: bigint, updates: Partial<TaskAttachment>): Promise<TaskAttachment | null> {
+    const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at' && key !== 'task_id' && key !== 'updated_at');
+    if (fields.length === 0) return this.getAttachmentById(attachmentId);
+
+    const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
+    const values = fields.map(field => updates[field as keyof TaskAttachment]);
+    values.push(attachmentId);
+
+    // إضافة updated_at = NOW() مع التعديل
+    const result = await pool.query(
+      `UPDATE task_attachments SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} RETURNING *`,
+      values
+    );
+    return result.rows[0] || null;
   }
 
   static async getRelations(taskId: bigint): Promise<TaskRelation[]> {

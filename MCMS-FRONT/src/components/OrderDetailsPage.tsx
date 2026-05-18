@@ -339,26 +339,21 @@ export default function OrderDetailsPage() {
                         </div>
                       </td>
                       <td className="px-8 py-6 text-center">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <TaskStatusDropdown 
-                            task={task}
-                            isEditable={true}
-                            onStatusChange={(taskId, newStatusId, newStatusName) => {
-                              // Update the order's tasks
-                              if (order) {
-                                setOrder({
-                                  ...order,
-                                  tasks: order.tasks.map(t =>
-                                    t.id === taskId
-                                      ? { ...t, status_id: newStatusId, status_name: newStatusName }
-                                      : t
-                                  )
-                                });
-                              }
-                            }}
-                            className="w-full"
-                          />
-                        </div>
+                        {(() => {
+                          const statusName = task.status_name || '—';
+                          const name = statusName.toLowerCase();
+                          let color = 'bg-slate-100 text-slate-700 border-slate-200';
+                          if (name.includes('done') || name.includes('منجز') || name.includes('مكتمل')) color = 'bg-green-100 text-green-700 border-green-200';
+                          else if (name.includes('progress') || name.includes('قيد') || name.includes('تنفيذ')) color = 'bg-blue-100 text-blue-700 border-blue-200';
+                          else if (name.includes('review') || name.includes('مراجعة')) color = 'bg-purple-100 text-purple-700 border-purple-200';
+                          else if (name.includes('cancel') || name.includes('ملغ')) color = 'bg-red-100 text-red-700 border-red-200';
+                          else if (name.includes('pending') || name.includes('انتظار') || name.includes('معلق')) color = 'bg-amber-100 text-amber-700 border-amber-200';
+                          return (
+                            <span className={`text-xs font-bold px-3 py-1.5 rounded-lg inline-block border ${color}`}>
+                              {statusName}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-8 py-6 text-center font-mono text-xs text-slate-500">
                         {task.deadline ? format(new Date(task.deadline), 'yyyy-MM-dd') : 'N/A'}

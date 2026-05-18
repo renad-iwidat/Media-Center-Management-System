@@ -128,7 +128,6 @@ export const Programs = () => <Placeholder title="البرامج والحلقا�
 export const Departments = () => <Placeholder title="الأقسام والفرق" />;
 export const Users = () => <Placeholder title="إدارة المستخدمين" />;
 export const Permissions = () => <Placeholder title="الصلاحيات" />;
-export const NotificationsPage = () => <Placeholder title="الإشعارات" />;
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">

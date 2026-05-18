@@ -92,6 +92,15 @@ export class AuthController {
     }
   }
 
+  async logout(req: Request, res: Response): Promise<void> {
+    try {
+      await AuthService.logout(BigInt(req.user!.user_id));
+      this.sendSuccess(res, { message: 'Logged out successfully' });
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
   private sendSuccess(res: Response, data: any, statusCode: number = 200): void {
     res.status(statusCode).json({ success: true, data, timestamp: new Date().toISOString() });
   }

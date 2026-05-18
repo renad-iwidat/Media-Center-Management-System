@@ -176,9 +176,12 @@ export class ContentService {
     status_id?: bigint;
     media_unit_id?: bigint;
     created_by?: bigint;
+    program_id?: bigint;
+    desk_id?: bigint;
     from_date?: Date;
     to_date?: Date;
     is_archived?: boolean;
+    sort?: 'newest' | 'oldest';
     limit?: number;
     offset?: number;
   }): Promise<{ data: Content[]; total: number }> {
@@ -186,21 +189,38 @@ export class ContentService {
     const vals: any[] = [];
     let p = 1;
 
-    if (query.keyword) { conds.push('(title ILIKE $' + p + ' OR tags::text ILIKE $' + p + ')'); vals.push('%' + query.keyword + '%'); p++; }
-    if (query.content_type_id) { conds.push('content_type_id = $' + p); vals.push(query.content_type_id); p++; }
-    if (query.status_id) { conds.push('status_id = $' + p); vals.push(query.status_id); p++; }
-    if (query.media_unit_id) { conds.push('media_unit_id = $' + p); vals.push(query.media_unit_id); p++; }
-    if (query.created_by) { conds.push('created_by = $' + p); vals.push(query.created_by); p++; }
-    if (query.from_date) { conds.push('created_at >= $' + p); vals.push(query.from_date); p++; }
-    if (query.to_date) { conds.push('created_at <= $' + p); vals.push(query.to_date); p++; }
-    if (query.is_archived !== undefined) { conds.push('is_archived = $' + p); vals.push(query.is_archived); p++; }
+    if (query.keyword) { conds.push('(c.title ILIKE $' + p + ' OR c.tags::text ILIKE $' + p + ')'); vals.push('%' + query.keyword + '%'); p++; }
+    if (query.content_type_id) { conds.push('c.content_type_id = $' + p); vals.push(query.content_type_id); p++; }
+    if (query.status_id) { conds.push('c.status_id = $' + p); vals.push(query.status_id); p++; }
+    if (query.media_unit_id) { conds.push('c.media_unit_id = $' + p); vals.push(query.media_unit_id); p++; }
+    if (query.created_by) { conds.push('c.created_by = $' + p); vals.push(query.created_by); p++; }
+    if (query.from_date) { conds.push('c.created_at >= $' + p); vals.push(query.from_date); p++; }
+    if (query.to_date) { conds.push('c.created_at <= $' + p); vals.push(query.to_date); p++; }
+    if (query.is_archived !== undefined) { conds.push('c.is_archived = $' + p); vals.push(query.is_archived); p++; }
+    
+    // فلتر بناءً على البرنامج (عبر الـ task → order)
+    if (query.program_id) {
+      conds.push(`c.task_id IN (SELECT t.id FROM tasks t LEFT JOIN orders o ON t.order_id = o.id WHERE o.program_id = $${p})`);
+      vals.push(query.program_id);
+      p++;
+    }
+    
+    // فلتر بناءً على القسم/الديسك (عبر الـ task → order)
+    if (query.desk_id) {
+      conds.push(`c.task_id IN (SELECT t.id FROM tasks t LEFT JOIN orders o ON t.order_id = o.id WHERE o.desk_id = $${p})`);
+      vals.push(query.desk_id);
+      p++;
+    }
 
     const where = conds.length > 0 ? 'WHERE ' + conds.join(' AND ') : '';
     
     // Get total count
-    const countSql = 'SELECT COUNT(*) as total FROM content ' + where;
+    const countSql = 'SELECT COUNT(*) as total FROM content c ' + where;
     const countResult = await pool.query(countSql, vals.slice(0, p - 1));
     const total = parseInt(countResult.rows[0].total) || 0;
+
+    // ترتيب: الأحدث افتراضياً
+    const orderBy = query.sort === 'oldest' ? 'ASC' : 'DESC';
 
     // Get paginated data with joins
     vals.push(query.limit || 10, query.offset || 0);
@@ -210,15 +230,22 @@ export class ContentService {
         ct.name as content_type_name,
         u.name as created_by_name,
         mu.name as media_unit_name,
+        o.title as order_title,
+        d.name as desk_name,
+        p.title as program_name,
         COUNT(DISTINCT cta.task_id) as reuse_count
       FROM content c
       LEFT JOIN content_types ct ON c.content_type_id = ct.id
       LEFT JOIN users u ON c.created_by = u.id
       LEFT JOIN media_units mu ON c.media_unit_id = mu.id
       LEFT JOIN content_tasks cta ON c.id = cta.content_id AND cta.usage_type = 'reuse'
+      LEFT JOIN tasks t ON c.task_id = t.id
+      LEFT JOIN orders o ON t.order_id = o.id
+      LEFT JOIN desks d ON o.desk_id = d.id
+      LEFT JOIN programs p ON o.program_id = p.id
       ${where}
-      GROUP BY c.id, ct.id, u.id, mu.id
-      ORDER BY c.created_at DESC 
+      GROUP BY c.id, ct.id, u.id, mu.id, o.id, d.id, p.id
+      ORDER BY c.created_at ${orderBy}
       LIMIT $${p} OFFSET $${p + 1}
     `;
     const result = await pool.query(sql, vals);

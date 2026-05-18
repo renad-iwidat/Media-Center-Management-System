@@ -6,41 +6,27 @@ import { Order } from '../../../types/management';
  */
 export class OrderValidator {
   /**
-   * Valid Order Status Transitions
-   * Created → Pending → In Progress → Review → Done
-   * Any status can go to Cancelled
-   */
-  private static readonly validTransitions: Record<string, string[]> = {
-    'Created': ['Pending', 'Cancelled'],
-    'Pending': ['In Progress', 'Cancelled'],
-    'In Progress': ['Review', 'Cancelled'],
-    'Review': ['Done', 'In Progress', 'Cancelled'],
-    'Done': [],
-    'Cancelled': [],
-  };
-
-  /**
-   * Validate Order Status Transition
-   * @param currentStatus Current order status
-   * @param newStatus New order status to transition to
-   * @returns true if transition is valid
+   * Valid Order Status Transitions (by ID)
+   * أي حالة ممكن تروح لأي حالة ثانية (بدون قيود)
+   * لأن المستخدم بده يقدر يغير الحالة بحرية
    */
   static isValidStatusTransition(currentStatus: any, newStatus: any): boolean {
+    // السماح بأي تغيير حالة
     const current = currentStatus?.toString() || '';
     const next = newStatus?.toString() || '';
-
-    return this.validTransitions[current]?.includes(next) ?? false;
+    
+    // ما بنسمح بالتغيير لنفس الحالة
+    if (current === next) return false;
+    
+    // أي تغيير ثاني مسموح
+    return true;
   }
 
   /**
    * Get transition error message
    */
   static getTransitionError(currentStatus: any, newStatus: any): string {
-    const current = currentStatus?.toString() || '';
-    const next = newStatus?.toString() || '';
-    const allowed = this.validTransitions[current] || [];
-
-    return `Invalid transition from ${current} to ${next}. Allowed: ${allowed.join(', ')}`;
+    return `لا يمكن تغيير الحالة من ${currentStatus} إلى ${newStatus}`;
   }
 
   /**

@@ -11,13 +11,14 @@ import { Badge } from './ui/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Modal } from './ui/Modal';
 import OrderForm from './OrderForm';
 import TaskForm from './TaskForm';
 
 export default function OrdersPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState({ limit: 10, offset: 0, total: 0 });
@@ -102,6 +103,37 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchData();
+  }, [pagination.offset, filters]);
+
+  // إعادة تحميل البيانات لما الصفحة ترجع للنشاط (بعد الرجوع من تفاصيل الأوردر)
+  useEffect(() => {
+    // كل ما تتغير الـ location وتدخل على /orders → fetch
+    if (location.pathname === '/orders') {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
+  // إعادة تحميل البيانات لما النافذة ترجع للنشاط
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.offset, filters]);
 
   const handleOrderSuccess = (id?: number) => {
@@ -256,10 +288,10 @@ export default function OrdersPage() {
                         {getPriorityLabel(order.priority_id)}
                       </span>
                     </td>
-                    <td className="px-6 py-5 border border-[#FF9F4A]">
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-[#FF9F4A]" />
-                        <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg">
+                    <td className="px-6 py-5 border border-[#FF9F4A] whitespace-nowrap">
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        <Clock size={16} className="text-[#FF9F4A] flex-shrink-0" />
+                        <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
                           {order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : 'N/A'}
                         </span>
                       </div>

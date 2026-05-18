@@ -319,8 +319,9 @@ export class TaskController {
       );
 
       this.sendSuccess(res, result, 201);
-    } catch (error) {
-      this.sendError(res, error, 400);
+    } catch (error: any) {
+      console.error('Error in addComment:', error);
+      this.sendError(res, error.message || error, 400);
     }
   }
 
@@ -339,6 +340,130 @@ export class TaskController {
 
       const comments = await this.taskService.getComments(BigInt(id));
       this.sendSuccess(res, comments, 200);
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  /**
+   * PUT /api/tasks/:id/comments/:commentId
+   * Update a comment (only owner can edit)
+   */
+  async updateComment(req: Request, res: Response): Promise<void> {
+    try {
+      const { commentId } = req.params;
+      const { user_id, comment } = req.body;
+
+      if (!commentId || !user_id || !comment) {
+        this.sendError(res, 'commentId, user_id, and comment are required', 400);
+        return;
+      }
+
+      const result = await this.taskService.updateComment(
+        BigInt(commentId),
+        BigInt(user_id),
+        comment
+      );
+      this.sendSuccess(res, result, 200);
+    } catch (error: any) {
+      this.sendError(res, error.message || error, 400);
+    }
+  }
+
+  /**
+   * DELETE /api/tasks/:id/comments/:commentId
+   * Delete a comment (only owner can delete)
+   */
+  async deleteComment(req: Request, res: Response): Promise<void> {
+    try {
+      const { commentId } = req.params;
+      const { user_id } = req.body;
+
+      if (!commentId || !user_id) {
+        this.sendError(res, 'commentId and user_id are required', 400);
+        return;
+      }
+
+      const result = await this.taskService.deleteComment(
+        BigInt(commentId),
+        BigInt(user_id)
+      );
+      this.sendSuccess(res, { deleted: result }, 200);
+    } catch (error: any) {
+      this.sendError(res, error.message || error, 400);
+    }
+  }
+
+  /**
+   * PUT /api/tasks/:id/attachments/:attachmentId
+   * Update an attachment (only owner can edit)
+   */
+  async updateAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { attachmentId } = req.params;
+      const { user_id, title, description } = req.body;
+
+      if (!attachmentId || !user_id) {
+        this.sendError(res, 'attachmentId and user_id are required', 400);
+        return;
+      }
+
+      const result = await this.taskService.updateAttachment(
+        BigInt(attachmentId),
+        BigInt(user_id),
+        { title, description }
+      );
+      this.sendSuccess(res, result, 200);
+    } catch (error: any) {
+      this.sendError(res, error.message || error, 400);
+    }
+  }
+
+  /**
+   * GET /api/tasks/:id/mentions
+   * Get mentions in task comments
+   */
+  async getMentions(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        this.sendError(res, 'Task ID is required', 400);
+        return;
+      }
+
+      const mentions = await this.taskService.getMentions('task', BigInt(id));
+      this.sendSuccess(res, mentions, 200);
+
+    } catch (error) {
+      this.sendError(res, error, 400);
+    }
+  }
+
+  /**
+   * POST /api/tasks/:id/mentions
+   * Add mention to task comment
+   */
+  async addMention(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { comment_id, mentioned_user_id } = req.body;
+
+      if (!id || !comment_id || !mentioned_user_id) {
+        this.sendError(res, 'Task ID, comment_id, and mentioned_user_id are required', 400);
+        return;
+      }
+
+      const mention = await this.taskService.addMention({
+        comment_id: BigInt(comment_id),
+        mentioned_user_id: BigInt(mentioned_user_id),
+        mentioned_by_user_id: BigInt(req.user!.user_id),
+        entity_type: 'task',
+        entity_id: BigInt(id),
+      });
+
+      this.sendSuccess(res, mention, 201);
+
     } catch (error) {
       this.sendError(res, error, 400);
     }
@@ -760,11 +885,12 @@ export class TaskController {
 
   /**
    * DELETE /api/tasks/:id/attachments/:attachmentId
-   * Delete attachment
+   * Delete attachment (only owner can delete)
    */
   async deleteAttachment(req: Request, res: Response): Promise<void> {
     try {
       const { id, attachmentId } = req.params;
+      const user_id = req.body?.user_id || (req as any).user?.id;
 
       if (!id || !attachmentId) {
         this.sendError(res, 'Task ID and attachment ID are required', 400);
@@ -792,11 +918,14 @@ export class TaskController {
         }
       }
 
-      // Delete from database
-      await this.taskService.deleteAttachment(BigInt(attachmentId));
+      // Delete from database (with ownership check if user_id provided)
+      await this.taskService.deleteAttachment(
+        BigInt(attachmentId),
+        user_id ? BigInt(user_id) : undefined
+      );
       this.sendSuccess(res, { deleted: true });
-    } catch (error) {
-      this.sendError(res, error, 400);
+    } catch (error: any) {
+      this.sendError(res, error.message || error, 400);
     }
   }
 

@@ -11,7 +11,7 @@ import { Badge } from './ui/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Modal } from './ui/Modal';
 import TaskForm from './TaskForm';
 import TaskTypeIndicator from './TaskTypeIndicator';
@@ -21,6 +21,7 @@ type TaskTab = 'all' | 'mine' | 'overdue';
 
 export default function TasksPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -118,6 +119,36 @@ export default function TasksPage() {
   useEffect(() => { fetchLookups(); }, []);
   useEffect(() => { fetchData(); }, [pagination.offset, filters, activeTab]);
 
+  // إعادة تحميل البيانات لما الصفحة ترجع للنشاط (بعد الرجوع من تفاصيل المهمة)
+  useEffect(() => {
+    if (location.pathname === '/tasks') {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
+  // إعادة تحميل البيانات لما الصفحة ترجع تكون مرئية
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.offset, filters, activeTab]);
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -176,15 +207,6 @@ export default function TasksPage() {
             className="h-11 py-0 text-sm"
           />
         </div>
-
-        <div className="w-40">
-          <Select 
-            options={[{ value: '', label: 'كل الأنواع' }, ...lookups.taskTypes.map(t => ({ value: t.id, label: t.name }))]}
-            value={filters.task_type_id}
-            onChange={(e) => setFilters(f => ({ ...f, task_type_id: e.target.value }))}
-            className="h-11 py-0 text-sm"
-          />
-        </div>
       </div>
 
       <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
@@ -193,7 +215,6 @@ export default function TasksPage() {
             <thead>
               <tr className="bg-gradient-to-r from-[#3d6a8a] to-[#2d5570] text-white text-sm font-bold border-b-4 border-[#FF9F4A]">
                 <th className="px-6 py-4 border-r border-white/20">المهمة</th>
-                <th className="px-6 py-4 border-r border-white/20">النوع</th>
                 <th className="px-6 py-4 border-r border-white/20">الطلب</th>
                 <th className="px-6 py-4 border-r border-white/20">الحالة</th>
                 <th className="px-6 py-4 border-r border-white/20">المسؤول</th>
@@ -223,42 +244,42 @@ export default function TasksPage() {
                       </span>
                     </td>
                     <td className="px-6 py-5 border-r border-slate-200">
-                      <TaskTypeIndicator 
-                        taskType={lookups.taskTypes.find(t => t.id === task.task_type_id)}
-                        size="sm"
-                      />
-                    </td>
-                    <td className="px-6 py-5 border-r border-slate-200">
                       <span className="text-xs font-semibold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-lg inline-block max-w-[150px] truncate" title={task.order_title}>
                         {task.order_title}
                       </span>
                     </td>
                     <td className="px-6 py-5 border-r border-slate-200">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <TaskStatusDropdown 
-                          task={task}
-                          isEditable={true}
-                          onStatusChange={(taskId, newStatusId, newStatusName) => {
-                            // Update the task in the list
-                            setTasks(tasks.map(t => 
-                              t.id === taskId 
-                                ? { ...t, status_id: newStatusId, status_name: newStatusName }
-                                : t
-                            ));
-                          }}
-                          className="w-full"
-                        />
-                      </div>
+                      {(() => {
+                        const statusName = task.status_name || lookups.statuses.find(s => s.id === task.status_id)?.name || '—';
+                        // ألوان الحالة
+                        const statusColor = (() => {
+                          const name = statusName.toLowerCase();
+                          if (name.includes('done') || name.includes('منجز') || name.includes('مكتمل')) return 'bg-green-100 text-green-700 border-green-200';
+                          if (name.includes('progress') || name.includes('قيد') || name.includes('تنفيذ')) return 'bg-blue-100 text-blue-700 border-blue-200';
+                          if (name.includes('review') || name.includes('مراجعة')) return 'bg-purple-100 text-purple-700 border-purple-200';
+                          if (name.includes('cancel') || name.includes('ملغ') || name.includes('رفض')) return 'bg-red-100 text-red-700 border-red-200';
+                          if (name.includes('pending') || name.includes('انتظار') || name.includes('معلق')) return 'bg-amber-100 text-amber-700 border-amber-200';
+                          return 'bg-slate-100 text-slate-700 border-slate-200';
+                        })();
+                        return (
+                          <span className={cn(
+                            "text-xs font-bold px-3 py-1.5 rounded-lg inline-block border",
+                            statusColor
+                          )}>
+                            {statusName}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-5 border-r border-slate-200">
                       <span className="text-sm font-semibold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-lg inline-block">
                         {task.assigned_to_name}
                       </span>
                     </td>
-                    <td className="px-6 py-5 border-r border-slate-200">
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} className="text-[#FF9F4A]" />
-                        <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg">
+                    <td className="px-6 py-5 border-r border-slate-200 whitespace-nowrap">
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        <Clock size={14} className="text-[#FF9F4A] flex-shrink-0" />
+                        <span className="font-mono text-sm text-slate-700 font-medium bg-orange-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
                           {task.deadline ? format(new Date(task.deadline), 'yyyy-MM-dd') : 'N/A'}
                         </span>
                       </div>

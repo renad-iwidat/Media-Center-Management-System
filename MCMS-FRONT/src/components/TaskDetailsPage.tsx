@@ -19,6 +19,8 @@ import TaskTypeIndicator from './TaskTypeIndicator';
 import ShootingDataForm from './ShootingDataForm';
 import ShootingDataDisplay from './ShootingDataDisplay';
 import AISystemButton from './AISystemButton';
+import CommentsSection from './CommentsSection';
+import AttachmentItem from './AttachmentItem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -272,19 +274,7 @@ export default function TaskDetailsPage() {
                 <Badge variant={getStatusVariant(task.status_id)} className="px-4 py-1 text-[12px]">
                   {task.status_name}
                 </Badge>
-                {task.task_type_id && (
-                  <TaskTypeIndicator 
-                    taskType={taskTypes.find(t => t.id === task.task_type_id)}
-                    size="sm"
-                  />
-                )}
                 <span className="text-xs font-mono font-bold text-slate-400">#{task.id}</span>
-                {dependencyStatus && (
-                  <Badge variant={dependencyStatus.can_start ? 'green' : 'red'} className="gap-1.5">
-                    {dependencyStatus.can_start ? <Unlock size={12} /> : <Lock size={12} />}
-                    {dependencyStatus.can_start ? 'قابلة للبدء' : 'محجوبة'}
-                  </Badge>
-                )}
               </div>
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">{task.title}</h1>
               <p className="text-slate-500 max-w-2xl leading-relaxed font-medium">{task.description || 'لا يوجد وصف متاح'}</p>
@@ -361,7 +351,6 @@ export default function TaskDetailsPage() {
              {task.task_type_id && taskTypes.find(t => t.id === task.task_type_id)?.category === 'reporting' && (
                <TabLink active={activeTab === 'ai-usage'} onClick={() => setActiveTab('ai-usage')} icon={<Zap size={18}/>} label="سجل النظام الذكي" count={aiUsageRecords.length} />
              )}
-             <TabLink active={activeTab === 'relations'} onClick={() => setActiveTab('relations')} icon={<GitBranch size={18}/>} label="العلاقات" count={(task.relations || []).length} />
              <TabLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={18}/>} label="السجل الكامل" />
           </div>
 
@@ -490,36 +479,10 @@ export default function TaskDetailsPage() {
 
           {activeTab === 'comments' && (
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <form onSubmit={handleAddComment} className="flex gap-4">
-                  <Textarea 
-                    placeholder="اكتب تعليقاً..." 
-                    className="flex-1 min-h-[80px]" 
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                  />
-                  <Button type="submit" className="self-end px-4 py-3">
-                    <Send size={18} />
-                  </Button>
-                </form>
-              </div>
-              <div className="space-y-4">
-                {(task.comments || []).map((comment) => (
-                  <div key={comment.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">
-                      {comment.user_name.substring(0, 2)}
-                    </div>
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-900">{comment.user_name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{comment.created_at ? format(new Date(comment.created_at), 'yyyy-MM-dd HH:mm') : 'N/A'}</span>
-                      </div>
-                      <p className="text-sm text-slate-600 leading-relaxed font-bold">{comment.comment}</p>
-                    </div>
-                  </div>
-                ))}
-                {(task.comments || []).length === 0 && <p className="text-center text-slate-400 py-12">لا يوجد تعليقات بعد</p>}
-              </div>
+              <CommentsSection taskId={parseInt(id!)} onCommentAdded={() => {
+                // إعادة تحميل بيانات المهمة
+                fetchDetails();
+              }} />
             </div>
           )}
 
@@ -534,22 +497,12 @@ export default function TaskDetailsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(task.attachments || []).map((file) => (
-                  <div key={file.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all flex-shrink-0">
-                        <Paperclip size={24} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h5 className="text-sm font-bold text-slate-900 truncate">{file.title || 'بدون عنوان'}</h5>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{file.description || 'بدون وصف'}</p>
-                        <span className="text-[10px] text-slate-400 font-bold mt-2 block">{file.user_name} • {file.created_at ? format(new Date(file.created_at), 'MM/dd HH:mm') : 'N/A'}</span>
-                      </div>
-                    </div>
-                    <a href={file.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all text-xs font-bold">
-                      <Download size={14} />
-                      تحميل
-                    </a>
-                  </div>
+                  <AttachmentItem
+                    key={file.id}
+                    taskId={parseInt(id!)}
+                    attachment={file as any}
+                    onChange={fetchDetails}
+                  />
                 ))}
                 {(task.attachments || []).length === 0 && (
                   <div className="col-span-2 py-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
@@ -558,39 +511,6 @@ export default function TaskDetailsPage() {
                     <Button variant="ghost" onClick={() => setIsUploadModalOpen(true)} className="mt-4 text-blue-600">ابدأ برفع أول ملف</Button>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'relations' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h4 className="text-lg font-bold text-slate-900">التبعيات والعلاقات</h4>
-                <Button onClick={() => setIsRelationModalOpen(true)} variant="secondary" className="gap-2 bg-slate-50">
-                  <Plus size={18} />
-                  إضافة علاقة
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                {(task.relations || []).map((rel) => (
-                  <div key={rel.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                        <GitBranch size={20} />
-                      </div>
-                      <div>
-                        <Link to={`/tasks/${rel.related_task_id}`} className="text-sm font-bold text-slate-900 hover:text-blue-600 transition-all">
-                          {rel.related_task_title}
-                        </Link>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{getRelationLabel(rel.relation_type)}</p>
-                      </div>
-                    </div>
-                    <Badge variant={rel.relation_type === 'blocks' ? 'red' : 'blue'}>
-                      {rel.relation_type}
-                    </Badge>
-                  </div>
-                ))}
-                {(task.relations || []).length === 0 && <p className="text-center text-slate-400 py-12">لا توجد علاقات معرفة</p>}
               </div>
             </div>
           )}

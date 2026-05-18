@@ -72,7 +72,11 @@ export class DeskModel {
 
   static async getTeams(deskId: bigint): Promise<Team[]> {
     const result = await pool.query(
-      'SELECT * FROM teams WHERE desk_id = $1 ORDER BY created_at DESC',
+      `SELECT t.*, u.name as manager_name,
+       (SELECT COUNT(*) FROM team_users tu WHERE tu.team_id = t.id) as member_count
+       FROM teams t 
+       LEFT JOIN users u ON t.manager_id = u.id
+       WHERE t.desk_id = $1 ORDER BY t.created_at DESC`,
       [deskId]
     );
     return result.rows;
@@ -90,7 +94,12 @@ export class TeamModel {
 
   static async findAll(limit: number = 50, offset: number = 0): Promise<Team[]> {
     const result = await pool.query(
-      'SELECT * FROM teams ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      `SELECT t.*, u.name as manager_name, d.name as desk_name,
+       (SELECT COUNT(*) FROM team_users tu WHERE tu.team_id = t.id) as member_count
+       FROM teams t
+       LEFT JOIN users u ON t.manager_id = u.id
+       LEFT JOIN desks d ON t.desk_id = d.id
+       ORDER BY t.created_at DESC LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
     return result.rows;
@@ -98,7 +107,11 @@ export class TeamModel {
 
   static async findByDesk(deskId: bigint): Promise<Team[]> {
     const result = await pool.query(
-      'SELECT * FROM teams WHERE desk_id = $1 ORDER BY created_at DESC',
+      `SELECT t.*, u.name as manager_name,
+       (SELECT COUNT(*) FROM team_users tu WHERE tu.team_id = t.id) as member_count
+       FROM teams t
+       LEFT JOIN users u ON t.manager_id = u.id
+       WHERE t.desk_id = $1 ORDER BY t.created_at DESC`,
       [deskId]
     );
     return result.rows;

@@ -70,6 +70,34 @@ export class NotificationService {
   }
 
   /**
+   * إشعار عند المنشن في تعليق
+   */
+  static async notifyMention(mentionedUserId: bigint, mentionedByName: string, entityType: 'task' | 'order', entityId: bigint, entityTitle: string): Promise<void> {
+    await this.create({
+      user_id: mentionedUserId,
+      type: 'mention',
+      title: 'تم منشنك في تعليق',
+      message: `${mentionedByName} منشنك في: ${entityTitle}`,
+      entity_type: entityType,
+      entity_id: entityId,
+    });
+  }
+
+  /**
+   * إشعار عند إضافة تعليق جديد
+   */
+  static async notifyNewComment(taskId: bigint, taskTitle: string, commentedByName: string, commentedToUserId: bigint): Promise<void> {
+    await this.create({
+      user_id: commentedToUserId,
+      type: 'comment',
+      title: 'تعليق جديد على المهمة',
+      message: `${commentedByName} علق على: ${taskTitle}`,
+      entity_type: 'task',
+      entity_id: taskId,
+    });
+  }
+
+  /**
    * إشعار عند اكتمال أوردر
    */
   static async notifyOrderCompleted(orderId: bigint, orderTitle: string, createdBy: bigint): Promise<void> {

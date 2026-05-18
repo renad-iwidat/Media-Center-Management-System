@@ -217,9 +217,12 @@ export class ContentController {
         status_id: req.query.status_id ? BigInt(req.query.status_id as string) : undefined,
         media_unit_id: req.query.media_unit_id ? BigInt(req.query.media_unit_id as string) : undefined,
         created_by: req.query.created_by ? BigInt(req.query.created_by as string) : undefined,
+        program_id: req.query.program_id ? BigInt(req.query.program_id as string) : undefined,
+        desk_id: req.query.desk_id ? BigInt(req.query.desk_id as string) : undefined,
         from_date: req.query.from_date ? new Date(req.query.from_date as string) : undefined,
         to_date: req.query.to_date ? new Date(req.query.to_date as string) : undefined,
         is_archived: archivedParam !== undefined ? archivedParam === 'true' : undefined,
+        sort: (req.query.sort as 'newest' | 'oldest') || 'newest',
         limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
         offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
       });
