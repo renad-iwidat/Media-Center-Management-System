@@ -125,6 +125,8 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
         const totalAutoSum = dailyStats.reduce((s: number, d: any) => s + (d.automated_count || 0), 0);
         const totalRejectedSum = dailyStats.reduce((s: number, d: any) => s + (d.rejected_count || 0), 0);
         const tableRows = showAllDays ? dailyStats : dailyStats.slice(0, 7);
+        // تحديد تاريخ اليوم بتوقيت فلسطين للمقارنة
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hebron' });
 
         return (
           <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden">
@@ -167,9 +169,10 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                     const pubCount = day.published_count || 0;
                     const pubH = (pubCount / maxVal) * 100;
                     const dateObj = new Date(day.date);
-                    const dayLabel = dateObj.toLocaleDateString('ar-SA', { day: 'numeric', month: 'numeric' });
-                    const weekDay = dateObj.toLocaleDateString('ar-SA', { weekday: 'short' });
-                    const isToday = idx === 0;
+                    const dayLabel = dateObj.toLocaleDateString('ar-SA', { day: 'numeric', month: 'numeric', timeZone: 'Asia/Hebron' });
+                    const weekDay = dateObj.toLocaleDateString('ar-SA', { weekday: 'short', timeZone: 'Asia/Hebron' });
+                    const dayDateStr = dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Hebron' });
+                    const isToday = dayDateStr === todayStr;
                     
                     return (
                       <div key={idx} className="flex-1 flex flex-col items-center gap-2 group relative">
@@ -280,15 +283,16 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                 <tbody className="divide-y divide-[#f8fafc]">
                   {tableRows.map((day: any, idx: number) => {
                     const dateObj = new Date(day.date);
-                    const dayName = dateObj.toLocaleDateString('ar-SA', { weekday: 'long' });
-                    const formattedDate = dateObj.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' });
+                    const dayName = dateObj.toLocaleDateString('ar-SA', { weekday: 'long', timeZone: 'Asia/Hebron' });
+                    const formattedDate = dateObj.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hebron' });
                     const pub = day.published_count || 0;
                     const ed = day.editorial_count || 0;
                     const auto = day.automated_count || 0;
                     const rej = day.rejected_count || 0;
                     const total = pub + rej;
                     const pubPct = total > 0 ? Math.round((pub / total) * 100) : 0;
-                    const isFirst = idx === 0;
+                    const dayDateStr = dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Hebron' });
+                    const isFirst = dayDateStr === todayStr;
                     return (
                       <tr key={idx} className={`transition-colors hover:bg-[#f8fafc] ${isFirst ? 'bg-[#fffbf5]' : ''}`}>
                         <td className="py-2.5 px-5">

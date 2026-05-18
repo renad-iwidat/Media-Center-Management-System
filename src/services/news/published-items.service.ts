@@ -352,15 +352,15 @@ export class PublishedItemsService {
 
       const result = await query(
         `WITH date_range AS (
-          SELECT DISTINCT DATE(pi.published_at) AS date
+          SELECT DISTINCT DATE(pi.published_at AT TIME ZONE 'Asia/Hebron') AS date
           FROM published_items pi
-          WHERE DATE(pi.published_at) >= CURRENT_DATE - ($1 || ' days')::INTERVAL
+          WHERE DATE(pi.published_at AT TIME ZONE 'Asia/Hebron') >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hebron')::DATE - ($1 || ' days')::INTERVAL
           ${muFilter}
           UNION
-          SELECT DISTINCT DATE(eq_rej.updated_at) AS date
+          SELECT DISTINCT DATE(eq_rej.updated_at AT TIME ZONE 'Asia/Hebron') AS date
           FROM editorial_queue eq_rej
           WHERE eq_rej.status = 'rejected'
-            AND DATE(eq_rej.updated_at) >= CURRENT_DATE - ($1 || ' days')::INTERVAL
+            AND DATE(eq_rej.updated_at AT TIME ZONE 'Asia/Hebron') >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hebron')::DATE - ($1 || ' days')::INTERVAL
           ${muFilterEq}
         )
         SELECT
@@ -371,11 +371,11 @@ export class PublishedItemsService {
           COALESCE(COUNT(DISTINCT eq_rej.id), 0)                                            AS rejected_count
         FROM date_range dr
         LEFT JOIN published_items pi
-               ON DATE(pi.published_at) = dr.date ${muFilter}
+               ON DATE(pi.published_at AT TIME ZONE 'Asia/Hebron') = dr.date ${muFilter}
         LEFT JOIN raw_data rd ON pi.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
         LEFT JOIN editorial_queue eq_rej
-               ON DATE(eq_rej.updated_at) = dr.date
+               ON DATE(eq_rej.updated_at AT TIME ZONE 'Asia/Hebron') = dr.date
               AND eq_rej.status = 'rejected'
               ${muFilterEq}
         GROUP BY dr.date
