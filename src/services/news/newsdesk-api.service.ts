@@ -9,7 +9,29 @@
 const NEWSDESK_API_BASE = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps:9999';
 
 /**
- * واجهة لتمثيل مقالة من الـ API
+ * واجهة لتمثيل مقالة خام من الـ API (endpoint: /articles/raw)
+ */
+export interface NewsDeskRawArticle {
+  id: number;
+  source_id: number;
+  apify_run_id?: string;
+  raw_url: string;
+  raw_title: string;
+  raw_text: string;
+  raw_summary?: string;
+  raw_authors?: string;
+  raw_keywords?: string;           // keywords كـ string مفصولة بفواصل → تتحول لـ tags
+  raw_published_at?: string;
+  raw_top_image_url?: string;
+  source_url?: string;
+  processing_status?: string;
+  fetched_at: string;
+  created_at?: string;
+  raw_meta?: Record<string, any>;
+}
+
+/**
+ * واجهة لتمثيل مقالة معالجة من الـ API (endpoint: /articles) — للتوافق مع الكود القديم
  */
 export interface NewsDeskArticle {
   id: number;
@@ -59,10 +81,21 @@ export interface NewsDeskArticle {
 }
 
 /**
- * واجهة لنتيجة قائمة المقالات
+ * واجهة لنتيجة قائمة المقالات المعالجة
  */
 export interface NewsDeskArticlesResponse {
   items: NewsDeskArticle[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+/**
+ * واجهة لنتيجة قائمة المقالات الخام
+ */
+export interface NewsDeskRawArticlesResponse {
+  items: NewsDeskRawArticle[];
   total: number;
   page: number;
   page_size: number;
@@ -163,6 +196,26 @@ class NewsDeskApiService {
   // ══════════════════════════════════════════════════════════════════════════
   // Articles (Processed)
   // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * جلب المقالات الخام (raw) — البيانات كما جاءت من المصدر
+   */
+  async getRawArticles(filters: ArticleFilters = {}): Promise<NewsDeskRawArticlesResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters.source) params.append('source', filters.source);
+    if (filters.language) params.append('language', filters.language);
+    if (filters.date_from) params.append('date_from', filters.date_from);
+    if (filters.date_to) params.append('date_to', filters.date_to);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.page_size) params.append('page_size', filters.page_size.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/articles/raw${queryString ? `?${queryString}` : ''}`;
+    
+    return this.request<NewsDeskRawArticlesResponse>(endpoint);
+  }
 
   /**
    * جلب المقالات المعالجة مع فلاتر

@@ -7,7 +7,7 @@
  */
 
 import { RawDataService, SourceService } from '../database/database.service';
-import { newsDeskApiService, NewsDeskArticle } from './newsdesk-api.service';
+import { newsDeskApiService, NewsDeskRawArticle } from './newsdesk-api.service';
 import { SystemSettingsService } from '../database/system-settings.service';
 
 export interface ArticleToSave {
@@ -53,42 +53,54 @@ export interface PipelineResult {
 const URL_CHECK_BATCH = 20;
 
 /**
- * تحويل مقالة من NewsDesk API إلى الصيغة المحلية
+ * تحويل مقالة خام من NewsDesk API إلى الصيغة المحلية
  * (source.id يبقى 0 مؤقتاً — يتم ربطه لاحقاً بمرحلة الحفظ)
  */
-function mapApiArticleToLocal(article: NewsDeskArticle): ArticleToSave {
-  // تحويل keywords string إلى array
+function mapRawArticleToLocal(article: NewsDeskRawArticle): ArticleToSave {
+  // تحويل raw_keywords string إلى array (هي الـ tags عندنا)
   const tags: string[] = [];
-  if (article.keywords) {
-    tags.push(...article.keywords.split(',').map(k => k.trim()).filter(Boolean));
+  if (article.raw_keywords) {
+    tags.push(...article.raw_keywords.split(',').map(k => k.trim()).filter(Boolean));
   }
-  if (article.category?.name_ar) {
-    tags.push(article.category.name_ar);
+
+  // استخراج اللغة من raw_meta إذا موجودة
+  const language = article.raw_meta?.articleLanguage || article.raw_meta?.configuredLanguage || 'ar';
+
+  // استخراج slug المصدر من source_url (مثلاً: https://asharq.com → asharq)
+  let sourceSlug = '';
+  let sourceName = 'NewsDesk';
+  if (article.source_url) {
+    try {
+      const urlObj = new URL(article.source_url);
+      const hostname = urlObj.hostname.replace('www.', '');
+      sourceSlug = hostname.split('.')[0]; // asharq.com → asharq
+      sourceName = hostname; // asharq.com
+    } catch { /* تجاهل URLs غير صالحة */ }
   }
 
   return {
-    title: article.title,
-    description: article.summary || article.text?.substring(0, 500) || '',
-    link: article.url,
-    pubDate: article.published_at || article.created_at,
-    image_url: article.top_image_url || undefined,
+    title: article.raw_title,
+    description: article.raw_summary || article.raw_text?.substring(0, 500) || '',
+    link: article.raw_url,
+    pubDate: article.raw_published_at || article.fetched_at,
+    image_url: article.raw_top_image_url || undefined,
     tags,
     source: {
       id: 0, // مؤقت — يتم ربطه بمرحلة الحفظ عبر findOrCreateBySlug
       source_type_id: 2, // API
       default_category_id: null,
     },
-    sourceName: article.source?.name || 'NewsDesk',
-    sourceBaseUrl: article.source?.base_url || '',
+    sourceName,
+    sourceBaseUrl: article.source_url || '',
     // حقول إضافية
-    summary: article.summary || '',
-    full_text: article.text || '',
-    language: article.language,
-    authors: article.authors || undefined,
-    ai_category_slug: article.category?.slug,
-    geo_scope_slug: article.geo_scope?.slug,
-    ai_confidence: article.ai_confidence || undefined,
-    source_slug: article.source?.slug || '',
+    summary: article.raw_summary || '',
+    full_text: article.raw_text || '',
+    language,
+    authors: article.raw_authors || undefined,
+    ai_category_slug: undefined, // المقالات الخام ما عندها تصنيف — بيتصنف لاحقاً
+    geo_scope_slug: undefined,
+    ai_confidence: undefined,
+    source_slug: sourceSlug,
     newsdesk_article_id: article.id,
   };
 }
@@ -160,21 +172,21 @@ class NewsPipelineService {
       return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [] };
     }
 
-    // ── المرحلة 1: جلب المقالات من الـ API ────────────────────────────────
-    console.log(`\n📰 جلب المقالات (page_size: ${pageSize})...`);
+    // ── المرحلة 1: جلب المقالات الخام من الـ API ────────────────────────────
+    console.log(`\n📰 جلب المقالات الخام (page_size: ${pageSize})...`);
 
     // نجلب آخر المقالات — نستخدم date_from لآخر 24 ساعة لتجنب التكرار
     const yesterday = new Date();
     yesterday.setHours(yesterday.getHours() - 24);
     const dateFrom = yesterday.toISOString().split('T')[0];
 
-    let allApiArticles: NewsDeskArticle[] = [];
+    let allApiArticles: NewsDeskRawArticle[] = [];
     let totalPages = 1;
     let currentPage = 1;
 
     try {
-      // جلب الصفحة الأولى
-      const firstResponse = await newsDeskApiService.getArticles({
+      // جلب الصفحة الأولى من /articles/raw
+      const firstResponse = await newsDeskApiService.getRawArticles({
         date_from: dateFrom,
         page: 1,
         page_size: Math.min(pageSize, 100),
@@ -182,28 +194,28 @@ class NewsPipelineService {
 
       allApiArticles = firstResponse.items;
       totalPages = firstResponse.pages;
-      console.log(`   📥 صفحة 1/${totalPages}: ${firstResponse.items.length} مقالة (إجمالي: ${firstResponse.total})`);
+      console.log(`   📥 صفحة 1/${totalPages}: ${firstResponse.items.length} مقالة خام (إجمالي: ${firstResponse.total})`);
 
       // جلب باقي الصفحات إذا لزم الأمر (حد أقصى 5 صفحات)
       const maxPages = Math.min(totalPages, 5);
       for (currentPage = 2; currentPage <= maxPages; currentPage++) {
-        const response = await newsDeskApiService.getArticles({
+        const response = await newsDeskApiService.getRawArticles({
           date_from: dateFrom,
           page: currentPage,
           page_size: Math.min(pageSize, 100),
         });
         allApiArticles.push(...response.items);
-        console.log(`   📥 صفحة ${currentPage}/${totalPages}: ${response.items.length} مقالة`);
+        console.log(`   📥 صفحة ${currentPage}/${totalPages}: ${response.items.length} مقالة خام`);
       }
     } catch (error) {
-      console.error(`❌ خطأ في جلب المقالات:`, error instanceof Error ? error.message : error);
+      console.error(`❌ خطأ في جلب المقالات الخام:`, error instanceof Error ? error.message : error);
       return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [] };
     }
 
-    console.log(`\n✅ تم جلب ${allApiArticles.length} مقالة من الـ API`);
+    console.log(`\n✅ تم جلب ${allApiArticles.length} مقالة خام من الـ API`);
 
-    // ── المرحلة 2: تحويل المقالات للصيغة المحلية ──────────────────────────
-    const allCandidates = allApiArticles.map(mapApiArticleToLocal);
+    // ── المرحلة 2: تحويل المقالات الخام للصيغة المحلية ──────────────────────────
+    const allCandidates = allApiArticles.map(mapRawArticleToLocal);
 
     // ── المرحلة 3: فلترة الموجودين — batch parallel ───────────────────────
     console.log(`\n🔍 فحص ${allCandidates.length} مقالة (موجود مسبقاً؟) — batches من ${URL_CHECK_BATCH}...`);
