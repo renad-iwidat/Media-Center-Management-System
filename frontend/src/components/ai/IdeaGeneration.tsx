@@ -74,21 +74,6 @@ export default function IdeaGeneration({ mediaUnitId }: { mediaUnitId: number | 
   const [episodePage, setEpisodePage] = useState(1);
   const itemsPerPage = 10;
 
-  // ── prefill from قسم النشر ──
-  useEffect(() => {
-    const prefill = localStorage.getItem('ai_prefill_content');
-    if (prefill) {
-      try {
-        const { title, content } = JSON.parse(prefill);
-        const text = title ? `${title}\n\n${content}` : content;
-        if (text) {
-          setAdditionalContext(text);
-        }
-      } catch {}
-      localStorage.removeItem('ai_prefill_content');
-    }
-  }, []);
-
   // ─── Load initial data ──────────────────────────────────────
   useEffect(() => {
     setLoadingData(true);
