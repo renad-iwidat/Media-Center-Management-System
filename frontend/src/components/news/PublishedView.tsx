@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, Newspaper, MessageSquare } from "lucide-react";
+import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, MessageSquare } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -332,16 +332,6 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                     >
                       <Share2 size={14} />
                       <span>منشور اجتماعي</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onNavigateToAI('newsroom', { title: selectedItem.title || '', content: selectedItem.content || '' });
-                        setSelectedItem(null);
-                      }}
-                      className="flex items-center gap-2 px-3 py-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl text-xs font-bold text-teal-600 transition-all"
-                    >
-                      <Newspaper size={14} />
-                      <span>نشرة إخبارية</span>
                     </button>
                     <button
                       onClick={() => {
