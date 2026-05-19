@@ -11,6 +11,7 @@ import { newsPipelineService } from './news-pipeline.service';
 import { articleSaverService } from './article-saver.service';
 import FlowRouterService from './flow-router.service';
 import { SystemSettingsService } from '../database/system-settings.service';
+import { autoPublishService } from './auto-publish.service';
 
 /**
  * واجهة لحالة الـ scheduler
@@ -195,6 +196,21 @@ class SchedulerService {
           console.log(`   ✅ تم نشر ${autoPublishResult.published} خبر أوتوماتيكي عالق`);
         } else {
           console.log(`   ✅ لا يوجد أخبار أوتوماتيكية عالقة`);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // المرحلة 4: النشر التلقائي على الموقع الخارجي (hgaza.nn.ps)
+        // ينشر الأخبار المعتمدة (published) على الموقع الخارجي
+        // ══════════════════════════════════════════════════════════════════════
+        console.log('\n🌐 المرحلة 4: النشر التلقائي على الموقع الخارجي...');
+        const externalPublishResult = await autoPublishService.publishAll();
+        if (externalPublishResult.success > 0 || externalPublishResult.failed > 0) {
+          console.log(`   📊 النتيجة: ✅ ${externalPublishResult.success} | ❌ ${externalPublishResult.failed} | ⏭️ ${externalPublishResult.skipped}`);
+        }
+        // إعادة محاولة الفاشل (إذا في)
+        const retryResult = await autoPublishService.retryFailed();
+        if (retryResult.total > 0) {
+          console.log(`   🔄 إعادة محاولة: ✅ ${retryResult.success} | ❌ ${retryResult.failed}`);
         }
       } else {
         console.log('\n⏸️  المرحلة 2: المعالجة متوقفة (flow_enabled = false) — تخطي');

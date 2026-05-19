@@ -65,6 +65,10 @@ export class SystemSettingsController {
         'flow_enabled',
         'scheduler_interval_minutes',
         'articles_per_source',
+        'auto_publish_enabled',
+        'auto_publish_api_url',
+        'auto_publish_api_token',
+        'auto_publish_category_id',
       ];
       if (!allowedKeys.includes(key)) {
         res.status(400).json({
@@ -126,6 +130,7 @@ export class SystemSettingsController {
         scheduler_enabled,
         classifier_enabled,
         flow_enabled,
+        auto_publish_enabled,
         scheduler_interval_minutes,
         articles_per_source,
       } = req.body;
@@ -138,6 +143,8 @@ export class SystemSettingsController {
         updates.push({ key: 'classifier_enabled', value: String(Boolean(classifier_enabled)) });
       if (flow_enabled !== undefined)
         updates.push({ key: 'flow_enabled', value: String(Boolean(flow_enabled)) });
+      if (auto_publish_enabled !== undefined)
+        updates.push({ key: 'auto_publish_enabled', value: String(Boolean(auto_publish_enabled)) });
       if (scheduler_interval_minutes !== undefined) {
         const mins = parseInt(String(scheduler_interval_minutes), 10);
         if (isNaN(mins) || mins < 1) {

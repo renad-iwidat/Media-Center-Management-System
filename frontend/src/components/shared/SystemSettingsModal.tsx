@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { X, Settings2, Clock, Hash, Power, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Settings2, Clock, Hash, Power, Loader2, CheckCircle2, AlertCircle, Globe, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../../services/api";
 
@@ -27,6 +27,10 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
   const [intervalMinutes, setIntervalMinutes] = useState(15);
   const [articlesPerSource, setArticlesPerSource] = useState(20);
 
+  // النشر التلقائي
+  const [autoPublishEnabled, setAutoPublishEnabled] = useState(false);
+  const [autoPublishTargets, setAutoPublishTargets] = useState<any[]>([]);
+
   // القيم المؤقتة للتعديل
   const [intervalInput, setIntervalInput] = useState("15");
   const [articlesInput, setArticlesInput] = useState("20");
@@ -36,9 +40,12 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    api.getSystemToggles()
-      .then((res) => {
-        const d = res.data || {};
+    Promise.all([
+      api.getSystemToggles().catch(() => ({ data: {} })),
+      api.getAutoPublishStatus().catch(() => ({ data: { masterEnabled: false, targets: [] } })),
+    ])
+      .then(([togglesRes, autoRes]) => {
+        const d = togglesRes.data || {};
         setSchedulerEnabled(!!d.scheduler_enabled);
         setClassifierEnabled(!!d.classifier_enabled);
         setFlowEnabled(!!d.flow_enabled);
@@ -46,6 +53,10 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
         setArticlesPerSource(d.articles_per_source ?? 20);
         setIntervalInput(String(d.scheduler_interval_minutes ?? 15));
         setArticlesInput(String(d.articles_per_source ?? 20));
+
+        const autoData = autoRes.data || {};
+        setAutoPublishEnabled(!!autoData.masterEnabled);
+        setAutoPublishTargets(autoData.targets || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -61,6 +72,37 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
       setClassifierEnabled(next);
       setFlowEnabled(next);
       onSystemStatusChange?.(next);
+      setSaveStatus("success");
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    }
+  };
+
+  // تشغيل/إيقاف النشر التلقائي
+  const handleToggleAutoPublish = async () => {
+    const next = !autoPublishEnabled;
+    setSaveStatus("saving");
+    try {
+      await api.toggleAutoPublishMaster(next);
+      setAutoPublishEnabled(next);
+      setSaveStatus("success");
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    }
+  };
+
+  // تفعيل/إيقاف هدف نشر معين
+  const handleToggleTarget = async (targetId: number, currentEnabled: boolean) => {
+    setSaveStatus("saving");
+    try {
+      await api.toggleAutoPublishTarget(targetId, !currentEnabled);
+      setAutoPublishTargets(prev =>
+        prev.map(t => t.id === targetId ? { ...t, isEnabled: !currentEnabled } : t)
+      );
       setSaveStatus("success");
     } catch {
       setSaveStatus("error");
@@ -120,7 +162,7 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="bg-white border border-e2e8f0 rounded-2xl shadow-lg w-full max-w-md pointer-events-auto"
+              className="bg-white border border-e2e8f0 rounded-2xl shadow-lg w-full max-w-md pointer-events-auto max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -209,6 +251,90 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* فاصل */}
+                  <div className="border-t border-e2e8f0" />
+
+                  {/* ═══ النشر التلقائي ═══ */}
+                  <div className="space-y-3">
+                    <p className="text-[11px] uppercase tracking-widest text-[#64748b] font-semibold">
+                      النشر التلقائي على المواقع
+                    </p>
+
+                    {/* Master Switch */}
+                    <button
+                      onClick={handleToggleAutoPublish}
+                      disabled={saveStatus === "saving"}
+                      className={`w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between
+                        ${saveStatus === "saving" ? "opacity-60 cursor-not-allowed" : ""}
+                        ${autoPublishEnabled
+                          ? "bg-blue-50 border-blue-300 hover:border-blue-400"
+                          : "bg-f8fafc border-e2e8f0 hover:border-cbd5e1"
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+                          ${autoPublishEnabled ? "bg-blue-100" : "bg-f1f5f9"}`}>
+                          <Globe size={18} className={autoPublishEnabled ? "text-blue-600" : "text-[#64748b]"} />
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-[#1e293b]">
+                            {autoPublishEnabled ? "النشر التلقائي مفعّل" : "النشر التلقائي متوقف"}
+                          </p>
+                          <p className="text-[10px] text-[#64748b] mt-0.5">
+                            نشر الأخبار الأوتوماتيكية على المواقع الخارجية
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`w-11 h-[22px] rounded-full relative transition-colors shrink-0
+                        ${autoPublishEnabled ? "bg-blue-600" : "bg-[#cbd5e1]"}`}>
+                        <motion.div
+                          animate={{ x: autoPublishEnabled ? 22 : 2 }}
+                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                          className="absolute top-[3px] left-0 w-4 h-4 bg-white rounded-full shadow-sm"
+                        />
+                      </div>
+                    </button>
+
+                    {/* أهداف النشر */}
+                    {autoPublishTargets.length > 0 && (
+                      <div className="space-y-2">
+                        {autoPublishTargets.map((target) => (
+                          <div
+                            key={target.id}
+                            className={`p-3 rounded-xl border transition-colors flex items-center justify-between
+                              ${target.isEnabled
+                                ? "bg-blue-50/50 border-blue-200"
+                                : "bg-f8fafc border-e2e8f0"
+                              }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <ExternalLink size={14} className={target.isEnabled ? "text-blue-500" : "text-[#94a3b8]"} />
+                              <div>
+                                <p className="text-xs font-semibold text-[#1e293b]">{target.name}</p>
+                                <p className="text-[10px] text-[#64748b]">
+                                  {target.mediaUnitName} · {target.totalPublished || 0} منشور
+                                  {target.publishedToday > 0 && ` · ${target.publishedToday} اليوم`}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleToggleTarget(target.id, target.isEnabled)}
+                              disabled={saveStatus === "saving"}
+                              className={`w-9 h-5 rounded-full relative transition-colors shrink-0
+                                ${target.isEnabled ? "bg-blue-600" : "bg-[#cbd5e1]"}`}
+                            >
+                              <motion.div
+                                animate={{ x: target.isEnabled ? 18 : 2 }}
+                                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                                className="absolute top-1 left-0 w-3 h-3 bg-white rounded-full shadow-sm"
+                              />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* فاصل */}

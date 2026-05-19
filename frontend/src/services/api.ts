@@ -569,4 +569,50 @@ export const api = {
     
     console.log('✅ [API] تم تسجيل الخروج من API');
   },
+
+  // --- Auto-Publish (النشر التلقائي على المواقع الخارجية) ---
+  getAutoPublishStatus: () => request<any>("/auto-publish/status"),
+  toggleAutoPublishMaster: (enabled: boolean) =>
+    request<any>("/auto-publish/toggle", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
+  getAutoPublishTargets: (mediaUnitId?: number) =>
+    request<any>(`/auto-publish/targets${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
+  getAutoPublishTarget: (id: number) => request<any>(`/auto-publish/targets/${id}`),
+  createAutoPublishTarget: (data: { media_unit_id: number; name: string; api_url: string; api_token: string; default_category_id?: number; is_enabled?: boolean }) =>
+    request<any>("/auto-publish/targets", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateAutoPublishTarget: (id: number, data: any) =>
+    request<any>(`/auto-publish/targets/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteAutoPublishTarget: (id: number) =>
+    request<any>(`/auto-publish/targets/${id}`, { method: "DELETE" }),
+  toggleAutoPublishTarget: (id: number, enabled: boolean) =>
+    request<any>(`/auto-publish/targets/${id}/toggle`, {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
+  publishOneToExternal: (raw_data_id: number, target_id: number) =>
+    request<any>("/auto-publish/publish-one", {
+      method: "POST",
+      body: JSON.stringify({ raw_data_id, target_id }),
+    }),
+  runAutoPublish: () =>
+    request<any>("/auto-publish/run", { method: "POST" }),
+  retryAutoPublish: () =>
+    request<any>("/auto-publish/retry", { method: "POST" }),
+  getAutoPublishLog: (targetId?: number, limit: number = 50) =>
+    request<any>(`/auto-publish/log${targetId ? `?target_id=${targetId}&limit=${limit}` : `?limit=${limit}`}`),
+  getExternalLinks: (rawDataId: number) =>
+    request<any>(`/auto-publish/external-links/${rawDataId}`),
+  getExternalLinksBatch: (rawDataIds: number[]) =>
+    request<any>("/auto-publish/external-links/batch", {
+      method: "POST",
+      body: JSON.stringify({ raw_data_ids: rawDataIds }),
+    }),
 };
