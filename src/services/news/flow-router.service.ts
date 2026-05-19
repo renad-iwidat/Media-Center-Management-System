@@ -277,7 +277,8 @@ export class FlowRouterService {
         try {
           // ── أ. فحص اكتمال المحتوى ─────────────────────────────────────
           const contentLength = (article.content || '').length;
-          const isComplete = contentLength >= this.MIN_CONTENT_LENGTH;
+          const hasImage = !!(article.image_url && article.image_url.trim());
+          const isComplete = contentLength >= this.MIN_CONTENT_LENGTH && hasImage;
 
           // تحديث is_incomplete في raw_data
           await this.markAsIncomplete(article.id, !isComplete);

@@ -706,7 +706,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
               )}
               <button
                 onClick={activeMode === 'STT' ? handleSTT : handleTTS}
-                disabled={isLoading || (activeMode === 'STT' ? !selectedFileId : (ttsSource === 'paste' ? !pastedText.trim() : !selectedArticleId))}
+                disabled={isLoading || (activeMode === 'STT' ? !selectedFileId : (ttsSource === 'paste' ? !pastedText.trim() : ttsSource === 'bulletin' ? !selectedBulletinId : !selectedArticleId))}
                 className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 text-sm disabled:opacity-30"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={16} /> : <span>{activeMode === 'STT' ? 'بدء التفريغ' : 'تحويل لصوت'}</span>}
