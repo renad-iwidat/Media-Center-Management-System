@@ -3,7 +3,7 @@ import {
   Newspaper, Loader2, Copy, Check, FileText, LayoutList,
   Trash2, Search, Sparkles, RefreshCw, Sun, Moon, Hash,
   X, ChevronDown, Radio, BookOpen, Tag, Calendar, Building2,
-  CheckSquare, Square, Filter, Wand2, Plus, Edit3
+  CheckSquare, Square, Filter, Wand2, Plus, Edit3, Save, Volume2
 } from 'lucide-react';
 import { generateAIContent } from '../../lib/ai-client';
 import { api } from '../../services/api';
@@ -66,6 +66,10 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualTitle, setManualTitle] = useState('');
   const [manualContent, setManualContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     fetchNews();
@@ -221,6 +225,49 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleSaveBulletin = async () => {
+    if (!result || !mediaUnitId) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const contentToSave = isEditing ? editedContent : result;
+      const timeLabel = timeOfDay === 'MORNING' ? 'الصباحية' : 'المسائية';
+      const typeLabel = activeMode === 'BULLETIN' ? 'نشرة' : 'موجز';
+      const title = `${typeLabel} ${timeLabel} - ${new Date().toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+      await api.createBulletin({
+        media_unit_id: mediaUnitId,
+        type: activeMode === 'BULLETIN' ? 'bulletin' : 'summary',
+        time_of_day: timeOfDay === 'MORNING' ? 'morning' : 'evening',
+        title,
+        original_content: result,
+        edited_content: isEditing ? editedContent : undefined,
+        news_count: selectedCount,
+      });
+
+      setSaveSuccess(true);
+      setIsEditing(false);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('❌ خطأ في حفظ الموجز/النشرة:', error);
+      alert('حدث خطأ أثناء الحفظ. حاول مجدداً.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startEditing = () => {
+    if (result) {
+      setEditedContent(result);
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedContent('');
   };
 
   const wordCount = result ? result.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -618,6 +665,35 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                 {result && (
                   <>
                     <span className="text-[10px] text-[#94a3b8]">{wordCount} كلمة · {charCount} حرف</span>
+                    {!isEditing ? (
+                      <button
+                        onClick={startEditing}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                        style={{ background: '#f8fafc', color: '#64748b', borderColor: '#e2e8f0' }}
+                        title="تعديل المحتوى"
+                      >
+                        <Edit3 size={12} /> تعديل
+                      </button>
+                    ) : (
+                      <button
+                        onClick={cancelEditing}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all text-red-500 border-red-200 bg-red-50 hover:bg-red-100"
+                      >
+                        <X size={12} /> إلغاء التعديل
+                      </button>
+                    )}
+                    <button
+                      onClick={handleSaveBulletin}
+                      disabled={isSaving || !mediaUnitId}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40"
+                      style={saveSuccess
+                        ? { background: '#dcfce7', color: '#16a34a', borderColor: '#86efac' }
+                        : { background: '#eff6ff', color: '#2563eb', borderColor: '#bfdbfe' }
+                      }
+                      title="حفظ في قاعدة البيانات"
+                    >
+                      {isSaving ? <Loader2 size={12} className="animate-spin" /> : saveSuccess ? <><Check size={12} /> تم الحفظ</> : <><Save size={12} /> حفظ</>}
+                    </button>
                     <button
                       onClick={copyToClipboard}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
@@ -642,6 +718,14 @@ export default function NewsRoom({ mediaUnitId }: { mediaUnitId: number | null }
                   </div>
                   <p className="text-xs">جاري التحرير الذكي...</p>
                 </div>
+              ) : result && isEditing ? (
+                <textarea
+                  value={editedContent}
+                  onChange={e => setEditedContent(e.target.value)}
+                  className="w-full h-full min-h-[200px] bg-white border border-[#e2e8f0] rounded-xl p-4 text-sm leading-loose text-[#1e293b] outline-none focus:border-[#4A7C9E] resize-none font-arabic"
+                  dir="rtl"
+                  placeholder="عدّل المحتوى هنا..."
+                />
               ) : result ? (
                 <div className="max-w-none">
                   <style>{`

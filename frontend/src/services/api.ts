@@ -615,4 +615,31 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ raw_data_ids: rawDataIds }),
     }),
+
+  // --- Bulletins (الموجزات والنشرات المحفوظة) ---
+  getBulletins: (mediaUnitId?: number | null) =>
+    request<any>(`/bulletins${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
+  getBulletinById: (id: number) => request<any>(`/bulletins/${id}`),
+  createBulletin: (data: {
+    media_unit_id: number;
+    type: 'summary' | 'bulletin';
+    time_of_day: 'morning' | 'evening';
+    title: string;
+    original_content: string;
+    edited_content?: string;
+    news_count?: number;
+  }) =>
+    request<any>("/bulletins", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateBulletin: (id: number, data: { edited_content?: string; title?: string; status?: string }) =>
+    request<any>(`/bulletins/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteBulletin: (id: number) =>
+    request<any>(`/bulletins/${id}`, { method: "DELETE" }),
+  markBulletinAudioGenerated: (id: number) =>
+    request<any>(`/bulletins/${id}/audio`, { method: "PATCH" }),
 };
