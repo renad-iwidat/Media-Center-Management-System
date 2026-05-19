@@ -50,7 +50,7 @@ export async function callOpenAIChatAPI(prompt: string): Promise<string> {
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       messages: [
         {
           role: 'system',
@@ -61,7 +61,7 @@ export async function callOpenAIChatAPI(prompt: string): Promise<string> {
           content: prompt,
         },
       ],
-      max_tokens: 4000,
+      max_tokens: 32000,
       temperature: 0.7,
     }),
   });

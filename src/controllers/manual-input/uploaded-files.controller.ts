@@ -33,27 +33,31 @@ interface FileRow {
  */
 function extractArabicNameFromS3(s3Url: string): string {
   try {
-    // استخراج اسم الملف من الـ URL
-    const filename = s3Url.split('/').pop() || '';
+    // استخراج اسم الملف من الـ URL مع فك الترميز
+    const rawFilename = s3Url.split('/').pop() || '';
+    const filename = decodeURIComponent(rawFilename);
     
-    // البحث عن النمط: [type]-[arabic-name]-[timestamp]-[random].[ext]
-    // نبحث عن: (audio|video|image)-([ء-ي\s\-]+?)-(\d+)-([a-z0-9]+)\.[a-z]+
-    const match = filename.match(/(?:audio|video|image)-([ء-ي\s\-]+?)-\d+-[a-z0-9]+\.[a-z]+/i);
+    // البحث عن النمط: [type]-[name]-[timestamp]-[random].[ext]
+    // الاسم ممكن يكون عربي أو إنجليزي
+    const match = filename.match(/(?:audio|video|image)-(.+?)-\d+-[a-z0-9]+\.[a-z0-9]+$/i);
     
     if (match && match[1]) {
       return match[1].trim();
     }
     
-    // إذا فشل النمط الأول، نحاول استخراج أي نص عربي
-    const arabicMatch = filename.match(/[ء-ي\s\-]+/);
-    if (arabicMatch) {
+    // إذا فشل النمط الأول، نحاول استخراج أي نص عربي (نطاق Unicode كامل)
+    const arabicMatch = filename.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s\-]+/);
+    if (arabicMatch && arabicMatch[0].trim().length > 1) {
       return arabicMatch[0].trim();
     }
     
-    // إذا لم نجد نص عربي، نرجع اسم الملف بدون الامتداد
-    return filename.replace(/\.[^/.]+$/, '');
+    // إذا لم نجد نص عربي، نرجع اسم الملف بدون الامتداد والبادئة
+    const withoutExt = filename.replace(/\.[^/.]+$/, '');
+    // إزالة البادئة (audio-, video-, image-) والـ timestamp والـ random
+    const cleanName = withoutExt.replace(/^(?:audio|video|image)-/, '').replace(/-\d+-[a-z0-9]+$/, '');
+    return cleanName || withoutExt;
   } catch (error) {
-    console.error('Error extracting Arabic name from S3 URL:', error);
+    console.error('Error extracting name from S3 URL:', error);
     return '';
   }
 }

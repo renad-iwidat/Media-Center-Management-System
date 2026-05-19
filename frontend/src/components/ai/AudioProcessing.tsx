@@ -497,7 +497,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                                 <FileVideo className="text-sky-400 shrink-0" size={14} />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold truncate">{file.display_name}</p>
+                                <p className="font-bold truncate">{file.display_name || file.original_filename}</p>
                                 <p className="text-gray-500 text-xs">{formatFileSize(file.file_size)}</p>
                               </div>
                             </div>
@@ -726,7 +726,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                     <h4 className="text-sm font-bold text-gray-900">التفريغ النهائي</h4>
                     {selectedFile && (
                       <span className="text-xs text-gray-600 mr-auto">
-                        {selectedFile.display_name}
+                        {selectedFile.display_name || selectedFile.original_filename}
                       </span>
                     )}
                   </div>
@@ -788,7 +788,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
           <div className="bg-[#2c5f7f] rounded-2xl border border-white/10 max-w-2xl w-full max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-sm font-bold text-white">{previewFile.display_name}</h3>
+              <h3 className="text-sm font-bold text-white">{previewFile.display_name || previewFile.original_filename}</h3>
               <button
                 onClick={() => {
                   setShowVideoModal(false);
