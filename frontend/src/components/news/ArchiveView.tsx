@@ -15,6 +15,7 @@ interface PlatformInfo {
   status: string;
   external_url: string | null;
   published_at: string | null;
+  platform_name?: string | null;
 }
 
 interface ArchiveItem {
@@ -534,7 +535,7 @@ function PlatformLinkCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-[#1e293b]">
-              {getPlatformLabel(platform.platform)}
+              {platform.platform_name || getPlatformLabel(platform.platform)}
             </span>
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
               statusSuccess

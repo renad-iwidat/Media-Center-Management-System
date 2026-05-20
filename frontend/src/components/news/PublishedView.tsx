@@ -39,7 +39,12 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const loadData = useCallback(() => {
     setLoading(true);
     api.getPublished(unitId)
-      .then((res) => setItems(res.data || []))
+      .then((res) => {
+        // قسم النشر = فقط الأخبار التحريرية (اللي وافق عليها المحرر)
+        const allItems = res.data || [];
+        const editorialOnly = allItems.filter((item: any) => item.flow_type === 'editorial');
+        setItems(editorialOnly);
+      })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [unitId]);

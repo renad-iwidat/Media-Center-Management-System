@@ -82,7 +82,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'incomplete', label: 'أخبار غير مكتملة',   description: 'أخبار تحتاج إكمال',           icon: AlertTriangle,  group: 'news' },
   { id: 'queue',      label: 'قسم التحرير',         description: 'تحرير ومراجعة الأخبار',       icon: FileEdit,       group: 'news' },
   { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
-  { id: 'published',  label: 'قسم النشر',           description: 'الأخبار المنشورة سابقاً',     icon: CheckCircle,    group: 'news' },
+  { id: 'published',  label: 'قسم النشر',           description: 'الأخبار التحريرية الجاهزة للنشر', icon: CheckCircle,    group: 'news' },
   { id: 'archive',    label: 'الأرشيف',             description: 'الأخبار المؤرشفة مع روابط النشر', icon: Archive,       group: 'news' },
   { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
   { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },

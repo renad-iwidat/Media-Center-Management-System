@@ -534,7 +534,7 @@ class PublishingService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // Archive (Business Rule — NOT automatic)
+  // Archive (كل الأخبار المنشورة بنجاح — أوتوماتيكي + يدوي)
   // ════════════════════════════════════════════════════════════════════════════
 
   async getArchivedArticles(options: {
@@ -543,39 +543,79 @@ class PublishingService {
     offset?: number;
   } = {}): Promise<{ articles: any[]; total: number }> {
     const { platform, limit = 50, offset = 0 } = options;
-    const conditions: string[] = [`rd.publish_status = 'archived'`];
+
+    // الأرشيف = كل مقال منشور بنجاح (أوتوماتيكي أو يدوي)
+    // المصادر:
+    // 1. publish_status IN ('archived', 'published_external', 'published_social')
+    // 2. أو موجود في auto_publish_log بحالة success
+    // 3. أو موجود في publishing_status بحالة success
+
+    let platformFilter = '';
     const params: any[] = [];
     let idx = 1;
 
-    if (platform) { conditions.push(`ps.platform = $${idx++}`); params.push(platform); }
-
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    if (platform) {
+      platformFilter = `AND (ps.platform = $${idx} OR ($${idx} = 'external_website' AND apl.id IS NOT NULL))`;
+      params.push(platform);
+      idx++;
+    }
 
     const countResult = await query(
       `SELECT COUNT(DISTINCT rd.id) as total 
        FROM raw_data rd
-       LEFT JOIN publishing_status ps ON ps.article_id = rd.id
-       ${whereClause}`, params
+       LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
+       LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
+       WHERE (
+         rd.publish_status IN ('archived', 'published_external', 'published_social')
+         OR ps.id IS NOT NULL
+         OR apl.id IS NOT NULL
+       ) ${platformFilter}`,
+      params
     );
 
     const dataParams = [...params, limit, offset];
     const result = await query(
-      `SELECT DISTINCT rd.id, rd.title, rd.content, rd.image_url, rd.tags,
+      `SELECT DISTINCT ON (rd.id) rd.id, rd.title, rd.content, rd.image_url, rd.tags,
               rd.publish_status, rd.category_id, c.name as category_name, rd.fetched_at,
-              json_agg(json_build_object(
-                'platform', ps.platform, 'status', ps.status,
-                'external_url', ps.external_url, 'published_at', ps.published_at
-              )) FILTER (WHERE ps.id IS NOT NULL) as platforms
+              (
+                SELECT json_agg(json_build_object(
+                  'platform', sub.platform, 'status', sub.status,
+                  'external_url', sub.external_url, 'published_at', sub.published_at,
+                  'platform_name', sub.platform_name
+                ))
+                FROM (
+                  -- من publishing_status (سوشال ميديا)
+                  SELECT ps2.platform::text, ps2.status::text, ps2.external_url, 
+                         ps2.published_at::text, pc.name as platform_name
+                  FROM publishing_status ps2
+                  LEFT JOIN platform_configs pc ON pc.id = ps2.platform_config_id
+                  WHERE ps2.article_id = rd.id AND ps2.status = 'success'
+                  UNION ALL
+                  -- من auto_publish_log (مواقع خارجية)
+                  SELECT 'external_website'::text as platform, 'success'::text as status,
+                         apl2.external_url, apl2.published_at::text,
+                         apt.name as platform_name
+                  FROM auto_publish_log apl2
+                  JOIN auto_publish_targets apt ON apt.id = apl2.target_id
+                  WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success' AND apl2.external_url IS NOT NULL
+                ) sub
+              ) as platforms
        FROM raw_data rd
        LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
+       LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
        LEFT JOIN categories c ON c.id = rd.category_id
-       ${whereClause}
-       GROUP BY rd.id, rd.title, rd.content, rd.image_url, rd.tags,
-                rd.publish_status, rd.category_id, c.name, rd.fetched_at
-       ORDER BY rd.fetched_at DESC
+       WHERE (
+         rd.publish_status IN ('archived', 'published_external', 'published_social')
+         OR ps.id IS NOT NULL
+         OR apl.id IS NOT NULL
+       ) ${platformFilter}
+       ORDER BY rd.id, rd.fetched_at DESC
        LIMIT $${idx++} OFFSET $${idx}`,
       dataParams
     );
+
+    // إعادة ترتيب بالأحدث
+    result.rows.sort((a: any, b: any) => new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime());
 
     return { articles: result.rows, total: parseInt(countResult.rows[0]?.total) || 0 };
   }
