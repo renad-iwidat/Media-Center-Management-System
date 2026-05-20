@@ -6,7 +6,7 @@
  * ويحسن الوضوح والقراءة دون تغيير المعنى الأساسي
  */
 
-import { callAIWithFallback } from './smart-transcription.service';
+import { callAIWithFallback } from './ai-call.service';
 
 interface CorrectionOptions {
   language?: string;
