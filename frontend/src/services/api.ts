@@ -616,6 +616,27 @@ export const api = {
       body: JSON.stringify({ raw_data_ids: rawDataIds }),
     }),
 
+  // --- Archive (الأرشيف — المقالات المنشورة بنجاح) ---
+  getArchive: (options?: { platform?: string; limit?: number; offset?: number }) =>
+    request<any>(`/publishing/archive${options ? `?${new URLSearchParams(
+      Object.entries(options).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
+    ).toString()}` : ""}`),
+  archiveArticle: (articleId: number) =>
+    request<any>(`/publishing/archive/${articleId}`, { method: "POST" }),
+  getPublishingStatus: (articleId: number) =>
+    request<any>(`/publishing/status/${articleId}`),
+  getPublishingLogs: (articleId: number) =>
+    request<any>(`/publishing/logs/${articleId}`),
+  getPublishingStats: () =>
+    request<any>("/publishing/stats"),
+  getPlatformConfigs: () =>
+    request<any>("/publishing/configs"),
+  publishToPlatform: (articleId: number, platformConfigId: number) =>
+    request<any>("/publishing/publish", {
+      method: "POST",
+      body: JSON.stringify({ article_id: articleId, platform_config_id: platformConfigId }),
+    }),
+
   // --- Bulletins (الموجزات والنشرات المحفوظة) ---
   getBulletins: (mediaUnitId?: number | null) =>
     request<any>(`/bulletins${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),

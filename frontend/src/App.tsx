@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   Home,
   ArrowRight,
+  Archive,
 } from 'lucide-react';
 
 import { OverviewView } from './components/news/OverviewView';
@@ -40,6 +41,7 @@ import { IncompleteView } from './components/news/IncompleteView';
 import { QueueView } from './components/news/QueueView';
 import { PoliciesView } from './components/news/PoliciesView';
 import { PublishedView } from './components/news/PublishedView';
+import { ArchiveView } from './components/news/ArchiveView';
 import { SystemSettingsModal } from './components/shared/SystemSettingsModal';
 import { LoginPage } from './components/auth/LoginPage';
 import IdeaGeneration from './components/ai/IdeaGeneration';
@@ -63,7 +65,7 @@ const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
 };
 
 type SectionId =
-  | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published'
+  | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published' | 'archive'
   | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat' | 'smart-transcription';
 
 interface NavItem {
@@ -81,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'queue',      label: 'قسم التحرير',         description: 'تحرير ومراجعة الأخبار',       icon: FileEdit,       group: 'news' },
   { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
   { id: 'published',  label: 'قسم النشر',           description: 'الأخبار المنشورة سابقاً',     icon: CheckCircle,    group: 'news' },
+  { id: 'archive',    label: 'الأرشيف',             description: 'الأخبار المؤرشفة مع روابط النشر', icon: Archive,       group: 'news' },
   { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
   { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },
   { id: 'editing',    label: 'التحرير الصحفي',     description: 'إعادة صياغة وتلخيص',          icon: PenTool,        group: 'ai' },
@@ -573,6 +576,7 @@ export default function App() {
                 localStorage.setItem('ai_prefill_content', JSON.stringify(content));
                 setActiveSection(section as SectionId);
               }} />}
+              {activeSection === 'archive'    && <ArchiveView unitId={selectedMediaUnitId} />}
 
               {/* AI Views */}
               {activeSection === 'ai-dashboard' && <AIDashboard setActiveSection={setActiveSection} />}

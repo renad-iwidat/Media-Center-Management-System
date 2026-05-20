@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, MessageSquare, Globe, ExternalLink, Loader2 } from "lucide-react";
+import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, MessageSquare, Globe, ExternalLink, Loader2, Archive } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -34,6 +34,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const [selectedPublishItem, setSelectedPublishItem] = useState<any>(null);
   const [showPublishOptions, setShowPublishOptions] = useState(false);
   const [lastPublishedUrl, setLastPublishedUrl] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<number | null>(null);
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -88,6 +89,24 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
       });
     } finally {
       setPublishingToTarget(null);
+    }
+  };
+
+  // أرشفة خبر
+  const handleArchiveArticle = async (rawDataId: number) => {
+    setArchivingId(rawDataId);
+    try {
+      await api.archiveArticle(rawDataId);
+      setNotification({ type: "success", message: "✅ تم أرشفة الخبر بنجاح" });
+      setItems(prev => prev.filter(item => item.raw_data_id !== rawDataId));
+      setSelectedItem(null);
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        message: err?.message || "❌ فشل أرشفة الخبر — تأكد أنه منشور على منصة واحدة على الأقل",
+      });
+    } finally {
+      setArchivingId(null);
     }
   };
 
@@ -496,9 +515,20 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                     {/* ═══ النشر على السوشال ميديا ═══ */}
                     <div className="space-y-2 border-t border-[#e2e8f0] pt-3">
                       <p className="text-[10px] text-[#94a3b8] font-bold uppercase flex items-center gap-1">
-                        <Share2 size={12} /> نشر على السوشال ميديا
+                        <Share2 size={12} /> نشر حقيقي على السوشال ميديا
                       </p>
-                      {onNavigateToAI ? (
+                      <SocialPublishSection
+                        articleId={selectedItem.raw_data_id}
+                        onSuccess={(url) => {
+                          setLastPublishedUrl(url);
+                          setNotification({ type: "success", message: "✅ تم النشر بنجاح على السوشال ميديا" });
+                        }}
+                        onError={(msg) => {
+                          setNotification({ type: "error", message: msg });
+                        }}
+                      />
+                      {/* رابط لأداة AI لتجهيز المحتوى */}
+                      {onNavigateToAI && (
                         <button
                           onClick={() => {
                             onNavigateToAI('social', {
@@ -508,24 +538,28 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                             setSelectedItem(null);
                             setShowPublishOptions(false);
                           }}
-                          className="w-full p-3 rounded-xl border border-[#e2e8f0] hover:border-orange-300 hover:bg-orange-50/50 transition-all flex items-center justify-between group bg-white"
+                          className="w-full p-2.5 rounded-xl border border-dashed border-[#e2e8f0] hover:border-orange-300 hover:bg-orange-50/30 transition-all flex items-center justify-center gap-2 text-[10px] font-bold text-[#94a3b8] hover:text-orange-600"
                         >
-                          <div className="flex items-center gap-3">
-                            <Share2 size={14} className="text-orange-500 group-hover:text-orange-600" />
-                            <div className="text-right">
-                              <p className="text-xs font-semibold text-[#1e293b]">تجهيز منشور سوشال ميديا</p>
-                              <p className="text-[10px] text-[#64748b]">تحويل الخبر لمنشور جاهز للنشر على المنصات</p>
-                            </div>
-                          </div>
-                          <span className="text-[10px] text-orange-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">فتح</span>
+                          <PenTool size={12} /> تجهيز المحتوى بالذكاء الاصطناعي أولاً
                         </button>
-                      ) : (
-                        <p className="text-xs text-[#94a3b8] text-center py-2">غير متاح حاليًا</p>
                       )}
                     </div>
                   </motion.div>
                 )}
               </div>
+
+              {/* Archive Button */}
+              <button
+                onClick={() => handleArchiveArticle(selectedItem.raw_data_id)}
+                disabled={archivingId === selectedItem.raw_data_id}
+                className="w-full bg-[#4A7C9E] hover:bg-[#3d6a8a] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+              >
+                {archivingId === selectedItem.raw_data_id ? (
+                  <><Loader2 size={14} className="animate-spin" /> جاري الأرشفة...</>
+                ) : (
+                  <><Archive size={14} /> نقل إلى الأرشيف</>
+                )}
+              </button>
 
               {/* Close */}
               <button
@@ -539,5 +573,114 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
         </div>
       )}
     </>
+  );
+}
+
+// ═══ Social Publish Section — نشر حقيقي على السوشال ميديا ═══
+function SocialPublishSection({
+  articleId,
+  onSuccess,
+  onError,
+}: {
+  articleId: number;
+  onSuccess: (url: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const [configs, setConfigs] = useState<any[]>([]);
+  const [loadingConfigs, setLoadingConfigs] = useState(true);
+  const [publishingTo, setPublishingTo] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLoadingConfigs(true);
+    api.getPlatformConfigs()
+      .then((res) => {
+        // فقط المنصات المفعّلة من نوع سوشال (ليس external_website)
+        const socialConfigs = (res.data || res.configs || []).filter(
+          (c: any) => c.is_enabled && c.platform !== 'external_website'
+        );
+        setConfigs(socialConfigs);
+      })
+      .catch(() => setConfigs([]))
+      .finally(() => setLoadingConfigs(false));
+  }, []);
+
+  const handlePublish = async (configId: number) => {
+    setPublishingTo(configId);
+    try {
+      const res = await api.publishToPlatform(articleId, configId);
+      if (res.success) {
+        const url = res.data?.external_url || '';
+        onSuccess(url);
+      } else {
+        onError(`❌ ${res.message || 'فشل النشر'}`);
+      }
+    } catch (err: any) {
+      onError(`❌ ${err?.message || 'فشل النشر على المنصة'}`);
+    } finally {
+      setPublishingTo(null);
+    }
+  };
+
+  const PLATFORM_ICONS_MAP: Record<string, string> = {
+    facebook: '📘',
+    instagram: '📷',
+    twitter: '🐦',
+  };
+
+  const PLATFORM_COLORS_MAP: Record<string, string> = {
+    facebook: 'border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50',
+    instagram: 'border-pink-200 hover:border-pink-400 hover:bg-pink-50/50',
+    twitter: 'border-sky-200 hover:border-sky-400 hover:bg-sky-50/50',
+  };
+
+  if (loadingConfigs) {
+    return (
+      <div className="flex items-center justify-center py-3">
+        <Loader2 size={14} className="animate-spin text-[#94a3b8]" />
+        <span className="text-xs text-[#94a3b8] mr-2">جاري تحميل المنصات...</span>
+      </div>
+    );
+  }
+
+  if (configs.length === 0) {
+    return (
+      <p className="text-xs text-[#94a3b8] text-center py-2 bg-white rounded-xl border border-[#e2e8f0]">
+        لا توجد منصات سوشال ميديا مفعّلة — أضف إعدادات من قسم الإعدادات
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {configs.map((config) => (
+        <button
+          key={config.id}
+          onClick={() => handlePublish(config.id)}
+          disabled={publishingTo !== null}
+          className={`w-full p-3 rounded-xl border transition-all flex items-center justify-between group bg-white disabled:opacity-50 disabled:cursor-not-allowed ${
+            PLATFORM_COLORS_MAP[config.platform] || 'border-[#e2e8f0] hover:border-[#94a3b8] hover:bg-[#f8fafc]'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">{PLATFORM_ICONS_MAP[config.platform] || '🌐'}</span>
+            <div className="text-right">
+              <p className="text-xs font-semibold text-[#1e293b]">{config.name}</p>
+              <p className="text-[10px] text-[#64748b]">
+                {config.platform === 'facebook' && 'نشر مباشر على فيسبوك'}
+                {config.platform === 'instagram' && 'نشر مباشر على إنستغرام'}
+                {config.platform === 'twitter' && 'نشر مباشر على X (تويتر)'}
+              </p>
+            </div>
+          </div>
+          {publishingTo === config.id ? (
+            <Loader2 size={14} className="text-indigo-600 animate-spin" />
+          ) : (
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 opacity-0 group-hover:opacity-100 transition-opacity">
+              نشر الآن
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }
