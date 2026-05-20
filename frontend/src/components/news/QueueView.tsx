@@ -149,13 +149,11 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         policyIds: selectedPolicies,
       });
       
-      if (res.finalText) {
-        setEditedContent(res.finalText);
-      }
       // حفظ نتائج كل خطوة
+      let parsedSteps: any[] = [];
       if (res.steps) {
         // Parse result string to object if needed
-        const parsedSteps = res.steps.map((step: any) => {
+        parsedSteps = res.steps.map((step: any) => {
           let result = step.result;
           if (typeof result === 'string') {
             try {
@@ -168,6 +166,20 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         });
         console.log('📋 Steps received:', JSON.stringify(parsedSteps, null, 2));
         setPolicyResults(parsedSteps);
+      }
+
+      // تحديث النص المعدّل — أولوية لـ finalText، ثم آخر step فيها modified_text
+      if (res.finalText && res.finalText !== editedContent) {
+        setEditedContent(res.finalText);
+      } else if (parsedSteps.length > 0) {
+        // ابحث عن آخر step فيها تعديل فعلي
+        for (let i = parsedSteps.length - 1; i >= 0; i--) {
+          const step = parsedSteps[i];
+          if (step.hasChanges && step.result?.modified_text) {
+            setEditedContent(step.result.modified_text);
+            break;
+          }
+        }
       }
     } catch (err) {
       console.error("Sequential apply error:", err);

@@ -318,7 +318,11 @@ export class AutoPublishController {
         res.status(200).json({
           success: true,
           message: 'تم نشر الخبر بنجاح على الموقع الخارجي ✅',
-          data: { responseCode: result.responseCode },
+          data: {
+            responseCode: result.responseCode,
+            externalUrl: result.externalUrl || null,
+            externalId: result.externalId || null,
+          },
         });
       } else {
         res.status(400).json({

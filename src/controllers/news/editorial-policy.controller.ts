@@ -366,6 +366,11 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
       if (aiResult.status === 'success' && aiResult.hasChanges) {
         currentText = aiResult.modifiedText;
         console.log(`  ✅ تم التعديل — النص الجديد سيُمرر للسياسة التالية`);
+      } else if (aiResult.status === 'success' && !aiResult.hasChanges && aiResult.result?.modified_text && aiResult.result.modified_text !== currentText) {
+        // الـ AI رجّع modified_text مختلف بس hasChanges = false (بسبب sanitization)
+        currentText = aiResult.result.modified_text;
+        step.hasChanges = true;
+        console.log(`  ✅ تم التعديل (من modified_text) — النص الجديد سيُمرر للسياسة التالية`);
       } else if (aiResult.status === 'error') {
         console.log(`  ⚠️ خطأ في السياسة "${policy.name}" — نكمل بالنص الحالي`);
       } else {

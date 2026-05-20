@@ -321,14 +321,18 @@ class AutoPublishService {
       const responseBody = await response.text();
 
       if (response.ok) {
-        // استخراج ID الخبر المنشور ورابطه
+        // استخراج ID الخبر المنشور ورابطه من الـ response
         let externalId: number | undefined;
         let externalUrl: string | undefined;
         try {
           const parsed = JSON.parse(responseBody);
           externalId = parsed?.data?.id;
-          // بناء رابط الخبر على الموقع الخارجي
-          if (externalId) {
+          // أولاً: استخدم الـ url المرجع مباشرة من الـ API
+          if (parsed?.data?.url) {
+            externalUrl = parsed.data.url;
+          }
+          // fallback: بناء الرابط من الـ ID
+          if (!externalUrl && externalId) {
             const baseUrl = target.api_url.replace('/api/v1/automation/news', '');
             externalUrl = `${baseUrl}/news/${externalId}`;
           }
@@ -619,6 +623,8 @@ class AutoPublishService {
     success: boolean;
     responseCode?: number;
     error?: string;
+    externalUrl?: string;
+    externalId?: number;
   }> {
     // جلب الهدف
     const target = await this.getTargetById(targetId);

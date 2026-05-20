@@ -33,6 +33,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const [publishingToTarget, setPublishingToTarget] = useState<number | null>(null);
   const [selectedPublishItem, setSelectedPublishItem] = useState<any>(null);
   const [showPublishOptions, setShowPublishOptions] = useState(false);
+  const [lastPublishedUrl, setLastPublishedUrl] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -47,6 +48,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   // فتح نافذة النشر الخارجي
   const handleOpenExternalPublish = async (item: any) => {
     setSelectedPublishItem(item);
+    setLastPublishedUrl(null);
     try {
       const res = await api.getAutoPublishTargets();
       const targets = (res.data || []).filter((t: any) => t.is_enabled);
@@ -63,13 +65,22 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const handlePublishToExternal = async (targetId: number) => {
     if (!selectedPublishItem?.raw_data_id) return;
     setPublishingToTarget(targetId);
+    setLastPublishedUrl(null);
     try {
-      await api.publishOneToExternal(selectedPublishItem.raw_data_id, targetId);
-      setNotification({
-        type: "success",
-        message: `✅ تم نشر الخبر على الموقع الخارجي`,
-      });
-      setShowPublishOptions(false);
+      const res = await api.publishOneToExternal(selectedPublishItem.raw_data_id, targetId);
+      const externalUrl = res?.data?.externalUrl;
+      if (externalUrl) {
+        setLastPublishedUrl(externalUrl);
+        setNotification({
+          type: "success",
+          message: `✅ تم نشر الخبر بنجاح`,
+        });
+      } else {
+        setNotification({
+          type: "success",
+          message: `✅ تم نشر الخبر على الموقع الخارجي`,
+        });
+      }
     } catch (err: any) {
       setNotification({
         type: "error",
@@ -414,6 +425,42 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                     animate={{ opacity: 1, height: 'auto' }}
                     className="mt-3 space-y-4 border border-[#e2e8f0] rounded-xl p-4 bg-[#f8fafc]"
                   >
+                    {/* ═══ رابط الخبر المنشور ═══ */}
+                    {lastPublishedUrl && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
+                        <p className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                          <CheckCircle size={14} /> تم النشر بنجاح
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={lastPublishedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-700 underline break-all flex-1"
+                          >
+                            {lastPublishedUrl}
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(lastPublishedUrl);
+                              setNotification({ type: 'success', message: '✅ تم نسخ الرابط' });
+                            }}
+                            className="shrink-0 px-2.5 py-1.5 bg-white border border-emerald-200 hover:bg-emerald-100 rounded-lg text-[10px] font-bold text-emerald-700 transition-all"
+                          >
+                            نسخ
+                          </button>
+                          <a
+                            href={lastPublishedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 px-2.5 py-1.5 bg-white border border-blue-200 hover:bg-blue-100 rounded-lg text-[10px] font-bold text-blue-700 transition-all flex items-center gap-1"
+                          >
+                            <ExternalLink size={10} /> فتح
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
                     {/* ═══ النشر على موقع خارجي ═══ */}
                     <div className="space-y-2">
                       <p className="text-[10px] text-[#94a3b8] font-bold uppercase flex items-center gap-1">
