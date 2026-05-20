@@ -289,7 +289,7 @@ class AutoPublishService {
       // تجهيز الـ tags و keywords
       const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
 
-      // بناء multipart/form-data
+      // بناء multipart/form-data — الصيغة المطلوبة من API هنا غزة
       const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
       let body = '';
 
@@ -312,7 +312,10 @@ class AutoPublishService {
 
       body += `--${boundary}--\r\n`;
 
-      // إرسال الطلب
+      console.log(`   📡 Sending to: ${target.api_url}`);
+      console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." category_id=${externalCategoryId} image_url=${article.image_url ? 'yes' : 'no'}`);
+
+      // إرسال الطلب كـ multipart/form-data
       const response = await fetch(target.api_url, {
         method: 'POST',
         headers: {
@@ -324,6 +327,8 @@ class AutoPublishService {
       });
 
       const responseBody = await response.text();
+
+      console.log(`   📋 Response [${response.status}]: ${responseBody.substring(0, 300)}`);
 
       if (response.ok) {
         // استخراج ID الخبر المنشور ورابطه من الـ response
