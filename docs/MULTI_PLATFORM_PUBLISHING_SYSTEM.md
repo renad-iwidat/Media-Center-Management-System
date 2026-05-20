@@ -270,6 +270,37 @@ FACEBOOK_ACCESS_TOKEN=EAALZAKaM7VdABRW7tlet1dr9CtrZCJy...
 
 ---
 
+## ⚠️ تفعيل المنصة في DB (مطلوب)
+
+الـ migration ينشئ جدول `platform_configs` **فاضي**. لازم تدخلي صف لكل منصة بدك تفعّليها وإلا ما بتظهر في زر النشر بالواجهة.
+
+**SQL لتفعيل فيسبوك** (موجود في `sql/enable-facebook-publishing.sql`):
+
+```sql
+-- 1. اعرفي media_unit_id الصحيح
+SELECT id, name FROM media_units WHERE is_active = true;
+
+-- 2. أدخلي إعداد فيسبوك
+INSERT INTO platform_configs (platform, name, credentials, is_enabled, media_unit_id)
+VALUES ('facebook', 'صفحة فيسبوك الرئيسية', '{}'::jsonb, true, 1)
+ON CONFLICT (platform, media_unit_id, name) DO UPDATE
+  SET is_enabled = EXCLUDED.is_enabled, updated_at = NOW();
+```
+
+**ملاحظات:**
+- `credentials='{}'` فاضية لأن الـ provider يستخدم `FACEBOOK_PAGE_ID` و `FACEBOOK_ACCESS_TOKEN` من `.env` كـ fallback
+- `is_enabled=true` ضروري وإلا ما بتظهر في فلتر `SocialPublishSection` بالواجهة
+- لو بدك تخزني credentials في DB مباشرة:
+  ```sql
+  '{"page_id":"961852527016202","access_token":"<TOKEN>"}'::jsonb
+  ```
+
+**واجهة النشر:** بعد التفعيل، الزر يظهر في `PublishedView` (قسم "النشر") → اضغطي "نشر" على أي خبر تحريري → "نشر حقيقي على السوشال ميديا" → اختاري "📘 صفحة فيسبوك الرئيسية".
+
+**الصورة:** تُرسل تلقائياً لو `raw_data.image_url` موجودة (يستخدم endpoint `/photos`)، وإلا منشور نصي عبر `/feed`.
+
+---
+
 ## إضافة منصة جديدة
 
 1. أنشئ `src/services/publishing/providers/NEW.provider.ts` ينفذ `IPublishingProvider`

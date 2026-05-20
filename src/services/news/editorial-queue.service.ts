@@ -372,32 +372,54 @@ export class EditorialQueueService {
       const imageToPublish = finalImageUrl !== undefined ? finalImageUrl : item.image_url;
 
       // إدراج في published_items مع queue_id (دايماً موجود) ومعلومات المستخدم والمهمة
-      await query(
-        `INSERT INTO published_items 
-         (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at, approved_by, task_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), $8, $9)`,
-        [
-          item.media_unit_id,
-          item.raw_data_id,
-          queueId,
-          contentTypeId,
-          titleToPublish,
-          contentToPublish,
-          item.tags,
-          userId || null,
-          taskId || null,
-        ]
-      );
+      // ملاحظة: نحاول إدراج image_url مباشرة. إذا العمود غير موجود (DB قديمة)
+      // نُعيد المحاولة بدونه ثم نُحدّثه عبر UPDATE في خطوة منفصلة.
+      try {
+        await query(
+          `INSERT INTO published_items 
+           (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, image_url, tags, is_active, published_at, approved_by, task_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW(), $9, $10)`,
+          [
+            item.media_unit_id,
+            item.raw_data_id,
+            queueId,
+            contentTypeId,
+            titleToPublish,
+            contentToPublish,
+            imageToPublish || null,
+            item.tags,
+            userId || null,
+            taskId || null,
+          ]
+        );
+      } catch (insertErr: any) {
+        // العمود image_url غير موجود — أدرج بدونه ثم حدّثه
+        await query(
+          `INSERT INTO published_items 
+           (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at, approved_by, task_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), $8, $9)`,
+          [
+            item.media_unit_id,
+            item.raw_data_id,
+            queueId,
+            contentTypeId,
+            titleToPublish,
+            contentToPublish,
+            item.tags,
+            userId || null,
+            taskId || null,
+          ]
+        );
 
-      // محاولة حفظ image_url
-      if (imageToPublish) {
-        try {
-          await query(
-            `UPDATE published_items SET image_url = $1 WHERE queue_id = $2`,
-            [imageToPublish, queueId]
-          );
-        } catch {
-          // العمود غير موجود — يمكن تجاهله
+        if (imageToPublish) {
+          try {
+            await query(
+              `UPDATE published_items SET image_url = $1 WHERE queue_id = $2`,
+              [imageToPublish, queueId]
+            );
+          } catch {
+            // العمود غير موجود — يمكن تجاهله
+          }
         }
       }
 

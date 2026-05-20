@@ -286,8 +286,16 @@ class PublishingService {
 
     // فحص الصورة (Instagram)
     if (constraints.requires_image) {
+      // نتحقق من الصورة في النسخة المعدّلة (published_items) أو الأصلية (raw_data)
       const result = await query(
-        `SELECT image_url FROM raw_data WHERE id = $1`,
+        `SELECT COALESCE(pi.image_url, rd.image_url) AS image_url
+         FROM raw_data rd
+         LEFT JOIN LATERAL (
+           SELECT image_url FROM published_items
+           WHERE raw_data_id = rd.id AND is_active = true
+           ORDER BY published_at DESC LIMIT 1
+         ) pi ON TRUE
+         WHERE rd.id = $1`,
         [articleId]
       );
       const imageUrl = result.rows[0]?.image_url;
@@ -575,7 +583,11 @@ class PublishingService {
 
     const dataParams = [...params, limit, offset];
     const result = await query(
-      `SELECT DISTINCT ON (rd.id) rd.id, rd.title, rd.content, rd.image_url, rd.tags,
+      `SELECT DISTINCT ON (rd.id) rd.id,
+              COALESCE(pi.title, rd.title)         AS title,
+              COALESCE(pi.content, rd.content)     AS content,
+              COALESCE(pi.image_url, rd.image_url) AS image_url,
+              COALESCE(pi.tags, rd.tags)           AS tags,
               rd.publish_status, rd.category_id, c.name as category_name, rd.fetched_at,
               (
                 SELECT json_agg(json_build_object(
@@ -604,6 +616,13 @@ class PublishingService {
        LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
        LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
        LEFT JOIN categories c ON c.id = rd.category_id
+       LEFT JOIN LATERAL (
+         SELECT title, content, image_url, tags
+         FROM published_items
+         WHERE raw_data_id = rd.id AND is_active = true
+         ORDER BY published_at DESC
+         LIMIT 1
+       ) pi ON TRUE
        WHERE (
          rd.publish_status IN ('archived', 'published_external', 'published_social')
          OR ps.id IS NOT NULL
@@ -665,13 +684,26 @@ class PublishingService {
   // ════════════════════════════════════════════════════════════════════════════
 
   private async getArticleForPublishing(articleId: number): Promise<ArticleForPublishing | null> {
+    // نُفضّل النسخة المعدّلة من published_items (بعد موافقة المحرر)
+    // وإن لم توجد نُرجِع للنسخة الأصلية من raw_data
     const result = await query(
-      `SELECT rd.id, rd.title, rd.content, rd.image_url, rd.tags, rd.category_id,
+      `SELECT rd.id,
+              COALESCE(pi.title, rd.title)         AS title,
+              COALESCE(pi.content, rd.content)     AS content,
+              COALESCE(pi.image_url, rd.image_url) AS image_url,
+              COALESCE(pi.tags, rd.tags)           AS tags,
+              rd.category_id,
               c.name as category_name,
               COALESCE(pi.media_unit_id, 1) as media_unit_id
        FROM raw_data rd
        LEFT JOIN categories c ON c.id = rd.category_id
-       LEFT JOIN published_items pi ON pi.raw_data_id = rd.id
+       LEFT JOIN LATERAL (
+         SELECT title, content, image_url, tags, media_unit_id
+         FROM published_items
+         WHERE raw_data_id = rd.id AND is_active = true
+         ORDER BY published_at DESC
+         LIMIT 1
+       ) pi ON TRUE
        WHERE rd.id = $1
        LIMIT 1`,
       [articleId]
