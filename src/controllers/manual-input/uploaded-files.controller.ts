@@ -1,6 +1,5 @@
-/**
+﻿/**
  * Uploaded Files Controller
- * التحكم في الملفات المرفوعة (صوت وفيديو)
  */
 
 import { Request, Response } from 'express';
@@ -24,43 +23,9 @@ interface FileRow {
   media_unit_id: number;
 }
 
-/**
- * استخراج النص العربي من S3 URL
- * مثال: "https://...manual-input-audio/audio-موجز-ضيياء---تست-رفع-صوت-1776608939260-usr5f3.mp3"
- * النتيجة: "موجز-ضيياء---تست-رفع-صوت"
- * 
- * النمط: [type]-[arabic-name]-[timestamp]-[random].[ext]
- */
-function extractArabicNameFromS3(s3Url: string): string {
-  try {
-    // استخراج اسم الملف من الـ URL
-    const filename = s3Url.split('/').pop() || '';
-    
-    // البحث عن النمط: [type]-[arabic-name]-[timestamp]-[random].[ext]
-    // نبحث عن: (audio|video|image)-([ء-ي\s\-]+?)-(\d+)-([a-z0-9]+)\.[a-z]+
-    const match = filename.match(/(?:audio|video|image)-([ء-ي\s\-]+?)-\d+-[a-z0-9]+\.[a-z]+/i);
-    
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-    
-    // إذا فشل النمط الأول، نحاول استخراج أي نص عربي
-    const arabicMatch = filename.match(/[ء-ي\s\-]+/);
-    if (arabicMatch) {
-      return arabicMatch[0].trim();
-    }
-    
-    // إذا لم نجد نص عربي، نرجع اسم الملف بدون الامتداد
-    return filename.replace(/\.[^/.]+$/, '');
-  } catch (error) {
-    console.error('Error extracting Arabic name from S3 URL:', error);
-    return '';
-  }
-}
-
 export class UploadedFilesController {
   /**
-   * الحصول على جميع الملفات المرفوعة
+   * ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ط¬ظ…ظٹط¹ ط§ظ„ظ…ظ„ظپط§طھ ط§ظ„ظ…ط±ظپظˆط¹ط©
    */
   static async getAllFiles(_req: Request, res: Response) {
     try {
@@ -87,7 +52,7 @@ export class UploadedFilesController {
 
       const filesWithArabicNames = result.rows.map((file: FileRow) => ({
         ...file,
-        display_name: extractArabicNameFromS3(file.s3_url),
+        display_name: file.original_filename,
       }));
 
       res.json({
@@ -105,7 +70,7 @@ export class UploadedFilesController {
   }
 
   /**
-   * الحصول على ملفات صوتية فقط
+   * ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ظ…ظ„ظپط§طھ طµظˆطھظٹط© ظپظ‚ط·
    */
   static async getAudioFiles(_req: Request, res: Response) {
     try {
@@ -133,7 +98,7 @@ export class UploadedFilesController {
 
       const filesWithArabicNames = result.rows.map((file: FileRow) => ({
         ...file,
-        display_name: extractArabicNameFromS3(file.s3_url),
+        display_name: file.original_filename,
       }));
 
       res.json({
@@ -151,7 +116,7 @@ export class UploadedFilesController {
   }
 
   /**
-   * الحصول على ملفات فيديو فقط
+   * ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ظ…ظ„ظپط§طھ ظپظٹط¯ظٹظˆ ظپظ‚ط·
    */
   static async getVideoFiles(_req: Request, res: Response) {
     try {
@@ -179,7 +144,7 @@ export class UploadedFilesController {
 
       const filesWithArabicNames = result.rows.map((file: FileRow) => ({
         ...file,
-        display_name: extractArabicNameFromS3(file.s3_url),
+        display_name: file.original_filename,
       }));
 
       res.json({
@@ -197,7 +162,7 @@ export class UploadedFilesController {
   }
 
   /**
-   * الحصول على ملف بالـ ID
+   * ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ظ…ظ„ظپ ط¨ط§ظ„ظ€ ID
    */
   static async getFileById(req: Request, res: Response) {
     try {
@@ -236,7 +201,7 @@ export class UploadedFilesController {
         success: true,
         data: {
           ...file,
-          display_name: extractArabicNameFromS3(file.s3_url),
+          display_name: file.original_filename,
         },
       });
     } catch (error) {
@@ -249,7 +214,7 @@ export class UploadedFilesController {
   }
 
   /**
-   * الحصول على ملفات حسب نوع المصدر
+   * ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ظ…ظ„ظپط§طھ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ظ…طµط¯ط±
    */
   static async getFilesBySourceType(req: Request, res: Response) {
     try {
@@ -279,7 +244,7 @@ export class UploadedFilesController {
 
       const filesWithArabicNames = result.rows.map((file: FileRow) => ({
         ...file,
-        display_name: extractArabicNameFromS3(file.s3_url),
+        display_name: file.original_filename,
       }));
 
       res.json({

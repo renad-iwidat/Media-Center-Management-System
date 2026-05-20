@@ -81,18 +81,20 @@ export class SystemSettingsService {
     scheduler_enabled: boolean;
     classifier_enabled: boolean;
     flow_enabled: boolean;
+    auto_publish_enabled: boolean;
     scheduler_interval_minutes: number;
     articles_per_source: number; // حجم الصفحة من الـ API
   }> {
     const result = await query(
       `SELECT key, value FROM system_settings 
-       WHERE key IN ('scheduler_enabled', 'classifier_enabled', 'flow_enabled', 'scheduler_interval_minutes', 'articles_per_source')`
+       WHERE key IN ('scheduler_enabled', 'classifier_enabled', 'flow_enabled', 'auto_publish_enabled', 'scheduler_interval_minutes', 'articles_per_source')`
     );
 
     const defaults: Record<string, any> = {
       scheduler_enabled: true,
       classifier_enabled: true,
       flow_enabled: true,
+      auto_publish_enabled: false,
       scheduler_interval_minutes: 15,
       articles_per_source: 20, // حجم الصفحة من الـ API
     };
@@ -110,6 +112,7 @@ export class SystemSettingsService {
       scheduler_enabled: boolean;
       classifier_enabled: boolean;
       flow_enabled: boolean;
+      auto_publish_enabled: boolean;
       scheduler_interval_minutes: number;
       articles_per_source: number;
     };

@@ -7,7 +7,7 @@ import TranscriptWithTimestamps from './TranscriptWithTimestamps';
 
 type AudioMode = 'STT' | 'TTS';
 type FileTypeFilter = 'all' | 'audio' | 'video';
-type TTSSource = 'paste' | 'published';
+type TTSSource = 'paste' | 'published' | 'bulletin';
 
 interface UploadedFile {
   id: number;
@@ -27,6 +27,17 @@ interface PublishedArticle {
   content: string;
   image_url?: string;
   published_at?: string;
+}
+
+interface SavedBulletin {
+  id: number;
+  title: string;
+  type: 'summary' | 'bulletin';
+  time_of_day: 'morning' | 'evening';
+  original_content: string;
+  edited_content: string | null;
+  created_at: string;
+  media_unit_name?: string;
 }
 
 export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number | null }) {
@@ -60,6 +71,9 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
   const [publishedArticles, setPublishedArticles] = useState<PublishedArticle[]>([]);
   const [selectedArticleId, setSelectedArticleId] = useState<number | null>(() => loadFromStorage('selectedArticleId', null));
   const [loadingArticles, setLoadingArticles] = useState(false);
+  const [savedBulletins, setSavedBulletins] = useState<SavedBulletin[]>([]);
+  const [selectedBulletinId, setSelectedBulletinId] = useState<number | null>(() => loadFromStorage('selectedBulletinId', null));
+  const [loadingBulletins, setLoadingBulletins] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -84,6 +98,10 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     if (activeMode === 'TTS' && ttsSource === 'published' && isMounted) {
       fetchPublishedArticles();
     }
+
+    if (activeMode === 'TTS' && ttsSource === 'bulletin' && isMounted) {
+      fetchSavedBulletins();
+    }
     
     return () => {
       isMounted = false;
@@ -100,6 +118,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
     { key: 'audioProc_ttsSource', value: ttsSource },
     { key: 'audioProc_pastedText', value: pastedText },
     { key: 'audioProc_selectedArticleId', value: selectedArticleId },
+    { key: 'audioProc_selectedBulletinId', value: selectedBulletinId },
   ], 200);
 
   const fetchUploadedFiles = async () => {
@@ -134,6 +153,29 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
       console.error('Error fetching published articles:', error);
     } finally {
       setLoadingArticles(false);
+    }
+  };
+
+  const fetchSavedBulletins = async () => {
+    try {
+      setLoadingBulletins(true);
+      const res = await api.getBulletins(mediaUnitId);
+      const bulletins = (res.data || []).map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        time_of_day: item.time_of_day,
+        original_content: item.original_content,
+        edited_content: item.edited_content,
+        created_at: item.created_at,
+        media_unit_name: item.media_unit_name,
+      }));
+      setSavedBulletins(bulletins);
+      console.log('Saved bulletins:', bulletins);
+    } catch (error) {
+      console.error('Error fetching saved bulletins:', error);
+    } finally {
+      setLoadingBulletins(false);
     }
   };
 
@@ -271,6 +313,13 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
         alert('يرجى إدراج نص قبل التحويل');
         return;
       }
+    } else if (ttsSource === 'bulletin') {
+      const bulletin = savedBulletins.find(b => b.id === selectedBulletinId);
+      if (!bulletin) {
+        alert('يرجى اختيار موجز/نشرة قبل التحويل');
+        return;
+      }
+      textToConvert = bulletin.edited_content || bulletin.original_content;
     } else {
       const article = publishedArticles.find(a => a.id === selectedArticleId);
       if (!article) {
@@ -297,6 +346,15 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         console.log('✅ Audio generated successfully');
+
+        // Mark bulletin as audio generated
+        if (ttsSource === 'bulletin' && selectedBulletinId) {
+          try {
+            await api.markBulletinAudioGenerated(selectedBulletinId);
+          } catch (e) {
+            console.warn('Could not mark bulletin audio status:', e);
+          }
+        }
       } else {
         throw new Error(res.error || 'Failed to generate audio');
       }
@@ -439,7 +497,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                                 <FileVideo className="text-sky-400 shrink-0" size={14} />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold truncate">{file.display_name}</p>
+                                <p className="font-bold truncate">{file.display_name || file.original_filename}</p>
                                 <p className="text-gray-500 text-xs">{formatFileSize(file.file_size)}</p>
                               </div>
                             </div>
@@ -506,13 +564,19 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                   {/* Source Selection */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { setTtsSource('paste'); setPastedText(''); setSelectedArticleId(null); }}
+                      onClick={() => { setTtsSource('paste'); setPastedText(''); setSelectedArticleId(null); setSelectedBulletinId(null); }}
                       className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${ttsSource === 'paste' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
                     >
                       <Copy size={12} /> نص مباشر
                     </button>
                     <button
-                      onClick={() => { setTtsSource('published'); setPastedText(''); setSelectedArticleId(null); }}
+                      onClick={() => { setTtsSource('bulletin'); setPastedText(''); setSelectedArticleId(null); setSelectedBulletinId(null); }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${ttsSource === 'bulletin' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                    >
+                      <FileText size={12} /> موجز/نشرة
+                    </button>
+                    <button
+                      onClick={() => { setTtsSource('published'); setPastedText(''); setSelectedArticleId(null); setSelectedBulletinId(null); }}
                       className={`flex-1 py-1.5 rounded-lg text-xs border transition-all flex items-center justify-center gap-1 ${ttsSource === 'published' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
                     >
                       <Newspaper size={12} /> أخبار منشورة
@@ -530,6 +594,49 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                       />
                       <div className="text-xs text-gray-500">
                         {pastedText.length} حرف
+                      </div>
+                    </div>
+                  ) : ttsSource === 'bulletin' ? (
+                    <div className="space-y-2">
+                      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 max-h-40">
+                        {loadingBulletins ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="animate-spin text-gray-400" size={16} />
+                          </div>
+                        ) : savedBulletins.length > 0 ? (
+                          savedBulletins.map(bulletin => (
+                            <div
+                              key={bulletin.id}
+                              onClick={() => setSelectedBulletinId(bulletin.id)}
+                              className={`p-2.5 rounded-lg border cursor-pointer transition-all text-xs ${selectedBulletinId === bulletin.id ? 'bg-[#2563eb]/10 border-[#2563eb]' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold truncate">{bulletin.title}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${bulletin.type === 'bulletin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                      {bulletin.type === 'bulletin' ? 'نشرة' : 'موجز'}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500">
+                                      {bulletin.time_of_day === 'morning' ? '☀️ صباحي' : '🌙 مسائي'}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {new Date(bulletin.created_at).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-500 text-xs line-clamp-1 mt-1">
+                                    {(bulletin.edited_content || bulletin.original_content).substring(0, 80)}...
+                                  </p>
+                                </div>
+                                {selectedBulletinId === bulletin.id && <Check size={12} className="text-[#2563eb] shrink-0 mt-0.5" />}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4 text-gray-500 text-xs">
+                            لا توجد موجزات/نشرات محفوظة
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -599,7 +706,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
               )}
               <button
                 onClick={activeMode === 'STT' ? handleSTT : handleTTS}
-                disabled={isLoading || (activeMode === 'STT' ? !selectedFileId : (ttsSource === 'paste' ? !pastedText.trim() : !selectedArticleId))}
+                disabled={isLoading || (activeMode === 'STT' ? !selectedFileId : (ttsSource === 'paste' ? !pastedText.trim() : ttsSource === 'bulletin' ? !selectedBulletinId : !selectedArticleId))}
                 className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 text-sm disabled:opacity-30"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={16} /> : <span>{activeMode === 'STT' ? 'بدء التفريغ' : 'تحويل لصوت'}</span>}
@@ -619,7 +726,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
                     <h4 className="text-sm font-bold text-gray-900">التفريغ النهائي</h4>
                     {selectedFile && (
                       <span className="text-xs text-gray-600 mr-auto">
-                        {selectedFile.display_name}
+                        {selectedFile.display_name || selectedFile.original_filename}
                       </span>
                     )}
                   </div>
@@ -681,7 +788,7 @@ export default function AudioProcessing({ mediaUnitId }: { mediaUnitId: number |
           <div className="bg-[#2c5f7f] rounded-2xl border border-white/10 max-w-2xl w-full max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-sm font-bold text-white">{previewFile.display_name}</h3>
+              <h3 className="text-sm font-bold text-white">{previewFile.display_name || previewFile.original_filename}</h3>
               <button
                 onClick={() => {
                   setShowVideoModal(false);

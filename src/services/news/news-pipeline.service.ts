@@ -175,10 +175,10 @@ class NewsPipelineService {
     // ── المرحلة 1: جلب المقالات الخام من الـ API ────────────────────────────
     console.log(`\n📰 جلب المقالات الخام (page_size: ${pageSize})...`);
 
-    // نجلب آخر المقالات — نستخدم date_from لآخر 24 ساعة لتجنب التكرار
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
-    const dateFrom = yesterday.toISOString().split('T')[0];
+    // نجلب آخر المقالات — نستخدم date_from لآخر ساعتين فقط لتجنب إدخال أخبار قديمة
+    const twoHoursAgo = new Date();
+    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    const dateFrom = twoHoursAgo.toISOString().split('T')[0];
 
     let allApiArticles: NewsDeskRawArticle[] = [];
     let totalPages = 1;
