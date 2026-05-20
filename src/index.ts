@@ -31,6 +31,8 @@ import uploadedFilesRoutes from './routes/manual-input/uploaded-files.routes';
 import newsDeskProxyRoutes from './routes/news/newsdesk-proxy.routes';
 import autoPublishRoutes from './routes/news/auto-publish.routes';
 import bulletinsRoutes from './routes/news/bulletins.routes';
+import publishingRoutes from './routes/publishing/publishing.routes';
+import { runPublishingMigration } from './services/publishing';
 
 const app = express();
 
@@ -310,6 +312,7 @@ app.use('/api/scheduler', schedulerRoutes);
 app.use('/api/newsdesk', newsDeskProxyRoutes);
 app.use('/api/auto-publish', autoPublishRoutes);
 app.use('/api/bulletins', bulletinsRoutes);
+app.use('/api/publishing', publishingRoutes);
 
 // 404 Handler
 app.use((req, res) => {
@@ -342,5 +345,12 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 15 دقيقة`);
   } catch (error) {
     console.error(`❌ خطأ في بدء الـ Scheduler:`, error);
+  }
+
+  // 🗄️ تشغيل migration نظام النشر المتعدد المنصات
+  try {
+    await runPublishingMigration();
+  } catch (error) {
+    console.error(`❌ خطأ في migration نظام النشر:`, error);
   }
 });

@@ -21,7 +21,8 @@
     "test:policies": "ts-node src/utils/test-policies-pipeline.ts",
     "test:ai": "ts-node src/utils/test-ai-with-policies.ts",
     "test:replace": "ts-node src/utils/test-replace-policy-and-flow.ts",
-    "setup:media-units": "node setup-media-units.js"
+    "setup:media-units": "node setup-media-units.js",
+    "publishing:migrate": "ts-node src/utils/run-publishing-migration.ts"
   },
   "keywords": [
     "media",

@@ -88,12 +88,13 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
+        LEFT JOIN source_types st ON rd.source_type_id = st.id
         WHERE eq.status = 'pending'`;
       
       const params: any[] = [];
@@ -147,12 +148,13 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
+        LEFT JOIN source_types st ON rd.source_type_id = st.id
         WHERE eq.status = $1`;
       
       const params: any[] = [status];
@@ -197,12 +199,13 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          s.name as source_name
+          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
+        LEFT JOIN source_types st ON rd.source_type_id = st.id
         WHERE eq.id = $1`,
         [queueId]
       );
@@ -463,12 +466,13 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
+        LEFT JOIN source_types st ON rd.source_type_id = st.id
         WHERE eq.status IN ('pending', 'in_review', 'incomplete')`;
       
       const params: any[] = [];
