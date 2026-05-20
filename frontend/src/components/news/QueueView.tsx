@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X, Trash, Copy, Globe, ExternalLink, Loader2 } from "lucide-react";
+import { FileEdit, AlertTriangle, Search, ArrowRight, Trash2, CheckCircle2, XCircle, Sparkles, Eye, X, Trash, Copy } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -28,11 +28,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-  // حالة نشر على موقع خارجي
-  const [showPublishDialog, setShowPublishDialog] = useState(false);
-  const [publishTargets, setPublishTargets] = useState<any[]>([]);
-  const [publishingToTarget, setPublishingToTarget] = useState<number | null>(null);
-  const [lastApprovedRawDataId, setLastApprovedRawDataId] = useState<number | null>(null);
+
 
   // Filter states
   const [searchTitle, setSearchTitle] = useState("");
@@ -210,58 +206,23 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         finalImageUrl: editedImageUrl,
       });
 
-      const rawDataId = editingItem.raw_data_id;
       setQueue(prev => prev.filter(item => item.id !== id));
       setEditingItem(null);
 
-      // عرض خيار النشر على المواقع الخارجية
-      setLastApprovedRawDataId(rawDataId);
-      api.getAutoPublishTargets().then((res) => {
-        const targets = (res.data || []).filter((t: any) => t.is_enabled);
-        if (targets.length > 0) {
-          setPublishTargets(targets);
-          setShowPublishDialog(true);
-        } else {
-          setNotification({
-            type: "success",
-            message: `✅ تم نشر الخبر بنجاح`,
-          });
-        }
-      }).catch(() => {
-        setNotification({
-          type: "success",
-          message: `✅ تم نشر الخبر بنجاح`,
-        });
+      setNotification({
+        type: "success",
+        message: `✅ تم تحرير الخبر ونقله لقسم النشر`,
       });
     } catch (err) {
       console.error("Approve error:", err);
       setNotification({
         type: "error",
-        message: `❌ حدث خطأ أثناء النشر`,
+        message: `❌ حدث خطأ أثناء التحرير`,
       });
     }
   };
 
-  // نشر على موقع خارجي
-  const handlePublishToExternal = async (targetId: number) => {
-    if (!lastApprovedRawDataId) return;
-    setPublishingToTarget(targetId);
-    try {
-      const result = await api.publishOneToExternal(lastApprovedRawDataId, targetId);
-      setNotification({
-        type: "success",
-        message: `✅ تم نشر الخبر على الموقع الخارجي`,
-      });
-      setShowPublishDialog(false);
-    } catch (err: any) {
-      setNotification({
-        type: "error",
-        message: err?.message || `❌ فشل النشر على الموقع الخارجي`,
-      });
-    } finally {
-      setPublishingToTarget(null);
-    }
-  };
+
 
   const handleReject = async (id: number) => {
     try {
@@ -336,7 +297,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
           
           <div className="flex gap-3 flex-wrap">
             <button onClick={() => handleApprove(editingItem.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40">
-              <CheckCircle2 size={18} /> موافقة ونشر
+              <CheckCircle2 size={18} /> جاهز للنشر
             </button>
             <button onClick={() => handleReject(editingItem.id)} className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all">
               <XCircle size={18} /> رفض
@@ -597,62 +558,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
     );
   }
 
-  // ═══ Publish to External Dialog ═══
-  const PublishDialog = showPublishDialog ? (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPublishDialog(false)}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-xl border border-[#e2e8f0] w-full max-w-sm p-6 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-center">
-            <Globe size={20} className="text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-[#1e293b]">نشر على موقع خارجي؟</p>
-            <p className="text-[11px] text-[#64748b]">اختر الموقع لنشر الخبر عليه</p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {publishTargets.map((target) => (
-            <button
-              key={target.id}
-              onClick={() => handlePublishToExternal(target.id)}
-              disabled={publishingToTarget !== null}
-              className="w-full p-4 rounded-xl border border-[#e2e8f0] hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3">
-                <ExternalLink size={16} className="text-blue-500 group-hover:text-blue-600" />
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-[#1e293b]">{target.name}</p>
-                  <p className="text-[10px] text-[#64748b]">{target.media_unit_name || target.mediaUnitName}</p>
-                </div>
-              </div>
-              {publishingToTarget === target.id ? (
-                <Loader2 size={16} className="text-blue-600 animate-spin" />
-              ) : (
-                <span className="text-xs text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">نشر</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={() => setShowPublishDialog(false)}
-          className="w-full py-2.5 rounded-xl text-sm text-[#64748b] hover:text-[#1e293b] hover:bg-[#f8fafc] transition-colors font-medium"
-        >
-          تخطي
-        </button>
-      </motion.div>
-    </div>
-  ) : null;
-
   return (
     <>
-      {PublishDialog}
       <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
       <div className="space-y-6">
       <div className="flex justify-between items-end mb-2">

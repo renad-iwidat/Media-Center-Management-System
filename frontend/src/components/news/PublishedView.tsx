@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, MessageSquare } from "lucide-react";
+import { CheckCircle, Search, Zap, Eye, X, PenTool, Share2, MessageSquare, Globe, ExternalLink, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { EmptyState } from "../shared/EmptyState";
+import { Notification, NotificationData } from "../shared/Notification";
 
 interface PublishedViewProps {
   unitId: number | null;
@@ -26,6 +27,13 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  // حالة النشر الخارجي
+  const [notification, setNotification] = useState<NotificationData | null>(null);
+  const [publishTargets, setPublishTargets] = useState<any[]>([]);
+  const [publishingToTarget, setPublishingToTarget] = useState<number | null>(null);
+  const [selectedPublishItem, setSelectedPublishItem] = useState<any>(null);
+  const [showPublishOptions, setShowPublishOptions] = useState(false);
+
   const loadData = useCallback(() => {
     setLoading(true);
     api.getPublished(unitId)
@@ -35,6 +43,42 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   }, [unitId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // فتح نافذة النشر الخارجي
+  const handleOpenExternalPublish = async (item: any) => {
+    setSelectedPublishItem(item);
+    try {
+      const res = await api.getAutoPublishTargets();
+      const targets = (res.data || []).filter((t: any) => t.is_enabled);
+      setPublishTargets(targets);
+    } catch {
+      setNotification({
+        type: "error",
+        message: "❌ فشل تحميل المواقع الخارجية",
+      });
+    }
+  };
+
+  // نشر على موقع خارجي
+  const handlePublishToExternal = async (targetId: number) => {
+    if (!selectedPublishItem?.raw_data_id) return;
+    setPublishingToTarget(targetId);
+    try {
+      await api.publishOneToExternal(selectedPublishItem.raw_data_id, targetId);
+      setNotification({
+        type: "success",
+        message: `✅ تم نشر الخبر على الموقع الخارجي`,
+      });
+      setShowPublishOptions(false);
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        message: err?.message || `❌ فشل النشر على الموقع الخارجي`,
+      });
+    } finally {
+      setPublishingToTarget(null);
+    }
+  };
 
   useEffect(() => {
     let filtered = [...items];
@@ -65,6 +109,9 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
 
   return (
     <>
+      {/* Notification */}
+      <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
+
       <div className="space-y-5">
         {/* Filters */}
         <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm space-y-4">
@@ -250,7 +297,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                 <CheckCircle size={18} className="text-emerald-600" />
                 تفاصيل الخبر المنشور
               </h3>
-              <button onClick={() => setSelectedItem(null)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#1e293b]">
+              <button onClick={() => { setSelectedItem(null); setShowPublishOptions(false); }} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#1e293b]">
                 <X size={18} />
               </button>
             </div>
@@ -347,9 +394,95 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                 </div>
               )}
 
+              {/* Publish Options */}
+              <div>
+                <button
+                  onClick={() => {
+                    setShowPublishOptions(!showPublishOptions);
+                    if (!showPublishOptions) {
+                      handleOpenExternalPublish(selectedItem);
+                    }
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40"
+                >
+                  <Globe size={16} /> نشر
+                </button>
+
+                {showPublishOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-3 space-y-4 border border-[#e2e8f0] rounded-xl p-4 bg-[#f8fafc]"
+                  >
+                    {/* ═══ النشر على موقع خارجي ═══ */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-[#94a3b8] font-bold uppercase flex items-center gap-1">
+                        <ExternalLink size={12} /> نشر على موقع خارجي
+                      </p>
+                      {publishTargets.length > 0 ? (
+                        publishTargets.map((target) => (
+                          <button
+                            key={target.id}
+                            onClick={() => handlePublishToExternal(target.id)}
+                            disabled={publishingToTarget !== null}
+                            className="w-full p-3 rounded-xl border border-[#e2e8f0] hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center justify-between group bg-white"
+                          >
+                            <div className="flex items-center gap-3">
+                              <ExternalLink size={14} className="text-blue-500 group-hover:text-blue-600" />
+                              <div className="text-right">
+                                <p className="text-xs font-semibold text-[#1e293b]">{target.name}</p>
+                                <p className="text-[10px] text-[#64748b]">{target.media_unit_name || target.mediaUnitName}</p>
+                              </div>
+                            </div>
+                            {publishingToTarget === target.id ? (
+                              <Loader2 size={14} className="text-blue-600 animate-spin" />
+                            ) : (
+                              <span className="text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">نشر</span>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-xs text-[#94a3b8] text-center py-2">لا توجد مواقع خارجية مفعّلة</p>
+                      )}
+                    </div>
+
+                    {/* ═══ النشر على السوشال ميديا ═══ */}
+                    <div className="space-y-2 border-t border-[#e2e8f0] pt-3">
+                      <p className="text-[10px] text-[#94a3b8] font-bold uppercase flex items-center gap-1">
+                        <Share2 size={12} /> نشر على السوشال ميديا
+                      </p>
+                      {onNavigateToAI ? (
+                        <button
+                          onClick={() => {
+                            onNavigateToAI('social', {
+                              title: selectedItem.title || '',
+                              content: selectedItem.content || ''
+                            });
+                            setSelectedItem(null);
+                            setShowPublishOptions(false);
+                          }}
+                          className="w-full p-3 rounded-xl border border-[#e2e8f0] hover:border-orange-300 hover:bg-orange-50/50 transition-all flex items-center justify-between group bg-white"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Share2 size={14} className="text-orange-500 group-hover:text-orange-600" />
+                            <div className="text-right">
+                              <p className="text-xs font-semibold text-[#1e293b]">تجهيز منشور سوشال ميديا</p>
+                              <p className="text-[10px] text-[#64748b]">تحويل الخبر لمنشور جاهز للنشر على المنصات</p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-orange-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">فتح</span>
+                        </button>
+                      ) : (
+                        <p className="text-xs text-[#94a3b8] text-center py-2">غير متاح حاليًا</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
               {/* Close */}
               <button
-                onClick={() => setSelectedItem(null)}
+                onClick={() => { setSelectedItem(null); setShowPublishOptions(false); }}
                 className="w-full bg-[#f8fafc] hover:bg-[#f1f5f9] border border-[#e2e8f0] text-[#64748b] py-2.5 rounded-xl font-bold text-sm transition-all"
               >
                 إغلاق
