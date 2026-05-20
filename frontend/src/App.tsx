@@ -168,7 +168,7 @@ export default function App() {
           return;
         }
 
-        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://media-center-management-system.onrender.com';
+        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-iqsv.onrender.com';
         try {
           const response = await fetch(`${managementApiUrl}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },

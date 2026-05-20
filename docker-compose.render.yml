@@ -41,11 +41,11 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        VITE_MANAGEMENT_API_URL: https://media-center-management-system.onrender.com
+        VITE_MANAGEMENT_API_URL: https://mcms-iqsv.onrender.com
         VITE_API_URL: http://localhost:7845
     container_name: media-center-frontend
     environment:
-      VITE_MANAGEMENT_API_URL: https://media-center-management-system.onrender.com
+      VITE_MANAGEMENT_API_URL: https://mcms-iqsv.onrender.com
       VITE_API_URL: http://localhost:7845
     ports:
       - "${FRONTEND_PORT:-7846}:80"

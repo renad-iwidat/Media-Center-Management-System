@@ -48,7 +48,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://media-center-management-system.onrender.com';
+      const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-iqsv.onrender.com';
 
       const loginResponse = await fetch(`${managementApiUrl}/api/auth/login`, {
         method: 'POST',

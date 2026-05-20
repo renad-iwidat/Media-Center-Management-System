@@ -47,7 +47,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: VITE_MANAGEMENT_API_URL
-        value: https://media-center-management-system.onrender.com
+        value: https://mcms-iqsv.onrender.com
       - key: VITE_API_URL
         fromService:
           type: web
