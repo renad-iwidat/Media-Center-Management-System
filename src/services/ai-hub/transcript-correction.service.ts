@@ -313,6 +313,38 @@ export async function correctTranscriptsBatch(
 }
 
 /**
+ * Get statistics from batch correction results
+ */
+export function getCorrectionStats(results: CorrectionResult[]): {
+  totalTranscripts: number;
+  totalCorrections: number;
+  averageProcessingTime: number;
+  averageCorrectionCount: number;
+  totalOriginalLength: number;
+  totalCorrectedLength: number;
+} {
+  const totalTranscripts = results.length;
+  const totalCorrections = results.reduce((sum, r) => sum + r.metadata.correctionCount, 0);
+  const averageProcessingTime = totalTranscripts > 0
+    ? results.reduce((sum, r) => sum + r.metadata.processingTime, 0) / totalTranscripts
+    : 0;
+  const averageCorrectionCount = totalTranscripts > 0
+    ? totalCorrections / totalTranscripts
+    : 0;
+  const totalOriginalLength = results.reduce((sum, r) => sum + r.metadata.originalLength, 0);
+  const totalCorrectedLength = results.reduce((sum, r) => sum + r.metadata.correctedLength, 0);
+
+  return {
+    totalTranscripts,
+    totalCorrections,
+    averageProcessingTime,
+    averageCorrectionCount,
+    totalOriginalLength,
+    totalCorrectedLength,
+  };
+}
+
+/**
  * Validate correction quality
  */
 export function validateCorrectionQuality(result: CorrectionResult): {
