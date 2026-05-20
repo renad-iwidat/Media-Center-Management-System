@@ -445,7 +445,7 @@ export class PublishingController {
       const success = await publishingService.archiveArticle(articleId);
 
       if (!success) {
-        res.status(404).json({ success: false, message: 'المقال غير موجود' });
+        res.status(400).json({ success: false, message: 'لا يمكن أرشفة المقال — تأكد أنه منشور على منصة واحدة على الأقل (موقع خارجي أو سوشال ميديا)' });
         return;
       }
 

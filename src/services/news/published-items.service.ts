@@ -71,6 +71,7 @@ export class PublishedItemsService {
         JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
         WHERE pi.is_active = true
+          AND COALESCE(rd.publish_status, 'draft') != 'archived'
         ORDER BY pi.published_at DESC
         LIMIT $1`,
         [limit]
@@ -197,6 +198,7 @@ export class PublishedItemsService {
         JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
         WHERE pi.is_active = true AND pi.media_unit_id = $1
+          AND COALESCE(rd.publish_status, 'draft') != 'archived'
         ORDER BY pi.published_at DESC
         LIMIT $2`,
         [mediaUnitId, limit]

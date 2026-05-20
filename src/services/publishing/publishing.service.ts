@@ -384,9 +384,12 @@ class PublishingService {
    */
   async archiveArticle(articleId: number): Promise<boolean> {
     // تحقق أنه منشور فعلاً على منصة واحدة على الأقل
+    // نفحص publishing_status (سوشال ميديا) + auto_publish_log (مواقع خارجية)
     const published = await query(
-      `SELECT COUNT(*) as count FROM publishing_status 
-       WHERE article_id = $1 AND status = 'success'`,
+      `SELECT (
+        (SELECT COUNT(*) FROM publishing_status WHERE article_id = $1 AND status = 'success') +
+        (SELECT COUNT(*) FROM auto_publish_log WHERE raw_data_id = $1 AND status = 'success')
+      ) as count`,
       [articleId]
     );
 
@@ -394,7 +397,18 @@ class PublishingService {
       return false; // لا يمكن أرشفة مقال غير منشور
     }
 
-    return this.setArticleStatus(articleId, 'archived');
+    // تحديث حالة المقال في raw_data
+    const statusUpdated = await this.setArticleStatus(articleId, 'archived');
+    
+    if (statusUpdated) {
+      // إلغاء تفعيل المقال في published_items حتى لا يظهر في قسم النشر
+      await query(
+        `UPDATE published_items SET is_active = false WHERE raw_data_id = $1`,
+        [articleId]
+      );
+    }
+    
+    return statusUpdated;
   }
 
   // ════════════════════════════════════════════════════════════════════════════

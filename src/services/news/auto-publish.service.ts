@@ -354,6 +354,14 @@ class AutoPublishService {
 
 
         await this.logPublish(target.id, article.id, 'success', response.status, responseBody, undefined, externalUrl, externalId);
+        
+        // تحديث حالة المقال في raw_data — لتتبع أنه منشور خارجياً
+        await query(
+          `UPDATE raw_data SET publish_status = 'published_external' 
+           WHERE id = $1 AND publish_status NOT IN ('archived')`,
+          [article.id]
+        );
+        
         return { success: true, responseCode: response.status, responseBody, externalUrl, externalId };
       } else {
         await this.logPublish(target.id, article.id, 'failed', response.status, responseBody, `HTTP ${response.status}`);
