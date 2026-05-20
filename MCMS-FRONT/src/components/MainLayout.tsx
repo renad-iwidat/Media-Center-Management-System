@@ -14,7 +14,10 @@ import {
   ChevronLeft,
   Layers,
   Mic,
-  LogOut
+  LogOut,
+  Briefcase,
+  Calendar,
+  Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -30,6 +33,7 @@ export default function MainLayout() {
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,6 +63,7 @@ export default function MainLayout() {
     if (user) {
       fetchUnreadCount();
       fetchLatestNotifications();
+      checkAdminProcAccess();
       
       socketService.onNotification(() => {
         fetchUnreadCount();
@@ -69,9 +74,23 @@ export default function MainLayout() {
     }
   }, [user]);
 
+  const checkAdminProcAccess = async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: { has_access: boolean } }>(
+        '/api/administrative/access/check'
+      );
+      if (res.success) {
+        setHasAdminAccess(res.data?.has_access || false);
+      }
+    } catch (err) {
+      setHasAdminAccess(false);
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen bg-[#020617]" />;
 
   const menuItems = [
+    { name: 'الصفحة الرئيسية', path: '/welcome', icon: Home },
     { name: 'لوحة التحكم', path: '/dashboard', icon: LayoutDashboard, permission: 'kpi.view' },
     { name: 'الطلبات', path: '/orders', icon: ClipboardList, permission: 'orders.view' },
     { name: 'المهام', path: '/tasks', icon: CheckSquare, permission: 'tasks.view' },
@@ -82,16 +101,24 @@ export default function MainLayout() {
     { name: 'بوابة إدخال المراسلين', path: 'https://manual-reporter-input-frontend.onrender.com/', icon: Mic },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => 
+  // العناصر الأساسية (الصفحة الرئيسية فقط - تظهر للجميع)
+  const homeItem = menuItems[0];
+  // باقي العناصر حسب الصلاحيات
+  const otherMenuItems = menuItems.slice(1).filter(item => 
     !item.permission || user.permissions?.includes(item.permission)
   );
 
   const getCurrentPageName = () => {
     const item = menuItems.find(i => i.path === location.pathname);
     if (item) return item.name;
+    if (location.pathname === '/welcome') return 'الرئيسية';
     if (location.pathname === '/profile') return 'بياناتي';
     if (location.pathname === '/change-password') return 'تغيير كلمة السر';
     if (location.pathname === '/notifications') return 'الإشعارات';
+    if (location.pathname === '/my-leave-request') return 'طلب إجازة / مغادرة';
+    if (location.pathname === '/my-admin-tasks') return 'مهامي الإدارية';
+    if (location.pathname === '/administrative/archive') return 'الأرشيف الخاص بالإداريين';
+    if (location.pathname.startsWith('/administrative')) return 'الإجراءات الإدارية';
     return '';
   };
 
@@ -131,63 +158,147 @@ export default function MainLayout() {
 
         {/* Logo Section - Removed */}
 
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {filteredMenuItems.map((item) => {
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          {/* الصفحة الرئيسية */}
+          <Link
+            to="/welcome"
+            className={cn(
+              "flex items-center gap-4 px-4 py-4 rounded-xl transition-all group relative text-[15px] font-semibold",
+              location.pathname === '/welcome'
+                ? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/10" 
+                : "text-white/80 hover:text-white hover:bg-white/10"
+            )}
+          >
+            <Home size={24} className={cn("min-w-[24px]", location.pathname === '/welcome' ? "text-[#FF9F4A] drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+            {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">الصفحة الرئيسية</motion.span>}
+            {location.pathname === '/welcome' && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-[#FF9F4A] rounded-l-full shadow-lg shadow-orange-500/50" />}
+          </Link>
+
+          {/* ═══ خدمات الموظفين ═══ */}
+          <div className="my-3 px-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-green-400/50 to-transparent" />
+            {isSidebarOpen && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-green-400 mt-3 mb-1 font-bold uppercase tracking-wider drop-shadow-sm">
+                خدمات الموظفين
+              </motion.p>
+            )}
+          </div>
+
+          <Link
+            to="/my-leave-request"
+            className={cn(
+              "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold",
+              location.pathname === '/my-leave-request'
+                ? "bg-gradient-to-l from-green-500/30 to-emerald-600/20 text-white shadow-lg backdrop-blur-sm border border-green-500/30" 
+                : "text-white/80 hover:text-white hover:bg-white/10"
+            )}
+          >
+            <Calendar size={24} className={cn("min-w-[24px]", location.pathname === '/my-leave-request' ? "text-green-400 drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+            {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">طلب إجازة / مغادرة</motion.span>}
+            {location.pathname === '/my-leave-request' && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-green-400 rounded-l-full shadow-lg shadow-green-500/50" />}
+          </Link>
+
+          <Link
+            to="/my-admin-tasks"
+            className={cn(
+              "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold",
+              location.pathname === '/my-admin-tasks'
+                ? "bg-gradient-to-l from-purple-500/30 to-indigo-600/20 text-white shadow-lg backdrop-blur-sm border border-purple-500/30" 
+                : "text-white/80 hover:text-white hover:bg-white/10"
+            )}
+          >
+            <ClipboardList size={24} className={cn("min-w-[24px]", location.pathname === '/my-admin-tasks' ? "text-purple-400 drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+            {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">مهامي الإدارية</motion.span>}
+            {location.pathname === '/my-admin-tasks' && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-purple-400 rounded-l-full shadow-lg shadow-purple-500/50" />}
+          </Link>
+
+          {/* ═══ نظام الذكاء الاصطناعي ═══ */}
+          <div className="my-3 px-2">
+            <a
+              href="https://automation-and-ai-hub-frontend.onrender.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block relative overflow-hidden rounded-xl p-3 bg-gradient-to-r from-[#f97316] via-[#ea580c] to-[#dc2626] shadow-lg shadow-orange-500/30 hover:shadow-xl hover:scale-[1.02] transition-all group"
+            >
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-50" />
+              <div className="relative flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <span className="text-xl">🤖</span>
+                </div>
+                {isSidebarOpen && (
+                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+                    <p className="text-white font-bold text-sm leading-tight">نظام أتمتة الأخبار</p>
+                    <p className="text-white/70 text-[10px] mt-0.5">وتقنيات الذكاء الاصطناعي</p>
+                  </motion.div>
+                )}
+              </div>
+            </a>
+          </div>
+
+          {/* ═══ الإجراءات الإدارية ═══ */}
+          {hasAdminAccess && (
+            <>
+              <div className="my-3 px-4">
+                <div className="h-px bg-gradient-to-r from-transparent via-[#FF9F4A]/50 to-transparent" />
+                {isSidebarOpen && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-[#FF9F4A] mt-3 mb-1 font-bold uppercase tracking-wider drop-shadow-sm">
+                    الإجراءات الإدارية
+                  </motion.p>
+                )}
+              </div>
+
+              <Link
+                to="/administrative"
+                className={cn(
+                  "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold",
+                  location.pathname.startsWith('/administrative')
+                    ? "bg-gradient-to-l from-[#FF9F4A]/30 to-orange-600/20 text-white shadow-lg backdrop-blur-sm border border-[#FF9F4A]/30" 
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Briefcase size={24} className={cn("min-w-[24px]", location.pathname.startsWith('/administrative') ? "text-[#FF9F4A] drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+                {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">قسم الإجراءات الإدارية</motion.span>}
+                {location.pathname.startsWith('/administrative') && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-[#FF9F4A] rounded-l-full shadow-lg shadow-orange-500/50" />}
+              </Link>
+            </>
+          )}
+
+          {/* ═══ إدارة النظام ═══ */}
+          <div className="my-3 px-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            {isSidebarOpen && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-white/50 mt-3 mb-1 font-bold uppercase tracking-wider drop-shadow-sm">
+                إدارة النظام
+              </motion.p>
+            )}
+          </div>
+
+          {otherMenuItems.map((item) => {
             const isExternal = item.path.startsWith('http');
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             
             const linkContent = (
               <>
-                <item.icon size={24} className={cn(
-                  "min-w-[24px]",
-                  isActive ? "text-[#FF9F4A] drop-shadow-lg" : "text-white/90 group-hover:text-white"
-                )} />
-                {isSidebarOpen && (
-                  <motion.span 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="whitespace-nowrap overflow-hidden drop-shadow-sm"
-                  >
-                    {item.name}
-                  </motion.span>
-                )}
-                {isActive && (
-                  <motion.div 
-                    layoutId="active-bar"
-                    className="absolute right-0 top-2 bottom-2 w-1.5 bg-[#FF9F4A] rounded-l-full shadow-lg shadow-orange-500/50"
-                  />
-                )}
+                <item.icon size={24} className={cn("min-w-[24px]", isActive ? "text-[#FF9F4A] drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+                {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap overflow-hidden drop-shadow-sm">{item.name}</motion.span>}
+                {isActive && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-[#FF9F4A] rounded-l-full shadow-lg shadow-orange-500/50" />}
               </>
             );
 
             if (isExternal) {
               return (
-                <a
-                  key={item.path}
-                  href={item.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "flex items-center gap-4 px-4 py-4 rounded-xl transition-all group relative text-[15px] font-semibold",
-                    "text-white/80 hover:text-white hover:bg-white/10"
-                  )}
-                >
+                <a key={item.path} href={item.path} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold text-white/80 hover:text-white hover:bg-white/10">
                   {linkContent}
                 </a>
               );
             }
 
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-4 px-4 py-4 rounded-xl transition-all group relative text-[15px] font-semibold",
-                  isActive
-                    ? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/10" 
-                    : "text-white/80 hover:text-white hover:bg-white/10"
-                )}
-              >
+              <Link key={item.path} to={item.path}
+                className={cn("flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold",
+                  isActive ? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/10" : "text-white/80 hover:text-white hover:bg-white/10"
+                )}>
                 {linkContent}
               </Link>
             );
@@ -306,6 +417,10 @@ export default function MainLayout() {
                                     navigate(`/tasks/${notif.entity_id}`);
                                   } else if (notif.entity_type === 'order' && notif.entity_id) {
                                     navigate(`/orders/${notif.entity_id}`);
+                                  } else if (notif.entity_type === 'admin_task' && notif.entity_id) {
+                                    navigate(`/administrative/tasks/${notif.entity_id}`);
+                                  } else if (notif.entity_type === 'admin_order' && notif.entity_id) {
+                                    navigate(`/administrative/orders/${notif.entity_id}`);
                                   } else if (notif.entity_type === 'content' && notif.entity_id) {
                                     navigate(`/content/${notif.entity_id}`);
                                   } else if (notif.entity_type === 'shooting' && notif.entity_id) {
@@ -357,6 +472,16 @@ export default function MainLayout() {
           >
             <Outlet />
           </motion.div>
+
+          {/* Footer */}
+          <div className="text-center py-8 mt-12 border-t border-gray-200">
+            <p className="text-sm text-gray-500 font-medium">
+              نظام إدارة مركز الإعلام © 2026 | تصميم وتنفيذ وحدة ليمينال
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              جميع الحقوق محفوظة لدى وحدة ليمينال للحلول الذكية والتقنية
+            </p>
+          </div>
         </main>
       </div>
     </div>

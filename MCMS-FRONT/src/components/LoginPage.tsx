@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// المستخدمين المسموح لهم بلوحة التحكم
+const DASHBOARD_ALLOWED_IDS = ['74', '39', '73', '71', '72'];
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +23,24 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      navigate('/');
+      // توجيه حسب صلاحية المستخدم
+      const storedUser = localStorage.getItem('token');
+      // نقرأ الـ user من الـ token payload
+      if (storedUser) {
+        try {
+          const payload = JSON.parse(atob(storedUser.split('.')[1]));
+          const userId = payload.user_id?.toString() || payload.id?.toString() || '';
+          if (DASHBOARD_ALLOWED_IDS.includes(userId)) {
+            navigate('/dashboard');
+          } else {
+            navigate('/welcome');
+          }
+        } catch {
+          navigate('/welcome');
+        }
+      } else {
+        navigate('/welcome');
+      }
     } catch (err: any) {
       setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من البيانات.');
     } finally {

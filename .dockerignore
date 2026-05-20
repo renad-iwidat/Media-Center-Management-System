@@ -1,7 +1,5 @@
 node_modules
-npm-debug.log
 dist
-build
 .git
 .gitignore
 .env
@@ -13,3 +11,8 @@ build
 .idea
 coverage
 .nyc_output
+npm-debug.log
+MCMS-FRONT
+scripts
+.github
+jest.config.js

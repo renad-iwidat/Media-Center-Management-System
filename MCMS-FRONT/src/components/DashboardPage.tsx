@@ -1,492 +1,597 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   AreaChart, Area, PieChart, Pie, Cell 
 } from 'recharts';
 import { 
-  Calendar, ArrowUpRight, ArrowDownRight, Clock, 
-  CheckCircle2, AlertCircle, Users, Database, 
-  Search, Filter, ChevronRight, BarChart3, TrendingUp,
-  FileText, ClipboardList, CheckSquare, RefreshCcw
+  Users, CheckCircle2, AlertCircle, Clock, 
+  ClipboardList, CheckSquare, TrendingUp, Calendar,
+  Award, ArrowUpRight, Timer, Database
 } from 'lucide-react';
 import { api } from '../services/api';
-import { DashboardData, TrendData, UserPerformance, OverdueTask } from '../types';
-import { Button, Input } from './ui/Inputs';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../lib/utils';
+import { DashboardData, TrendData, UserPerformance } from '../types';
+import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    from: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
-    to: format(new Date(), 'yyyy-MM-dd')
-  });
-
+  const [period, setPeriod] = useState<string>('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [data, setData] = useState<DashboardData | null>(null);
   const [trends, setTrends] = useState<TrendData[]>([]);
   const [userPerformers, setUserPerformers] = useState<UserPerformance[]>([]);
-  const [overdueTasks, setOverdueTasks] = useState<OverdueTask[]>([]);
-  const [inProgressTasks, setInProgressTasks] = useState<any[]>([]);
-  const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
+  const [leaveCount, setLeaveCount] = useState(0);
+  const [tablePage, setTablePage] = useState(0);
+  const [contentStats, setContentStats] = useState<any>(null);
+  const TABLE_PAGE_SIZE = 10;
 
-  const fetchDashboard = async () => {
+  const getDateRange = () => {
+    if (period === 'custom' && customFrom && customTo) {
+      return { from: customFrom, to: customTo };
+    }
+    if (period === 'all') return { from: '', to: '' };
+
+    const to = new Date();
+    const from = new Date();
+    
+    switch (period) {
+      case 'this-week':
+        from.setDate(to.getDate() - to.getDay()); // بداية الأسبوع الحالي
+        break;
+      case 'last-week':
+        from.setDate(to.getDate() - to.getDay() - 7);
+        to.setDate(to.getDate() - to.getDay() - 1);
+        break;
+      case 'this-month':
+        from.setDate(1); // بداية الشهر الحالي
+        break;
+      case 'last-month':
+        from.setMonth(to.getMonth() - 1, 1);
+        to.setDate(0); // آخر يوم من الشهر الماضي
+        break;
+      case '3-months':
+        from.setMonth(to.getMonth() - 3);
+        break;
+      case '6-months':
+        from.setMonth(to.getMonth() - 6);
+        break;
+      case 'year':
+        from.setFullYear(to.getFullYear() - 1);
+        break;
+    }
+    return { from: format(from, 'yyyy-MM-dd'), to: format(to, 'yyyy-MM-dd') };
+  };
+
+  const fetchData = async () => {
     setLoading(true);
+    const { from, to } = getDateRange();
+    const dateQuery = from && to ? `?from=${from}&to=${to}` : '';
     try {
-      const [dashRes, trendRes, userRes, overdueRes, tasksRes] = await Promise.all([
-        api.get<any>(`/api/kpi/dashboard?from=${filters.from}&to=${filters.to}`),
-        api.get<any>(`/api/kpi/trends?months=6`),
-        api.get<any>(`/api/kpi/users`),
-        api.get<any>(`/api/tasks/overdue`),
-        api.get<any>(`/api/tasks`)
+      const [dashRes, trendRes, userRes, leaveRes] = await Promise.all([
+        api.get<any>(`/api/kpi/dashboard${dateQuery}`).catch(() => ({ success: false, data: null })),
+        api.get<any>('/api/kpi/trends?months=6').catch(() => ({ success: false, data: [] })),
+        api.get<any>('/api/kpi/users?limit=200').catch(() => ({ success: false, data: [] })),
+        api.get<any>('/api/administrative/orders?category_id=4&limit=500').catch(() => ({ success: false, data: [] })),
       ]);
 
-      if (dashRes.success) setData(dashRes.data);
-      if (trendRes.success) setTrends(trendRes.data.reverse());
-      if (userRes.success) setUserPerformers(userRes.data);
-      if (overdueRes.success) setOverdueTasks(overdueRes.data);
-      if (tasksRes.success && Array.isArray(tasksRes.data)) {
-        const inProgress = tasksRes.data.filter((t: any) => 
-          t.status_name === 'قيد التنفيذ' || t.status_name === 'جاري' || t.status_id === 2
-        ).slice(0, 5);
-        const upcoming = tasksRes.data.filter((t: any) => 
-          t.status_name === 'معلق' || t.status_name === 'جديد' || t.status_name === 'قادم' || t.status_id === 1
-        ).slice(0, 5);
-        setInProgressTasks(inProgress);
-        setUpcomingTasks(upcoming);
+      if (dashRes.success && dashRes.data) setData(dashRes.data);
+      if (trendRes.success && Array.isArray(trendRes.data)) setTrends([...trendRes.data].reverse());
+      if (userRes.success && Array.isArray(userRes.data)) setUserPerformers(userRes.data);
+      if (leaveRes.success && Array.isArray(leaveRes.data)) {
+        setLeaveCount(leaveRes.data.length);
+      }
+
+      // إحصائيات الأرشيف من الـ dashboard data
+      if (dashRes.success && dashRes.data?.content) {
+        setContentStats({
+          total: dashRes.data.content.total || 0,
+          archived: dashRes.data.content.archived || 0,
+          totalSizeMB: dashRes.data.content.total_size_mb || 0,
+          totalSizeGB: ((dashRes.data.content.total_size_mb || 0) / 1024).toFixed(2),
+          totalReuses: dashRes.data.reuse?.total_reuses || 0,
+          types: dashRes.data.content.types || [],
+          byDesk: dashRes.data.content.byDesk || [],
+          topReused: dashRes.data.reuse?.top_reused || [],
+        });
       }
     } catch (err) {
-      console.error(err);
+      console.error('Dashboard fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDashboard();
-  }, [filters]);
-
-  const setPreset = (preset: 'week' | 'month' | 'quarter' | 'all') => {
-    const to = new Date();
-    let from = new Date();
-    if (preset === 'week') from.setDate(to.getDate() - 7);
-    else if (preset === 'month') from.setMonth(to.getMonth() - 1);
-    else if (preset === 'quarter') from.setMonth(to.getMonth() - 3);
-    else from = new Date('2024-01-01');
-
-    setFilters({ 
-      from: format(from, 'yyyy-MM-dd'), 
-      to: format(to, 'yyyy-MM-dd') 
-    });
-  };
+  useEffect(() => { fetchData(); }, [period, customFrom, customTo]);
 
   if (loading && !data) return <DashboardSkeleton />;
+  if (!data) return (
+    <div className="text-center py-20">
+      <p className="text-gray-500 text-lg">جاري تحميل البيانات...</p>
+      <button onClick={fetchData} className="mt-4 px-6 py-2 bg-[#2d5570] text-white rounded-xl font-bold">
+        إعادة المحاولة
+      </button>
+    </div>
+  );
+
+  // بيانات الـ Pie Chart
+  const tasksPieData = [
+    { name: 'منجز', value: data.tasks.completed, color: '#10b981' },
+    { name: 'قيد التنفيذ', value: data.tasks.in_progress, color: '#3b82f6' },
+    { name: 'معلق', value: data.tasks.pending, color: '#f59e0b' },
+    { name: 'متأخر', value: data.tasks.overdue, color: '#ef4444' },
+  ].filter(d => d.value > 0);
+
+  // ترتيب الموظفين حسب الإنجاز
+  const sortedPerformers = [...userPerformers]
+    .sort((a, b) => b.completed_tasks - a.completed_tasks);
+
+  const topPerformer = sortedPerformers[0];
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header & Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+    <div className="space-y-6 pb-8">
+      {/* Header + Filter */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-1">لوحة التحكم</h1>
-          <p className="text-slate-500 font-medium">نظرة عامة شاملة على أداء نظام إدارة مركز الإعلام</p>
+          <h1 className="text-2xl font-black text-gray-900">لوحة التحكم</h1>
+          <p className="text-sm text-gray-500">نظرة شاملة على أداء مركز الإعلام</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Input 
-              type="date" 
-              className="w-40 h-10 py-0 text-xs bg-slate-50 border-slate-200 text-slate-800" 
-              value={filters.from}
-              onChange={(e) => setFilters(f => ({ ...f, from: e.target.value }))}
-            />
-            <span className="text-slate-400 text-xs font-bold">إلى</span>
-            <Input 
-              type="date" 
-              className="w-40 h-10 py-0 text-xs bg-slate-50 border-slate-200 text-slate-800" 
-              value={filters.to}
-              onChange={(e) => setFilters(f => ({ ...f, to: e.target.value }))}
-            />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm flex-wrap">
+            {[
+              { key: 'all', label: 'الكل' },
+              { key: 'this-week', label: 'هذا الأسبوع' },
+              { key: 'last-week', label: 'الأسبوع الماضي' },
+              { key: 'this-month', label: 'هذا الشهر' },
+              { key: 'last-month', label: 'الشهر الماضي' },
+              { key: '3-months', label: '3 أشهر' },
+              { key: '6-months', label: '6 أشهر' },
+              { key: 'year', label: 'سنة' },
+              { key: 'custom', label: 'مخصص' },
+            ].map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  period === p.key
+                    ? 'bg-[#2d5570] text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-          <div className="h-6 w-px bg-slate-200" />
-          <div className="flex items-center gap-1">
-            <PresetBtn onClick={() => setPreset('week')}>هذا الأسبوع</PresetBtn>
-            <PresetBtn onClick={() => setPreset('month')}>هذا الشهر</PresetBtn>
-            <PresetBtn onClick={() => setPreset('quarter')}>آخر ٣ شهور</PresetBtn>
-            <PresetBtn onClick={() => setPreset('all')}>الكل</PresetBtn>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Oversight: Tasks & Performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Enhanced Tasks Table (Overdue + Ongoing + Upcoming) */}
-        <div className="bg-white rounded-3xl overflow-hidden flex flex-col border border-slate-100 shadow-xl shadow-slate-200/40">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="font-bold text-lg text-slate-900">متابعة الأداء التشغيلي</h3>
-              <p className="text-xs text-slate-400">مراقبة حية للمهام ذات الأولوية</p>
+          {period === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs" />
+              <span className="text-gray-400 text-xs">إلى</span>
+              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs" />
             </div>
-            <div className="flex gap-2">
-              <span className="px-2 py-1 bg-red-50 text-red-600 text-[10px] font-bold rounded-lg border border-red-100">متأخر</span>
-              <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-100">جاري</span>
-              <span className="px-2 py-1 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg border border-slate-100">قادم</span>
-            </div>
-          </div>
-          <div className="flex-1 overflow-x-auto">
-            <table className="w-full text-right">
-              <thead>
-                <tr className="bg-slate-50/50 text-[11px] text-slate-500 uppercase font-bold border-b border-slate-100">
-                  <th className="px-6 py-4">المهمة</th>
-                  <th className="px-6 py-4">المسؤول</th>
-                  <th className="px-6 py-4">الحالة</th>
-                  <th className="px-6 py-4">الموعد</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {/* Overdue Tasks First */}
-                {overdueTasks.map((task, idx) => (
-                  <tr key={`overdue-${idx}`} className="hover:bg-red-50/20 transition-all group">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900 block truncate max-w-[200px] group-hover:text-red-600 transition-colors">{task.title}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs text-slate-600 font-bold">{task.user_name}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                        <span className="text-xs font-bold text-red-600">متأخر ({task.delay_days} يوم)</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-red-500 font-bold">{task.deadline}</td>
-                  </tr>
-                ))}
-                
-                {/* In Progress Tasks */}
-                {inProgressTasks.map((task, idx) => (
-                  <tr key={`progress-${idx}`} className="hover:bg-blue-50/20 transition-all group">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900 block truncate max-w-[200px] group-hover:text-blue-600 transition-colors">{task.title}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs text-slate-600 font-bold">{task.assigned_to_name || '-'}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                        <span className="text-xs font-bold text-blue-600">جاري</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-blue-500 font-bold">{task.deadline || '-'}</td>
-                  </tr>
-                ))}
-
-                {/* Upcoming Tasks */}
-                {upcomingTasks.map((task, idx) => (
-                  <tr key={`upcoming-${idx}`} className="hover:bg-slate-50 transition-all group">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900 block truncate max-w-[200px]">{task.title}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs text-slate-600 font-bold">{task.assigned_to_name || '-'}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                        <span className="text-xs font-bold text-slate-500">قادم</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-400 font-bold">{task.deadline || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {overdueTasks.length === 0 && inProgressTasks.length === 0 && upcomingTasks.length === 0 && (
-              <div className="p-16 text-center">
-                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="text-green-500" size={24} />
-                </div>
-                <p className="text-slate-400 text-sm">لا توجد مهام حاسمة للمتابعة حالياً</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top Performers */}
-        <div className="bg-white rounded-3xl overflow-hidden flex flex-col border border-slate-100 shadow-xl shadow-slate-200/40">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="font-bold text-lg text-slate-900">أفضل الموظفين أداءً</h3>
-              <p className="text-xs text-slate-400">المتميزون في الإنجاز والالتزام</p>
-            </div>
-            <div className="p-2 bg-amber-50 rounded-lg">
-              <TrendingUp className="text-amber-500" size={18} />
-            </div>
-          </div>
-          <div className="flex-1 overflow-x-auto">
-            <table className="w-full text-right">
-              <thead>
-                <tr className="bg-slate-50/50 text-[11px] text-slate-500 uppercase font-bold border-b border-slate-100">
-                  <th className="px-6 py-4">الموظف</th>
-                  <th className="px-6 py-4">المهام</th>
-                  <th className="px-6 py-4">الالتزام</th>
-                  <th className="px-6 py-4">معدل الإنجاز</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data?.top_performers.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-all group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-blue-600/20">
-                          {p.name.substring(0, 2)}
-                        </div>
-                        <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-sm text-slate-700 font-bold">{p.completed_tasks}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "text-xs font-mono font-bold px-2 py-1 rounded-md",
-                          p.on_time_percentage >= 90 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                        )}>{p.on_time_percentage}%</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${p.on_time_percentage}%` }}
-                          className="h-full bg-blue-600 rounded-full" 
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Secondary Statistics: Summary Cards */}
-      <h2 className="text-xl font-bold text-slate-900 pt-6 flex items-center gap-3">
-        <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-        ملخص المؤشرات الحية
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <SummaryCard 
-          title="الطلبات"
-          total={data?.orders.total || 0}
-          icon={<ClipboardList className="text-blue-600" />}
-          stats={[
-            { label: 'مكتملة', value: data?.orders.completed, color: 'text-green-600' },
-            { label: 'جارية', value: data?.orders.in_progress, color: 'text-blue-600' },
-            { label: 'متأخرة', value: data?.orders.overdue, color: 'text-red-600' }
-          ]}
-          progress={data?.orders.completion_rate}
+      {/* Stats Cards - Row 1 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          icon={<Users className="w-5 h-5" />}
+          label="الموظفين"
+          value={data.users.total}
+          color="bg-indigo-500"
+          bgLight="bg-indigo-50"
         />
-        <SummaryCard 
-          title="المهام التنفيذية"
-          total={data?.tasks.total || 0}
-          icon={<CheckSquare className="text-emerald-600" />}
-          stats={[
-            { label: 'مكتملة', value: data?.tasks.completed, color: 'text-green-600' },
-            { label: 'جارية', value: data?.tasks.in_progress, color: 'text-blue-600' },
-            { label: 'معلقة', value: data?.tasks.pending, color: 'text-slate-400 font-bold' }
-          ]}
-          progress={data?.tasks.completion_rate}
+        <StatCard
+          icon={<ClipboardList className="w-5 h-5" />}
+          label="الطلبات"
+          value={data.orders.total}
+          sub={`${data.orders.completed} منجز`}
+          color="bg-blue-500"
+          bgLight="bg-blue-50"
         />
-        <SummaryCard 
-          title="المحتوى والأرشيف"
-          total={data?.content.total || 0}
-          icon={<Database className="text-amber-600" />}
-          stats={[
-            { label: 'المساحة', value: `${data?.content.total_size_mb} MB`, color: 'text-amber-600 font-mono font-bold' },
-            { label: 'المؤرشف', value: data?.content.archived, color: 'text-slate-400 font-bold' }
-          ]}
+        <StatCard
+          icon={<CheckSquare className="w-5 h-5" />}
+          label="المهام"
+          value={data.tasks.total}
+          sub={`${data.tasks.completed} منجز`}
+          color="bg-emerald-500"
+          bgLight="bg-emerald-50"
         />
-        <SummaryCard 
-          title="كفاءة الإنجاز"
-          total={data?.performance.on_time_percentage + '%'}
-          icon={<TrendingUp className="text-purple-600" />}
-          stats={[
-            { label: 'وقت التنفيذ (د)', value: `${data?.performance.avg_task_duration_minutes}`, color: 'text-purple-600 font-mono font-bold' },
-            { label: 'نسبة الالتزام', value: `${data?.performance.on_time_percentage}%`, color: 'text-green-600 font-mono font-bold' }
-          ]}
-          isRadial
+        <StatCard
+          icon={<Calendar className="w-5 h-5" />}
+          label="الإجازات/المغادرات"
+          value={leaveCount}
+          color="bg-amber-500"
+          bgLight="bg-amber-50"
         />
       </div>
 
-      {/* Analytical Charts Block */}
-      <h2 className="text-xl font-bold text-slate-900 pt-6 flex items-center gap-3">
-        <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
-        التحليل الزمني والنمو التراكمي
-      </h2>
+      {/* Stats Cards - Row 2 (Task Status) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <MiniStat label="مهام منجزة" value={data.tasks.completed} icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} />
+        <MiniStat label="قيد التنفيذ" value={data.tasks.in_progress} icon={<Clock className="w-4 h-4 text-blue-500" />} />
+        <MiniStat label="مهام متأخرة" value={data.tasks.overdue} icon={<AlertCircle className="w-4 h-4 text-red-500" />} />
+        <MiniStat label="نسبة الإنجاز" value={`${data.tasks.completion_rate}%`} icon={<TrendingUp className="w-4 h-4 text-purple-500" />} />
+      </div>
+
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/40">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-            <div className="space-y-1">
-              <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
-                <BarChart3 className="text-blue-600" size={20} />
-                تحليل التوجهات الإنتاجية
-              </h3>
-              <p className="text-xs text-slate-400">تتبع حجم العمل والإنتاج على مدار الأشهر</p>
-            </div>
-            <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-4 py-2 rounded-full">
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /> طلبات</div>
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-600" /> مهام</div>
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-600" /> محتوى</div>
-            </div>
-          </div>
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis 
-                  dataKey="month" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600, fontAttributes: 'font-mono' }} 
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="orders" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorOrders)" />
-                <Area type="monotone" dataKey="tasks" stroke="#10b981" strokeWidth={3} fill="transparent" />
-                <Area type="monotone" dataKey="content" stroke="#f59e0b" strokeWidth={3} fill="transparent" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Trends Chart */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">الاتجاهات الشهرية</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={trends}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+              <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
+              <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+              <Area type="monotone" dataKey="tasks" name="المهام" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={2} />
+              <Area type="monotone" dataKey="orders" name="الطلبات" stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 flex flex-col border border-slate-100 shadow-xl shadow-slate-200/40">
-          <div className="mb-8">
-            <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-900">
-              <RefreshCcw className="text-blue-600" size={20} />
-              إعادة الاستخدام
-            </h3>
-            <p className="text-xs text-slate-400">تحليل استهلاك المحتوى المؤرشف</p>
-          </div>
-          <div className="mb-10 p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl text-center shadow-lg shadow-blue-600/20">
-            <p className="text-blue-100 text-[10px] mb-1 font-bold uppercase tracking-widest">إجمالي مرات التكرار</p>
-            <div className="text-5xl font-mono font-bold text-white tracking-tighter">{data?.reuse.total_reuses}</div>
-          </div>
-          <div className="space-y-4 flex-1 overflow-y-auto pr-1">
-            <p className="text-sm font-bold text-slate-800 px-1 border-r-4 border-blue-600 mr-2">المحتوى الأكثر استخداماً</p>
-            {data?.reuse.top_reused.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:border-blue-400 hover:bg-white hover:shadow-lg transition-all cursor-default">
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-900 shadow-sm">{idx + 1}</div>
-                  <span className="text-sm text-slate-700 font-bold truncate max-w-[140px] group-hover:text-slate-900">{item.title}</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-mono text-blue-600 font-bold">
-                  <span className="text-lg">{item.reuse_count}</span>
-                  <span className="text-[10px] text-slate-400 mt-1 uppercase">مرة</span>
-                </div>
+        {/* Pie Chart */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">توزيع المهام</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie data={tasksPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={3}>
+                {tasksPieData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="flex flex-wrap justify-center gap-3 mt-2">
+            {tasksPieData.map((d) => (
+              <div key={d.name} className="flex items-center gap-1.5 text-xs">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                <span className="text-gray-600 font-medium">{d.name} ({d.value})</span>
               </div>
             ))}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function SummaryCard({ title, total, icon, stats, progress, isRadial }: any) {
-  return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg shadow-slate-200/30 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100">{icon}</div>
-        <div className="text-2xl font-mono font-bold text-slate-900 tracking-tight">{total}</div>
-      </div>
-      <div>
-        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">{title}</h4>
-        <div className="space-y-3">
-          {stats.map((s: any, i: number) => (
-            <div key={i} className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">{s.label}</span>
-              <span className={cn("font-bold", s.color)}>{s.value}</span>
-            </div>
-          ))}
+      {/* Top Performer Highlight */}
+      {topPerformer && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-6 flex items-center gap-5"
+        >
+          <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+            <Award className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <p className="text-sm text-amber-700 font-bold">أكثر موظف إنجازاً</p>
+            <p className="text-2xl font-black text-gray-900">{topPerformer.user_name}</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {topPerformer.completed_tasks} مهمة منجزة • {topPerformer.on_time_percentage}% في الوقت
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Employee Performance Table */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-800">أداء الموظفين</h3>
+          <span className="text-xs text-gray-400 font-medium">{sortedPerformers.length} موظف</span>
         </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 text-xs text-gray-500 font-bold uppercase">
+                <th className="px-6 py-3 text-right">#</th>
+                <th className="px-6 py-3 text-right">الموظف</th>
+                <th className="px-6 py-3 text-center">المهام الكلية</th>
+                <th className="px-6 py-3 text-center">منجز</th>
+                <th className="px-6 py-3 text-center">متأخر</th>
+                <th className="px-6 py-3 text-center">نسبة الإنجاز</th>
+                <th className="px-6 py-3 text-center">الأداء</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedPerformers.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE).map((user, i) => {
+                const globalIndex = tablePage * TABLE_PAGE_SIZE + i;
+                const rate = user.total_tasks_assigned > 0 
+                  ? Math.round((user.completed_tasks / user.total_tasks_assigned) * 100) 
+                  : 0;
+                return (
+                  <tr key={user.user_id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        globalIndex === 0 ? 'bg-amber-100 text-amber-700' : globalIndex === 1 ? 'bg-gray-200 text-gray-700' : globalIndex === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {globalIndex + 1}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-gray-800">{user.user_name}</p>
+                      <p className="text-xs text-gray-400">{user.role_name}</p>
+                    </td>
+                    <td className="px-6 py-4 text-center font-bold text-gray-700">{user.total_tasks_assigned}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-bold">{user.completed_tasks}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 rounded-lg text-sm font-bold ${user.overdue_tasks > 0 ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-400'}`}>
+                        {user.overdue_tasks}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center font-bold text-gray-700">{rate}%</td>
+                    <td className="px-6 py-4">
+                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full transition-all ${rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-blue-500' : rate >= 30 ? 'bg-amber-500' : 'bg-red-500'}`}
+                          style={{ width: `${Math.min(rate, 100)}%` }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {sortedPerformers.length === 0 && (
+            <div className="text-center py-12 text-gray-400">لا توجد بيانات أداء</div>
+          )}
+        </div>
+        {/* Pagination */}
+        {sortedPerformers.length > TABLE_PAGE_SIZE && (
+          <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              عرض {tablePage * TABLE_PAGE_SIZE + 1} - {Math.min((tablePage + 1) * TABLE_PAGE_SIZE, sortedPerformers.length)} من {sortedPerformers.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTablePage(p => Math.max(0, p - 1))}
+                disabled={tablePage === 0}
+                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold disabled:opacity-40 hover:bg-gray-200 transition-colors"
+              >
+                السابق
+              </button>
+              <span className="text-sm font-bold text-gray-600">
+                {tablePage + 1} / {Math.ceil(sortedPerformers.length / TABLE_PAGE_SIZE)}
+              </span>
+              <button
+                onClick={() => setTablePage(p => Math.min(Math.ceil(sortedPerformers.length / TABLE_PAGE_SIZE) - 1, p + 1))}
+                disabled={tablePage >= Math.ceil(sortedPerformers.length / TABLE_PAGE_SIZE) - 1}
+                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold disabled:opacity-40 hover:bg-gray-200 transition-colors"
+              >
+                التالي
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      {progress !== undefined && (
-        <div className="pt-2">
-          <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
-            <span>نسبة الإنجاز</span>
-            <span className="text-slate-800">{progress}%</span>
+
+      {/* Employee Bar Chart - Top 10 */}
+      {sortedPerformers.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-6">أعلى 10 موظفين إنجازاً</h3>
+          <ResponsiveContainer width="100%" height={Math.max(Math.min(sortedPerformers.length, 10) * 45, 200)}>
+            <BarChart data={sortedPerformers.slice(0, 10)} layout="vertical" margin={{ right: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+              <YAxis 
+                type="category" 
+                dataKey="user_name" 
+                tick={{ fontSize: 11 }} 
+                stroke="#94a3b8" 
+                width={120}
+              />
+              <Tooltip 
+                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                formatter={(value: any, name: string) => [value, name]}
+              />
+              <Bar dataKey="completed_tasks" name="منجز" fill="#10b981" radius={[0, 6, 6, 0]} barSize={20} />
+              <Bar dataKey="overdue_tasks" name="متأخر" fill="#ef4444" radius={[0, 6, 6, 0]} barSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm bg-emerald-500" />
+              <span className="text-gray-600 font-medium">مهام منجزة</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm bg-red-500" />
+              <span className="text-gray-600 font-medium">مهام متأخرة</span>
+            </div>
           </div>
-          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: `${progress}%` }}
-              className="h-full bg-blue-600 rounded-full"
-            />
+        </div>
+      )}
+
+      {/* Orders Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <MiniStat label="طلبات منجزة" value={data.orders.completed} icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} />
+        <MiniStat label="طلبات قيد التنفيذ" value={data.orders.in_progress} icon={<Clock className="w-4 h-4 text-blue-500" />} />
+        <MiniStat label="طلبات متأخرة" value={data.orders.overdue} icon={<AlertCircle className="w-4 h-4 text-red-500" />} />
+        <MiniStat label="متوسط مدة المهمة" value={`${data.performance.avg_task_duration_minutes || 0} ساعة`} icon={<Timer className="w-4 h-4 text-indigo-500" />} />
+      </div>
+
+      {/* إحصائيات الأرشيف الذكي */}
+      {contentStats && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-sm">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">إحصائيات الأرشيف الذكي</h3>
+              <p className="text-xs text-gray-400">جميع الملفات والمحتوى المخزن في النظام</p>
+            </div>
           </div>
+
+          {/* الأرقام */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-cyan-50 rounded-xl p-4 border border-cyan-100 text-center">
+              <p className="text-3xl font-black text-gray-900">{contentStats.total}</p>
+              <p className="text-xs text-cyan-700 font-bold mt-1">إجمالي الملفات</p>
+            </div>
+            <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 text-center">
+              <p className="text-3xl font-black text-gray-900">{contentStats.archived}</p>
+              <p className="text-xs text-indigo-700 font-bold mt-1">محتوى مؤرشف</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
+              <p className="text-3xl font-black text-gray-900">{contentStats.totalSizeMB > 1024 ? contentStats.totalSizeGB + ' GB' : contentStats.totalSizeMB + ' MB'}</p>
+              <p className="text-xs text-blue-700 font-bold mt-1">حجم التخزين</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 text-center">
+              <p className="text-3xl font-black text-gray-900">{contentStats.totalReuses}</p>
+              <p className="text-xs text-purple-700 font-bold mt-1">إعادة استخدام</p>
+            </div>
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Pie Chart - أنواع المحتوى */}
+            {contentStats.types && contentStats.types.length > 0 && (
+              <div className="border border-gray-100 rounded-xl p-5">
+                <h4 className="text-sm font-bold text-gray-700 mb-4 text-center">توزيع أنواع المحتوى</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie 
+                      data={contentStats.types} 
+                      cx="50%" cy="50%" 
+                      innerRadius={45} outerRadius={75} 
+                      dataKey="count" 
+                      nameKey="name"
+                      paddingAngle={3}
+                    >
+                      {contentStats.types.map((_: any, i: number) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any, name: string) => [`${value} ملف`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap justify-center gap-2 mt-3">
+                  {contentStats.types.map((t: any, i: number) => (
+                    <div key={t.name} className="flex items-center gap-1.5 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="text-gray-600">{t.name} ({t.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pie Chart - المحتوى حسب القسم */}
+            {contentStats.byDesk && contentStats.byDesk.length > 0 && (
+              <div className="border border-gray-100 rounded-xl p-5">
+                <h4 className="text-sm font-bold text-gray-700 mb-4 text-center">المحتوى حسب القسم (الديسك)</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie 
+                      data={contentStats.byDesk} 
+                      cx="50%" cy="50%" 
+                      innerRadius={45} outerRadius={75} 
+                      dataKey="count" 
+                      nameKey="name"
+                      paddingAngle={3}
+                    >
+                      {contentStats.byDesk.map((_: any, i: number) => (
+                        <Cell key={i} fill={['#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981', '#06b6d4'][i % 6]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any, name: string) => [`${value} ملف`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap justify-center gap-2 mt-3">
+                  {contentStats.byDesk.map((d: any, i: number) => (
+                    <div key={d.name} className="flex items-center gap-1.5 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981', '#06b6d4'][i % 6] }} />
+                      <span className="text-gray-600">{d.name} ({d.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* أكثر محتوى تم إعادة استخدامه */}
+          {contentStats.topReused && contentStats.topReused.length > 0 && (
+            <div>
+              <p className="text-sm font-bold text-gray-700 mb-3">أكثر محتوى تم إعادة استخدامه</p>
+              <div className="space-y-2">
+                {contentStats.topReused.map((item: any, i: number) => (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{item.title}</p>
+                        {item.type && <p className="text-xs text-gray-400">{item.type}</p>}
+                      </div>
+                    </div>
+                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold">{item.reuseCount} مرة</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function PresetBtn({ children, onClick }: any) {
+// ═══════════════ Components ═══════════════
+
+function StatCard({ icon, label, value, sub, color, bgLight }: any) {
   return (
-    <button 
-      onClick={onClick}
-      className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100"
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`${bgLight} rounded-2xl p-5 border border-gray-100`}
     >
-      {children}
-    </button>
+      <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center text-white mb-3 shadow-sm`}>
+        {icon}
+      </div>
+      <p className="text-3xl font-black text-gray-900">{value}</p>
+      <p className="text-sm font-bold text-gray-600 mt-1">{label}</p>
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    </motion.div>
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-slate-100 ring-1 ring-black/5">
-        <p className="text-xs font-bold text-slate-500 mb-3">{label}</p>
-        <div className="space-y-2">
-          {payload.map((p: any, i: number) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.stroke }} />
-              <span className="text-xs text-slate-700 font-medium">{p.name === 'orders' ? 'الطلبات' : p.name === 'tasks' ? 'المهام' : 'المحتوى'}:</span>
-              <span className="text-xs font-mono font-bold mr-auto text-slate-900">{p.value}</span>
-            </div>
-          ))}
-        </div>
+function MiniStat({ label, value, icon }: any) {
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
+      <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+        {icon}
       </div>
-    );
-  }
-  return null;
+      <div>
+        <p className="text-xl font-black text-gray-900">{value}</p>
+        <p className="text-xs text-gray-500 font-medium">{label}</p>
+      </div>
+    </div>
+  );
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse pb-12">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="h-12 w-64 bg-slate-100 rounded-xl" />
-        <div className="h-16 w-full lg:w-96 bg-slate-100 rounded-xl" />
+    <div className="space-y-6 animate-pulse">
+      <div className="flex justify-between items-center">
+        <div className="h-8 w-40 bg-gray-200 rounded-lg" />
+        <div className="h-10 w-64 bg-gray-200 rounded-xl" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-48 bg-slate-100 rounded-2xl" />)}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl" />)}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 h-[450px] bg-slate-100 rounded-2xl" />
-        <div className="h-[450px] bg-slate-100 rounded-2xl" />
+        <div className="lg:col-span-2 h-80 bg-gray-100 rounded-2xl" />
+        <div className="h-80 bg-gray-100 rounded-2xl" />
       </div>
+      <div className="h-64 bg-gray-100 rounded-2xl" />
     </div>
   );
 }

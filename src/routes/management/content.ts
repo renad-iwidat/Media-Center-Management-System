@@ -20,6 +20,7 @@ router.use(authenticate);
 router.get('/types', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getContentTypes(req, res); });
 router.get('/statuses', requirePermission('content.view'), (req: Request, res: Response) => { contentController.getContentStatuses(req, res); });
 router.get('/analytics/most-reused', requirePermission('kpi.view'), (req: Request, res: Response) => { contentController.getMostReusedContent(req, res); });
+router.get('/stats', requirePermission('kpi.view'), (req: Request, res: Response) => { contentController.getContentStats(req, res); });
 
 // Pipeline - Specific routes
 router.post('/from-shooting', requirePermission('content.create'), (req: Request, res: Response) => { contentController.createFromShooting(req, res); });

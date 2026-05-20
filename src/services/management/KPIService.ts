@@ -259,16 +259,59 @@ export class KPIService {
    * Get all orders KPI (for dashboard)
    */
   static async getAllUsersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
-    const result = await pool.query(
-      `SELECT uk.*, u.name as user_name, u.email, r.name as role_name
-       FROM user_kpi uk
-       INNER JOIN users u ON uk.user_id = u.id
-       LEFT JOIN roles r ON u.role_id = r.id
-       ORDER BY uk.on_time_percentage DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
-    return result.rows;
+    // query بسيط وسريع - يجلب من user_kpi أولاً، وإذا فاضي يحسب مباشرة
+    try {
+      // أولاً نجرب user_kpi (أسرع)
+      const kpiResult = await pool.query(
+        `SELECT uk.*, u.name as user_name, u.email, r.name as role_name
+         FROM user_kpi uk
+         INNER JOIN users u ON uk.user_id = u.id
+         LEFT JOIN roles r ON u.role_id = r.id
+         WHERE uk.completed_tasks > 0 OR uk.total_tasks_assigned > 0
+         ORDER BY uk.completed_tasks DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+
+      if (kpiResult.rows.length > 0) return kpiResult.rows;
+
+      // fallback: حساب بسيط من tasks
+      const result = await pool.query(
+        `SELECT 
+          u.id as user_id,
+          u.name as user_name,
+          u.email,
+          r.name as role_name,
+          COALESCE(task_counts.total, 0) as total_tasks_assigned,
+          COALESCE(task_counts.completed, 0) as completed_tasks,
+          COALESCE(task_counts.pending, 0) as pending_tasks,
+          COALESCE(task_counts.overdue, 0) as overdue_tasks,
+          0 as average_completion_time,
+          CASE WHEN COALESCE(task_counts.total, 0) > 0 
+            THEN ROUND((COALESCE(task_counts.completed, 0)::numeric / task_counts.total) * 100)
+            ELSE 0 END as on_time_percentage
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        LEFT JOIN LATERAL (
+          SELECT 
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE ts.name IN ('Done', 'منجز')) as completed,
+            COUNT(*) FILTER (WHERE ts.name NOT IN ('Done', 'منجز', 'مرفوض')) as pending,
+            COUNT(*) FILTER (WHERE t.is_overdue = true) as overdue
+          FROM tasks t
+          LEFT JOIN task_statuses ts ON t.status_id = ts.id
+          WHERE t.assigned_to = u.id
+        ) task_counts ON true
+        WHERE u.is_active = true
+        ORDER BY COALESCE(task_counts.completed, 0) DESC
+        LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('getAllUsersKPI error:', error);
+      return [];
+    }
   }
 
   /**
@@ -294,100 +337,94 @@ export class KPIService {
   static async getDashboardSummary(from?: Date, to?: Date): Promise<any> {
     const dateFilter = from && to ? ' AND o.created_at BETWEEN $1 AND $2' : '';
     const taskDateFilter = from && to ? ' AND t.created_at BETWEEN $1 AND $2' : '';
-    const contentDateFilter = from && to ? ' AND created_at BETWEEN $1 AND $2' : '';
     const dateParams = from && to ? [from, to] : [];
 
-    const ordersResult = await pool.query(
-      'SELECT' +
-      ' COUNT(*) as total_orders,' +
-      " SUM(CASE WHEN os.name = 'Done' THEN 1 ELSE 0 END) as completed_orders," +
-      " SUM(CASE WHEN os.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_orders," +
-      " SUM(CASE WHEN os.name = 'Pending' OR os.name = 'Created' THEN 1 ELSE 0 END) as pending_orders," +
-      ' SUM(CASE WHEN o.is_overdue = true THEN 1 ELSE 0 END) as overdue_orders' +
-      ' FROM orders o LEFT JOIN order_statuses os ON o.status_id = os.id' +
-      ' WHERE 1=1' + dateFilter,
-      dateParams
-    );
+    try {
+      // تشغيل الـ queries الأساسية بالتوازي
+      const [ordersResult, tasksResult, usersResult, contentResult, typesResult, byDeskResult] = await Promise.all([
+        pool.query(
+          'SELECT' +
+          ' COUNT(*) as total_orders,' +
+          " SUM(CASE WHEN os.name IN ('Done', 'مكتمل', 'منجز') THEN 1 ELSE 0 END) as completed_orders," +
+          " SUM(CASE WHEN os.name IN ('In Progress', 'قيد التنفيذ') THEN 1 ELSE 0 END) as in_progress_orders," +
+          " SUM(CASE WHEN os.name IN ('Pending', 'Created', 'مسودة', 'بانتظار المراجعة', 'معلق') THEN 1 ELSE 0 END) as pending_orders," +
+          ' SUM(CASE WHEN o.is_overdue = true THEN 1 ELSE 0 END) as overdue_orders' +
+          ' FROM orders o LEFT JOIN order_statuses os ON o.status_id = os.id' +
+          ' WHERE 1=1' + dateFilter,
+          dateParams
+        ),
+        pool.query(
+          'SELECT' +
+          ' COUNT(*) as total_tasks,' +
+          " SUM(CASE WHEN ts.name IN ('Done', 'منجز') THEN 1 ELSE 0 END) as completed_tasks," +
+          " SUM(CASE WHEN ts.name IN ('In Progress', 'قيد التنفيذ') THEN 1 ELSE 0 END) as in_progress_tasks," +
+          " SUM(CASE WHEN ts.name IN ('Pending', 'غير مُسند', 'تم الإسناد') THEN 1 ELSE 0 END) as pending_tasks," +
+          ' SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks' +
+          ' FROM tasks t LEFT JOIN task_statuses ts ON t.status_id = ts.id' +
+          ' WHERE 1=1' + taskDateFilter,
+          dateParams
+        ),
+        pool.query('SELECT COUNT(*) as total_users FROM users WHERE is_active = true'),
+        pool.query(`SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE is_archived = true) as archived FROM content`),
+        pool.query(`SELECT ct.name, COUNT(c.id) as count FROM content c LEFT JOIN content_types ct ON c.content_type_id = ct.id GROUP BY ct.name ORDER BY count DESC`),
+        pool.query(`SELECT d.name, COUNT(c.id) as count FROM desks d LEFT JOIN orders o ON o.desk_id = d.id LEFT JOIN tasks t ON t.order_id = o.id LEFT JOIN content c ON c.task_id = t.id GROUP BY d.name HAVING COUNT(c.id) > 0 ORDER BY count DESC`),
+      ]);
 
-    const tasksResult = await pool.query(
-      'SELECT' +
-      ' COUNT(*) as total_tasks,' +
-      " SUM(CASE WHEN ts.name = 'Done' THEN 1 ELSE 0 END) as completed_tasks," +
-      " SUM(CASE WHEN ts.name = 'In Progress' THEN 1 ELSE 0 END) as in_progress_tasks," +
-      " SUM(CASE WHEN ts.name = 'Pending' THEN 1 ELSE 0 END) as pending_tasks," +
-      ' SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks' +
-      ' FROM tasks t LEFT JOIN task_statuses ts ON t.status_id = ts.id' +
-      ' WHERE 1=1' + taskDateFilter,
-      dateParams
-    );
+      const orders = ordersResult.rows[0];
+      const tasks = tasksResult.rows[0];
+      const content = contentResult.rows[0];
 
-    const contentResult = await pool.query(
-      'SELECT' +
-      ' COUNT(*) as total_content,' +
-      ' COALESCE(SUM(file_size), 0) as total_size,' +
-      ' SUM(CASE WHEN is_archived = true THEN 1 ELSE 0 END) as archived_content' +
-      ' FROM content WHERE 1=1' + contentDateFilter,
-      dateParams
-    );
+      // حساب حجم الملفات من admin attachments (task_attachments ما فيها file_size)
+      let totalSizeMB = 0;
+      try {
+        const sizeRes = await pool.query(`SELECT COALESCE(SUM(file_size), 0) as s FROM admin_proc_task_attachments WHERE file_size > 0`);
+        totalSizeMB = Math.round((parseInt(sizeRes.rows[0]?.s) || 0) / 1024 / 1024);
+      } catch { /* ignore */ }
 
-    const usersResult = await pool.query(
-      'SELECT COUNT(*) as total_users FROM users'
-    );
-
-    const avgResult = await pool.query(
-      'SELECT ROUND(AVG(actual_duration)) as avg_task_duration,' +
-      ' ROUND(AVG(CASE WHEN is_on_time = true THEN 1.0 ELSE 0.0 END) * 100) as on_time_percentage' +
-      ' FROM task_kpi WHERE actual_duration IS NOT NULL'
-    );
-
-    const topUsersResult = await pool.query(
-      'SELECT uk.user_id, u.name, uk.completed_tasks, uk.on_time_percentage' +
-      ' FROM user_kpi uk INNER JOIN users u ON uk.user_id = u.id' +
-      ' WHERE uk.completed_tasks > 0' +
-      ' ORDER BY uk.on_time_percentage DESC, uk.completed_tasks DESC LIMIT 5'
-    );
-
-    const orders = ordersResult.rows[0];
-    const tasks = tasksResult.rows[0];
-    const content = contentResult.rows[0];
-    const avg = avgResult.rows[0];
-
-    return {
-      orders: {
-        total: parseInt(orders.total_orders) || 0,
-        completed: parseInt(orders.completed_orders) || 0,
-        in_progress: parseInt(orders.in_progress_orders) || 0,
-        pending: parseInt(orders.pending_orders) || 0,
-        overdue: parseInt(orders.overdue_orders) || 0,
-        completion_rate: orders.total_orders > 0
-          ? Math.round((parseInt(orders.completed_orders) / parseInt(orders.total_orders)) * 100)
-          : 0,
-      },
-      tasks: {
-        total: parseInt(tasks.total_tasks) || 0,
-        completed: parseInt(tasks.completed_tasks) || 0,
-        in_progress: parseInt(tasks.in_progress_tasks) || 0,
-        pending: parseInt(tasks.pending_tasks) || 0,
-        overdue: parseInt(tasks.overdue_tasks) || 0,
-        completion_rate: tasks.total_tasks > 0
-          ? Math.round((parseInt(tasks.completed_tasks) / parseInt(tasks.total_tasks)) * 100)
-          : 0,
-      },
-      content: {
-        total: parseInt(content.total_content) || 0,
-        total_size_mb: Math.round((parseInt(content.total_size) || 0) / 1024 / 1024),
-        archived: parseInt(content.archived_content) || 0,
-      },
-      users: {
-        total: parseInt(usersResult.rows[0].total_users) || 0,
-      },
-      performance: {
-        avg_task_duration_minutes: parseInt(avg?.avg_task_duration) || 0,
-        on_time_percentage: parseInt(avg?.on_time_percentage) || 0,
-      },
-      top_performers: topUsersResult.rows,
-      reuse: await this.getReuseStats(),
-    };
+      return {
+        orders: {
+          total: parseInt(orders.total_orders) || 0,
+          completed: parseInt(orders.completed_orders) || 0,
+          in_progress: parseInt(orders.in_progress_orders) || 0,
+          pending: parseInt(orders.pending_orders) || 0,
+          overdue: parseInt(orders.overdue_orders) || 0,
+          completion_rate: orders.total_orders > 0
+            ? Math.round((parseInt(orders.completed_orders) / parseInt(orders.total_orders)) * 100)
+            : 0,
+        },
+        tasks: {
+          total: parseInt(tasks.total_tasks) || 0,
+          completed: parseInt(tasks.completed_tasks) || 0,
+          in_progress: parseInt(tasks.in_progress_tasks) || 0,
+          pending: parseInt(tasks.pending_tasks) || 0,
+          overdue: parseInt(tasks.overdue_tasks) || 0,
+          completion_rate: tasks.total_tasks > 0
+            ? Math.round((parseInt(tasks.completed_tasks) / parseInt(tasks.total_tasks)) * 100)
+            : 0,
+        },
+        content: {
+          total: parseInt(content.total) || 0,
+          archived: parseInt(content.archived) || 0,
+          total_size_mb: totalSizeMB,
+          types: typesResult.rows.map((r: any) => ({ name: r.name || 'غير محدد', count: parseInt(r.count) })),
+          byDesk: byDeskResult.rows.map((r: any) => ({ name: r.name, count: parseInt(r.count) })),
+        },
+        users: {
+          total: parseInt(usersResult.rows[0].total_users) || 0,
+        },
+        performance: {
+          avg_task_duration_minutes: 0,
+          on_time_percentage: tasks.total_tasks > 0
+            ? Math.round((parseInt(tasks.completed_tasks) / parseInt(tasks.total_tasks)) * 100)
+            : 0,
+        },
+        top_performers: [],
+        reuse: { total_reuses: 0, top_reused: [] },
+      };
+    } catch (error) {
+      console.error('getDashboardSummary error:', error);
+      throw error;
+    }
   }
 
   /**

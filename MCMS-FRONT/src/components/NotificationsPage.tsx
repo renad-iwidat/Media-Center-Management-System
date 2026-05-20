@@ -49,6 +49,10 @@ export default function NotificationsPage() {
       navigate(`/tasks/${notification.entity_id}`);
     } else if (notification.entity_type === 'order' && notification.entity_id) {
       navigate(`/orders/${notification.entity_id}`);
+    } else if (notification.entity_type === 'admin_task' && notification.entity_id) {
+      navigate(`/administrative/tasks/${notification.entity_id}`);
+    } else if (notification.entity_type === 'admin_order' && notification.entity_id) {
+      navigate(`/administrative/orders/${notification.entity_id}`);
     } else if (notification.entity_type === 'content' && notification.entity_id) {
       navigate(`/content/${notification.entity_id}`);
     } else if (notification.entity_type === 'shooting' && notification.entity_id) {

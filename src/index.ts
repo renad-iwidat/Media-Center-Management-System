@@ -31,10 +31,10 @@ app.use(helmet());
 app.use(cors());
 
 // Parse JSON request bodies
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json({ limit: '500mb' }));
 
 // Parse URL-encoded request bodies
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
 // BigInt serialization middleware
 app.use(bigIntSerializerMiddleware);
@@ -133,6 +133,14 @@ httpServer.listen(port, async () => {
     console.error('1. DATABASE_URL in .env file');
     console.error('2. Database server is running and accessible');
     console.error('3. Network connectivity to the database');
+  }
+
+  // تهيئة bucket الإجراءات الإدارية
+  try {
+    const { AdminProcS3Service } = await import('./services/administrative/AdminProcS3Service');
+    await AdminProcS3Service.ensureBucketExists();
+  } catch (error) {
+    console.error('⚠️  Admin Procedures bucket initialization failed:', error instanceof Error ? error.message : String(error));
   }
 });
 

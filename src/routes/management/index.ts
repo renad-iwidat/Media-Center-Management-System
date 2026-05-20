@@ -7,6 +7,7 @@ import shootingsRouter from './shootings';
 import contentRouter from './content';
 import permissionsRouter from './permissions';
 import notificationsRouter from './notifications';
+import administrativeRouter from '../administrative';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/shootings', shootingsRouter);
 router.use('/content', contentRouter);
 router.use('/permissions', permissionsRouter);
 router.use('/notifications', notificationsRouter);
+router.use('/administrative', administrativeRouter);
 
 export default router;

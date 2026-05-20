@@ -356,6 +356,89 @@ export class ContentController {
     res.status(statusCode).json(response);
   }
 
+  /**
+   * GET /api/content/stats
+   * إحصائيات الأرشيف الذكي
+   */
+  async getContentStats(req: Request, res: Response): Promise<void> {
+    try {
+      const pool = (await import('../../config/database')).default;
+
+      const [totalResult, typesResult, reuseResult, topReusedResult, byDeskResult] = await Promise.all([
+        pool.query(`
+          SELECT 
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE is_archived = true) as archived,
+            COUNT(*) FILTER (WHERE is_archived = false) as active
+          FROM content
+        `),
+        pool.query(`
+          SELECT ct.name, COUNT(c.id) as count
+          FROM content c
+          LEFT JOIN content_types ct ON c.content_type_id = ct.id
+          GROUP BY ct.name
+          ORDER BY count DESC
+        `),
+        pool.query(`SELECT COUNT(*) as total FROM content_tasks WHERE usage_type = 'reuse'`),
+        pool.query(`
+          SELECT c.id, c.title, ct.name as type_name, COUNT(cta.task_id) as reuse_count
+          FROM content c
+          INNER JOIN content_tasks cta ON c.id = cta.content_id AND cta.usage_type = 'reuse'
+          LEFT JOIN content_types ct ON c.content_type_id = ct.id
+          GROUP BY c.id, c.title, ct.name
+          ORDER BY reuse_count DESC
+          LIMIT 5
+        `),
+        pool.query(`
+          SELECT d.id, d.name, COUNT(c.id) as content_count
+          FROM desks d
+          LEFT JOIN orders o ON o.desk_id = d.id
+          LEFT JOIN tasks t ON t.order_id = o.id
+          LEFT JOIN content c ON c.task_id = t.id
+          GROUP BY d.id, d.name
+          HAVING COUNT(c.id) > 0
+          ORDER BY content_count DESC
+        `),
+      ]);
+
+      // حساب الحجم الكلي من كل الجداول اللي فيها ملفات
+      const sizeResult = await pool.query(`
+        SELECT 
+          COALESCE(SUM(file_size), 0) as total
+        FROM (
+          SELECT file_size FROM task_attachments WHERE file_size > 0
+          UNION ALL
+          SELECT file_size FROM admin_proc_task_attachments WHERE file_size > 0
+        ) all_files
+      `);
+
+      const taskAttCount = await pool.query(`SELECT COUNT(*) as total FROM task_attachments`);
+
+      const stats = totalResult.rows[0];
+      const totalSize = parseInt(sizeResult.rows[0]?.total) || 0;
+      const totalFiles = (parseInt(stats.total) || 0) + (parseInt(taskAttCount.rows[0]?.total) || 0);
+
+      this.sendSuccess(res, {
+        total: totalFiles,
+        archived: parseInt(stats.archived) || 0,
+        active: parseInt(stats.active) || 0,
+        totalSizeGB: (totalSize / 1024 / 1024 / 1024).toFixed(2),
+        totalSizeMB: Math.round(totalSize / 1024 / 1024),
+        totalReuses: parseInt(reuseResult.rows[0]?.total) || 0,
+        types: typesResult.rows.map((r: any) => ({ name: r.name || 'غير محدد', count: parseInt(r.count) })),
+        byDesk: byDeskResult.rows.map((r: any) => ({ name: r.name, count: parseInt(r.content_count) })),
+        topReused: topReusedResult.rows.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          type: r.type_name,
+          reuseCount: parseInt(r.reuse_count),
+        })),
+      });
+    } catch (error) {
+      this.sendError(res, error, 500);
+    }
+  }
+
   private sendError(res: Response, error: any, statusCode: number = 400): void {
     const message = error instanceof Error ? error.message : String(error);
     res.status(statusCode).json({ success: false, error: message, timestamp: new Date().toISOString() });
