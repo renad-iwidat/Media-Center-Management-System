@@ -332,16 +332,26 @@ class AutoPublishService {
         try {
           const parsed = JSON.parse(responseBody);
           externalId = parsed?.data?.id;
-          // أولاً: استخدم الـ url المرجع مباشرة من الـ API
+          // استخدم الـ url المرجع مباشرة من الـ API (الصيغة الصحيحة: /article/{slug})
           if (parsed?.data?.url) {
             externalUrl = parsed.data.url;
           }
-          // fallback: بناء الرابط من الـ ID
-          if (!externalUrl && externalId) {
+          // fallback: بناء الرابط بصيغة /article/{slug} من العنوان
+          if (!externalUrl && article.title) {
             const baseUrl = target.api_url.replace('/api/v1/automation/news', '');
-            externalUrl = `${baseUrl}/news/${externalId}`;
+            const slug = article.title
+              .trim()
+              .replace(/[^\u0600-\u06FF\u0750-\u077Fa-zA-Z0-9\s-]/g, '') // إبقاء العربي والإنجليزي والأرقام
+              .replace(/\s+/g, '-')       // مسافات → شرطات
+              .replace(/-+/g, '-')        // شرطات متكررة → شرطة واحدة
+              .replace(/^-|-$/g, '');     // إزالة شرطات من البداية والنهاية
+            externalUrl = `${baseUrl}/article/${encodeURIComponent(slug)}`;
           }
         } catch { /* تجاهل */ }
+
+        console.log(`   🔗 External URL: ${externalUrl || '(لم يُرجع رابط)'}`);
+        console.log(`   📋 API response: ${responseBody.substring(0, 500)}`);
+
 
         await this.logPublish(target.id, article.id, 'success', response.status, responseBody, undefined, externalUrl, externalId);
         return { success: true, responseCode: response.status, responseBody, externalUrl, externalId };

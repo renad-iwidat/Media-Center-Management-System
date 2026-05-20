@@ -144,17 +144,8 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
       <Notification notification={notification} onClose={() => setNotification(null)} position="center" />
 
       <div className="space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#4A7C9E] to-[#3d6a8a] rounded-xl flex items-center justify-center shadow-lg">
-              <Archive size={20} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-[#1e293b]">الأرشيف</h2>
-              <p className="text-xs text-[#94a3b8]">الأخبار المنشورة والمؤرشفة مع تفاصيل النشر</p>
-            </div>
-          </div>
+        {/* Stats */}
+        <div className="flex items-center justify-end">
           <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 py-2">
             <p className="text-xs text-[#64748b]">الإجمالي: <span className="font-bold text-[#1e293b]">{total}</span> خبر</p>
           </div>
