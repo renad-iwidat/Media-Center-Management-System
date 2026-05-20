@@ -16,11 +16,13 @@ COPY vite.config.ts ./
 COPY tsconfig.json ./
 COPY src/ ./src/
 
-# Copy static assets to public folder for Vite
-RUN mkdir -p public
-COPY "Media Center  logo.png" ./public/
-COPY logo1.PNG ./public/
-COPY liminal-logo.jpeg ./public/
+# Copy all files (includes images) then move to public
+COPY . /tmp/all/
+RUN mkdir -p public && \
+    cp /tmp/all/*.png public/ 2>/dev/null || true && \
+    cp /tmp/all/*.PNG public/ 2>/dev/null || true && \
+    cp /tmp/all/*.jpeg public/ 2>/dev/null || true && \
+    rm -rf /tmp/all
 
 # Build the application
 ARG VITE_API_URL
