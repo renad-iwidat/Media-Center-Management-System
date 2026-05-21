@@ -390,15 +390,24 @@ class EditorialPolicyService {
         (responseText && !responseText.startsWith('{') && !responseText.startsWith('[') ? responseText : null) ||
         text;
 
+      // normalize للمقارنة العادلة — نشيل whitespace زايد ونعمل trim
+      const normalizeForCompare = (s: string) => s.replace(/\s+/g, ' ').trim();
+      const normalizedModified = normalizeForCompare(modifiedText);
+      const normalizedOriginal = normalizeForCompare(text);
+      const normalizedSanitized = normalizeForCompare(sanitizedOriginal);
+
       // المقارنة مع النص المنظف عشان نكتشف التغييرات الفعلية
-      const hasRealChanges = modifiedText !== text && modifiedText !== sanitizedOriginal;
+      const hasRealChanges = normalizedModified !== normalizedOriginal && normalizedModified !== normalizedSanitized;
+
+      console.log(`  📊 [${policyName}] مقارنة: modifiedText.length=${modifiedText.length}, text.length=${text.length}, sanitized.length=${sanitizedOriginal.length}`);
+      console.log(`  📊 [${policyName}] hasRealChanges=${hasRealChanges}, normalized match original=${normalizedModified === normalizedOriginal}, normalized match sanitized=${normalizedModified === normalizedSanitized}`);
 
       // fallback ذكي: إذا ما لقينا النص بالحقول المعروفة، ندوّر على أطول string بالـ result
       let finalText = modifiedText;
-      if (finalText === text && Object.keys(result).length > 0) {
+      if (normalizeForCompare(finalText) === normalizedOriginal && Object.keys(result).length > 0) {
         let longestStr = '';
         for (const [_, value] of Object.entries(result)) {
-          if (typeof value === 'string' && value.length > longestStr.length && value !== text && value !== sanitizedOriginal) {
+          if (typeof value === 'string' && value.length > longestStr.length && normalizeForCompare(value) !== normalizedOriginal && normalizeForCompare(value) !== normalizedSanitized) {
             longestStr = value;
           }
         }
@@ -408,9 +417,15 @@ class EditorialPolicyService {
       }
 
       // لو النص المعدّل مطابق للأصلي بس فيه modified_text مختلف عن الـ sanitized — نستخدمه
-      if (finalText === text && result.modified_text && result.modified_text !== sanitizedOriginal) {
+      if (normalizeForCompare(finalText) === normalizedOriginal && result.modified_text && normalizeForCompare(result.modified_text) !== normalizedSanitized) {
         finalText = result.modified_text;
       }
+
+      // حساب hasChanges النهائي بالـ normalized comparison
+      const normalizedFinal = normalizeForCompare(finalText);
+      const finalHasChanges = normalizedFinal !== normalizedOriginal && normalizedFinal !== normalizedSanitized;
+
+      console.log(`  📊 [${policyName}] finalHasChanges=${finalHasChanges}, finalText.length=${finalText.length}`);
 
       // تسجيل استخدام الذكاء الاصطناعي
       try {
@@ -421,7 +436,7 @@ class EditorialPolicyService {
           endpoint: apiUrl,
           requestData: { policyName, taskType, textLength: text.length },
           responseStatus: 'success',
-          responseData: { hasChanges: finalText !== text && finalText !== sanitizedOriginal },
+          responseData: { hasChanges: finalHasChanges },
           durationMs: executionTime,
         });
       } catch (logError) {
@@ -437,7 +452,7 @@ class EditorialPolicyService {
         rawResponse: responseText,
         executionTime,
         endpoint: apiUrl,
-        hasChanges: finalText !== text && finalText !== sanitizedOriginal,
+        hasChanges: finalHasChanges,
       };
     } catch (error: any) {
       const executionTime = Date.now() - startTime;

@@ -58,7 +58,8 @@ class PublishingService {
    */
   async publishToPlatform(
     articleId: number,
-    platformConfigId: number
+    platformConfigId: number,
+    customContent?: string
   ): Promise<{ success: boolean; message: string; data?: PublishResult }> {
     // 1. جلب إعدادات المنصة
     const config = await this.getPlatformConfig(platformConfigId);
@@ -141,6 +142,12 @@ class PublishingService {
       return { success: false, message: 'المقال غير موجود' };
     }
 
+    // إذا في محتوى مخصص (من SocialPostCreator) — نستخدمه بدل المحتوى الأصلي
+    if (customContent) {
+      article.content = customContent;
+      article.isCustomContent = true;
+    }
+
     // 8. الحصول على المزود (provider)
     const provider = getProvider(config.platform as PublishingPlatform);
     if (!provider) {
@@ -160,6 +167,22 @@ class PublishingService {
       await this.updateStatusToSuccess(articleId, platformConfigId, result);
       await this.completePublishLog(logId, 'success', result);
       await this.updateArticleLifecycle(articleId, config.platform as PublishingPlatform);
+
+      // 12. تخزين المحتوى المنشور — تحديث published_items بآخر نسخة منشورة
+      if (customContent) {
+        try {
+          await query(
+            `UPDATE published_items 
+             SET content = $1
+             WHERE raw_data_id = $2 AND is_active = true`,
+            [customContent, articleId]
+          );
+          console.log(`💾 تم تحديث published_items بالمحتوى المنشور للمقال #${articleId}`);
+        } catch (updateErr) {
+          // لا نوقف العملية — النشر نجح
+          console.warn(`⚠️ فشل تحديث published_items بالمحتوى المنشور:`, updateErr);
+        }
+      }
 
       return {
         success: true,

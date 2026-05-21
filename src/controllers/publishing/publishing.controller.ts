@@ -32,7 +32,7 @@ export class PublishingController {
    */
   static async publish(req: Request, res: Response): Promise<void> {
     try {
-      const { article_id, platform_config_id } = req.body;
+      const { article_id, platform_config_id, custom_content } = req.body;
 
       if (!article_id || !platform_config_id) {
         res.status(400).json({
@@ -42,11 +42,12 @@ export class PublishingController {
         return;
       }
 
-      console.log(`📤 طلب نشر: مقال #${article_id} → منصة config #${platform_config_id}`);
+      console.log(`📤 طلب نشر: مقال #${article_id} → منصة config #${platform_config_id}${custom_content ? ' (مع محتوى مخصص)' : ''}`);
 
       const result = await publishingService.publishToPlatform(
         Number(article_id),
-        Number(platform_config_id)
+        Number(platform_config_id),
+        custom_content || undefined
       );
 
       const statusCode = result.success ? 200 : 409;

@@ -103,7 +103,8 @@ ${postText}
     setStep("publishing");
     setIsPublishing(true);
     try {
-      const res = await api.publishToPlatform(article.raw_data_id, configId);
+      // نبعث النص المعالج (processedPost) عشان ينتشر بدل المحتوى الأصلي
+      const res = await api.publishToPlatform(article.raw_data_id, configId, processedPost || postText);
       if (res.success || res.data?.external_url) {
         const url = res.data?.external_url || "";
         setPublishedUrl(url);

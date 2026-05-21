@@ -631,10 +631,10 @@ export const api = {
     request<any>("/publishing/stats"),
   getPlatformConfigs: () =>
     request<any>("/publishing/configs"),
-  publishToPlatform: (articleId: number, platformConfigId: number) =>
+  publishToPlatform: (articleId: number, platformConfigId: number, customContent?: string) =>
     request<any>("/publishing/publish", {
       method: "POST",
-      body: JSON.stringify({ article_id: articleId, platform_config_id: platformConfigId }),
+      body: JSON.stringify({ article_id: articleId, platform_config_id: platformConfigId, custom_content: customContent }),
     }),
 
   // --- Bulletins (الموجزات والنشرات المحفوظة) ---

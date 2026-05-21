@@ -39,7 +39,9 @@ export class InstagramProvider implements IPublishingProvider {
         };
       }
 
-      const caption = this.formatCaption(article);
+      const caption = article.isCustomContent
+        ? article.content
+        : this.formatCaption(article);
 
       // الخطوة 1: إنشاء media container
       const containerResponse = await fetch(

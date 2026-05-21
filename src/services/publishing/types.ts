@@ -114,6 +114,8 @@ export interface ArticleForPublishing {
   category_id: number | null;
   category_name: string | null;
   media_unit_id: number;
+  /** إذا true — المحتوى جاهز للنشر مباشرة (من SocialPostCreator) بدون formatting إضافي */
+  isCustomContent?: boolean;
 }
 
 export interface PlatformPublishOptions {

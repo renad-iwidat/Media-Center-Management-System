@@ -178,6 +178,14 @@ export async function applyPolicy(req: Request, res: Response) {
       response.modifiedText = aiResult.modifiedText;
       response.hasChanges = aiResult.hasChanges;
 
+      // fallback: إذا hasChanges = false بس الـ modifiedText مختلف فعلاً (بعد normalize)
+      if (!aiResult.hasChanges && aiResult.modifiedText) {
+        const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+        if (normalize(aiResult.modifiedText) !== normalize(articleText)) {
+          response.hasChanges = true;
+        }
+      }
+
       // بناء معلومات التغييرات من الـ result (بس إذا في بيانات فعلية)
       const r = aiResult.result || {};
       const changesMade = r.changes_made || r.removed_terms || r.replacements || [];
@@ -366,11 +374,24 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
       if (aiResult.status === 'success' && aiResult.hasChanges) {
         currentText = aiResult.modifiedText;
         console.log(`  ✅ تم التعديل — النص الجديد سيُمرر للسياسة التالية`);
-      } else if (aiResult.status === 'success' && !aiResult.hasChanges && aiResult.result?.modified_text && aiResult.result.modified_text !== currentText) {
-        // الـ AI رجّع modified_text مختلف بس hasChanges = false (بسبب sanitization)
-        currentText = aiResult.result.modified_text;
-        step.hasChanges = true;
-        console.log(`  ✅ تم التعديل (من modified_text) — النص الجديد سيُمرر للسياسة التالية`);
+      } else if (aiResult.status === 'success' && !aiResult.hasChanges) {
+        // fallback: نفحص إذا الـ modifiedText أو result.modified_text مختلف فعلاً (بعد normalize)
+        const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+        const normalizedCurrent = normalize(currentText);
+        const normalizedModified = normalize(aiResult.modifiedText || '');
+        const normalizedResultText = normalize(aiResult.result?.modified_text || '');
+
+        if (normalizedModified && normalizedModified !== normalizedCurrent) {
+          currentText = aiResult.modifiedText;
+          step.hasChanges = true;
+          console.log(`  ✅ تم التعديل (من modifiedText بعد normalize) — النص الجديد سيُمرر للسياسة التالية`);
+        } else if (aiResult.result?.modified_text && normalizedResultText !== normalizedCurrent) {
+          currentText = aiResult.result.modified_text;
+          step.hasChanges = true;
+          console.log(`  ✅ تم التعديل (من result.modified_text) — النص الجديد سيُمرر للسياسة التالية`);
+        } else {
+          console.log(`  ℹ️ السياسة "${policy.name}" لم تعدّل النص — نكمل بنفس النص`);
+        }
       } else if (aiResult.status === 'error') {
         console.log(`  ⚠️ خطأ في السياسة "${policy.name}" — نكمل بالنص الحالي`);
       } else {
@@ -385,11 +406,12 @@ export async function applyPoliciesSequential(req: Request, res: Response) {
     console.log(`${'='.repeat(80)}\n`);
 
     // 4. بناء الـ response
+    const normalizeText = (s: string) => s.replace(/\s+/g, ' ').trim();
     const response: any = {
       status: 'success',
       originalText,
       finalText: currentText,
-      hasChanges: currentText !== originalText,
+      hasChanges: normalizeText(currentText) !== normalizeText(originalText),
       totalExecutionTime,
       policiesApplied: steps.length,
       skippedPolicyIds: skippedIds.length > 0 ? skippedIds : undefined,

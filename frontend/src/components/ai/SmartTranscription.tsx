@@ -568,6 +568,28 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
                   </button>
                 ))}
               </div>
+
+              {/* أزرار رفع ملفات جديدة */}
+              <div className="flex gap-3">
+                <a
+                  href="https://manual-reporter-input-frontend.onrender.com/audio"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-400 text-blue-400 hover:text-blue-300 transition-all text-sm font-semibold"
+                >
+                  <FileAudio size={18} />
+                  رفع ملف صوتي
+                </a>
+                <a
+                  href="https://manual-reporter-input-frontend.onrender.com/video"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-sky-500/40 bg-sky-500/5 hover:bg-sky-500/10 hover:border-sky-400 text-sky-400 hover:text-sky-300 transition-all text-sm font-semibold"
+                >
+                  <FileVideo size={18} />
+                  رفع ملف فيديو
+                </a>
+              </div>
             </div>
 
             {/* Files Grid */}

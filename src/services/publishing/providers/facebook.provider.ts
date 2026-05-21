@@ -32,7 +32,10 @@ export class FacebookProvider implements IPublishingProvider {
       }
 
       // بناء محتوى المنشور
-      const postMessage = this.formatPostContent(article);
+      // إذا المحتوى مخصص (من SocialPostCreator) — نستخدمه مباشرة بدون formatting
+      const postMessage = article.isCustomContent
+        ? article.content
+        : this.formatPostContent(article);
 
       // تحديد نوع المنشور (مع صورة أو بدون)
       let endpoint: string;

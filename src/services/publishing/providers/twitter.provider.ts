@@ -35,7 +35,9 @@ export class TwitterProvider implements IPublishingProvider {
       }
 
       // تنسيق التغريدة (حد أقصى 280 حرف)
-      const tweetText = this.formatTweet(article);
+      const tweetText = article.isCustomContent
+        ? article.content.substring(0, 280)
+        : this.formatTweet(article);
 
       // بناء OAuth 1.0a header
       const url = `${this.API_BASE}/tweets`;
