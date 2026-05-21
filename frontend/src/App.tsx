@@ -52,7 +52,7 @@ import NewsRoom from './components/ai/NewsRoom';
 import ChatInterface from './components/ai/ChatInterface';
 import SmartTranscription from './components/ai/SmartTranscription';
 
-import { api, getAuthToken, getCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
+import { api, getAuthToken, setAuthToken, getCurrentUser, setCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
 import { useRenderTracker } from './lib/useRenderTracker';
 
@@ -146,6 +146,75 @@ export default function App() {
       localStorage.removeItem('selectedUnitId');
     }
   }, [selectedMediaUnitId]);
+
+  // === Auto-login من التوكن بالـ URL (redirect من مشروع خارجي) ===
+  useEffect(() => {
+    let isMounted = true;
+
+    const handleTokenFromUrl = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token');
+
+      // إذا ما في توكن بالـ URL أو المستخدم مسجل دخول أصلاً، ما نعمل شي
+      if (!urlToken || isAuthenticated) return;
+
+      // نظّف الـ URL من الـ params (عشان ما يضل التوكن ظاهر)
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      // احفظ التوكن وحاول تتحقق منه
+      setAuthToken(urlToken);
+      setIsCheckingAuth(true);
+
+      try {
+        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-iqsv.onrender.com';
+        const response = await fetch(`${managementApiUrl}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${urlToken}`, 'Content-Type': 'application/json' },
+        });
+
+        if (!isMounted) return;
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setCurrentUser(data.data);
+            setCurrentUserState(data.data);
+            setIsAuthenticated(true);
+          } else {
+            // التوكن مش صالح
+            clearAuthToken();
+            clearCurrentUser();
+            setIsAuthenticated(false);
+          }
+        } else {
+          // التوكن انتهى أو غير صالح
+          clearAuthToken();
+          clearCurrentUser();
+          setIsAuthenticated(false);
+        }
+      } catch {
+        // خطأ بالشبكة — نحاول نستخدم بيانات الـ URL كـ fallback
+        if (isMounted) {
+          const userId = params.get('user_id');
+          const userEmail = params.get('user_email');
+          if (userId && userEmail) {
+            const fallbackUser = { id: Number(userId), email: userEmail };
+            setCurrentUser(fallbackUser);
+            setCurrentUserState(fallbackUser);
+            setIsAuthenticated(true);
+          } else {
+            clearAuthToken();
+            setIsAuthenticated(false);
+          }
+        }
+      } finally {
+        if (isMounted) setIsCheckingAuth(false);
+      }
+    };
+
+    handleTokenFromUrl();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
