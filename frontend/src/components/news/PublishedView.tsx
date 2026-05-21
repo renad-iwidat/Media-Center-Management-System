@@ -232,6 +232,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                     <th className="text-right py-3 px-5 text-[10px] font-semibold text-[#64748b] uppercase">العنوان</th>
                     <th className="text-right py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">التصنيف</th>
                     <th className="text-right py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">النوع</th>
+                    <th className="text-center py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">منشور على</th>
                     <th className="text-center py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">التاريخ</th>
                     <th className="text-center py-3 px-4 text-[10px] font-semibold text-[#64748b] uppercase">الإجراء</th>
                   </tr>
@@ -260,6 +261,23 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                           }`}>
                             {item.flow_type === "automated" ? <><Zap size={10} /> أوتوماتيكي</> : <><Eye size={10} /> تحريري</>}
                           </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1 justify-center flex-wrap">
+                            {item.is_published_external && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                <Globe size={9} /> موقع
+                              </span>
+                            )}
+                            {item.is_published_social && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                                <Share2 size={9} /> سوشال
+                              </span>
+                            )}
+                            {!item.is_published_external && !item.is_published_social && (
+                              <span className="text-[9px] text-[#94a3b8]">—</span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-center text-[#64748b] text-xs font-mono">
                           {item.pub_date
@@ -431,9 +449,58 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                 </div>
               )}
 
-              {/* Publish Options — خيارين أساسيين واضحين */}
+              {/* Publish Options — حسب نوع الخبر */}
               <div className="space-y-3">
-                <p className="text-[10px] text-[#94a3b8] font-bold uppercase">خيارات النشر</p>
+                <p className="text-[10px] text-[#94a3b8] font-bold uppercase">حالة النشر</p>
+
+                {/* عرض المنصات اللي منشور عليها */}
+                {(selectedItem.is_published_external || selectedItem.is_published_social || (selectedItem.published_platforms && selectedItem.published_platforms.length > 0)) && (
+                  <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 space-y-3">
+                    <p className="text-xs font-bold text-[#1e293b] flex items-center gap-1.5">
+                      <CheckCircle size={14} className="text-emerald-600" /> منشور على:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedItem.published_platforms && selectedItem.published_platforms.map((p: any, idx: number) => (
+                        <span key={idx} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold ${
+                          p.platform === 'external_website'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : p.platform === 'facebook'
+                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                            : p.platform === 'instagram'
+                            ? 'bg-pink-100 text-pink-700 border border-pink-200'
+                            : p.platform === 'twitter'
+                            ? 'bg-sky-100 text-sky-700 border border-sky-200'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}>
+                          {p.platform === 'external_website' && <Globe size={12} />}
+                          {p.platform === 'facebook' && <Share2 size={12} />}
+                          {p.platform === 'instagram' && <Share2 size={12} />}
+                          {p.platform === 'twitter' && <Share2 size={12} />}
+                          {p.name || p.platform}
+                        </span>
+                      ))}
+                      {/* fallback إذا ما في تفاصيل بس في flags */}
+                      {(!selectedItem.published_platforms || selectedItem.published_platforms.length === 0) && selectedItem.is_published_external && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                          <Globe size={12} /> موقع خارجي
+                        </span>
+                      )}
+                      {(!selectedItem.published_platforms || selectedItem.published_platforms.length === 0) && selectedItem.is_published_social && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                          <Share2 size={12} /> سوشال ميديا
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* إذا مش منشور على أي منصة */}
+                {!selectedItem.is_published_external && !selectedItem.is_published_social && (!selectedItem.published_platforms || selectedItem.published_platforms.length === 0) && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
+                    <Eye size={14} className="text-amber-600 shrink-0" />
+                    <p className="text-xs text-amber-700 font-medium">لم يُنشر بعد على أي منصة خارجية</p>
+                  </div>
+                )}
 
                 {/* رابط الخبر المنشور */}
                 {lastPublishedUrl && (
@@ -458,47 +525,62 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                   </div>
                 )}
 
-                {/* الخيارين الأساسيين */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* الخيار 1: نشر موقع خارجي */}
-                  <button
-                    onClick={() => { setShowPublishOptions(true); setShowSocialPostCreator(false); handleOpenExternalPublish(selectedItem); }}
-                    className={`p-4 rounded-xl border-2 transition-all text-right ${
-                      showPublishOptions && !showSocialPostCreator
-                        ? "border-blue-400 bg-blue-50"
-                        : "border-[#e2e8f0] bg-white hover:border-blue-300 hover:bg-blue-50/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                        <Globe size={20} className="text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-[#1e293b]">نشر موقع خارجي</p>
-                        <p className="text-[10px] text-[#94a3b8]">نشر الخبر على المواقع المرتبطة</p>
-                      </div>
-                    </div>
-                  </button>
+                {/* خيارات النشر المتاحة */}
+                <p className="text-[10px] text-[#94a3b8] font-bold uppercase pt-2">إجراءات النشر المتاحة</p>
 
-                  {/* الخيار 2: إنشاء منشور على السوشال ميديا */}
-                  <button
-                    onClick={() => { setShowSocialPostCreator(true); setShowPublishOptions(false); }}
-                    className={`p-4 rounded-xl border-2 transition-all text-right ${
-                      showSocialPostCreator
-                        ? "border-[#FF9F4A] bg-orange-50"
-                        : "border-[#e2e8f0] bg-white hover:border-[#FF9F4A] hover:bg-orange-50/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
-                        <Share2 size={20} className="text-[#FF9F4A]" />
+                {/* الخيارات حسب حالة النشر الفعلية */}
+                <div className={`grid grid-cols-1 ${!selectedItem.is_published_external && selectedItem.flow_type !== "automated" && !selectedItem.is_published_social ? "sm:grid-cols-2" : ""} gap-3`}>
+                  {/* نشر موقع خارجي — فقط إذا مش منشور خارجياً بعد */}
+                  {!selectedItem.is_published_external && selectedItem.flow_type !== "automated" && (
+                    <button
+                      onClick={() => { setShowPublishOptions(true); setShowSocialPostCreator(false); handleOpenExternalPublish(selectedItem); }}
+                      className={`p-4 rounded-xl border-2 transition-all text-right ${
+                        showPublishOptions && !showSocialPostCreator
+                          ? "border-blue-400 bg-blue-50"
+                          : "border-[#e2e8f0] bg-white hover:border-blue-300 hover:bg-blue-50/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                          <Globe size={20} className="text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#1e293b]">نشر موقع خارجي</p>
+                          <p className="text-[10px] text-[#94a3b8]">نشر الخبر على المواقع المرتبطة</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-[#1e293b]">إنشاء منشور على السوشال ميديا</p>
-                        <p className="text-[10px] text-[#94a3b8]">تحويل الخبر لمنشور ونشره على المنصات</p>
+                    </button>
+                  )}
+
+                  {/* إنشاء منشور على السوشال ميديا — إذا مش منشور على سوشال بعد */}
+                  {!selectedItem.is_published_social && (
+                    <button
+                      onClick={() => { setShowSocialPostCreator(true); setShowPublishOptions(false); }}
+                      className={`p-4 rounded-xl border-2 transition-all text-right ${
+                        showSocialPostCreator
+                          ? "border-[#FF9F4A] bg-orange-50"
+                          : "border-[#e2e8f0] bg-white hover:border-[#FF9F4A] hover:bg-orange-50/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                          <Share2 size={20} className="text-[#FF9F4A]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#1e293b]">إنشاء منشور على السوشال ميديا</p>
+                          <p className="text-[10px] text-[#94a3b8]">تحويل الخبر لمنشور ونشره على المنصات</p>
+                        </div>
                       </div>
+                    </button>
+                  )}
+
+                  {/* إذا كل شي منشور — رسالة */}
+                  {selectedItem.is_published_external && selectedItem.is_published_social && (
+                    <div className="col-span-full bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
+                      <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                      <p className="text-xs text-emerald-700 font-medium">تم النشر على جميع المنصات المتاحة</p>
                     </div>
-                  </button>
+                  )}
                 </div>
 
                 {/* ═══ محتوى الخيار 1: نشر موقع خارجي ═══ */}
