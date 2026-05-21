@@ -12,7 +12,7 @@ import { newsDeskApiService } from '../../services/news/newsdesk-api.service';
  */
 async function runNewsFetcher(): Promise<void> {
   try {
-    const apiUrl = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps:9999';
+    const apiUrl = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps';
     console.log(`📰 جاري سحب الأخبار من NewsDesk API...`);
     console.log(`   URL: ${apiUrl}\n`);
 

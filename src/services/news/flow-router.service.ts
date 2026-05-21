@@ -32,7 +32,7 @@ import { aiClassifierService } from './ai-classifier.service';
  * automated = ينشر أوتوماتيكي بدون تدخل المحرر
  * ═══════════════════════════════════════════════════════════════════
  */
-const CATEGORY_FLOW_MAP: Record<number, 'automated' | 'editorial'> = {
+export const CATEGORY_FLOW_MAP: Record<number, 'automated' | 'editorial'> = {
   // ── تحريري (editorial) ──────────────────────
   1:  'editorial',   // محلي
   2:  'editorial',   // دولي
@@ -54,7 +54,7 @@ const DEFAULT_FLOW: 'automated' | 'editorial' = 'editorial';
 /**
  * تحديد الفلو من category_id مباشرة
  */
-function getFlowByCategory(categoryId: number | null): 'automated' | 'editorial' {
+export function getFlowByCategory(categoryId: number | null): 'automated' | 'editorial' {
   if (!categoryId) return DEFAULT_FLOW;
   return CATEGORY_FLOW_MAP[categoryId] || DEFAULT_FLOW;
 }

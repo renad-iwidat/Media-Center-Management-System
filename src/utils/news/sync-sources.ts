@@ -10,7 +10,7 @@ import { newsDeskApiService } from '../../services/news/newsdesk-api.service';
 
 async function syncSources(): Promise<void> {
   try {
-    const apiUrl = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps:9999';
+    const apiUrl = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps';
     console.log(`🔗 مزامنة المصادر من NewsDesk API...`);
     console.log(`   URL: ${apiUrl}\n`);
 

@@ -12,7 +12,7 @@ async function main() {
     
     console.log('🎯 إعدادات التشغيل:');
     console.log(`   عدد الأخبار لكل صفحة: ${articlesPerSource}`);
-    console.log(`   المصدر: NewsDesk API (${process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps:9999'})\n`);
+    console.log(`   المصدر: NewsDesk API (${process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps'})\n`);
 
     const result = await newsPipelineService.runPipeline(articlesPerSource);
 

@@ -1,50 +1,211 @@
 # نظام النشر المتعدد المنصات — Multi-Platform Publishing System (v2)
 
-## ملخص
+## ملخص عام
 
-نظام نشر احترافي متكامل يدعم النشر على عدة منصات مع حماية كاملة من:
-- **Race Conditions** — PostgreSQL Advisory Lock
-- **Double-Click** — حالة "publishing" حقيقية في DB
-- **النشر المكرر** — UNIQUE constraint + فحص قبل النشر
-- **الفشل** — Retry مع Exponential Backoff + Dead-Letter Queue
-
----
-
-## التحسينات (v2)
-
-| المشكلة | الحل |
-|---------|------|
-| Race Condition (طلبين متزامنين) | `pg_advisory_xact_lock` داخل transaction |
-| Double-click publish | حالة `publishing` حقيقية في DB — الطلب الثاني يرجع "قيد النشر" |
-| تكرار مفهوم status vs logs | **status = source of truth** (آخر حالة)، **logs = history** (audit trail) |
-| أرشفة تلقائية خطرة | الأرشفة = **business rule يدوي** فقط (endpoint مخصص) |
-| Instagram limitations | فحص constraints قبل النشر (requires_image, business_account) |
-| لا retry strategy | **3 محاولات** مع exponential backoff (2s→4s→8s) + dead-letter |
+نظام نشر احترافي متكامل يدعم النشر على **المواقع الخارجية** (WordPress API) و**السوشال ميديا** (فيسبوك، إنستغرام، تويتر) مع:
+- حماية كاملة من Race Conditions و Double-Click
+- Retry مع Exponential Backoff + Dead-Letter Queue
+- تتبع كامل لكل عملية نشر في الداتابيس (Audit Trail)
+- نشر تلقائي للأخبار الأوتوماتيكية + نشر يدوي للتحريرية
 
 ---
 
-## البنية المعمارية
+## الفلو الكامل — من الخبر الخام حتى النشر النهائي
+
+### المرحلة 1: سحب الأخبار وتوجيهها (Flow Router)
 
 ```
-src/services/publishing/
-├── types.ts                          ← الأنواع + PLATFORM_CONSTRAINTS + RetryConfig
-├── index.ts                          ← تصدير الموديول
-├── publishing.service.ts             ← الخدمة الرئيسية (v2)
-├── publishing-db.migration.ts        ← Migration (v2 — مع retry columns)
-└── providers/                        ← Strategy Pattern
-    ├── base-provider.ts              ← IPublishingProvider interface
-    ├── index.ts                      ← Provider Registry
-    ├── external-website.provider.ts
-    ├── facebook.provider.ts
-    ├── instagram.provider.ts
-    └── twitter.provider.ts
-
-src/controllers/publishing/
-└── publishing.controller.ts          ← REST Controller (v2)
-
-src/routes/publishing/
-└── publishing.routes.ts              ← Express Routes (v2)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Scheduler (كل 10-15 دقيقة)                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  1. سحب أخبار جديدة من NewsDesk API → raw_data (status: 'fetched')      │
+│  2. تصنيف AI (يحدد category_id)                                         │
+│  3. تنظيف النص (للأوتوماتيكية فقط)                                      │
+│  4. فحص اكتمال المحتوى (عنوان + محتوى ≥100 حرف + صورة)                 │
+│  5. التوجيه حسب التصنيف:                                                │
+│                                                                          │
+│     ┌────────────────────────────────────────────────────────────┐       │
+│     │  automated (أوتوماتيكي):                                   │       │
+│     │    اقتصاد(3), رياضة(4), صحة(5), تكنولوجيا(6),             │       │
+│     │    ثقافة(7), بيئة(9), غذاء(10)                             │       │
+│     │    → auto-approve → published_items → نشر خارجي تلقائي    │       │
+│     ├────────────────────────────────────────────────────────────┤       │
+│     │  editorial (تحريري):                                       │       │
+│     │    محلي(1), دولي(2), سياسي(11)                             │       │
+│     │    → editorial_queue (pending) → المحرر يقرر               │       │
+│     └────────────────────────────────────────────────────────────┘       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+**تغييرات الداتابيس في هذه المرحلة:**
+
+| الجدول | التغيير | التفاصيل |
+|--------|---------|----------|
+| `raw_data` | INSERT | خبر جديد بـ `fetch_status = 'fetched'` |
+| `raw_data` | UPDATE `category_id` | بعد تصنيف AI |
+| `raw_data` | UPDATE `content` | بعد تنظيف النص (أوتوماتيكي فقط) |
+| `raw_data` | UPDATE `fetch_status` | `'fetched'` → `'processed'` أو `'published'` |
+| `editorial_queue` | INSERT | صف لكل media_unit (status: pending/incomplete) |
+| `editorial_queue` | UPDATE `status` | `'pending'` → `'approved'` (أوتوماتيكي) |
+| `published_items` | INSERT | الخبر المنشور محلياً (أوتوماتيكي فوراً / تحريري بعد موافقة المحرر) |
+
+---
+
+### المرحلة 2: النشر على الموقع الخارجي
+
+هناك مسارين:
+
+#### المسار A: النشر التلقائي (أخبار أوتوماتيكية)
+
+```
+published_items (automated) ──→ auto-publish.service ──→ External API
+                                      │
+                                      ├── يفحص auto_publish_targets (المفعّلة)
+                                      ├── يفحص auto_publish_log (لمنع التكرار)
+                                      ├── يرسل POST multipart/form-data
+                                      ├── يسجل النتيجة في auto_publish_log
+                                      └── يحدّث raw_data.publish_status → 'published_external'
+```
+
+**الشروط:**
+- `auto_publish_enabled = true` (Master Switch)
+- الهدف `is_enabled = true`
+- الخبر من تصنيف automated
+- لم يُنشر مسبقاً على نفس الهدف (فحص `auto_publish_log`)
+
+#### المسار B: النشر اليدوي (أخبار تحريرية)
+
+```
+المحرر يوافق على الخبر
+        │
+        ▼
+PublishedView → يضغط "عرض" → يختار "نشر موقع خارجي"
+        │
+        ▼
+يظهر dialog بالمواقع المفعّلة (auto_publish_targets)
+        │
+        ▼
+يضغط "نشر" على الهدف المطلوب
+        │
+        ▼
+POST /api/auto-publish/publish-one { raw_data_id, target_id }
+        │
+        ▼
+auto-publish.service.publishOneToTarget()
+        │
+        ├── يبني multipart/form-data (title, content, category_id, tags, image_url)
+        ├── يحدد category_id الخارجي من LOCAL_TO_HGAZA_CATEGORY mapping
+        ├── يرسل POST إلى target.api_url مع Bearer token
+        │
+        ├── ✅ نجاح:
+        │     ├── يسجل في auto_publish_log (status: 'success', external_url, external_id)
+        │     ├── يحدّث raw_data.publish_status → 'published_external'
+        │     └── يرجع الرابط الخارجي للفرونت
+        │
+        └── ❌ فشل:
+              ├── يسجل في auto_publish_log (status: 'failed', error_message, response_code)
+              └── يزيد retry_count
+```
+
+**تغييرات الداتابيس:**
+
+| الجدول | التغيير | التفاصيل |
+|--------|---------|----------|
+| `auto_publish_log` | INSERT/UPDATE | تسجيل كل محاولة نشر (status, response_code, external_url, external_id) |
+| `raw_data` | UPDATE `publish_status` | → `'published_external'` عند النجاح |
+
+---
+
+### المرحلة 3: النشر على السوشال ميديا (فيسبوك / إنستغرام / تويتر)
+
+```
+PublishedView → يضغط "عرض" → يختار "إنشاء منشور على السوشال ميديا"
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│              SocialPostCreator (4 خطوات)                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Step 1: تعديل المنشور                                       │
+│  ─────────────────────                                       │
+│  • AI يولّد مسودة منشور مناسبة للمنصة المختارة              │
+│  • المحرر يعدّل النص + يضيف/يزيل الصورة                    │
+│  • يختار المنصة (فيسبوك/إنستغرام/تويتر)                    │
+│                                                              │
+│  Step 2: معالجة المنشور                                      │
+│  ─────────────────────                                       │
+│  • AI يراجع ويصقل المنشور (إيموجي + هاشتاجات)              │
+│  • يتأكد من مناسبته لطبيعة المنصة                           │
+│                                                              │
+│  Step 3: معاينة المنشور                                      │
+│  ─────────────────────                                       │
+│  • المحرر يشوف الشكل النهائي                                │
+│  • يختار config المنصة المحددة (من platform_configs)          │
+│  • يضغط "نشر"                                               │
+│                                                              │
+│  Step 4: النشر الفعلي                                        │
+│  ─────────────────────                                       │
+│  • POST /api/publishing/publish { article_id, config_id }    │
+│  • publishing.service.publishToPlatform()                    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### فلو النشر على السوشال ميديا بالتفصيل (publishing.service)
+
+```
+POST /api/publishing/publish { article_id: 5, platform_config_id: 2 }
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. جلب platform_config (فحص is_enabled)                          │
+│ 2. فحص Platform Constraints (Instagram يتطلب صورة)               │
+│ 3. BEGIN TRANSACTION                                             │
+│    ├── pg_advisory_xact_lock(50002) ← Lock key = 5*10000 + 2    │
+│    ├── فحص publishing_status:                                    │
+│    │     • status='success' → "منشور مسبقاً" (رفض)              │
+│    │     • status='publishing' → "قيد النشر" (رفض)              │
+│    │     • status='failed' → نسمح بإعادة المحاولة               │
+│    ├── INSERT/UPDATE publishing_status → status='publishing'     │
+│    ├── UPDATE raw_data.publish_status → 'publishing'             │
+│    └── COMMIT (يحرر الـ lock)                                    │
+│                                                                  │
+│ 4. جلب بيانات المقال (يفضّل published_items على raw_data)        │
+│ 5. الحصول على Provider (facebook/instagram/twitter)              │
+│ 6. تسجيل المحاولة في publishing_logs (status: 'processing')     │
+│ 7. تنفيذ النشر عبر Provider                                     │
+│                                                                  │
+│    ┌── ✅ نجاح ──────────────────────────────────────────┐       │
+│    │ • UPDATE publishing_status → 'success'              │       │
+│    │   + external_post_id, external_url, published_at    │       │
+│    │ • UPDATE publishing_logs → 'success'                │       │
+│    │ • UPDATE raw_data.publish_status:                    │       │
+│    │   - facebook/instagram/twitter → 'published_social' │       │
+│    │   - external_website → 'published_external'         │       │
+│    └─────────────────────────────────────────────────────┘       │
+│                                                                  │
+│    ┌── ❌ فشل ───────────────────────────────────────────┐       │
+│    │ • UPDATE publishing_status → 'failed'               │       │
+│    │   + error_message, retry_count++, last_retry_at     │       │
+│    │ • UPDATE publishing_logs → 'failed'                 │       │
+│    │ • UPDATE raw_data.publish_status → 'ready_for_publish' │    │
+│    └─────────────────────────────────────────────────────┘       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**تغييرات الداتابيس عند النشر على السوشال:**
+
+| الجدول | التغيير | متى |
+|--------|---------|-----|
+| `publishing_status` | INSERT/UPDATE | عند بدء النشر (status: publishing) |
+| `publishing_status` | UPDATE | عند النجاح (status: success + external_url + external_post_id) |
+| `publishing_status` | UPDATE | عند الفشل (status: failed + error_message + retry_count) |
+| `publishing_logs` | INSERT | عند بدء كل محاولة (status: processing, retry_attempt) |
+| `publishing_logs` | UPDATE | عند انتهاء المحاولة (status: success/failed + completed_at) |
+| `raw_data` | UPDATE `publish_status` | publishing → published_social (نجاح) أو ready_for_publish (فشل) |
 
 ---
 
@@ -81,8 +242,7 @@ src/routes/publishing/
 المحاولة 3: فشل → Dead Letter ☠️ (لا مزيد من المحاولات)
 ```
 
-
-**الإعدادات (قابلة للتعديل):**
+**الإعدادات:**
 ```typescript
 DEFAULT_RETRY_CONFIG = {
   max_retries: 3,
@@ -93,44 +253,209 @@ DEFAULT_RETRY_CONFIG = {
 
 **Dead-Letter Queue:**
 - المقالات التي فشلت ≥ 3 مرات تبقى في حالة `failed` مع `retry_count >= 3`
-- يمكن مراجعتها عبر `GET /api/publishing/dead-letter`
-- يمكن إعادة تعيينها يدوياً عبر `POST /api/publishing/set-status`
+- مراجعتها: `GET /api/publishing/dead-letter`
+- إعادة تعيينها: `POST /api/publishing/set-status`
 
 ---
 
-## Source of Truth
+## دورة حياة المقال (Status Lifecycle)
 
-| الجدول | الدور | متى يُقرأ |
-|--------|-------|-----------|
-| `publishing_status` | **الحالة الحالية** — آخر state لكل مقال/منصة | عند فحص "هل منشور؟" |
-| `publishing_logs` | **التاريخ** — كل محاولة بالتفاصيل | عند المراجعة والتدقيق |
+```
+                                    ┌──────────────────────────────────────────────────────┐
+                                    │              raw_data.publish_status                   │
+                                    └──────────────────────────────────────────────────────┘
 
-**القاعدة:**
-- لمعرفة "هل المقال منشور على فيسبوك؟" → اقرأ `publishing_status`
-- لمعرفة "كم مرة حاولنا ننشره؟" → اقرأ `publishing_logs`
-
----
-
-## Archive = Business Rule
-
-**قبل (v1):** الأرشفة تلقائية بعد النشر ← خطر!
-**بعد (v2):** الأرشفة **يدوية فقط** عبر:
-
-```bash
-POST /api/publishing/archive/:articleId
+┌─────────┐     ┌──────────────────┐     ┌────────────┐
+│  draft  │ ──→ │ ready_for_publish │ ──→ │ publishing │ (lock state — يمنع double-click)
+└─────────┘     └──────────────────┘     └────────────┘
+     │                                         │
+     │                                    ┌────┴────┐
+     │                                  نجاح      فشل
+     │                                    │         │
+     │                                    ▼         ▼
+     │                          ┌─────────────────┐  يرجع إلى
+     │                          │ published_social │  ready_for_publish
+     │                          │       أو        │
+     │                          │published_external│
+     │                          └─────────────────┘
+     │                                    │
+     │                              (يدوي فقط)
+     │                                    ▼
+     │                             ┌──────────┐
+     └─────────────────────────────│ archived │
+                                   └──────────┘
 ```
 
-**شروط الأرشفة:**
-- المقال لازم يكون منشور بنجاح على منصة واحدة على الأقل
-- إذا مش منشور → يرجع خطأ
+**القواعد:**
+- `publishing` = حالة مؤقتة (lock) — لو بقيت أكثر من 5 دقائق تُنظف تلقائياً
+- `published_social` = نُشر على سوشال ميديا واحدة على الأقل
+- `published_external` = نُشر على موقع خارجي واحد على الأقل
+- `archived` = قرار يدوي من المحرر (يتطلب نشر ناجح مسبق)
+- لا يمكن الرجوع من `archived` أو `published_external` إلى حالة أقل
 
 ---
 
-## Platform Constraints
+## Source of Truth — جداول التتبع
 
-```bash
-GET /api/publishing/constraints
+| الجدول | الدور | متى يُقرأ | يخص |
+|--------|-------|-----------|-----|
+| `publishing_status` | **الحالة الحالية** لكل مقال/منصة سوشال | "هل منشور على فيسبوك؟" | سوشال ميديا |
+| `publishing_logs` | **تاريخ المحاولات** (audit trail) | "كم مرة حاولنا؟ متى فشل؟" | سوشال ميديا |
+| `auto_publish_log` | **سجل النشر الخارجي** | "هل منشور على هنا غزة؟ ما الرابط؟" | مواقع خارجية |
+| `raw_data.publish_status` | **حالة المقال العامة** | "وين وصل هالخبر؟" | الكل |
+
+---
+
+## جداول الداتابيس الكاملة
+
+### `platform_configs` — إعدادات المنصات (سوشال ميديا)
+
+| العمود | النوع | الوصف |
+|--------|-------|-------|
+| id | SERIAL PK | |
+| platform | VARCHAR | `facebook` / `instagram` / `twitter` / `external_website` |
+| name | VARCHAR | اسم عرض ("صفحة فيسبوك الرئيسية") |
+| credentials | JSONB | `{page_id, access_token}` أو `{api_url, api_token}` |
+| is_enabled | BOOLEAN | مفعّل أم لا |
+| media_unit_id | INT FK | الوحدة الإعلامية |
+| created_at | TIMESTAMP | |
+| updated_at | TIMESTAMP | |
+
+**UNIQUE:** `(platform, media_unit_id, name)`
+
+### `publishing_status` — حالة النشر الحالية (Source of Truth للسوشال)
+
+| العمود | النوع | الوصف |
+|--------|-------|-------|
+| id | SERIAL PK | |
+| article_id | INT FK → raw_data | معرف المقال |
+| platform | VARCHAR | المنصة |
+| platform_config_id | INT FK | إعداد المنصة |
+| status | VARCHAR | `publishing` / `success` / `failed` |
+| external_post_id | VARCHAR | ID المنشور على المنصة الخارجية |
+| external_url | VARCHAR | رابط المنشور |
+| published_at | TIMESTAMP | وقت النشر الناجح |
+| error_message | TEXT | رسالة الخطأ (عند الفشل) |
+| retry_count | INT DEFAULT 0 | عدد المحاولات (0-3) |
+| last_retry_at | TIMESTAMP | آخر محاولة |
+| metadata | JSONB | بيانات إضافية من المنصة |
+| created_at | TIMESTAMP | |
+| updated_at | TIMESTAMP | |
+
+**UNIQUE:** `(article_id, platform_config_id)`
+
+### `publishing_logs` — سجل المحاولات (Audit Trail للسوشال)
+
+| العمود | النوع | الوصف |
+|--------|-------|-------|
+| id | SERIAL PK | |
+| article_id | INT FK | معرف المقال |
+| platform | VARCHAR | المنصة |
+| platform_config_id | INT FK | إعداد المنصة |
+| status | VARCHAR | `processing` / `success` / `failed` |
+| external_post_id | VARCHAR | ID المنشور |
+| external_url | VARCHAR | رابط المنشور |
+| error_message | TEXT | رسالة الخطأ |
+| retry_attempt | INT | رقم المحاولة (0, 1, 2...) |
+| metadata | JSONB | بيانات إضافية |
+| attempted_at | TIMESTAMP | وقت بدء المحاولة |
+| completed_at | TIMESTAMP | وقت انتهاء المحاولة |
+
+### `auto_publish_targets` — أهداف النشر الخارجي
+
+| العمود | النوع | الوصف |
+|--------|-------|-------|
+| id | SERIAL PK | |
+| media_unit_id | INT FK | الوحدة الإعلامية |
+| name | VARCHAR | اسم الهدف ("موقع هنا غزة") |
+| api_url | VARCHAR | `https://hgaza.nn.ps/api/v1/automation/news` |
+| api_token | VARCHAR | Bearer token |
+| default_category_id | INT | التصنيف الافتراضي على الموقع الخارجي |
+| is_enabled | BOOLEAN | مفعّل أم لا |
+| created_at | TIMESTAMP | |
+| updated_at | TIMESTAMP | |
+
+### `auto_publish_log` — سجل النشر الخارجي
+
+| العمود | النوع | الوصف |
+|--------|-------|-------|
+| id | SERIAL PK | |
+| target_id | INT FK → auto_publish_targets | الهدف |
+| raw_data_id | INT FK → raw_data | المقال |
+| status | VARCHAR | `pending` / `success` / `failed` |
+| external_url | VARCHAR | رابط الخبر على الموقع الخارجي |
+| external_id | INT | ID الخبر على الموقع الخارجي |
+| response_code | INT | HTTP status code (201, 400, 500...) |
+| response_body | TEXT | جسم الاستجابة |
+| error_message | TEXT | رسالة الخطأ |
+| retry_count | INT DEFAULT 0 | عدد المحاولات |
+| published_at | TIMESTAMP | وقت النشر |
+| created_at | TIMESTAMP | |
+| updated_at | TIMESTAMP | |
+
+---
+
+## تفاصيل كل Provider
+
+### Facebook Provider
+
+| الحقل | القيمة |
+|-------|--------|
+| API | Facebook Graph API v19.0 |
+| Endpoint (نص) | `POST /{page_id}/feed` |
+| Endpoint (صورة) | `POST /{page_id}/photos` |
+| Auth | Page Access Token (long-lived) |
+| Max Length | 63,206 حرف |
+| Credentials | `page_id` + `access_token` (من DB أو `.env` كـ fallback) |
+
+**تنسيق المنشور:**
 ```
+📰 {العنوان}
+
+{المحتوى — أول 500 حرف}
+
+#{هاشتاج1} #{هاشتاج2} ...
+```
+
+**الصورة:** تُرسل تلقائياً لو `image_url` موجودة (endpoint `/photos` مع `caption`)، وإلا منشور نصي عبر `/feed`.
+
+### External Website Provider
+
+| الحقل | القيمة |
+|-------|--------|
+| API | WordPress REST API (أو أي API مخصص) |
+| Method | POST multipart/form-data |
+| Auth | Bearer Token |
+| Response | `201 Created` |
+
+**الحقول المرسلة:**
+| حقل | الوصف |
+|------|-------|
+| `title` | عنوان الخبر |
+| `content` | محتوى الخبر الكامل |
+| `category_id` | ID التصنيف على الموقع الخارجي (من mapping) |
+| `tags` | الوسوم (مفصولة بفاصلة) |
+| `keywords` | الكلمات المفتاحية |
+| `image_url` | رابط صورة الخبر (اختياري) |
+
+### ربط التصنيفات (Category Mapping)
+
+| تصنيف محلي | ID | → | تصنيف هنا غزة | ID |
+|-----------|---|---|--------------|---|
+| محلي | 1 | → | الأخبار المحلية | 1 |
+| دولي | 2 | → | الأخبار الدولية | 4 |
+| اقتصاد | 3 | → | الاقتصاد | 6 |
+| رياضة | 4 | → | الرياضة | 7 |
+| صحة | 5 | → | الصحة | 2 |
+| علوم وتكنولوجيا | 6 | → | تكنولوجيا | 8 |
+| فن و ثقافة | 7 | → | الثقافة | 9 |
+| بيئة | 9 | → | اجتماعي | 10 |
+| غذاء | 10 | → | أخبار عامة | 13 |
+| سياسي | 11 | → | السياسة | 5 |
+
+---
+
+## Platform Constraints (فحص قبل النشر)
 
 ```json
 {
@@ -138,13 +463,7 @@ GET /api/publishing/constraints
     "requires_image": true,
     "requires_business_account": true,
     "max_content_length": 2200,
-    "supported_media_types": ["image", "video"],
-    "notes": [
-      "يتطلب Instagram Business/Creator Account",
-      "يتطلب صورة أو فيديو إجبارياً — لا يدعم نص فقط",
-      "الصورة لازم تكون URL عام (publicly accessible)",
-      "الحساب لازم يكون مربوط بصفحة فيسبوك"
-    ]
+    "notes": ["يتطلب صورة إجبارياً", "حساب Business/Creator مربوط بفيسبوك"]
   },
   "facebook": {
     "requires_image": false,
@@ -155,12 +474,37 @@ GET /api/publishing/constraints
     "requires_image": false,
     "max_content_length": 280,
     "notes": ["يتطلب OAuth 1.0a credentials"]
+  },
+  "external_website": {
+    "requires_image": false,
+    "max_content_length": 100000,
+    "notes": ["يدعم WordPress REST API أو أي API مخصص"]
   }
 }
 ```
 
 **الفحص يحصل تلقائياً قبل النشر:**
 - إذا المقال بدون صورة + المنصة Instagram → خطأ فوري بدون محاولة
+
+---
+
+## الأرشفة (Archive)
+
+**القاعدة:** الأرشفة = قرار يدوي من المحرر (ليست تلقائية)
+
+```bash
+POST /api/publishing/archive/:articleId
+```
+
+**الشروط:**
+- المقال لازم يكون منشور بنجاح على منصة واحدة على الأقل (سوشال أو خارجي)
+- يفحص `publishing_status` (سوشال) + `auto_publish_log` (خارجي)
+
+**تغييرات الداتابيس عند الأرشفة:**
+| الجدول | التغيير |
+|--------|---------|
+| `raw_data.publish_status` | → `'archived'` |
+| `published_items.is_active` | → `false` (لا يظهر في قسم النشر) |
 
 ---
 
@@ -172,39 +516,13 @@ GET /api/publishing/constraints
 POST /api/publishing/cleanup
 ```
 
-هذا يحل مشكلة: لو السيرفر وقع أثناء النشر، المقال يبقى "publishing" للأبد.
-الـ cleanup يحوّلها إلى "failed" عشان تقدر تعيد المحاولة.
-
----
-
-## دورة حياة المقال (Status Lifecycle)
-
-```
-┌─────────┐     ┌──────────────────┐     ┌────────────┐
-│  draft  │ ──→ │ ready_for_publish │ ──→ │ publishing │ (lock state)
-└─────────┘     └──────────────────┘     └────────────┘
-                                               │
-                                          ┌────┴────┐
-                                        نجاح      فشل
-                                          │         │
-                                          ▼         ▼
-                                   ┌────────────┐  يرجع إلى
-                                   │ published_ │  ready_for_publish
-                                   │ social/ext │
-                                   └────────────┘
-                                          │
-                                    (يدوي فقط)
-                                          ▼
-                                   ┌──────────┐
-                                   │ archived │
-                                   └──────────┘
-```
+يحوّل `publishing` → `failed` مع رسالة "Timeout — stuck in publishing state"
 
 ---
 
 ## API Endpoints الكاملة
 
-Base URL: `/api/publishing/`
+### نظام النشر على السوشال ميديا (`/api/publishing/`)
 
 | Method | Path | الوصف |
 |--------|------|-------|
@@ -229,75 +547,101 @@ Base URL: `/api/publishing/`
 | POST | `/archive/:articleId` | أرشفة يدوية |
 | GET | `/stats` | إحصائيات (تشمل dead-letter count) |
 
+### نظام النشر على المواقع الخارجية (`/api/auto-publish/`)
+
+| Method | Path | الوصف |
+|--------|------|-------|
+| GET | `/status` | حالة النظام + إحصائيات |
+| POST | `/toggle` | تفعيل/إيقاف النشر التلقائي (master) |
+| GET | `/targets` | جميع أهداف النشر |
+| POST | `/targets` | إنشاء هدف جديد |
+| PATCH | `/targets/:id` | تحديث هدف |
+| DELETE | `/targets/:id` | حذف هدف |
+| POST | `/targets/:id/toggle` | تفعيل/إيقاف هدف |
+| POST | `/run` | تشغيل يدوي فوري |
+| POST | `/publish-one` | نشر خبر واحد يدوياً |
+| POST | `/retry` | إعادة محاولة الفاشل |
+| GET | `/log` | سجل النشر |
+| GET | `/external-links/:rawDataId` | روابط خبر منشور |
+| POST | `/external-links/batch` | روابط عدة أخبار |
+
 ---
 
-## جداول الداتابيس (v2)
+## البنية المعمارية
 
-### `publishing_status` — Source of Truth
+```
+src/services/publishing/                    ← نظام السوشال ميديا
+├── types.ts                                ← الأنواع + PLATFORM_CONSTRAINTS + RetryConfig
+├── index.ts                                ← تصدير الموديول
+├── publishing.service.ts                   ← الخدمة الرئيسية (v2) — race protection + retry
+├── publishing-db.migration.ts              ← Migration
+└── providers/                              ← Strategy Pattern
+    ├── base-provider.ts                    ← IPublishingProvider interface
+    ├── index.ts                            ← Provider Registry
+    ├── external-website.provider.ts        ← WordPress API
+    ├── facebook.provider.ts                ← Facebook Graph API
+    ├── instagram.provider.ts               ← Instagram API
+    └── twitter.provider.ts                 ← Twitter/X API
 
-| العمود | الوصف |
-|--------|-------|
-| article_id | معرف المقال |
-| platform_config_id | إعداد المنصة |
-| **status** | `publishing` / `success` / `failed` |
-| retry_count | عدد المحاولات (0-3) |
-| last_retry_at | آخر محاولة |
-| external_post_id | معرف المنشور على المنصة |
-| external_url | رابط المنشور |
+src/services/news/
+├── auto-publish.service.ts                 ← النشر التلقائي على المواقع الخارجية
+├── published-items.service.ts              ← إدارة المحتوى المنشور محلياً
+├── flow-router.service.ts                  ← توجيه الأخبار (automated/editorial)
+└── scheduler.service.ts                    ← الـ Scheduler (يشغّل كل شي)
 
-**UNIQUE:** `(article_id, platform_config_id)`
+src/controllers/publishing/
+└── publishing.controller.ts                ← REST Controller (سوشال)
 
-### `publishing_logs` — Audit Trail
+src/controllers/news/
+└── auto-publish.controller.ts              ← REST Controller (خارجي)
 
-| العمود | الوصف |
-|--------|-------|
-| article_id | معرف المقال |
-| platform_config_id | إعداد المنصة |
-| status | `processing` / `success` / `failed` |
-| **retry_attempt** | رقم المحاولة (0, 1, 2...) |
-| attempted_at | وقت المحاولة |
-| completed_at | وقت الانتهاء |
+frontend/src/components/news/
+├── PublishedView.tsx                        ← عرض الأخبار المنشورة + أزرار النشر
+├── SocialPostCreator.tsx                   ← إنشاء منشور سوشال (4 خطوات + AI)
+└── QueueView.tsx                           ← استديو التحرير
+```
 
 ---
 
 ## متغيرات البيئة
 
 ```env
-# Facebook Publishing (Autonews Page)
+# Facebook Publishing
 FACEBOOK_PAGE_ID=961852527016202
 FACEBOOK_ACCESS_TOKEN=EAALZAKaM7VdABRW7tlet1dr9CtrZCJy...
+
+# Auto-Publish (External Website)
+# يُخزّن في auto_publish_targets (api_url + api_token)
 ```
 
 ---
 
-## ⚠️ تفعيل المنصة في DB (مطلوب)
+## تفعيل المنصة في DB (مطلوب)
 
-الـ migration ينشئ جدول `platform_configs` **فاضي**. لازم تدخلي صف لكل منصة بدك تفعّليها وإلا ما بتظهر في زر النشر بالواجهة.
-
-**SQL لتفعيل فيسبوك** (موجود في `sql/enable-facebook-publishing.sql`):
+### تفعيل فيسبوك (سوشال ميديا):
 
 ```sql
--- 1. اعرفي media_unit_id الصحيح
-SELECT id, name FROM media_units WHERE is_active = true;
-
--- 2. أدخلي إعداد فيسبوك
 INSERT INTO platform_configs (platform, name, credentials, is_enabled, media_unit_id)
 VALUES ('facebook', 'صفحة فيسبوك الرئيسية', '{}'::jsonb, true, 1)
 ON CONFLICT (platform, media_unit_id, name) DO UPDATE
   SET is_enabled = EXCLUDED.is_enabled, updated_at = NOW();
 ```
 
-**ملاحظات:**
-- `credentials='{}'` فاضية لأن الـ provider يستخدم `FACEBOOK_PAGE_ID` و `FACEBOOK_ACCESS_TOKEN` من `.env` كـ fallback
-- `is_enabled=true` ضروري وإلا ما بتظهر في فلتر `SocialPublishSection` بالواجهة
-- لو بدك تخزني credentials في DB مباشرة:
-  ```sql
-  '{"page_id":"961852527016202","access_token":"<TOKEN>"}'::jsonb
-  ```
+> `credentials='{}'` لأن الـ provider يستخدم `.env` كـ fallback
 
-**واجهة النشر:** بعد التفعيل، الزر يظهر في `PublishedView` (قسم "النشر") → اضغطي "نشر" على أي خبر تحريري → "نشر حقيقي على السوشال ميديا" → اختاري "📘 صفحة فيسبوك الرئيسية".
+### تفعيل موقع خارجي:
 
-**الصورة:** تُرسل تلقائياً لو `raw_data.image_url` موجودة (يستخدم endpoint `/photos`)، وإلا منشور نصي عبر `/feed`.
+```sql
+INSERT INTO auto_publish_targets (media_unit_id, name, api_url, api_token, default_category_id, is_enabled)
+VALUES (1, 'موقع هنا غزة', 'https://hgaza.nn.ps/api/v1/automation/news', 'TOKEN_HERE', 1, true);
+```
+
+### تفعيل النشر التلقائي:
+
+```sql
+INSERT INTO system_settings (key, value) VALUES ('auto_publish_enabled', 'true')
+ON CONFLICT (key) DO UPDATE SET value = 'true';
+```
 
 ---
 
@@ -307,5 +651,46 @@ ON CONFLICT (platform, media_unit_id, name) DO UPDATE
 2. سجّله في `providers/index.ts`
 3. أضف النوع في `types.ts` → `PublishingPlatform`
 4. أضف القيود في `PLATFORM_CONSTRAINTS`
+5. أضف صف في `platform_configs` بالداتابيس
 
 **هذا كل شيء** — الـ retry, logs, race protection, archive كلها تعمل تلقائياً.
+
+---
+
+## ملخص التتبع (Tracking Summary)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ماذا يحصل في الداتابيس عند كل عملية                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  📥 خبر جديد يوصل:                                                      │
+│     raw_data ← INSERT (fetch_status: 'fetched')                          │
+│                                                                          │
+│  🤖 تصنيف + توجيه:                                                      │
+│     raw_data ← UPDATE (category_id, content, fetch_status: 'processed')  │
+│     editorial_queue ← INSERT (status: pending/incomplete)                │
+│                                                                          │
+│  ✅ موافقة (أوتوماتيكي أو يدوي):                                        │
+│     editorial_queue ← UPDATE (status: 'approved')                        │
+│     published_items ← INSERT (is_active: true)                           │
+│                                                                          │
+│  🌐 نشر خارجي:                                                          │
+│     auto_publish_log ← INSERT (status, external_url, external_id)        │
+│     raw_data ← UPDATE (publish_status: 'published_external')             │
+│                                                                          │
+│  📘 نشر سوشال:                                                          │
+│     publishing_status ← INSERT/UPDATE (status: publishing → success)     │
+│     publishing_logs ← INSERT (processing → success/failed)               │
+│     raw_data ← UPDATE (publish_status: 'published_social')               │
+│                                                                          │
+│  📦 أرشفة:                                                               │
+│     raw_data ← UPDATE (publish_status: 'archived')                       │
+│     published_items ← UPDATE (is_active: false)                          │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+*آخر تحديث: مايو 2026*

@@ -3,10 +3,10 @@
  * خدمة سحب الأخبار من NewsDesk API الخارجي
  * بديل عن RSS Fetcher — يسحب الأخبار الجاهزة من API مركزي
  * 
- * Base URL: https://newsdesk-api.liminal.ps:9999
+ * Base URL: configured via NEWSDESK_API_URL env variable
  */
 
-const NEWSDESK_API_BASE = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps:9999';
+const NEWSDESK_API_BASE = process.env.NEWSDESK_API_URL || 'https://newsdesk-api.liminal.ps';
 
 /**
  * واجهة لتمثيل مقالة خام من الـ API (endpoint: /articles/raw)

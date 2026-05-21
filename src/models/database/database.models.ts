@@ -28,7 +28,6 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
-  flow: string;
   is_active: boolean;
 }
 
