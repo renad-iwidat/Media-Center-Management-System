@@ -392,7 +392,7 @@ export async function updateArticleContent(req: Request, res: Response): Promise
       }
 
       await query(
-        `UPDATE raw_data SET fetch_status = 'published' WHERE id = $1`,
+        `UPDATE raw_data SET fetch_status = 'published', publish_status = 'ready_for_publish' WHERE id = $1`,
         [articleId]
       );
 
@@ -418,6 +418,7 @@ export async function updateArticleContent(req: Request, res: Response): Promise
         console.log(`   ✅ تم تحديث السجل ${record.id} للوحدة ${record.media_unit_name} إلى in_review`);
       }
 
+      // تحريري: يبقى بحالة pending حتى المحرر يوافق
       await query(
         `UPDATE raw_data SET fetch_status = 'processed' WHERE id = $1`,
         [articleId]

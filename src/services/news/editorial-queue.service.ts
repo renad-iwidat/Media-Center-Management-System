@@ -429,6 +429,13 @@ export class EditorialQueueService {
         [item.raw_data_id]
       );
 
+      // تحديث publish_status إلى 'ready_for_publish' — جاهز للنشر الخارجي/سوشال
+      await query(
+        `UPDATE raw_data SET publish_status = 'ready_for_publish' 
+         WHERE id = $1 AND COALESCE(publish_status, 'draft') IN ('draft', 'ready_for_publish')`,
+        [item.raw_data_id]
+      );
+
       console.log(`📤 تم نشر الخبر ${item.raw_data_id} من الطابور (queue_id=${queueId})`);
     } catch (error) {
       console.error(`❌ خطأ في نشر الخبر المعتمد:`, error);
@@ -495,7 +502,8 @@ export class EditorialQueueService {
         JOIN media_units mu ON eq.media_unit_id = mu.id
         LEFT JOIN sources s ON rd.source_id = s.id
         LEFT JOIN source_types st ON rd.source_type_id = st.id
-        WHERE eq.status IN ('pending', 'in_review', 'incomplete')`;
+        WHERE eq.status IN ('pending', 'in_review')
+          AND COALESCE(c.flow, 'editorial') = 'editorial'`;
       
       const params: any[] = [];
       if (mediaUnitId) {
@@ -506,7 +514,7 @@ export class EditorialQueueService {
         params.push(taskId);
         sql += ` AND eq.task_id = $${params.length}`;
       }
-      sql += ` ORDER BY eq.status, eq.created_at ASC`;
+      sql += ` ORDER BY eq.created_at DESC`;
 
       const result = await query(sql, params);
       console.log('📊 البيانات المرجعة من getAllEditorialItems:', result.rows.length, 'عنصر');

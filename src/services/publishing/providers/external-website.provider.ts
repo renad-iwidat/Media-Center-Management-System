@@ -20,37 +20,26 @@ export class ExternalWebsiteProvider implements IPublishingProvider {
       // تجهيز الـ tags
       const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
 
-      // بناء multipart/form-data
-      const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
-      let body = '';
-
-      const addField = (name: string, value: string) => {
-        body += `--${boundary}\r\n`;
-        body += `Content-Disposition: form-data; name="${name}"\r\n\r\n`;
-        body += `${value}\r\n`;
-      };
-
-      addField('title', article.title);
-      addField('content', article.content);
-      addField('category_id', default_category_id || '1');
-      addField('tags', tagsString);
-      addField('keywords', tagsString);
+      // بناء FormData
+      const formData = new FormData();
+      formData.append('title', article.title);
+      formData.append('content', article.content);
+      formData.append('category_id', default_category_id || '1');
+      formData.append('tags', tagsString);
+      formData.append('keywords', tagsString);
 
       if (article.image_url) {
-        addField('image_url', article.image_url);
+        formData.append('image_url', article.image_url);
       }
 
-      body += `--${boundary}--\r\n`;
-
-      // إرسال الطلب
+      // إرسال الطلب (FormData يضبط Content-Type + boundary تلقائياً)
       const response = await fetch(api_url, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${api_token}`,
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
         },
-        body,
+        body: formData,
       });
 
       const responseBody = await response.text();

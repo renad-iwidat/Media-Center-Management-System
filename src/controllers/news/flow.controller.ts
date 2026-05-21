@@ -76,7 +76,8 @@ export class FlowController {
 
   /**
    * GET /api/flow/editorial
-   * جلب جميع الأخبار في ستوديو التحرير (pending + in_review + incomplete)
+   * جلب الأخبار التحريرية المكتملة في ستوديو التحرير (pending + in_review فقط)
+   * لا يشمل الأخبار الناقصة (incomplete) — هذه تظهر في قسم الأخبار الغير مكتملة
    * يدعم task_id اختياري للربط مع نظام الإدارة
    * 
    * Query Parameters:

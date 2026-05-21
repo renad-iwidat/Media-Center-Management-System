@@ -62,13 +62,13 @@ export class PublishedItemsService {
           COALESCE(pi.image_url, rd.image_url) AS image_url,
           rd.url as original_url,
           rd.pub_date,
-          c.name as category_name,
+          COALESCE(c.name, '—') as category_name,
           mu.name as media_unit_name,
-          c.flow as flow_type,
+          COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
         WHERE pi.is_active = true
           AND COALESCE(rd.publish_status, 'draft') != 'archived'
@@ -105,13 +105,13 @@ export class PublishedItemsService {
           COALESCE(pi.image_url, rd.image_url) AS image_url,
           rd.url as original_url,
           rd.pub_date,
-          c.name as category_name,
+          COALESCE(c.name, '—') as category_name,
           mu.name as media_unit_name,
-          c.flow as flow_type,
+          COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
         WHERE pi.id = $1 AND pi.is_active = true`,
         [itemId]
@@ -146,13 +146,13 @@ export class PublishedItemsService {
           COALESCE(pi.image_url, rd.image_url) AS image_url,
           rd.url as original_url,
           rd.pub_date,
-          c.name as category_name,
+          COALESCE(c.name, '—') as category_name,
           mu.name as media_unit_name,
-          c.flow as flow_type,
+          COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
         WHERE pi.is_active = true AND c.name = $1
         ORDER BY pi.published_at DESC
@@ -189,13 +189,13 @@ export class PublishedItemsService {
           COALESCE(pi.image_url, rd.image_url) AS image_url,
           rd.url as original_url,
           rd.pub_date,
-          c.name as category_name,
+          COALESCE(c.name, '—') as category_name,
           mu.name as media_unit_name,
-          c.flow as flow_type,
+          COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
         WHERE pi.is_active = true AND pi.media_unit_id = $1
           AND COALESCE(rd.publish_status, 'draft') != 'archived'
@@ -236,15 +236,15 @@ export class PublishedItemsService {
           COALESCE(pi.image_url, rd.image_url) AS image_url,
           rd.url as original_url,
           rd.pub_date,
-          c.name as category_name,
+          COALESCE(c.name, '—') as category_name,
           mu.name as media_unit_name,
-          c.flow as flow_type,
+          COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         JOIN media_units mu ON pi.media_unit_id = mu.id
-        WHERE pi.is_active = true AND c.flow = $1
+        WHERE pi.is_active = true AND COALESCE(c.flow, 'editorial') = $1
         ORDER BY pi.published_at DESC
         LIMIT $2`,
         [flowType, limit]
@@ -269,22 +269,22 @@ export class PublishedItemsService {
       // عدد المحتوى الأوتوماتيكي والتحريري — بناءً على categories.flow
       const flowResult = await query(
         `SELECT 
-          COUNT(CASE WHEN c.flow = 'automated' THEN 1 END) as automated_count,
-          COUNT(CASE WHEN c.flow = 'editorial' THEN 1 END) as editorial_count
+          COUNT(CASE WHEN COALESCE(c.flow, 'editorial') = 'automated' THEN 1 END) as automated_count,
+          COUNT(CASE WHEN COALESCE(c.flow, 'editorial') = 'editorial' THEN 1 END) as editorial_count
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         WHERE pi.is_active = true`
       );
 
       // المحتوى حسب الفئة
       const categoryResult = await query(
         `SELECT 
-          c.name as category,
+          COALESCE(c.name, 'بدون تصنيف') as category,
           COUNT(*) as count
         FROM published_items pi
         JOIN raw_data rd ON pi.raw_data_id = rd.id
-        JOIN categories c ON rd.category_id = c.id
+        LEFT JOIN categories c ON rd.category_id = c.id
         WHERE pi.is_active = true
         GROUP BY c.name
         ORDER BY count DESC`

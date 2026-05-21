@@ -309,41 +309,30 @@ class AutoPublishService {
       // تجهيز الـ tags و keywords
       const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
 
-      // بناء multipart/form-data — الصيغة المطلوبة من API هنا غزة
-      const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
-      let body = '';
-
-      const addField = (name: string, value: string) => {
-        body += `--${boundary}\r\n`;
-        body += `Content-Disposition: form-data; name="${name}"\r\n\r\n`;
-        body += `${value}\r\n`;
-      };
-
-      addField('title', article.title);
-      addField('content', article.content);
-      addField('category_id', String(externalCategoryId));
-      addField('tags', tagsString);
-      addField('keywords', tagsString);
+      // بناء FormData — الصيغة المطلوبة من API هنا غزة
+      const formData = new FormData();
+      formData.append('title', article.title);
+      formData.append('content', article.content);
+      formData.append('category_id', String(externalCategoryId));
+      formData.append('tags', tagsString);
+      formData.append('keywords', tagsString);
 
       // إضافة الصورة كـ URL إذا موجودة
       if (article.image_url) {
-        addField('image_url', article.image_url);
+        formData.append('image_url', article.image_url);
       }
-
-      body += `--${boundary}--\r\n`;
 
       console.log(`   📡 Sending to: ${target.api_url}`);
       console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." category_id=${externalCategoryId} image_url=${article.image_url ? 'yes' : 'no'}`);
 
-      // إرسال الطلب كـ multipart/form-data
+      // إرسال الطلب كـ multipart/form-data (FormData يضبط الـ boundary تلقائياً)
       const response = await fetch(target.api_url, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${target.api_token}`,
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
         },
-        body,
+        body: formData,
       });
 
       const responseBody = await response.text();

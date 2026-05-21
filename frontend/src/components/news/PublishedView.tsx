@@ -44,8 +44,8 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
       .then((res) => {
         // قسم النشر = فقط الأخبار التحريرية (اللي وافق عليها المحرر)
         const allItems = res.data || [];
-        const editorialOnly = allItems.filter((item: any) => item.flow_type === 'editorial');
-        setItems(editorialOnly);
+        // قسم النشر = كل الأخبار المنشورة (تحريرية + أوتوماتيكية مكتملة يدوياً)
+        setItems(allItems);
       })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
