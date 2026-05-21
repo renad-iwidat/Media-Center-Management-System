@@ -106,7 +106,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               <TrendingUp className="text-white w-8 h-8" />
             </div>
             <h1 className="text-2xl font-arabic font-bold text-white mb-1">
-              مركز <span className="text-[#FF9F4A]">الإعلام</span>
+              نظام مركز <span className="text-[#FF9F4A]">الإعلام الرقمي</span>
             </h1>
             <p className="text-white/40 text-sm">نظام الأخبار</p>
           </div>
@@ -193,9 +193,16 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 pt-5 border-t border-white/8">
+          <div className="mt-6 pt-5 border-t border-white/8 space-y-2">
             <p className="text-center text-white/25 text-xs leading-relaxed">
               هذا النظام مخصص للموظفين المصرح لهم فقط
+            </p>
+            <p className="text-center text-white/20 text-[10px] leading-relaxed">
+              نظام إدارة مركز الإعلام 2026 ©
+              <br />
+              تصميم وتنفيذ: وحدة ليمينال للحلول الذكية والتقنية
+              <br />
+              جميع الحقوق محفوظة لدى وحدة ليمينال للحلول الذكية والتقنية
             </p>
           </div>
         </div>
