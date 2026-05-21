@@ -24,6 +24,9 @@ router.post('/cleanup', PublishingController.cleanupStale);
 // ── Article Status ──────────────────────────────────────────────────────────
 router.get('/status/:articleId', PublishingController.getArticleStatus);
 
+// ── Rate Limit / Cooldown ───────────────────────────────────────────────────
+router.get('/cooldown/:platformConfigId', PublishingController.getCooldown);
+
 // ── Publishing Logs ─────────────────────────────────────────────────────────
 router.get('/logs', PublishingController.getLogs);
 router.get('/logs/:articleId', PublishingController.getArticleLogs);

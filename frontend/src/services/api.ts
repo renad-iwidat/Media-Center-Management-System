@@ -636,6 +636,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ article_id: articleId, platform_config_id: platformConfigId, custom_content: customContent }),
     }),
+  getPublishCooldown: (platformConfigId: number) =>
+    request<any>(`/publishing/cooldown/${platformConfigId}`),
 
   // --- Bulletins (الموجزات والنشرات المحفوظة) ---
   getBulletins: (mediaUnitId?: number | null) =>

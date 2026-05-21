@@ -327,6 +327,31 @@ class PublishingService {
       }
     }
 
+    // فحص Rate Limit — فيسبوك: بوست واحد كل 15 دقيقة
+    if (config.platform === 'facebook') {
+      const cooldownMinutes = 15;
+      const lastPublish = await query(
+        `SELECT published_at FROM publishing_status 
+         WHERE platform_config_id = $1 AND status = 'success'
+         ORDER BY published_at DESC LIMIT 1`,
+        [config.id]
+      );
+
+      if (lastPublish.rows.length > 0 && lastPublish.rows[0].published_at) {
+        const lastTime = new Date(lastPublish.rows[0].published_at).getTime();
+        const now = Date.now();
+        const elapsedMs = now - lastTime;
+        const cooldownMs = cooldownMinutes * 60 * 1000;
+
+        if (elapsedMs < cooldownMs) {
+          const remainingMs = cooldownMs - elapsedMs;
+          const remainingMin = Math.floor(remainingMs / 60000);
+          const remainingSec = Math.ceil((remainingMs % 60000) / 1000);
+          return `⏳ يجب الانتظار ${remainingMin} دقيقة و ${remainingSec} ثانية قبل النشر التالي على فيسبوك (حماية من الحظر)`;
+        }
+      }
+    }
+
     return null;
   }
 
@@ -344,6 +369,19 @@ class PublishingService {
       [articleId, platformConfigId]
     );
     return result.rows.length > 0;
+  }
+
+  /**
+   * جلب وقت آخر نشر ناجح على منصة معينة
+   */
+  async getLastPublishTime(platformConfigId: number): Promise<string | null> {
+    const result = await query(
+      `SELECT published_at FROM publishing_status 
+       WHERE platform_config_id = $1 AND status = 'success'
+       ORDER BY published_at DESC LIMIT 1`,
+      [platformConfigId]
+    );
+    return result.rows[0]?.published_at || null;
   }
 
   /**

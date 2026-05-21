@@ -62,6 +62,53 @@ export class PublishingController {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
+  // Rate Limit / Cooldown
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * GET /api/publishing/cooldown/:platformConfigId
+   * فحص الوقت المتبقي قبل السماح بالنشر التالي
+   */
+  static async getCooldown(req: Request, res: Response): Promise<void> {
+    try {
+      const platformConfigId = Number(req.params.platformConfigId);
+      const cooldownMinutes = 15;
+
+      const result = await publishingService.getLastPublishTime(platformConfigId);
+
+      if (!result) {
+        res.status(200).json({ canPublish: true, remainingMs: 0, remainingFormatted: '' });
+        return;
+      }
+
+      const lastTime = new Date(result).getTime();
+      const now = Date.now();
+      const elapsedMs = now - lastTime;
+      const cooldownMs = cooldownMinutes * 60 * 1000;
+
+      if (elapsedMs >= cooldownMs) {
+        res.status(200).json({ canPublish: true, remainingMs: 0, remainingFormatted: '' });
+      } else {
+        const remainingMs = cooldownMs - elapsedMs;
+        const remainingMin = Math.floor(remainingMs / 60000);
+        const remainingSec = Math.ceil((remainingMs % 60000) / 1000);
+        res.status(200).json({
+          canPublish: false,
+          remainingMs,
+          remainingFormatted: `${remainingMin}:${remainingSec.toString().padStart(2, '0')}`,
+          message: `⏳ انتظر ${remainingMin} دقيقة و ${remainingSec} ثانية قبل النشر التالي`,
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في فحص الـ cooldown',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
   // حالة النشر
   // ════════════════════════════════════════════════════════════════════════════
 

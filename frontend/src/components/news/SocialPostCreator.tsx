@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Share2, Loader2, CheckCircle, ArrowRight, Eye, Send,
-  PenLine, Sparkles, Image as ImageIcon, X, ExternalLink, Copy
+  PenLine, Sparkles, Image as ImageIcon, X, ExternalLink, Copy, Clock
 } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
@@ -34,6 +34,11 @@ export function SocialPostCreator({ article, onClose, onSuccess }: SocialPostCre
   const [configs, setConfigs] = useState<any[]>([]);
   const [loadingConfigs, setLoadingConfigs] = useState(true);
 
+  // Rate limit / Cooldown state
+  const [cooldownRemaining, setCooldownRemaining] = useState(0); // بالميلي ثانية
+  const [cooldownConfigId, setCooldownConfigId] = useState<number | null>(null);
+  const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // تحميل إعدادات المنصات
   useEffect(() => {
     setLoadingConfigs(true);
@@ -47,6 +52,62 @@ export function SocialPostCreator({ article, onClose, onSuccess }: SocialPostCre
       .catch(() => setConfigs([]))
       .finally(() => setLoadingConfigs(false));
   }, []);
+
+  // تنظيف الـ interval عند إغلاق المكون
+  useEffect(() => {
+    return () => {
+      if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+    };
+  }, []);
+
+  // فحص الـ cooldown لمنصة معينة وبدء العداد التنازلي
+  const checkCooldown = async (configId: number) => {
+    try {
+      const res = await api.getPublishCooldown(configId);
+      if (!res.canPublish && res.remainingMs > 0) {
+        setCooldownRemaining(res.remainingMs);
+        setCooldownConfigId(configId);
+        startCooldownTimer(res.remainingMs);
+        return false;
+      }
+      setCooldownRemaining(0);
+      setCooldownConfigId(null);
+      return true;
+    } catch {
+      return true; // إذا فشل الفحص — نسمح بالنشر
+    }
+  };
+
+  const startCooldownTimer = (initialMs: number) => {
+    if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+    let remaining = initialMs;
+    cooldownIntervalRef.current = setInterval(() => {
+      remaining -= 1000;
+      if (remaining <= 0) {
+        setCooldownRemaining(0);
+        setCooldownConfigId(null);
+        if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+      } else {
+        setCooldownRemaining(remaining);
+      }
+    }, 1000);
+  };
+
+  const formatCooldown = (ms: number) => {
+    const min = Math.floor(ms / 60000);
+    const sec = Math.ceil((ms % 60000) / 1000);
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  // فحص الـ cooldown تلقائياً لما نوصل لخطوة المعاينة
+  useEffect(() => {
+    if (step === "preview" && configs.length > 0) {
+      const fbConfig = configs.find(c => c.platform === "facebook");
+      if (fbConfig) {
+        checkCooldown(fbConfig.id);
+      }
+    }
+  }, [step, configs]);
 
   // توليد مسودة المنشور بالذكاء الاصطناعي
   useEffect(() => {
@@ -100,6 +161,13 @@ ${postText}
 
   // النشر الفعلي
   const handlePublish = async (configId: number) => {
+    // فحص الـ cooldown أولاً
+    const canPublish = await checkCooldown(configId);
+    if (!canPublish) {
+      setNotification({ type: "error", message: `⏳ يجب الانتظار ${formatCooldown(cooldownRemaining)} قبل النشر التالي (حماية من الحظر)` });
+      return;
+    }
+
     setStep("publishing");
     setIsPublishing(true);
     try {
@@ -117,6 +185,11 @@ ${postText}
         }
         if (onSuccess && url) onSuccess(url);
       } else {
+        // إذا الخطأ بسبب cooldown — نبدأ العداد
+        if (res.message && res.message.includes('انتظر')) {
+          // نستخرج الوقت المتبقي من الرسالة أو نفحص مرة ثانية
+          await checkCooldown(configId);
+        }
         setNotification({ type: "error", message: `❌ ${res.message || "فشل النشر"}` });
         setStep("preview");
       }
@@ -373,17 +446,44 @@ ${postText}
                     لا توجد منصات سوشال ميديا مفعّلة — أضف إعدادات من قسم الإعدادات
                   </p>
                 ) : (
-                  configs.filter(c => c.platform === platform || platform === "").map((config) => (
-                    <button
-                      key={config.id}
-                      onClick={() => handlePublish(config.id)}
-                      disabled={isPublishing}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20"
-                    >
-                      <Send size={16} />
-                      نشر على {PLATFORM_INFO[config.platform]?.label || config.name}
-                    </button>
-                  ))
+                  <>
+                    {/* عداد تنازلي — Rate Limit */}
+                    {cooldownRemaining > 0 && (
+                      <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-2">
+                        <div className="flex items-center justify-center w-10 h-10 bg-amber-100 rounded-full">
+                          <Clock size={18} className="text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-amber-800">حماية من الحظر — انتظر قبل النشر التالي</p>
+                          <p className="text-lg font-mono font-bold text-amber-600 mt-0.5">{formatCooldown(cooldownRemaining)}</p>
+                        </div>
+                      </div>
+                    )}
+                    {configs.filter(c => c.platform === platform || platform === "").map((config) => (
+                      <button
+                        key={config.id}
+                        onClick={() => handlePublish(config.id)}
+                        disabled={isPublishing || cooldownRemaining > 0}
+                        className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
+                          cooldownRemaining > 0
+                            ? "bg-slate-400 cursor-not-allowed text-white shadow-none"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {cooldownRemaining > 0 ? (
+                          <>
+                            <Clock size={16} />
+                            انتظر {formatCooldown(cooldownRemaining)}
+                          </>
+                        ) : (
+                          <>
+                            <Send size={16} />
+                            نشر على {PLATFORM_INFO[config.platform]?.label || config.name}
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </>
                 )}
                 {/* إذا لم يكن هناك config مطابق للمنصة المختارة، اعرض الكل */}
                 {configs.length > 0 && configs.filter(c => c.platform === platform).length === 0 && (
@@ -391,11 +491,24 @@ ${postText}
                     <button
                       key={config.id}
                       onClick={() => handlePublish(config.id)}
-                      disabled={isPublishing}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20"
+                      disabled={isPublishing || cooldownRemaining > 0}
+                      className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
+                        cooldownRemaining > 0
+                          ? "bg-slate-400 cursor-not-allowed text-white shadow-none"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      <Send size={16} />
-                      نشر على {PLATFORM_INFO[config.platform]?.label || config.name}
+                      {cooldownRemaining > 0 ? (
+                        <>
+                          <Clock size={16} />
+                          انتظر {formatCooldown(cooldownRemaining)}
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} />
+                          نشر على {PLATFORM_INFO[config.platform]?.label || config.name}
+                        </>
+                      )}
                     </button>
                   ))
                 )}
