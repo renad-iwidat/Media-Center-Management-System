@@ -198,4 +198,44 @@ router.post(
   SmartTranscriptionController.correctTranscriptsBatchEndpoint
 );
 
+/**
+ * POST /api/ai-hub/smart-transcription/generate-by-outlet
+ * Generate full editorial package based on outlet identity from database
+ * 
+ * Request body:
+ * {
+ *   "transcript": "string (required) - The transcript text",
+ *   "outletSlug": "string (required) - slug from outlet_editorial_profiles (e.g. 'annahar', 'alsharq-palestine')",
+ *   "customInfo": "string (optional) - Additional context",
+ *   "clipCount": number (optional, default: 5),
+ *   "socialCount": number (optional, default: 6)
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": boolean,
+ *   "data": {
+ *     "outlet": { "name": "string", "slug": "string", "identity": "string" },
+ *     "transcript": "string",
+ *     "outputs": [
+ *       { "type": "comprehensive_report", "type_name_ar": "تقرير صحفي شامل", "content": "string" },
+ *       { "type": "short_news", "type_name_ar": "خبر قصير", "content": "string" },
+ *       { "type": "full_transcript", "type_name_ar": "التفريغ الكامل المنقح", "content": "string" },
+ *       { "type": "social_posts", "type_name_ar": "بوستات السوشال ميديا", "content": "string" },
+ *       { "type": "video_clips", "type_name_ar": "أهم المقاطع للتقطيع", "content": "string" }
+ *     ],
+ *     "quality_assessment": "string",
+ *     "top_ideas": "string",
+ *     "top_quotes": "string",
+ *     "editorial_alerts": "string",
+ *     "metadata": { ... }
+ *   }
+ * }
+ */
+router.post(
+  '/generate-by-outlet',
+  createAILogger('smart-transcription', 'generate-by-outlet'),
+  SmartTranscriptionController.generateByOutletEndpoint
+);
+
 export default router;

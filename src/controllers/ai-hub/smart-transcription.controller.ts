@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import { generateSmartTranscriptionOutputs } from '../../services/ai-hub/smart-transcription.service';
 import { correctTranscript, correctTranscriptsBatch, validateCorrectionQuality, getCorrectionStats } from '../../services/ai-hub/transcript-correction.service';
+import { generateByOutlet } from '../../services/ai-hub/outlet-transcription.service';
 
 export class SmartTranscriptionController {
   /**
@@ -340,6 +341,51 @@ export class SmartTranscriptionController {
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to correct transcripts',
+      });
+    }
+  }
+
+  /**
+   * Generate editorial package by outlet
+   * POST /api/ai-hub/smart-transcription/generate-by-outlet
+   * 
+   * Body:
+   * {
+   *   "transcript": "string (required)",
+   *   "outletSlug": "string (required) - slug of the outlet from outlet_editorial_profiles",
+   *   "customInfo": "string (optional)",
+   *   "clipCount": number (optional, default 5),
+   *   "socialCount": number (optional, default 6)
+   * }
+   */
+  static async generateByOutletEndpoint(req: Request, res: Response) {
+    try {
+      const { transcript, outletSlug, customInfo = '', clipCount = 5, socialCount = 6 } = req.body;
+
+      if (!transcript) {
+        return res.status(400).json({ success: false, error: 'transcript مطلوب' });
+      }
+
+      if (!outletSlug) {
+        return res.status(400).json({ success: false, error: 'outletSlug مطلوب — اختر جهة إعلامية' });
+      }
+
+      console.log(`\n📰 [Smart Transcription] Generate by outlet: ${outletSlug}`);
+
+      const result = await generateByOutlet({
+        transcript,
+        outletSlug,
+        customInfo,
+        clipCount,
+        socialCount,
+      });
+
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      console.error('❌ [Smart Transcription] Generate by outlet error:', error.message);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'فشل توليد الحزمة التحريرية',
       });
     }
   }

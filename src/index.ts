@@ -24,7 +24,7 @@ import flowRoutes from './routes/news/flow.routes';
 import editorialPolicyRoutes from './routes/news/editorial-policy.routes';
 import systemSettingsRoutes from './routes/news/system-settings.routes';
 import schedulerRoutes from './routes/news/scheduler.routes';
-import { chatRoutes, ttsRoutes, sttRoutes, audioExtractionRoutes, videoToTextRoutes, analyticsRoutes, smartTranscriptionRoutes } from './routes/ai-hub';
+import { chatRoutes, ttsRoutes, sttRoutes, audioExtractionRoutes, videoToTextRoutes, analyticsRoutes, smartTranscriptionRoutes, transcriptionEditorialRoutes } from './routes/ai-hub';
 import ideasRoutes from './routes/ai-hub/ideas.routes';
 import streamingExtractionRoutes from './routes/ai-hub/streaming-extraction.routes';
 import uploadedFilesRoutes from './routes/manual-input/uploaded-files.routes';
@@ -298,6 +298,7 @@ app.use('/api/ai-hub/video-to-text', videoToTextRoutes);
 app.use('/api/ai-hub/ideas', ideasRoutes);
 app.use('/api/ai-hub/analytics', analyticsRoutes);
 app.use('/api/ai-hub/smart-transcription', smartTranscriptionRoutes);
+app.use('/api/ai-hub/transcription-editorial', transcriptionEditorialRoutes);
 app.use('/api/uploaded-files', uploadedFilesRoutes);
 app.use('/api/data', (req, res, next) => {
   console.log(`📍 Data Route: ${req.method} ${req.path}`);

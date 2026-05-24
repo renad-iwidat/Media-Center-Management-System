@@ -539,6 +539,28 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // --- Smart Transcription - Outlet Based ---
+  smartTranscriptionGenerateByOutlet: (data: {
+    transcript: string;
+    outletSlug: string;
+    customInfo?: string;
+    clipCount?: number;
+    socialCount?: number;
+  }) =>
+    request<any>("/ai-hub/smart-transcription/generate-by-outlet", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getOutletProfiles: () =>
+    request<any>("/ai-hub/transcription-editorial/outlets"),
+
+  getOutputTypes: () =>
+    request<any>("/ai-hub/transcription-editorial/output-types"),
+
+  getSocialPlatforms: () =>
+    request<any>("/ai-hub/transcription-editorial/social-platforms"),
+
   // --- Authentication (Management System) ---
   login: (email: string, password: string) =>
     request<any>("/auth/login", {
