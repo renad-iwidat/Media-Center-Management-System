@@ -3,11 +3,11 @@
  * Handles intelligent transcription and editorial output generation
  * 
  * Flow:
- * 1. Transcription: Uses OpenAI STT
+ * 1. Transcription: Uses OpenAI STT (with timestamps for video_clips)
  * 2. Output Generation: Uses AI_MODEL first, falls back to OpenAI if it fails
  */
 
-import { transcribeAudioBufferParallel } from './parallel-stt.service';
+import { transcribeAudioBufferParallel, transcribeAudioBufferParallelWithTimestamps, formatTranscriptWithTimestamps } from './parallel-stt.service';
 import { extractAudioFromVideoUrl } from './audio-extraction.service';
 import { correctTranscript } from './transcript-correction.service';
 import { callAIWithFallback, callOpenAIChatAPI } from './ai-call.service';
@@ -59,6 +59,10 @@ export async function generateSmartTranscriptionOutputs(
   } = options;
 
   let transcript = providedTranscript;
+  let transcriptWithTimestamps: string | null = null; // النص مع التوقيتات لاستخدامه في video_clips
+
+  // Check if video_clips is requested — we'll need timestamps
+  const needsTimestamps = outputs.some(o => o.type === 'video_clips' && o.enabled);
 
   // Step 1: Extract audio and transcribe using Parallel STT (handles large files)
   if (!transcript && fileUrl) {
@@ -70,13 +74,28 @@ export async function generateSmartTranscriptionOutputs(
         const audioBuffer = await extractAudioFromVideoUrl(fileUrl);
         console.log(`✅ [Smart Transcription] Audio extracted successfully (${audioBuffer.length} bytes)`);
         
-        // Transcribe using Parallel STT (handles chunking for large files)
-        console.log(`🎤 [Smart Transcription] Transcribing with Parallel STT...`);
-        transcript = await transcribeAudioBufferParallel(audioBuffer, {
-          language,
-          chunkDurationSeconds: 300, // 5 minutes per chunk
-          maxConcurrentRequests: 3,
-        });
+        if (needsTimestamps) {
+          // Transcribe with timestamps for video_clips
+          console.log(`🎤 [Smart Transcription] Transcribing with Parallel STT (with timestamps)...`);
+          const timestampedResult = await transcribeAudioBufferParallelWithTimestamps(audioBuffer, {
+            language,
+            chunkDurationSeconds: 300,
+            maxConcurrentRequests: 3,
+            overlapSeconds: 3,
+          });
+          transcript = timestampedResult.text;
+          transcriptWithTimestamps = formatTranscriptWithTimestamps(timestampedResult);
+          console.log(`⏱️  [Smart Transcription] Got ${timestampedResult.segments.length} timestamped segments`);
+        } else {
+          // Regular transcription without timestamps
+          console.log(`🎤 [Smart Transcription] Transcribing with Parallel STT...`);
+          transcript = await transcribeAudioBufferParallel(audioBuffer, {
+            language,
+            chunkDurationSeconds: 300,
+            maxConcurrentRequests: 3,
+            overlapSeconds: 3,
+          });
+        }
       } catch (error: any) {
         console.error(`⚠️ [Smart Transcription] Video processing failed: ${error.message}`);
         throw new Error(`Failed to process video: ${error.message}`);
@@ -89,12 +108,27 @@ export async function generateSmartTranscriptionOutputs(
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = Buffer.from(arrayBuffer);
         
-        // Use Parallel STT for large audio files
-        transcript = await transcribeAudioBufferParallel(audioBuffer, {
-          language,
-          chunkDurationSeconds: 300, // 5 minutes per chunk
-          maxConcurrentRequests: 3,
-        });
+        if (needsTimestamps) {
+          // Transcribe with timestamps
+          console.log(`🎤 [Smart Transcription] Transcribing with timestamps...`);
+          const timestampedResult = await transcribeAudioBufferParallelWithTimestamps(audioBuffer, {
+            language,
+            chunkDurationSeconds: 300,
+            maxConcurrentRequests: 3,
+            overlapSeconds: 3,
+          });
+          transcript = timestampedResult.text;
+          transcriptWithTimestamps = formatTranscriptWithTimestamps(timestampedResult);
+          console.log(`⏱️  [Smart Transcription] Got ${timestampedResult.segments.length} timestamped segments`);
+        } else {
+          // Regular transcription
+          transcript = await transcribeAudioBufferParallel(audioBuffer, {
+            language,
+            chunkDurationSeconds: 300,
+            maxConcurrentRequests: 3,
+            overlapSeconds: 3,
+          });
+        }
       } catch (error: any) {
         console.error(`⚠️ [Smart Transcription] Audio processing failed: ${error.message}`);
         throw new Error(`Failed to process audio: ${error.message}`);
@@ -141,9 +175,14 @@ export async function generateSmartTranscriptionOutputs(
     try {
       console.log(`\n📋 [Smart Transcription] Generating: ${output.type}`);
       
+      // For video_clips, use timestamped transcript if available
+      const transcriptForOutput = (output.type === 'video_clips' && transcriptWithTimestamps)
+        ? transcriptWithTimestamps
+        : correctedTranscript;
+      
       const content = await generateOutput(
         output.type,
-        correctedTranscript,
+        transcriptForOutput,
         output.count || 10,
         editorialPolicy,
         customInfo
@@ -352,12 +391,15 @@ ${transcript}
 
 المهمة: حدد أفضل ${count} مقاطع مقترحة للنشر من المادة.
 
+ملاحظة مهمة: النص المفرّغ أدناه يحتوي على توقيتات حقيقية بصيغة [MM:SS] أو [HH:MM:SS] في بداية كل جملة.
+استخدم هذه التوقيتات الحقيقية لتحديد بداية ونهاية كل مقطع مقترح.
+
 الشكل المطلوب لكل مقطع (التزم بهذا الشكل بالضبط):
 
 المقطع [الرقم]
 
 التوقيت:
-[MM:SS] – [MM:SS]
+[MM:SS] – [MM:SS] (استخدم التوقيتات الحقيقية الموجودة في النص)
 
 العنوان:
 [عنوان صحفي جذاب للمقطع]
@@ -366,7 +408,8 @@ ${transcript}
 "[النص الحرفي الكامل الوارد في التفريغ داخل هذا التوقيت]"
 
 المعايير الإلزامية:
-- التوقيت بصيغة: MM:SS – MM:SS (مثال: 00:00 – 01:15)
+- استخدم التوقيتات الحقيقية الموجودة في النص المفرّغ (لا تخمّن توقيتات)
+- التوقيت بصيغة: MM:SS – MM:SS (أو HH:MM:SS – HH:MM:SS للفيديوهات الطويلة)
 - النص الكامل يجب أن يكون منقولاً حرفياً كما ورد في التفريغ داخل التوقيت المحدد
 - ممنوع تلخيص النص أو اختصاره - يجب نقله كاملاً كما هو
 - اختر اللحظات الأكثر أهمية وتأثيراً
@@ -376,10 +419,10 @@ ${transcript}
 ${editorialPolicy ? `سياسة التحرير المعتمدة:\n${editorialPolicy}\n` : ''}
 ${customInfo ? `معلومات إضافية:\n${customInfo}\n` : ''}
 
-النص المفرّغ:
+النص المفرّغ مع التوقيتات:
 ${transcript}
 
-حدد أفضل ${count} مقاطع مقترحة للنشر:`,
+حدد أفضل ${count} مقاطع مقترحة للنشر بناءً على التوقيتات الحقيقية:`,
 
     policy_alerts: `
 أنت متخصص في مراجعة السياسات التحريرية في قناة إخبارية عربية رائدة.
