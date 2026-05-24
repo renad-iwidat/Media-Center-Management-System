@@ -45,6 +45,7 @@ export async function generateSmartTranscriptionOutputs(
 ): Promise<{
   transcript: string;
   originalTranscript?: string;
+  transcriptWithTimestamps?: string | null;
   outputs: GeneratedOutput[];
   metadata: Record<string, any>;
 }> {
