@@ -28,8 +28,17 @@ export class ExternalWebsiteProvider implements IPublishingProvider {
       formData.append('tags', tagsString);
       formData.append('keywords', tagsString);
 
+      // إضافة الصورة كـ base64 (image_url يسبب 500 على السيرفر الخارجي)
       if (article.image_url) {
-        formData.append('image_url', article.image_url);
+        try {
+          const imgResponse = await fetch(article.image_url, { signal: AbortSignal.timeout(15000) });
+          if (imgResponse.ok) {
+            const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+            const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
+            const base64 = `data:${contentType};base64,${imgBuffer.toString('base64')}`;
+            formData.append('image_base64', base64);
+          }
+        } catch { /* تجاهل — ننشر بدون صورة */ }
       }
 
       // إرسال الطلب (FormData يضبط Content-Type + boundary تلقائياً)

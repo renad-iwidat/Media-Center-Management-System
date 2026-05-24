@@ -309,33 +309,65 @@ class AutoPublishService {
       // تجهيز الـ tags و keywords
       const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
 
-      // بناء FormData — الصيغة المطلوبة من API هنا غزة
-      const formData = new FormData();
-      formData.append('title', article.title);
-      formData.append('content', article.content);
-      formData.append('category_id', String(externalCategoryId));
-      formData.append('tags', tagsString);
-      formData.append('keywords', tagsString);
-
-      // إضافة الصورة كـ URL إذا موجودة
-      if (article.image_url) {
-        formData.append('image_url', article.image_url);
-      }
-
       console.log(`   📡 Sending to: ${target.api_url}`);
       console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." category_id=${externalCategoryId} image_url=${article.image_url ? 'yes' : 'no'}`);
 
-      // إرسال الطلب كـ multipart/form-data (FormData يضبط الـ boundary تلقائياً)
-      const response = await fetch(target.api_url, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${target.api_token}`,
-        },
-        body: formData,
-      });
+      // تحميل الصورة مرة واحدة وتحويلها لـ base64
+      let imageBase64: string | null = null;
+      if (article.image_url) {
+        try {
+          const imgResponse = await fetch(article.image_url, { signal: AbortSignal.timeout(15000) });
+          if (imgResponse.ok) {
+            const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+            const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
+            imageBase64 = `data:${contentType};base64,${imgBuffer.toString('base64')}`;
+          } else {
+            console.log(`   ⚠️ فشل تحميل الصورة (${imgResponse.status}), سيتم النشر بدون صورة`);
+          }
+        } catch (imgErr) {
+          console.log(`   ⚠️ خطأ في تحميل الصورة: ${imgErr instanceof Error ? imgErr.message : 'unknown'}, سيتم النشر بدون صورة`);
+        }
+      }
 
-      const responseBody = await response.text();
+      // إرسال الطلب كـ multipart/form-data مع retry في حالة 500 (rate limiting)
+      let response!: Response;
+      let responseBody = '';
+      const maxRetries = 2;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        // إعادة بناء FormData لكل محاولة (لأن الـ body يُستهلك)
+        const retryFormData = new FormData();
+        retryFormData.append('title', article.title);
+        retryFormData.append('content', article.content);
+        retryFormData.append('category_id', String(externalCategoryId));
+        retryFormData.append('tags', tagsString);
+        retryFormData.append('keywords', tagsString);
+
+        // إضافة الصورة كـ base64 إذا تم تحميلها بنجاح
+        if (imageBase64) {
+          retryFormData.append('image_base64', imageBase64);
+        }
+
+        response = await fetch(target.api_url, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${target.api_token}`,
+          },
+          body: retryFormData,
+        });
+
+        responseBody = await response.text();
+
+        if (response.status !== 500 || attempt === maxRetries) {
+          break;
+        }
+
+        // انتظار قبل إعادة المحاولة (exponential backoff)
+        const waitTime = (attempt + 1) * 5000;
+        console.log(`   🔄 Retry ${attempt + 1}/${maxRetries} after ${waitTime / 1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
 
       console.log(`   📋 Response [${response.status}]: ${responseBody.substring(0, 300)}`);
 
@@ -518,8 +550,8 @@ class AutoPublishService {
           console.log(`   ❌ ${article.title.substring(0, 50)}... — ${publishResult.error}`);
         }
 
-        // تأخير بين كل طلب (500ms) لتجنب rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // تأخير بين كل طلب (5 ثواني) لتجنب rate limiting على السيرفر الخارجي
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
 
@@ -618,7 +650,8 @@ class AutoPublishService {
         });
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // تأخير بين كل طلب (5 ثواني) لتجنب rate limiting
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
     return result;
