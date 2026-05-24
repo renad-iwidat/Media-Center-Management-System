@@ -216,6 +216,7 @@ export async function generateSmartTranscriptionOutputs(
   return {
     transcript: correctedTranscript,
     originalTranscript: transcript,
+    transcriptWithTimestamps: transcriptWithTimestamps || null,
     outputs: generatedOutputs,
     metadata: {
       generatedAt: new Date().toISOString(),
@@ -225,6 +226,7 @@ export async function generateSmartTranscriptionOutputs(
       outputsGenerated: generatedOutputs.filter(o => !o.metadata?.error).length,
       outputsFailed: generatedOutputs.filter(o => o.metadata?.error).length,
       transcriptCorrected: transcript !== correctedTranscript,
+      hasTimestamps: !!transcriptWithTimestamps,
     },
   };
 }

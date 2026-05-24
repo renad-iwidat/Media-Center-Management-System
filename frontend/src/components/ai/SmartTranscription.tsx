@@ -268,10 +268,9 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
       });
 
       // حفظ النص مع التوقيتات إن وجد
-      if (result.data.metadata?.transcriptWithTimestamps) {
-        setTranscriptWithTimestamps(result.data.metadata.transcriptWithTimestamps);
-      } else if (result.data.outputs?.length > 0) {
-        // التوقيتات قد تكون مضمنة في النص الأصلي
+      if (result.data.transcriptWithTimestamps) {
+        setTranscriptWithTimestamps(result.data.transcriptWithTimestamps);
+      } else {
         setTranscriptWithTimestamps(null);
       }
 
