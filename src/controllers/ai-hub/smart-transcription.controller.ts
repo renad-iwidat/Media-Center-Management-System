@@ -360,7 +360,7 @@ export class SmartTranscriptionController {
    */
   static async generateByOutletEndpoint(req: Request, res: Response) {
     try {
-      const { transcript, outletSlug, customInfo = '', clipCount = 5, socialCount = 6 } = req.body;
+      const { transcript, transcriptWithTimestamps, outletSlug, customInfo = '', clipCount = 5, socialCount = 6 } = req.body;
 
       if (!transcript) {
         return res.status(400).json({ success: false, error: 'transcript مطلوب' });
@@ -371,9 +371,13 @@ export class SmartTranscriptionController {
       }
 
       console.log(`\n📰 [Smart Transcription] Generate by outlet: ${outletSlug}`);
+      if (transcriptWithTimestamps) {
+        console.log(`⏱️  [Smart Transcription] Timestamps available for clips`);
+      }
 
       const result = await generateByOutlet({
         transcript,
+        transcriptWithTimestamps,
         outletSlug,
         customInfo,
         clipCount,

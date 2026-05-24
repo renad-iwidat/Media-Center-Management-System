@@ -10,8 +10,9 @@ import { OutletEditorialProfile } from '../../models/database/transcription-edit
 
 interface OutletTranscriptionOptions {
   transcript: string;
+  transcriptWithTimestamps?: string;  // النص مع التوقيتات لاستخدامه في المقاطع
   outletSlug: string;
-  outputTypes?: string[];  // slugs from transcription_output_types
+  outputTypes?: string[];
   customInfo?: string;
   clipCount?: number;
   socialCount?: number;
@@ -72,7 +73,7 @@ async function getSocialPlatforms(): Promise<any[]> {
 export async function generateByOutlet(
   options: OutletTranscriptionOptions
 ): Promise<OutletTranscriptionResult> {
-  const { transcript, outletSlug, customInfo = '', clipCount = 5, socialCount = 6 } = options;
+  const { transcript, transcriptWithTimestamps, outletSlug, customInfo = '', clipCount = 5, socialCount = 6 } = options;
 
   // 1. جلب الجهة من الداتابيس
   const outlet = await getOutletProfile(outletSlug);
@@ -111,7 +112,8 @@ export async function generateByOutlet(
 
   // المجموعة 6: المقاطع المقترحة
   console.log(`  📋 توليد: المقاطع المقترحة للتقطيع`);
-  results.clips = await generateClips(transcript, outlet, clipCount);
+  const transcriptForClips = transcriptWithTimestamps || transcript;
+  results.clips = await generateClips(transcriptForClips, outlet, clipCount);
 
   // المجموعة 7: التنبيهات التحريرية
   console.log(`  📋 توليد: التنبيهات التحريرية`);

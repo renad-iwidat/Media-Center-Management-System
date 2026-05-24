@@ -144,6 +144,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcriptionResult, setTranscriptionResult] = useState<TranscriptionResult | null>(null);
+  const [transcriptWithTimestamps, setTranscriptWithTimestamps] = useState<string | null>(null);
   const [generatedOutputs, setGeneratedOutputs] = useState<GeneratedOutput[]>([]);
   const [selectedOutputs, setSelectedOutputs] = useState<Set<OutputType>>(new Set());
 
@@ -156,11 +157,12 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
 
   // حالات الجهات الإعلامية (Outlet-based)
   const [outletProfiles, setOutletProfiles] = useState<OutletProfile[]>([]);
-  const [selectedOutlet, setSelectedOutlet] = useState<OutletProfile | null>(null);
+  const [selectedOutlets, setSelectedOutlets] = useState<OutletProfile[]>([]);
   const [selectedOutletOutputs, setSelectedOutletOutputs] = useState<Set<OutletOutputType>>(
     new Set(['comprehensive_report', 'short_news', 'full_transcript', 'social_posts', 'video_clips'])
   );
-  const [outletResult, setOutletResult] = useState<any>(null);
+  const [outletResults, setOutletResults] = useState<any[]>([]);
+  const [activeResultTab, setActiveResultTab] = useState<number>(0);
   
   // حالات الملفات المرفوعة
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -246,12 +248,12 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
         throw new Error('لم يتم العثور على توكن المصادقة. يرجى تسجيل الدخول مرة أخرى.');
       }
 
-      // استدعاء API للتفريغ - بدون تحديد المخرجات (سيتم توليدها لاحقاً)
+      // استدعاء API للتفريغ - نطلب video_clips لضمان الحصول على timestamps
       const result = await api.smartTranscriptionProcess({
         fileUrl: file.s3_url,
         fileType,
         language: 'ar',
-        outputs: [], // لا نحدد المخرجات هنا
+        outputs: [{ type: 'video_clips', enabled: true, count: 5 }], // نطلب timestamps
         editorialPolicy: '',
         customInfo,
       });
@@ -264,6 +266,14 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
         segments: result.data.segments || [],
         duration: result.data.metadata?.duration || 0,
       });
+
+      // حفظ النص مع التوقيتات إن وجد
+      if (result.data.metadata?.transcriptWithTimestamps) {
+        setTranscriptWithTimestamps(result.data.metadata.transcriptWithTimestamps);
+      } else if (result.data.outputs?.length > 0) {
+        // التوقيتات قد تكون مضمنة في النص الأصلي
+        setTranscriptWithTimestamps(null);
+      }
 
       // الانتقال إلى خطوة اختيار المخرجات
       setProcessingStep('outputs');
@@ -334,26 +344,51 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     setSelectedOutletOutputs(newSelected);
   };
 
-  // توليد المخرجات حسب الجهة المختارة
+  // تبديل اختيار جهة (multi-select)
+  const toggleOutletSelection = (outlet: OutletProfile) => {
+    setSelectedOutlets(prev => {
+      const exists = prev.find(o => o.id === outlet.id);
+      if (exists) {
+        return prev.filter(o => o.id !== outlet.id);
+      } else {
+        return [...prev, outlet];
+      }
+    });
+  };
+
+  // توليد المخرجات لكل الجهات المختارة
   const generateByOutlet = async () => {
-    if (!transcriptionResult || !selectedOutlet) {
-      alert('يرجى اختيار جهة إعلامية');
+    if (!transcriptionResult || selectedOutlets.length === 0) {
+      alert('يرجى اختيار جهة إعلامية واحدة على الأقل');
       return;
     }
 
     setIsProcessing(true);
     try {
-      const result = await api.smartTranscriptionGenerateByOutlet({
-        transcript: transcriptionResult.transcript,
-        outletSlug: selectedOutlet.slug,
-        customInfo,
-        clipCount: videoClipsCount,
-        socialCount,
-      });
+      const results: any[] = [];
 
-      setOutletResult(result.data);
-      // تحويل المخرجات لصيغة GeneratedOutput للعرض
-      const outputs: GeneratedOutput[] = (result.data.outputs || []).map((o: any) => ({
+      for (let i = 0; i < selectedOutlets.length; i++) {
+        const outlet = selectedOutlets[i];
+        console.log(`📰 [${i + 1}/${selectedOutlets.length}] توليد حزمة: ${outlet.name}`);
+
+        const result = await api.smartTranscriptionGenerateByOutlet({
+          transcript: transcriptionResult.transcript,
+          transcriptWithTimestamps: transcriptWithTimestamps || undefined,
+          outletSlug: outlet.slug,
+          customInfo,
+          clipCount: videoClipsCount,
+          socialCount,
+        });
+
+        results.push(result.data);
+      }
+
+      setOutletResults(results);
+      setActiveResultTab(0);
+
+      // عرض مخرجات أول جهة بالـ generatedOutputs
+      const firstResult = results[0];
+      const outputs: GeneratedOutput[] = (firstResult.outputs || []).map((o: any) => ({
         type: o.type as OutputType,
         content: o.content,
         metadata: { type_name_ar: o.type_name_ar },
@@ -476,14 +511,17 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     );
 
     // اسم الجهة إن وجد
-    if (selectedOutlet) {
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ text: `الجهة: ${selectedOutlet.name}`, bold: true, size: 26, rightToLeft: true, color: '3B82F6' })],
-          ...rtlProps,
-          spacing: { after: 80 },
-        })
-      );
+    if (selectedOutlets.length > 0) {
+      const activeOutlet = outletResults[activeResultTab]?.outlet;
+      if (activeOutlet) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: `الجهة: ${activeOutlet.name}`, bold: true, size: 26, rightToLeft: true, color: '3B82F6' })],
+            ...rtlProps,
+            spacing: { after: 80 },
+          })
+        );
+      }
     }
 
     // التاريخ
@@ -496,7 +534,8 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     );
 
     // ═══ تقييم الجودة + الأفكار + الاقتباسات ═══
-    if (outletResult?.quality_assessment) {
+    const activeResult = outletResults[activeResultTab];
+    if (activeResult?.quality_assessment) {
       children.push(
         new Paragraph({
           children: [new TextRun({ text: 'تقييم جودة التفريغ', bold: true, size: 30, rightToLeft: true })],
@@ -505,10 +544,10 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
           border: { bottom: { color: '10B981', size: 6, space: 4, style: 'single' } },
         })
       );
-      addContentLines(children, outletResult.quality_assessment, rtlProps);
+      addContentLines(children, activeResult.quality_assessment, rtlProps);
     }
 
-    if (outletResult?.top_ideas) {
+    if (activeResult?.top_ideas) {
       children.push(
         new Paragraph({
           children: [new TextRun({ text: 'أبرز الأفكار', bold: true, size: 30, rightToLeft: true })],
@@ -517,10 +556,10 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
           border: { bottom: { color: '8B5CF6', size: 6, space: 4, style: 'single' } },
         })
       );
-      addContentLines(children, outletResult.top_ideas, rtlProps);
+      addContentLines(children, activeResult.top_ideas, rtlProps);
     }
 
-    if (outletResult?.top_quotes) {
+    if (activeResult?.top_quotes) {
       children.push(
         new Paragraph({
           children: [new TextRun({ text: 'أفضل الاقتباسات', bold: true, size: 30, rightToLeft: true })],
@@ -529,7 +568,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
           border: { bottom: { color: 'F59E0B', size: 6, space: 4, style: 'single' } },
         })
       );
-      addContentLines(children, outletResult.top_quotes, rtlProps);
+      addContentLines(children, activeResult.top_quotes, rtlProps);
     }
 
     // ═══ المخرجات الرئيسية ═══
@@ -549,7 +588,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     });
 
     // ═══ التنبيهات التحريرية ═══
-    if (outletResult?.editorial_alerts) {
+    if (activeResult?.editorial_alerts) {
       children.push(
         new Paragraph({
           children: [new TextRun({ text: 'تنبيهات تحريرية', bold: true, size: 30, rightToLeft: true, color: 'EF4444' })],
@@ -558,7 +597,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
           border: { bottom: { color: 'EF4444', size: 6, space: 4, style: 'single' } },
         })
       );
-      addContentLines(children, outletResult.editorial_alerts, rtlProps);
+      addContentLines(children, activeResult.editorial_alerts, rtlProps);
     }
 
     // ═══ إنشاء الملف ═══
@@ -572,8 +611,9 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
     });
 
     const blob = await Packer.toBlob(doc);
-    const filename = selectedOutlet
-      ? `حزمة-تحريرية-${selectedOutlet.name}-${Date.now()}.docx`
+    const activeOutletName = outletResults[activeResultTab]?.outlet?.name;
+    const filename = activeOutletName
+      ? `حزمة-تحريرية-${activeOutletName}-${Date.now()}.docx`
       : `تفريغ-ذكي-${Date.now()}.docx`;
     saveAs(blob, filename);
   };
@@ -638,6 +678,86 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
           spacing: { after: 120 },
         })
       );
+    });
+  }
+
+  // تصدير كل الجهات — ملف DOCX لكل جهة
+  const exportAllOutletsDOCX = async () => {
+    if (outletResults.length === 0) return;
+
+    for (let i = 0; i < outletResults.length; i++) {
+      const result = outletResults[i];
+      const outletName = result.outlet?.name || `جهة-${i + 1}`;
+
+      // تبديل الـ tab مؤقتاً لبناء الملف
+      const prevTab = activeResultTab;
+      setActiveResultTab(i);
+
+      // بناء المخرجات لهذه الجهة
+      const outputs: GeneratedOutput[] = (result.outputs || []).map((o: any) => ({
+        type: o.type as OutputType,
+        content: o.content,
+        metadata: { type_name_ar: o.type_name_ar },
+      }));
+
+      // بناء الملف
+      const doc = buildDOCXForResult(result, outputs, outletName);
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `حزمة-تحريرية-${outletName}-${Date.now()}.docx`);
+
+      // انتظار قصير بين الملفات لتجنب مشاكل المتصفح
+      if (i < outletResults.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      setActiveResultTab(prevTab);
+    }
+  };
+
+  // بناء ملف DOCX لنتيجة جهة واحدة
+  function buildDOCXForResult(result: any, outputs: GeneratedOutput[], outletName: string): Document {
+    const outputLabels: Record<string, string> = {
+      executive_summary: 'ملخص تنفيذي', detailed_report: 'تقرير صحفي', news_article: 'خبر صحفي',
+      video_clips: 'مقاطع مقترحة للنشر', social_media: 'منشورات سوشيال ميديا', policy_alerts: 'تنبيهات سياسة التحرير',
+      comprehensive_report: 'تقرير صحفي شامل', short_news: 'خبر قصير',
+      full_transcript: 'التفريغ الكامل المنقح', social_posts: 'بوستات السوشال ميديا',
+    };
+
+    const rtlProps = { alignment: AlignmentType.RIGHT, bidirectional: true };
+    const children: Paragraph[] = [];
+
+    children.push(
+      new Paragraph({ children: [new TextRun({ text: 'الحزمة التحريرية — التفريغ الذكي', bold: true, size: 40, rightToLeft: true })], ...rtlProps, spacing: { after: 120 } }),
+      new Paragraph({ children: [new TextRun({ text: `الجهة: ${outletName}`, bold: true, size: 26, rightToLeft: true, color: '3B82F6' })], ...rtlProps, spacing: { after: 80 } }),
+      new Paragraph({ children: [new TextRun({ text: new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }), size: 22, rightToLeft: true, color: '6B7280' })], ...rtlProps, spacing: { after: 300 } })
+    );
+
+    if (result.quality_assessment) {
+      children.push(new Paragraph({ children: [new TextRun({ text: 'تقييم جودة التفريغ', bold: true, size: 30, rightToLeft: true })], ...rtlProps, spacing: { before: 300, after: 200 }, border: { bottom: { color: '10B981', size: 6, space: 4, style: 'single' } } }));
+      addContentLines(children, result.quality_assessment, rtlProps);
+    }
+    if (result.top_ideas) {
+      children.push(new Paragraph({ children: [new TextRun({ text: 'أبرز الأفكار', bold: true, size: 30, rightToLeft: true })], ...rtlProps, spacing: { before: 300, after: 200 }, border: { bottom: { color: '8B5CF6', size: 6, space: 4, style: 'single' } } }));
+      addContentLines(children, result.top_ideas, rtlProps);
+    }
+    if (result.top_quotes) {
+      children.push(new Paragraph({ children: [new TextRun({ text: 'أفضل الاقتباسات', bold: true, size: 30, rightToLeft: true })], ...rtlProps, spacing: { before: 300, after: 200 }, border: { bottom: { color: 'F59E0B', size: 6, space: 4, style: 'single' } } }));
+      addContentLines(children, result.top_quotes, rtlProps);
+    }
+
+    outputs.forEach((output) => {
+      const label = output.metadata?.type_name_ar || outputLabels[output.type] || output.type;
+      children.push(new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 30, rightToLeft: true })], ...rtlProps, spacing: { before: 400, after: 200 }, border: { bottom: { color: '3B82F6', size: 6, space: 4, style: 'single' } } }));
+      addContentLines(children, output.content, rtlProps);
+    });
+
+    if (result.editorial_alerts) {
+      children.push(new Paragraph({ children: [new TextRun({ text: 'تنبيهات تحريرية', bold: true, size: 30, rightToLeft: true, color: 'EF4444' })], ...rtlProps, spacing: { before: 400, after: 200 }, border: { bottom: { color: 'EF4444', size: 6, space: 4, style: 'single' } } }));
+      addContentLines(children, result.editorial_alerts, rtlProps);
+    }
+
+    return new Document({
+      sections: [{ properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children }],
     });
   }
 
@@ -903,33 +1023,49 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
 
             {/* Outlet Selection */}
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">اختر الجهة الإعلامية</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">اختر الجهات الإعلامية</h2>
               <p className="text-slate-400 text-sm mb-4">
-                اختر الجهة التي تريد توليد المخرجات حسب هويتها التحريرية
+                اختر جهة واحدة أو أكثر — سيتم توليد حزمة تحريرية منفصلة لكل جهة
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-                {outletProfiles.map(outlet => (
-                  <button
-                    key={outlet.id}
-                    onClick={() => setSelectedOutlet(outlet)}
-                    className={`p-3 rounded-lg border-2 text-right transition-all ${
-                      selectedOutlet?.id === outlet.id
-                        ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500/50'
-                        : 'bg-slate-900/50 border-slate-700 hover:border-slate-500'
-                    }`}
-                  >
-                    <p className={`font-semibold text-sm ${selectedOutlet?.id === outlet.id ? 'text-blue-300' : 'text-white'}`}>
-                      {outlet.name}
-                    </p>
-                  </button>
-                ))}
+                {outletProfiles.map(outlet => {
+                  const isSelected = selectedOutlets.some(o => o.id === outlet.id);
+                  return (
+                    <button
+                      key={outlet.id}
+                      onClick={() => toggleOutletSelection(outlet)}
+                      className={`p-3 rounded-lg border-2 text-right transition-all relative ${
+                        isSelected
+                          ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500/50'
+                          : 'bg-slate-900/50 border-slate-700 hover:border-slate-500'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-2 left-2 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                          <Check size={12} className="text-white" />
+                        </div>
+                      )}
+                      <p className={`font-semibold text-sm ${isSelected ? 'text-blue-300' : 'text-white'}`}>
+                        {outlet.name}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
 
-              {selectedOutlet && (
+              {selectedOutlets.length > 0 && (
                 <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <p className="text-blue-400 font-semibold mb-2">{selectedOutlet.name}</p>
-                  <p className="text-slate-400 text-sm leading-relaxed">{selectedOutlet.identity}</p>
+                  <p className="text-blue-400 font-semibold mb-2">
+                    تم اختيار {selectedOutlets.length} {selectedOutlets.length === 1 ? 'جهة' : 'جهات'}:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedOutlets.map(o => (
+                      <span key={o.id} className="bg-blue-600/30 text-blue-300 px-3 py-1 rounded-full text-sm">
+                        {o.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1013,7 +1149,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
                 </button>
                 <button
                   onClick={generateByOutlet}
-                  disabled={!selectedOutlet || selectedOutletOutputs.size === 0 || isProcessing}
+                  disabled={selectedOutlets.length === 0 || selectedOutletOutputs.size === 0 || isProcessing}
                   className="flex-1 py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold flex items-center justify-center gap-2 transition"
                 >
                   {isProcessing ? (
@@ -1024,7 +1160,7 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
                   ) : (
                     <>
                       <Zap className="w-5 h-5" />
-                      توليد الحزمة التحريرية
+                      توليد الحزمة التحريرية ({selectedOutlets.length} {selectedOutlets.length === 1 ? 'جهة' : 'جهات'})
                     </>
                   )}
                 </button>
@@ -1042,32 +1178,60 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
               <div>
                 <p className="text-white font-semibold">تم توليد المخرجات بنجاح!</p>
                 <p className="text-green-200 text-sm">
-                  {selectedOutlet ? `الجهة: ${selectedOutlet.name} — ` : ''}
-                  تم توليد {generatedOutputs.length} مخرجات
+                  تم توليد حزم تحريرية لـ {outletResults.length} {outletResults.length === 1 ? 'جهة' : 'جهات'}
                 </p>
               </div>
             </div>
 
-            {/* Quality Assessment & Alerts (from outlet result) */}
-            {outletResult && (
+            {/* Outlet Tabs (if multiple) */}
+            {outletResults.length > 1 && (
+              <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
+                <div className="flex flex-wrap gap-2">
+                  {outletResults.map((result, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setActiveResultTab(idx);
+                        const outputs: GeneratedOutput[] = (result.outputs || []).map((o: any) => ({
+                          type: o.type as OutputType,
+                          content: o.content,
+                          metadata: { type_name_ar: o.type_name_ar },
+                        }));
+                        setGeneratedOutputs(outputs);
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        activeResultTab === idx
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      {result.outlet?.name || `جهة ${idx + 1}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quality Assessment & Alerts (from active outlet result) */}
+            {outletResults[activeResultTab] && (
               <>
-                {outletResult.quality_assessment && (
+                {outletResults[activeResultTab].quality_assessment && (
                   <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
                     <h3 className="text-lg font-semibold text-white mb-3">تقييم الجودة والأفكار الرئيسية</h3>
                     <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                      {outletResult.quality_assessment}
-                      {outletResult.top_ideas && (
+                      {outletResults[activeResultTab].quality_assessment}
+                      {outletResults[activeResultTab].top_ideas && (
                         <>
                           {'\n\n'}
                           <span className="text-blue-400 font-semibold">أبرز الأفكار:</span>
-                          {'\n'}{outletResult.top_ideas}
+                          {'\n'}{outletResults[activeResultTab].top_ideas}
                         </>
                       )}
-                      {outletResult.top_quotes && (
+                      {outletResults[activeResultTab].top_quotes && (
                         <>
                           {'\n\n'}
                           <span className="text-blue-400 font-semibold">أفضل الاقتباسات:</span>
-                          {'\n'}{outletResult.top_quotes}
+                          {'\n'}{outletResults[activeResultTab].top_quotes}
                         </>
                       )}
                     </div>
@@ -1109,21 +1273,34 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
               </div>
 
               {/* Export Buttons */}
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button
-                  onClick={exportUnifiedFile}
-                  className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-                >
-                  <Download className="w-4 h-4" />
-                  تحميل TXT
-                </button>
-                <button
-                  onClick={exportDOCX}
-                  className="bg-blue-700 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-                >
-                  <FileText className="w-4 h-4" />
-                  تحميل DOCX
-                </button>
+              <div className="mt-6 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={exportUnifiedFile}
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    تحميل TXT
+                  </button>
+                  <button
+                    onClick={exportDOCX}
+                    className="bg-blue-700 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                  >
+                    <FileText className="w-4 h-4" />
+                    تحميل DOCX
+                  </button>
+                </div>
+
+                {/* Export All Outlets */}
+                {outletResults.length > 1 && (
+                  <button
+                    onClick={exportAllOutletsDOCX}
+                    className="w-full bg-green-700 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    تحميل كل الجهات ({outletResults.length} ملفات DOCX)
+                  </button>
+                )}
               </div>
 
               {/* New Process Button */}
@@ -1132,10 +1309,12 @@ export default function SmartTranscription({ }: SmartTranscriptionProps) {
                   setProcessingStep('select');
                   setSelectedFile(null);
                   setTranscriptionResult(null);
+                  setTranscriptWithTimestamps(null);
                   setGeneratedOutputs([]);
                   setSelectedOutputs(new Set());
-                  setSelectedOutlet(null);
-                  setOutletResult(null);
+                  setSelectedOutlets([]);
+                  setOutletResults([]);
+                  setActiveResultTab(0);
                   setCustomInfo('');
                 }}
                 className="mt-3 w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"

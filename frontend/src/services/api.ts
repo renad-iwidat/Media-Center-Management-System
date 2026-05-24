@@ -542,6 +542,7 @@ export const api = {
   // --- Smart Transcription - Outlet Based ---
   smartTranscriptionGenerateByOutlet: (data: {
     transcript: string;
+    transcriptWithTimestamps?: string;
     outletSlug: string;
     customInfo?: string;
     clipCount?: number;
