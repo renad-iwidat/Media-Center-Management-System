@@ -180,10 +180,24 @@ export class SourceService {
       return { ...byName.rows[0], slug };
     }
 
-    // ثالثاً: إنشاء مصدر جديد
+    // ثالثاً: البحث بالـ URL (لتجنب duplicate key على url)
+    const byUrl = await query(
+      `SELECT * FROM sources WHERE url = $1 LIMIT 1`,
+      [baseUrl]
+    );
+    if (byUrl.rows.length > 0) {
+      // تحديث الـ slug للمصدر الموجود
+      if (!byUrl.rows[0].slug) {
+        await query(`UPDATE sources SET slug = $1 WHERE id = $2`, [slug, byUrl.rows[0].id]);
+      }
+      return { ...byUrl.rows[0], slug: byUrl.rows[0].slug || slug };
+    }
+
+    // رابعاً: إنشاء مصدر جديد مع ON CONFLICT كـ fallback للـ race conditions
     const result = await query(
       `INSERT INTO sources (source_type_id, url, name, slug, is_active, created_at) 
        VALUES ($1, $2, $3, $4, true, NOW()) 
+       ON CONFLICT (url) DO UPDATE SET slug = COALESCE(sources.slug, EXCLUDED.slug)
        RETURNING *`,
       [2, baseUrl, name, slug] // source_type_id = 2 (API)
     );

@@ -1,13 +1,15 @@
 /**
  * AI Call Service
- * خدمة مشتركة لاستدعاء AI_MODEL و OpenAI
+ * خدمة مشتركة لاستدعاء OpenAI API
  * 
  * ملف مستقل لتجنب circular dependency بين:
  * - smart-transcription.service.ts
  * - transcript-correction.service.ts
  * 
- * يستخدم gpt-4.1 (1M token context, 32K max output) لدعم النصوص الطويلة
- * مثل تفريغ فيديوهات ساعة أو ساعتين
+ * يختار الموديل تلقائياً حسب عدد التوكنات:
+ * - نصوص قصيرة (< 10K tokens): gpt-4o (أسرع وأرخص)
+ * - نصوص متوسطة (10K-30K tokens): gpt-4.1 مع 16K output
+ * - نصوص طويلة (> 30K tokens): gpt-4.1 (1M token context, 32K max output)
  */
 
 /**
@@ -100,62 +102,16 @@ export async function callOpenAIChatAPI(prompt: string): Promise<string> {
 /**
  * Call AI_MODEL first, fallback to OpenAI if it fails
  * 
- * للنصوص الطويلة (فيديو ساعة+): يتخطى AI_MODEL ويروح مباشرة على OpenAI gpt-4.1
- * لأن AI_MODEL المحلي ما بيتحمل نصوص كبيرة
+ * ⚠️ تم التحديث: يستخدم OpenAI دائماً مع اختيار الموديل حسب عدد التوكنات
+ * - نصوص قصيرة (< 10K tokens): gpt-4o (أسرع وأرخص)
+ * - نصوص متوسطة (10K-30K tokens): gpt-4.1 مع 16K output
+ * - نصوص طويلة (> 30K tokens): gpt-4.1 مع 32K output
  */
 export async function callAIWithFallback(prompt: string): Promise<string> {
-  const aiModelUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
   const estimatedTokens = estimateTokenCount(prompt);
   
-  // For large inputs, skip AI_MODEL entirely — it can't handle them
-  if (estimatedTokens > 15000) {
-    console.log(`\n🤖 [AI Call] Large input (~${estimatedTokens} tokens) — skipping AI_MODEL, using OpenAI directly`);
-    const result = await callOpenAIChatAPI(prompt);
-    console.log(`✅ [AI Call] OpenAI responded successfully`);
-    return result;
-  }
-  
-  // Try AI_MODEL first for smaller inputs
-  try {
-    console.log(`\n🤖 [AI Call] Calling AI_MODEL: ${aiModelUrl} (~${estimatedTokens} tokens)`);
-    
-    const response = await fetch(`${aiModelUrl}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        max_tokens: 4000,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI_MODEL returned ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    // Check if the response is valid
-    if (data.result && data.result.length > 100) {
-      console.log(`✅ [AI Call] AI_MODEL responded successfully`);
-      return data.result;
-    } else {
-      throw new Error('AI_MODEL response too short or invalid');
-    }
-  } catch (error: any) {
-    console.log(`⚠️ [AI Call] AI_MODEL failed: ${error.message}`);
-    console.log(`🔄 [AI Call] Falling back to OpenAI...`);
-    
-    // Fallback to OpenAI
-    try {
-      const result = await callOpenAIChatAPI(prompt);
-      console.log(`✅ [AI Call] OpenAI fallback responded successfully`);
-      return result;
-    } catch (openaiError: any) {
-      console.error(`❌ [AI Call] OpenAI fallback also failed: ${openaiError.message}`);
-      throw new Error(`Both AI_MODEL and OpenAI failed: ${error.message} / ${openaiError.message}`);
-    }
-  }
+  console.log(`\n🤖 [AI Call] Input ~${estimatedTokens} tokens — using OpenAI directly`);
+  const result = await callOpenAIChatAPI(prompt);
+  console.log(`✅ [AI Call] OpenAI responded successfully`);
+  return result;
 }
