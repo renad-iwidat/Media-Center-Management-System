@@ -25,6 +25,14 @@ import {
   getGeoScopes,
   getArticlesByGeoScope,
 } from '../../controllers/news/data.controller';
+import {
+  getMediaUnitsWithSources,
+  getMediaUnitSources,
+  linkSourceToMediaUnit,
+  unlinkSourceFromMediaUnit,
+  syncMediaUnitSources,
+  getMediaUnitArticles,
+} from '../../controllers/news/media-unit-source.controller';
 
 const router = Router();
 
@@ -37,6 +45,14 @@ router.get('/media-units', (req, res, next) => {
   console.log('🔐 [ROUTE] المستخدم المصادق عليه:', (req as any).user?.name || 'غير موجود');
   next();
 }, getMediaUnits);
+
+// Media Units — مع المصادر المرتبطة
+router.get('/media-units/with-sources', getMediaUnitsWithSources);
+router.get('/media-units/:slug/sources', getMediaUnitSources);
+router.post('/media-units/:slug/sources', linkSourceToMediaUnit);
+router.delete('/media-units/:slug/sources/:sourceId', unlinkSourceFromMediaUnit);
+router.post('/media-units/:slug/sources/sync', syncMediaUnitSources);
+router.get('/media-units/:slug/articles', getMediaUnitArticles);
 
 // أخبار ناقصة المحتوى
 router.get('/articles/incomplete', getIncompleteArticles);

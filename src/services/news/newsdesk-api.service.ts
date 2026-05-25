@@ -241,10 +241,17 @@ class NewsDeskApiService {
   }
 
   /**
-   * جلب مقالة واحدة بالـ ID
+   * جلب مقالة واحدة بالـ ID — مع النص الكامل
    */
   async getArticleById(id: number): Promise<NewsDeskArticle> {
     return this.request<NewsDeskArticle>(`/articles/${id}`);
+  }
+
+  /**
+   * جلب مقالة خام واحدة بالـ ID — مع raw_text و raw_meta
+   */
+  async getRawArticleById(id: number): Promise<NewsDeskRawArticle> {
+    return this.request<NewsDeskRawArticle>(`/articles/raw/${id}`);
   }
 
   /**
@@ -265,13 +272,17 @@ class NewsDeskApiService {
 
   /**
    * جلب مقالات حسب الوحدة الإعلامية
+   * يُستخدم لسحب الأخبار التابعة لوحدة إعلامية محددة
    */
   async getArticlesByMediaUnit(mediaUnitSlug: string, filters: ArticleFilters = {}): Promise<NewsDeskArticlesResponse> {
     const params = new URLSearchParams();
     if (filters.category) params.append('category', filters.category);
+    if (filters.geo_scope) params.append('geo_scope', filters.geo_scope);
+    if (filters.source) params.append('source', filters.source);
     if (filters.language) params.append('language', filters.language);
     if (filters.date_from) params.append('date_from', filters.date_from);
     if (filters.date_to) params.append('date_to', filters.date_to);
+    if (filters.search) params.append('search', filters.search);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.page_size) params.append('page_size', filters.page_size.toString());
 

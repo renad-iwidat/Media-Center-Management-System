@@ -1,15 +1,90 @@
-# 📰 فلو سحب ومعالجة الأخبار
+# 📰 فلو سحب ومعالجة الأخبار — بناءً على الوحدات الإعلامية
 
 ## النظرة العامة
 
 ```
-NewsDesk API ──→ Pipeline ──→ raw_data ──→ FlowRouter ──→ editorial_queue ──→ published_items
-(خارجي)         (سحب+حفظ)    (تخزين)      (معالجة)       (طابور التحرير)     (منشور)
+                    ┌─────────────────────────────────────────────────────┐
+                    │           NewsDesk API (خارجي)                       │
+                    └──────────┬─────────────────────────┬────────────────┘
+                               │                         │
+                    Step 1:    │              Step 2:     │
+                    القائمة    │              التفاصيل   │
+                               │                         │
+              /articles/by-media-unit/{slug}    /articles/{id}
+              (id, title, summary, category)    (text, classifications, ...)
+                               │                         │
+                    ┌──────────▼─────────────────────────▼────────────────┐
+                    │  Pipeline — لكل وحدة إعلامية:                        │
+                    │  1. جلب القائمة → فلترة المكرر                       │
+                    │  2. جلب التفاصيل الكاملة (النص + التصنيفات)          │
+                    │  3. ربط المصدر                                       │
+                    │  4. حفظ مع media_unit_id                            │
+                    └──────────────┬──────────────────────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────────────────────┐
+                    │  raw_data (fetch_status = 'fetched')                 │
+                    │  + media_unit_id (الوحدة التي سحبت الخبر)           │
+                    │  + content = النص الكامل (من /articles/{id})         │
+                    └──────────────┬──────────────────────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────────────────────┐
+                    │  FlowRouter — التوزيع حسب الوحدة:                   │
+                    │  • إذا media_unit_id موجود → يروح لها فقط           │
+                    │  • إذا لا → يبحث عن الوحدات المرتبطة بالمصدر       │
+                    │  • Fallback → كل الوحدات النشطة                     │
+                    └──────────────┬──────────────────────────────────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              ▼                    ▼                    ▼
+    editorial_queue       editorial_queue       editorial_queue
+    (وحدة إعلامية 1)     (وحدة إعلامية 2)     (وحدة إعلامية N)
+              │                    │                    │
+              ▼                    ▼                    ▼
+    published_items       published_items       published_items
 ```
 
 ---
 
-## المرحلة 1: السحب من API
+## البنية الجديدة — العلاقات
+
+```
+┌──────────────┐     ┌────────────────────┐     ┌──────────────┐
+│ media_units  │     │ media_unit_sources │     │   sources    │
+│              │     │ (جدول ربط)         │     │              │
+│ id           │◄────│ media_unit_id      │     │ id           │
+│ name         │     │ source_id ─────────│────►│ slug         │
+│ slug         │     │ priority           │     │ name         │
+│ is_active    │     │ is_active          │     │ url          │
+└──────────────┘     └────────────────────┘     │ is_active    │
+       │                                         └──────────────┘
+       │                                                │
+       │  ┌──────────────────────────────────────────┐  │
+       └─►│            raw_data                       │◄─┘
+          │ media_unit_id (الوحدة التي سحبت الخبر)   │
+          │ source_id (المصدر)                        │
+          │ category_id, geo_scope_id                 │
+          │ title, content, summary                   │
+          │ fetch_status                              │
+          └──────────────┬───────────────────────────┘
+                         │
+          ┌──────────────▼───────────────────────────┐
+          │        editorial_queue                     │
+          │ media_unit_id (الوحدة المستهدفة)          │
+          │ raw_data_id                               │
+          │ status (pending/approved/incomplete)       │
+          └──────────────┬───────────────────────────┘
+                         │
+          ┌──────────────▼───────────────────────────┐
+          │        published_items                     │
+          │ media_unit_id                             │
+          │ raw_data_id                               │
+          │ title, content, tags                      │
+          └──────────────────────────────────────────┘
+```
+
+---
+
+## المرحلة 1: السحب من API — بناءً على الوحدات الإعلامية (Two-Step)
 
 **المسؤول:** `news-pipeline.service.ts` + `scheduler.service.ts`
 
@@ -17,19 +92,35 @@ NewsDesk API ──→ Pipeline ──→ raw_data ──→ FlowRouter ──�
 ┌─────────────────────────────────────────────────────────┐
 │  Scheduler (كل 15 دقيقة — حسب system_settings)         │
 │                                                         │
-│  1. فحص: scheduler_enabled = true?                      │
-│  2. اتصال بـ NewsDesk API (/health)                     │
-│  3. جلب المقالات (/articles?date_from=آخر 24 ساعة)      │
-│  4. لكل مقالة:                                          │
-│     ├─ فحص تكرار (newsdesk_article_id + url)            │
+│  1. جلب الوحدات الإعلامية النشطة مع مصادرها            │
+│     (من media_unit_sources)                             │
+│                                                         │
+│  2. لكل وحدة إعلامية — Step 1 (القائمة):               │
+│     ├─ GET /articles/by-media-unit/{slug}               │
+│     │  (يرجع قائمة: id, title, summary, category...)   │
+│     │  ⚠️ بدون النص الكامل (text)                       │
+│     └─ فحص تكرار (newsdesk_article_id + url)            │
+│                                                         │
+│  3. لكل مقالة جديدة — Step 2 (التفاصيل):              │
+│     ├─ GET /articles/{id}                               │
+│     │  (يرجع كل شي: text + classifications + ...)      │
 │     ├─ ربط المصدر (sources — findOrCreateBySlug)        │
 │     ├─ ربط التصنيف (categories — بالـ slug)             │
 │     └─ ربط المنطقة (geographic_scopes — بالـ slug)      │
-│  5. حفظ بـ raw_data (fetch_status = 'fetched')          │
+│                                                         │
+│  4. حفظ بـ raw_data مع media_unit_id                    │
+│     (fetch_status = 'fetched')                          │
+│                                                         │
+│  5. إذا ما في وحدات مربوطة → fallback سحب عام          │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**النتيجة:** أخبار جديدة بجدول `raw_data` بستيتوس `fetched`
+**لماذا Two-Step؟**
+- `/articles/by-media-unit/{slug}` يرجع القائمة بدون `text` (النص الكامل)
+- `/articles/{id}` يرجع المقالة الكاملة مع `text` + `classifications`
+- هيك بنضمن ما يضيع أي بيانات
+
+**النتيجة:** أخبار جديدة بجدول `raw_data` بستيتوس `fetched` + `media_unit_id` + نص كامل
 
 ---
 
@@ -45,23 +136,23 @@ NewsDesk API ──→ Pipeline ──→ raw_data ──→ FlowRouter ──�
 │                                                         │
 │  لكل خبر:                                               │
 │  ┌───────────────────────────────────────────────┐      │
-│  │ 1. تصنيف (إذا category_id = NULL)             │      │
-│  │    ├─ classifier_enabled = true?               │      │
-│  │    │   ├─ نعم → AI المحلي يصنفه               │      │
-│  │    │   └─ لا → يبقى بدون تصنيف (editorial)    │      │
-│  │    └─ إذا عنده category_id → يتخطى ✅          │      │
+│  │ 1. تحديد الوحدات المستهدفة:                   │      │
+│  │    ├─ media_unit_id موجود → هي فقط            │      │
+│  │    ├─ source_id → الوحدات المرتبطة بالمصدر    │      │
+│  │    └─ Fallback → كل الوحدات النشطة            │      │
 │  │                                                │      │
-│  │ 2. فحص اكتمال المحتوى                         │      │
+│  │ 2. تصنيف (إذا category_id = NULL)             │      │
+│  │    ├─ classifier_enabled = true → AI           │      │
+│  │    └─ لا → يبقى بدون تصنيف (editorial)        │      │
+│  │                                                │      │
+│  │ 3. فحص اكتمال المحتوى                         │      │
 │  │    └─ content.length >= 100 حرف?               │      │
-│  │        ├─ نعم → مكتمل ✅                       │      │
-│  │        └─ لا → ناقص ⚠️                         │      │
 │  │                                                │      │
-│  │ 3. تحديد نوع الفلو (من category.flow)          │      │
+│  │ 4. تحديد نوع الفلو (من category.flow)          │      │
 │  │    ├─ automated (اقتصاد، رياضة، صحة...)       │      │
 │  │    └─ editorial (سياسة، مجتمع، أمن...)         │      │
 │  │                                                │      │
-│  │ 4. التوزيع على media_units                     │      │
-│  │    (كل وحدة إعلامية نشطة تاخد نسخة)           │      │
+│  │ 5. التوزيع على الوحدات المستهدفة فقط          │      │
 │  └───────────────────────────────────────────────┘      │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -74,53 +165,33 @@ NewsDesk API ──→ Pipeline ──→ raw_data ──→ FlowRouter ──�
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                                                         │
 │  حسب نتيجة المرحلة 2:                                  │
 │                                                         │
-│  ┌─────────────────────────────────────────────┐        │
-│  │ ⚠️ ناقص (content < 100 حرف)                 │        │
-│  │    → editorial_queue.status = 'incomplete'   │        │
-│  │    → ينتظر المحرر يكمله                     │        │
-│  └─────────────────────────────────────────────┘        │
-│                                                         │
-│  ┌─────────────────────────────────────────────┐        │
-│  │ 📝 تحريري (editorial) + مكتمل               │        │
-│  │    → editorial_queue.status = 'pending'      │        │
-│  │    → ينتظر موافقة المحرر                    │        │
-│  └─────────────────────────────────────────────┘        │
-│                                                         │
-│  ┌─────────────────────────────────────────────┐        │
-│  │ ⚡ أوتوماتيكي (automated) + مكتمل            │        │
-│  │    → تنظيف المحتوى (content-cleaner)         │        │
-│  │    → editorial_queue.status = 'approved'     │        │
-│  │    → يُنشر تلقائياً → published_items        │        │
-│  └─────────────────────────────────────────────┘        │
-│                                                         │
+│  ⚠️ ناقص → status = 'incomplete' (ينتظر المحرر)        │
+│  📝 تحريري + مكتمل → status = 'pending' (ينتظر موافقة) │
+│  ⚡ أوتوماتيكي + مكتمل → approved → published_items     │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## المرحلة 4: النشر
+## API Endpoints — إدارة ربط المصادر بالوحدات
 
-**الجدول:** `published_items`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/media-units/with-sources` | كل الوحدات مع مصادرها |
+| GET | `/api/data/media-units/:slug/sources` | مصادر وحدة محددة |
+| POST | `/api/data/media-units/:slug/sources` | ربط مصدر بوحدة |
+| DELETE | `/api/data/media-units/:slug/sources/:sourceId` | إلغاء ربط مصدر |
+| POST | `/api/data/media-units/:slug/sources/sync` | مزامنة من NewsDesk API |
+| GET | `/api/data/media-units/:slug/articles` | أخبار وحدة (منشورة) |
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│  الخبر يوصل لـ published_items بطريقتين:               │
-│                                                         │
-│  1. أوتوماتيكي: FlowRouter ينشره مباشرة               │
-│     (اقتصاد، رياضة، صحة، تكنولوجيا، ثقافة، بيئة)     │
-│                                                         │
-│  2. يدوي: المحرر يوافق من editorial_queue              │
-│     (سياسة، مجتمع، أمن، دين، أخرى)                    │
-│                                                         │
-│  بعد النشر:                                             │
-│  → raw_data.fetch_status = 'published'                  │
-│  → الخبر متاح للعرض بالفرونت اند                       │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+**POST /api/data/media-units/:slug/sources — Body:**
+```json
+{
+  "source_id": 5,
+  "priority": 1
+}
 ```
 
 ---
@@ -132,31 +203,6 @@ NewsDesk API ──→ Pipeline ──→ raw_data ──→ FlowRouter ──�
 | `fetched` | تم السحب من API — ينتظر المعالجة | بعد المرحلة 1 |
 | `processed` | تمت المعالجة — بالطابور | بعد المرحلة 2 |
 | `published` | تم النشر | بعد المرحلة 4 |
-
----
-
-## ملخص الجداول
-
-```
-┌──────────────┐     ┌──────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   sources    │     │  raw_data    │     │ editorial_queue │     │ published_items │
-│              │     │              │     │                 │     │                 │
-│ id           │◄────│ source_id    │     │ raw_data_id ────│────►│ raw_data_id     │
-│ slug         │     │ category_id ─│──►categories         │     │ queue_id ───────│──► editorial_queue
-│ name         │     │ geo_scope_id │──►geographic_scopes  │     │ media_unit_id   │
-│ url          │     │ title        │     │ media_unit_id   │     │ title           │
-│ is_active    │     │ content      │     │ status          │     │ content         │
-│ last_fetched │     │ summary      │     │ (pending/       │     │ published_at    │
-│              │     │ image_url    │     │  approved/      │     │                 │
-│              │     │ tags         │     │  incomplete/    │     │                 │
-│              │     │ authors      │     │  rejected)      │     │                 │
-│              │     │ language     │     │                 │     │                 │
-│              │     │ fetch_status │     │                 │     │                 │
-│              │     │ pub_date     │     │                 │     │                 │
-│              │     │ ai_confidence│     │                 │     │                 │
-│              │     │ newsdesk_id  │     │                 │     │                 │
-└──────────────┘     └──────────────┘     └─────────────────┘     └─────────────────┘
-```
 
 ---
 
@@ -182,3 +228,17 @@ NewsDesk API ──→ Pipeline ──→ raw_data ──→ FlowRouter ──�
 | `articles_per_source` | 20 | حجم الصفحة من الـ API |
 | `classifier_enabled` | true/false | تشغيل/إيقاف التصنيف المحلي |
 | `flow_enabled` | true/false | تشغيل/إيقاف التوجيه |
+
+---
+
+## Migration SQL
+
+لتطبيق التغييرات على الداتابيس:
+```bash
+psql $DATABASE_URL -f sql/create_media_unit_sources.sql
+```
+
+هذا يُنشئ:
+1. جدول `media_unit_sources` (ربط المصادر بالوحدات)
+2. عمود `media_unit_id` في `raw_data`
+3. عمود `slug` في `media_units`

@@ -1,13 +1,24 @@
 /**
  * News Pipeline Service
- * خدمة سحب الأخبار من NewsDesk API الخارجي
+ * خدمة سحب الأخبار من NewsDesk API الخارجي — بناءً على الوحدات الإعلامية
  * 
- * بديل عن RSS Pipeline القديم — الآن يسحب من API مركزي بدلاً من RSS feeds مباشرة
- * كل خبر يتربط بمصدره بجدول sources (يُنشأ تلقائياً إذا ما كان موجود)
+ * الفلو (Two-Step):
+ * ─────────────────────────────────────────────────────────────────────────
+ * الخطوة 1: GET /articles/by-media-unit/{slug}
+ *   → قائمة المقالات التابعة للوحدة (بدون النص الكامل)
+ *   → نستخدمها لمعرفة الـ IDs + فلترة المكرر
+ * 
+ * الخطوة 2: GET /articles/{id}
+ *   → لكل مقالة جديدة (مش مكررة) نجلب التفاصيل الكاملة
+ *   → يرجع: text (النص الكامل) + classifications + كل التفاصيل
+ * 
+ * النتيجة: بيانات كاملة 100% من الـ API — بدون نقص
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 import { RawDataService, SourceService } from '../database/database.service';
-import { newsDeskApiService, NewsDeskRawArticle } from './newsdesk-api.service';
+import { MediaUnitSourceService } from '../database/media-unit-source.service';
+import { newsDeskApiService, NewsDeskArticle } from './newsdesk-api.service';
 import { SystemSettingsService } from '../database/system-settings.service';
 
 export interface ArticleToSave {
@@ -34,6 +45,8 @@ export interface ArticleToSave {
   ai_confidence?: number;
   source_slug?: string;
   newsdesk_article_id?: number;
+  // ── حقل جديد: الوحدة الإعلامية ──
+  media_unit_id?: number;
 }
 
 export interface PipelineResult {
@@ -47,43 +60,44 @@ export interface PipelineResult {
     newCount: number;
     skippedCount: number;
   }[];
+  // ── تفاصيل per media unit ──
+  mediaUnitDetails: {
+    mediaUnit: string;
+    slug: string;
+    fetched: number;
+    newCount: number;
+    skippedCount: number;
+  }[];
 }
 
 /** حجم الـ batch لفحص الروابط الموجودة */
 const URL_CHECK_BATCH = 20;
 
+/** حجم الـ batch لجلب التفاصيل الكاملة */
+const DETAIL_FETCH_BATCH = 5;
+
 /**
- * تحويل مقالة خام من NewsDesk API إلى الصيغة المحلية
- * (source.id يبقى 0 مؤقتاً — يتم ربطه لاحقاً بمرحلة الحفظ)
+ * تحويل مقالة كاملة (من /articles/{id}) إلى الصيغة المحلية
+ * هذه المقالة فيها كل التفاصيل: text + classifications + source + category + geo_scope
  */
-function mapRawArticleToLocal(article: NewsDeskRawArticle): ArticleToSave {
-  // تحويل raw_keywords string إلى array (هي الـ tags عندنا)
+function mapFullArticleToLocal(article: NewsDeskArticle, mediaUnitId: number): ArticleToSave {
+  // تحويل keywords string إلى array (هي الـ tags عندنا)
   const tags: string[] = [];
-  if (article.raw_keywords) {
-    tags.push(...article.raw_keywords.split(',').map(k => k.trim()).filter(Boolean));
+  if (article.keywords) {
+    tags.push(...article.keywords.split(',').map(k => k.trim()).filter(Boolean));
   }
 
-  // استخراج اللغة من raw_meta إذا موجودة
-  const language = article.raw_meta?.articleLanguage || article.raw_meta?.configuredLanguage || 'ar';
-
-  // استخراج slug المصدر من source_url (مثلاً: https://asharq.com → asharq)
-  let sourceSlug = '';
-  let sourceName = 'NewsDesk';
-  if (article.source_url) {
-    try {
-      const urlObj = new URL(article.source_url);
-      const hostname = urlObj.hostname.replace('www.', '');
-      sourceSlug = hostname.split('.')[0]; // asharq.com → asharq
-      sourceName = hostname; // asharq.com
-    } catch { /* تجاهل URLs غير صالحة */ }
-  }
+  // استخراج معلومات المصدر
+  const sourceSlug = article.source?.slug || '';
+  const sourceName = article.source?.name || 'NewsDesk';
+  const sourceBaseUrl = article.source?.base_url || '';
 
   return {
-    title: article.raw_title,
-    description: article.raw_summary || article.raw_text?.substring(0, 500) || '',
-    link: article.raw_url,
-    pubDate: article.raw_published_at || article.fetched_at,
-    image_url: article.raw_top_image_url || undefined,
+    title: article.title,
+    description: article.summary || '',
+    link: article.url,
+    pubDate: article.published_at || article.created_at,
+    image_url: article.top_image_url || undefined,
     tags,
     source: {
       id: 0, // مؤقت — يتم ربطه بمرحلة الحفظ عبر findOrCreateBySlug
@@ -91,17 +105,19 @@ function mapRawArticleToLocal(article: NewsDeskRawArticle): ArticleToSave {
       default_category_id: null,
     },
     sourceName,
-    sourceBaseUrl: article.source_url || '',
-    // حقول إضافية
-    summary: article.raw_summary || '',
-    full_text: article.raw_text || '',
-    language,
-    authors: article.raw_authors || undefined,
-    ai_category_slug: undefined, // المقالات الخام ما عندها تصنيف — بيتصنف لاحقاً
-    geo_scope_slug: undefined,
-    ai_confidence: undefined,
+    sourceBaseUrl,
+    // ── البيانات الكاملة من /articles/{id} ──
+    summary: article.summary || '',
+    full_text: article.text || article.summary || '', // النص الكامل من الـ API
+    language: article.language || 'ar',
+    authors: article.authors || undefined,
+    ai_category_slug: article.category?.slug || undefined,
+    geo_scope_slug: article.geo_scope?.slug || undefined,
+    ai_confidence: article.ai_confidence || undefined,
     source_slug: sourceSlug,
     newsdesk_article_id: article.id,
+    // ── الوحدة الإعلامية ──
+    media_unit_id: mediaUnitId,
   };
 }
 
@@ -144,8 +160,13 @@ class NewsPipelineService {
   }
 
   /**
-   * سحب الأخبار من NewsDesk API
-   * يجلب المقالات الجديدة ويفلتر الموجود مسبقاً
+   * سحب الأخبار من NewsDesk API — بناءً على الوحدات الإعلامية
+   * 
+   * Two-Step Approach:
+   * ─────────────────────────────────────────────────────────────
+   * Step 1: /articles/by-media-unit/{slug} → قائمة IDs + metadata
+   * Step 2: /articles/{id} → النص الكامل + كل التفاصيل
+   * ─────────────────────────────────────────────────────────────
    */
   async runPipeline(articlesPerSource: number = 20): Promise<PipelineResult> {
     const startTime = Date.now();
@@ -157,7 +178,7 @@ class NewsPipelineService {
     const schedulerEnabled = await SystemSettingsService.getBoolean('scheduler_enabled', true);
     if (!schedulerEnabled) {
       console.log('⏸️  السحب متوقف (scheduler_enabled = false)');
-      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [] };
+      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [], mediaUnitDetails: [] };
     }
 
     const pageSize = await SystemSettingsService.getNumber('articles_per_source', articlesPerSource);
@@ -169,85 +190,160 @@ class NewsPipelineService {
       console.log(`✅ API متصل — ${health.active_sources} مصدر نشط | Scheduler: ${health.scheduler_status}`);
     } catch (error) {
       console.error(`❌ فشل الاتصال بـ NewsDesk API:`, error instanceof Error ? error.message : error);
-      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [] };
+      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [], mediaUnitDetails: [] };
     }
 
-    // ── المرحلة 1: جلب المقالات الخام من الـ API ────────────────────────────
-    console.log(`\n📰 جلب المقالات الخام (page_size: ${pageSize})...`);
+    // ── المرحلة 1: جلب الوحدات الإعلامية النشطة ────────────────────────────
+    const mediaUnits = await MediaUnitSourceService.getActiveUnitsWithSourceSlugs();
+    
+    if (mediaUnits.length === 0) {
+      console.log('⚠️  لا توجد وحدات إعلامية نشطة مع مصادر مربوطة');
+      return this.runGlobalPipeline(pageSize);
+    }
 
-    // نجلب آخر المقالات — نستخدم date_from لآخر ساعتين فقط لتجنب إدخال أخبار قديمة
+    console.log(`\n🏢 ${mediaUnits.length} وحدة إعلامية نشطة:`);
+    for (const unit of mediaUnits) {
+      console.log(`   • ${unit.name} (${unit.slug}) — ${unit.source_slugs.length} مصدر`);
+    }
+
+    // ── المرحلة 2: سحب قوائم المقالات لكل وحدة ────────────────────────────
     const twoHoursAgo = new Date();
     twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
     const dateFrom = twoHoursAgo.toISOString().split('T')[0];
 
-    let allApiArticles: NewsDeskRawArticle[] = [];
-    let totalPages = 1;
-    let currentPage = 1;
+    // تجميع المقالات الجديدة (بعد فلترة المكرر) مع media_unit_id
+    const newArticleIds: Array<{ id: number; mediaUnitId: number }> = [];
+    let totalSkipped = 0;
+    const mediaUnitDetails: PipelineResult['mediaUnitDetails'] = [];
 
-    try {
-      // جلب الصفحة الأولى من /articles/raw
-      const firstResponse = await newsDeskApiService.getRawArticles({
-        date_from: dateFrom,
-        page: 1,
-        page_size: Math.min(pageSize, 100),
-      });
+    for (const unit of mediaUnits) {
+      console.log(`\n📰 [${unit.name}] Step 1: جلب قائمة المقالات من /articles/by-media-unit/${unit.slug}...`);
 
-      allApiArticles = firstResponse.items;
-      totalPages = firstResponse.pages;
-      console.log(`   📥 صفحة 1/${totalPages}: ${firstResponse.items.length} مقالة خام (إجمالي: ${firstResponse.total})`);
+      let unitArticles: NewsDeskArticle[] = [];
 
-      // جلب باقي الصفحات إذا لزم الأمر (حد أقصى 5 صفحات)
-      const maxPages = Math.min(totalPages, 5);
-      for (currentPage = 2; currentPage <= maxPages; currentPage++) {
-        const response = await newsDeskApiService.getRawArticles({
+      try {
+        // جلب الصفحة الأولى
+        const firstResponse = await newsDeskApiService.getArticlesByMediaUnit(unit.slug, {
           date_from: dateFrom,
-          page: currentPage,
+          page: 1,
           page_size: Math.min(pageSize, 100),
         });
-        allApiArticles.push(...response.items);
-        console.log(`   📥 صفحة ${currentPage}/${totalPages}: ${response.items.length} مقالة خام`);
+
+        unitArticles = firstResponse.items;
+        const totalPages = firstResponse.pages;
+        console.log(`   📥 صفحة 1/${totalPages}: ${firstResponse.items.length} مقالة (إجمالي: ${firstResponse.total})`);
+
+        // جلب باقي الصفحات (حد أقصى 5)
+        const maxPages = Math.min(totalPages, 5);
+        for (let page = 2; page <= maxPages; page++) {
+          const response = await newsDeskApiService.getArticlesByMediaUnit(unit.slug, {
+            date_from: dateFrom,
+            page,
+            page_size: Math.min(pageSize, 100),
+          });
+          unitArticles.push(...response.items);
+          console.log(`   📥 صفحة ${page}/${totalPages}: ${response.items.length} مقالة`);
+        }
+      } catch (error) {
+        console.error(`   ❌ خطأ في سحب قائمة أخبار [${unit.name}]:`, error instanceof Error ? error.message : error);
+        mediaUnitDetails.push({
+          mediaUnit: unit.name,
+          slug: unit.slug,
+          fetched: 0,
+          newCount: 0,
+          skippedCount: 0,
+        });
+        continue;
       }
-    } catch (error) {
-      console.error(`❌ خطأ في جلب المقالات الخام:`, error instanceof Error ? error.message : error);
-      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [] };
-    }
 
-    console.log(`\n✅ تم جلب ${allApiArticles.length} مقالة خام من الـ API`);
+      // ── فلترة المكرر (بالـ newsdesk_article_id أو URL) ──
+      let unitNewCount = 0;
+      let unitSkipped = 0;
 
-    // ── المرحلة 2: تحويل المقالات الخام للصيغة المحلية ──────────────────────────
-    const allCandidates = allApiArticles.map(mapRawArticleToLocal);
-
-    // ── المرحلة 3: فلترة الموجودين — batch parallel ───────────────────────
-    console.log(`\n🔍 فحص ${allCandidates.length} مقالة (موجود مسبقاً؟) — batches من ${URL_CHECK_BATCH}...`);
-
-    const newArticles: ArticleToSave[] = [];
-    let skippedCount = 0;
-
-    for (let i = 0; i < allCandidates.length; i += URL_CHECK_BATCH) {
-      const batch = allCandidates.slice(i, i + URL_CHECK_BATCH);
-      const existsResults = await Promise.all(
-        batch.map(async (a) => {
-          // أولاً: فحص بـ newsdesk_article_id (أسرع وأدق)
-          if (a.newsdesk_article_id) {
-            const existsById = await RawDataService.existsByNewsDeskId(a.newsdesk_article_id);
+      for (let i = 0; i < unitArticles.length; i += URL_CHECK_BATCH) {
+        const batch = unitArticles.slice(i, i + URL_CHECK_BATCH);
+        const existsResults = await Promise.all(
+          batch.map(async (a) => {
+            // فحص بـ newsdesk_article_id (أسرع وأدق)
+            const existsById = await RawDataService.existsByNewsDeskId(a.id);
             if (existsById) return true;
+            // فحص بالـ URL
+            return RawDataService.existsByUrl(a.url);
+          })
+        );
+        for (let j = 0; j < batch.length; j++) {
+          if (existsResults[j]) {
+            unitSkipped++;
+          } else {
+            newArticleIds.push({ id: batch[j].id, mediaUnitId: unit.id });
+            unitNewCount++;
           }
-          // ثانياً: فحص بالـ URL
-          return RawDataService.existsByUrl(a.link);
-        })
-      );
-      for (let j = 0; j < batch.length; j++) {
-        if (existsResults[j]) {
-          skippedCount++;
-        } else {
-          newArticles.push(batch[j]);
         }
       }
+
+      totalSkipped += unitSkipped;
+      console.log(`   ✅ [${unit.name}] ${unitNewCount} جديد | ⏭️ ${unitSkipped} مكرر`);
+
+      mediaUnitDetails.push({
+        mediaUnit: unit.name,
+        slug: unit.slug,
+        fetched: unitArticles.length,
+        newCount: unitNewCount,
+        skippedCount: unitSkipped,
+      });
     }
 
+    if (newArticleIds.length === 0) {
+      const duration = Date.now() - startTime;
+      console.log(`\n✅ لا توجد مقالات جديدة | ⏭️ ${totalSkipped} مكرر | ⏱️ ${(duration / 1000).toFixed(1)}s\n`);
+      return { totalSources: 0, newArticles: [], skippedCount: totalSkipped, duration, details: [], mediaUnitDetails };
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // المرحلة 3: جلب التفاصيل الكاملة لكل مقالة جديدة
+    // GET /articles/{id} → يرجع text + classifications + كل شي
+    // ══════════════════════════════════════════════════════════════════════════
+    console.log(`\n📄 Step 2: جلب التفاصيل الكاملة لـ ${newArticleIds.length} مقالة من /articles/{id}...`);
+
+    const allNewArticles: ArticleToSave[] = [];
+    let fetchErrors = 0;
+
+    for (let i = 0; i < newArticleIds.length; i += DETAIL_FETCH_BATCH) {
+      const batch = newArticleIds.slice(i, i + DETAIL_FETCH_BATCH);
+      
+      const results = await Promise.allSettled(
+        batch.map(async ({ id, mediaUnitId }) => {
+          const fullArticle = await newsDeskApiService.getArticleById(id);
+          return mapFullArticleToLocal(fullArticle, mediaUnitId);
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          allNewArticles.push(result.value);
+        } else {
+          fetchErrors++;
+          console.warn(`   ⚠️ فشل جلب تفاصيل مقالة: ${result.reason?.message || result.reason}`);
+        }
+      }
+
+      // Progress log كل 20 مقالة
+      if ((i + DETAIL_FETCH_BATCH) % 20 === 0 || i + DETAIL_FETCH_BATCH >= newArticleIds.length) {
+        const done = Math.min(i + DETAIL_FETCH_BATCH, newArticleIds.length);
+        console.log(`   📄 ${done}/${newArticleIds.length} مقالة (${fetchErrors} أخطاء)`);
+      }
+
+      // Delay بسيط بين الـ batches لتجنب rate limiting
+      if (i + DETAIL_FETCH_BATCH < newArticleIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    console.log(`   ✅ تم جلب ${allNewArticles.length} مقالة كاملة (${fetchErrors} فشل)`);
+
     // ── المرحلة 4: ربط المصادر ───────────────────────────────────────────
-    console.log(`\n🔗 ربط ${newArticles.length} مقالة بمصادرها...`);
-    for (const article of newArticles) {
+    console.log(`\n🔗 ربط ${allNewArticles.length} مقالة بمصادرها...`);
+    for (const article of allNewArticles) {
       try {
         const sourceId = await this.resolveSourceId(article);
         article.source.id = sourceId;
@@ -258,25 +354,17 @@ class NewsPipelineService {
     console.log(`   ✅ تم ربط المصادر (${this.sourceCache.size} مصدر فريد)`);
 
     const duration = Date.now() - startTime;
-    console.log(`\n✅ ${newArticles.length} مقالة جديدة | ⏭️  ${skippedCount} موجود مسبقاً | ⏱️  ${(duration / 1000).toFixed(1)}s\n`);
+    console.log(`\n✅ ${allNewArticles.length} مقالة جديدة (كاملة) | ⏭️ ${totalSkipped} مكرر | ⏱️ ${(duration / 1000).toFixed(1)}s\n`);
 
     // تجميع الـ details حسب المصدر
     const sourceMap = new Map<string, { fetched: number; newCount: number; skippedCount: number }>();
-    for (const article of allCandidates) {
+    for (const article of allNewArticles) {
       const name = article.sourceName;
       if (!sourceMap.has(name)) {
         sourceMap.set(name, { fetched: 0, newCount: 0, skippedCount: 0 });
       }
+      sourceMap.get(name)!.newCount++;
       sourceMap.get(name)!.fetched++;
-    }
-    for (const article of newArticles) {
-      const name = article.sourceName;
-      if (sourceMap.has(name)) {
-        sourceMap.get(name)!.newCount++;
-      }
-    }
-    for (const [, stats] of sourceMap) {
-      stats.skippedCount = stats.fetched - stats.newCount;
     }
 
     const details = Array.from(sourceMap.entries()).map(([source, stats]) => ({
@@ -288,10 +376,122 @@ class NewsPipelineService {
 
     return {
       totalSources: sourceMap.size,
-      newArticles,
-      skippedCount,
+      newArticles: allNewArticles,
+      skippedCount: totalSkipped,
       duration,
       details,
+      mediaUnitDetails,
+    };
+  }
+
+  /**
+   * Fallback: سحب عام بدون تحديد وحدة إعلامية
+   * يُستخدم إذا ما في وحدات إعلامية مربوطة بمصادر
+   * 
+   * نفس الـ Two-Step:
+   * 1. /articles → قائمة
+   * 2. /articles/{id} → تفاصيل كاملة
+   */
+  private async runGlobalPipeline(pageSize: number): Promise<PipelineResult> {
+    console.log('\n⚠️ Fallback: سحب عام (لا توجد وحدات مربوطة بمصادر)...');
+
+    const twoHoursAgo = new Date();
+    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    const dateFrom = twoHoursAgo.toISOString().split('T')[0];
+
+    let listArticles: NewsDeskArticle[] = [];
+
+    try {
+      const firstResponse = await newsDeskApiService.getArticles({
+        date_from: dateFrom,
+        page: 1,
+        page_size: Math.min(pageSize, 100),
+      });
+
+      listArticles = firstResponse.items;
+      const totalPages = firstResponse.pages;
+      console.log(`   📥 صفحة 1/${totalPages}: ${firstResponse.items.length} مقالة (إجمالي: ${firstResponse.total})`);
+
+      const maxPages = Math.min(totalPages, 5);
+      for (let page = 2; page <= maxPages; page++) {
+        const response = await newsDeskApiService.getArticles({
+          date_from: dateFrom,
+          page,
+          page_size: Math.min(pageSize, 100),
+        });
+        listArticles.push(...response.items);
+        console.log(`   📥 صفحة ${page}/${totalPages}: ${response.items.length} مقالة`);
+      }
+    } catch (error) {
+      console.error(`❌ خطأ في السحب العام:`, error instanceof Error ? error.message : error);
+      return { totalSources: 0, newArticles: [], skippedCount: 0, duration: 0, details: [], mediaUnitDetails: [] };
+    }
+
+    // فلترة المكرر
+    const newArticleIds: Array<{ id: number; mediaUnitId: number }> = [];
+    let skippedCount = 0;
+
+    for (let i = 0; i < listArticles.length; i += URL_CHECK_BATCH) {
+      const batch = listArticles.slice(i, i + URL_CHECK_BATCH);
+      const existsResults = await Promise.all(
+        batch.map(async (a) => {
+          const existsById = await RawDataService.existsByNewsDeskId(a.id);
+          if (existsById) return true;
+          return RawDataService.existsByUrl(a.url);
+        })
+      );
+      for (let j = 0; j < batch.length; j++) {
+        if (existsResults[j]) {
+          skippedCount++;
+        } else {
+          newArticleIds.push({ id: batch[j].id, mediaUnitId: 0 });
+        }
+      }
+    }
+
+    if (newArticleIds.length === 0) {
+      return { totalSources: 0, newArticles: [], skippedCount, duration: Date.now(), details: [], mediaUnitDetails: [] };
+    }
+
+    // جلب التفاصيل الكاملة
+    console.log(`\n📄 جلب التفاصيل الكاملة لـ ${newArticleIds.length} مقالة...`);
+    const newArticles: ArticleToSave[] = [];
+
+    for (let i = 0; i < newArticleIds.length; i += DETAIL_FETCH_BATCH) {
+      const batch = newArticleIds.slice(i, i + DETAIL_FETCH_BATCH);
+      const results = await Promise.allSettled(
+        batch.map(async ({ id, mediaUnitId }) => {
+          const fullArticle = await newsDeskApiService.getArticleById(id);
+          return mapFullArticleToLocal(fullArticle, mediaUnitId);
+        })
+      );
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          newArticles.push(result.value);
+        }
+      }
+      if (i + DETAIL_FETCH_BATCH < newArticleIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    // ربط المصادر
+    for (const article of newArticles) {
+      try {
+        const sourceId = await this.resolveSourceId(article);
+        article.source.id = sourceId;
+      } catch (error) {
+        console.warn(`   ⚠️ فشل ربط مصدر "${article.sourceName}":`, error instanceof Error ? error.message : error);
+      }
+    }
+
+    return {
+      totalSources: this.sourceCache.size,
+      newArticles,
+      skippedCount,
+      duration: Date.now(),
+      details: [],
+      mediaUnitDetails: [],
     };
   }
 }

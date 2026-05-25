@@ -1,5 +1,6 @@
 import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
+import { MediaUnitSourceService } from '../database/media-unit-source.service';
 import { contentCleanerService } from './content-cleaner.service';
 import { aiClassifierService } from './ai-classifier.service';
 
@@ -76,6 +77,7 @@ interface RawDataItem {
   source_id: number;
   source_type_id: number;
   category_id: number | null;
+  media_unit_id: number | null;
   url: string;
   title: string;
   content: string;
@@ -262,7 +264,7 @@ export class FlowRouterService {
       // ══════════════════════════════════════════════════════════════════════
       const categories = await this.getActiveCategories();
       const categoryMap = new Map(categories.map(c => [c.id, c]));
-      const mediaUnits = await this.getActiveMediaUnits();
+      const allMediaUnits = await this.getActiveMediaUnits();
 
       // ══════════════════════════════════════════════════════════════════════
       // الخطوة 3: معالجة كل خبر
@@ -275,6 +277,32 @@ export class FlowRouterService {
 
       for (const article of rawArticles) {
         try {
+          // ── تحديد الوحدات الإعلامية المستهدفة ─────────────────────────
+          // إذا الخبر مربوط بوحدة إعلامية (media_unit_id) → يروح لها فقط
+          // إذا لا → يروح لكل الوحدات المرتبطة بمصدره
+          // إذا ما في ربط → يروح لكل الوحدات النشطة (fallback)
+          let targetMediaUnits: MediaUnit[] = [];
+
+          if (article.media_unit_id) {
+            // الخبر مربوط بوحدة محددة من السحب
+            const unit = allMediaUnits.find(u => u.id === article.media_unit_id);
+            if (unit) {
+              targetMediaUnits = [unit];
+            }
+          }
+          
+          if (targetMediaUnits.length === 0 && article.source_id) {
+            // بحث عن الوحدات المرتبطة بالمصدر
+            const linkedUnits = await MediaUnitSourceService.getMediaUnitsBySourceId(article.source_id);
+            if (linkedUnits.length > 0) {
+              targetMediaUnits = linkedUnits.map(u => ({ id: u.id, name: u.name, is_active: u.is_active }));
+            }
+          }
+
+          if (targetMediaUnits.length === 0) {
+            // Fallback: كل الوحدات النشطة
+            targetMediaUnits = allMediaUnits;
+          }
           // ── أ. فحص اكتمال المحتوى ─────────────────────────────────────
           const contentLength = (article.content || '').length;
           const hasImage = !!(article.image_url && article.image_url.trim());
@@ -310,19 +338,19 @@ export class FlowRouterService {
             automatedToClean.push(article);
           }
 
-          // ── د. التوزيع على كل media_units عبر editorial_queue ──────────
+          // ── د. التوزيع على media_units المستهدفة عبر editorial_queue ──────────
           if (!isComplete) {
             // ⚠️ ناقص → editorial_queue بحالة 'incomplete' لكل يونت
-            await this.distributeToQueue(article, mediaUnits, 'incomplete');
+            await this.distributeToQueue(article, targetMediaUnits, 'incomplete');
             result.incompleteCount++;
-            console.log(`⚠️  الخبر ${article.id} — ناقص (${contentLength} حرف) → incomplete لكل اليونتات`);
+            console.log(`⚠️  الخبر ${article.id} — ناقص (${contentLength} حرف) → incomplete لـ ${targetMediaUnits.length} وحدة`);
           } else if (flowType === 'automated') {
             // ⚡ أوتوماتيك + مكتمل → يتم التوزيع بعد التنظيف
-            automatedQueuePending.push({ article, mediaUnits });
+            automatedQueuePending.push({ article, mediaUnits: targetMediaUnits });
             result.automatedCount++;
           } else {
             // 📝 تحريري + مكتمل → pending (ينتظر المحرر) — بدون تنظيف
-            await this.distributeToQueue(article, mediaUnits, 'pending');
+            await this.distributeToQueue(article, targetMediaUnits, 'pending');
             result.editorialCount++;
             console.log(`   📝 تحرير: ${article.title.substring(0, 60)}`);
           }

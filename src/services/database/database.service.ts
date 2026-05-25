@@ -239,16 +239,17 @@ export class RawDataService {
   static async create(data: Omit<RawData, 'id' | 'fetched_at'>): Promise<RawData> {
     const result = await query(
       `INSERT INTO raw_data 
-       (source_id, source_type_id, category_id, geo_scope_id, url, title, content, image_url, tags, fetch_status, pub_date,
+       (source_id, source_type_id, category_id, geo_scope_id, media_unit_id, url, title, content, image_url, tags, fetch_status, pub_date,
         summary, authors, language, source_slug, geo_scope_slug, ai_confidence, newsdesk_article_id, category_slug,
         fetched_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW()) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW()) 
        RETURNING *`,
       [
         data.source_id || null,
         data.source_type_id,
         data.category_id,
         data.geo_scope_id || null,
+        data.media_unit_id || null,
         data.url,
         data.title,
         data.content,
