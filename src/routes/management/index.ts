@@ -8,6 +8,7 @@ import contentRouter from './content';
 import permissionsRouter from './permissions';
 import notificationsRouter from './notifications';
 import administrativeRouter from '../administrative';
+import chatRouter from './chat';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/content', contentRouter);
 router.use('/permissions', permissionsRouter);
 router.use('/notifications', notificationsRouter);
 router.use('/administrative', administrativeRouter);
+router.use('/chat', chatRouter);
 
 export default router;

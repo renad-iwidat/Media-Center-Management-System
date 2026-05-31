@@ -485,6 +485,9 @@ export default function MainLayout() {
           </div>
         </main>
       </div>
+
+      {/* المساعد الذكي العائم */}
+      <ChatWidget />
     </div>
   );
 }
