@@ -24,6 +24,7 @@ import { cn } from '../lib/utils';
 import { api } from '../services/api';
 import { socketService } from '../services/socket';
 import { Notification, UnreadCountResponse, NotificationsResponse } from '../types';
+import ChatWidget from './ChatBot/ChatWidget';
 
 export default function MainLayout() {
   const { user, loading, logout } = useAuth();
