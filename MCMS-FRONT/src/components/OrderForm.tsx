@@ -112,7 +112,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
       };
 
       const res = initialData?.id 
-        ? await api.patch<{ success: boolean; error?: string }>(`/api/orders/${initialData.id}`, payload)
+        ? await api.put<{ success: boolean; error?: string }>(`/api/orders/${initialData.id}`, payload)
         : await api.post<{ success: boolean; data: { id: number }; error?: string }>('/api/orders', payload);
 
       if (res.success) {

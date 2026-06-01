@@ -72,6 +72,10 @@ class ApiService {
       window.location.href = '/login';
     }
 
+    if (response.status === 403) {
+      return { success: false, error: 'ليس لديك صلاحية لتنفيذ هذا الإجراء' } as T;
+    }
+
     return response.json();
   }
 
@@ -85,6 +89,10 @@ class ApiService {
     if (response.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
+    }
+
+    if (response.status === 403) {
+      return { success: false, error: 'ليس لديك صلاحية لتنفيذ هذا الإجراء' } as T;
     }
 
     return response.json();
