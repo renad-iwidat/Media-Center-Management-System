@@ -163,7 +163,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
           label="القسم المسؤول"
           options={[
             { value: '', label: 'اختر القسم...' },
-            ...lookups.desks.map(d => ({ value: d.id, label: d.name }))
+            ...lookups.desks.map(d => ({ value: d.id.toString(), label: d.name }))
           ]}
           value={formData.desk_id}
           onChange={(e) => setFormData(f => ({ ...f, desk_id: e.target.value }))}
@@ -172,7 +172,10 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
 
         <Select 
           label="الأولوية"
-          options={priorityOptions}
+          options={[
+            { value: '', label: 'اختر الأولوية...' },
+            ...priorityOptions.map(p => ({ value: p.value.toString(), label: p.label }))
+          ]}
           value={formData.priority_id}
           onChange={(e) => setFormData(f => ({ ...f, priority_id: e.target.value }))}
           required
@@ -182,7 +185,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
           label="الوحدة الإعلامية"
           options={[
             { value: '', label: 'اختر الوحدة...' },
-            ...lookups.mediaUnits.map(m => ({ value: m.id, label: m.name }))
+            ...lookups.mediaUnits.map(m => ({ value: m.id.toString(), label: m.name }))
           ]}
           value={formData.media_unit_id}
           onChange={(e) => setFormData(f => ({ ...f, media_unit_id: e.target.value }))}
@@ -202,7 +205,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
           label="البرنامج"
           options={[
             { value: '', label: 'اختياري...' },
-            ...lookups.programs.map(p => ({ value: p.id, label: p.title || p.name || 'بدون عنوان' }))
+            ...lookups.programs.map(p => ({ value: p.id.toString(), label: p.title || p.name || 'بدون عنوان' }))
           ]}
           value={formData.program_id}
           onChange={(e) => setFormData(f => ({ ...f, program_id: e.target.value }))}
@@ -213,7 +216,7 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
             label="الحلقة"
             options={[
               { value: '', label: 'حلقة جديدة...' },
-              ...episodes.map(ep => ({ value: ep.id, label: ep.title }))
+              ...episodes.map(ep => ({ value: ep.id.toString(), label: ep.title }))
             ]}
             value={formData.episode_id}
             onChange={(e) => setFormData(f => ({ ...f, episode_id: e.target.value }))}

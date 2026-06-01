@@ -311,7 +311,7 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
             label="الطلب المرتبط"
             options={[
               { value: '', label: 'اختر الطلب...' },
-              ...lookups.orders.map(o => ({ value: o.id, label: o.title }))
+              ...lookups.orders.map(o => ({ value: o.id.toString(), label: o.title }))
             ]}
             value={formData.order_id}
             onChange={(e) => setFormData(f => ({ ...f, order_id: e.target.value }))}
@@ -323,7 +323,7 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
           label="الموظف المعين"
           options={[
             { value: '', label: 'اختر الموظف...' },
-            ...lookups.users.map(u => ({ value: u.id, label: u.name }))
+            ...lookups.users.map(u => ({ value: u.id.toString(), label: u.name }))
           ]}
           value={formData.assigned_to}
           onChange={(e) => setFormData(f => ({ ...f, assigned_to: e.target.value }))}
@@ -333,7 +333,10 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
 
         <Select 
           label="الأولوية"
-          options={priorityOptions}
+          options={[
+            { value: '', label: 'اختر الأولوية...' },
+            ...priorityOptions.map(p => ({ value: p.value.toString(), label: p.label }))
+          ]}
           value={formData.priority_id}
           onChange={(e) => setFormData(f => ({ ...f, priority_id: e.target.value }))}
           required
@@ -343,7 +346,7 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
           label="حالة المهمة"
           options={[
             { value: '', label: 'اختر الحالة...' },
-            ...lookups.statuses.map(s => ({ value: s.id, label: s.name }))
+            ...lookups.statuses.map(s => ({ value: s.id.toString(), label: s.name }))
           ]}
           value={formData.status_id}
           onChange={(e) => setFormData(f => ({ ...f, status_id: e.target.value }))}
@@ -363,7 +366,7 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
           label="نوع المهمة"
           options={[
             { value: '', label: 'اختر النوع (اختياري)...' },
-            ...lookups.taskTypes.map(t => ({ value: t.id, label: t.name }))
+            ...lookups.taskTypes.map(t => ({ value: t.id.toString(), label: t.name }))
           ]}
           value={formData.task_type_id}
           onChange={(e) => handleTaskTypeChange(e.target.value)}
