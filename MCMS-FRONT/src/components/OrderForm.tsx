@@ -25,11 +25,11 @@ export default function OrderForm({ initialData, onSuccess, onCancel }: OrderFor
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    desk_id: initialData?.desk_id || '',
-    priority_id: initialData?.priority_id || 3, // Default to Medium
-    media_unit_id: initialData?.media_unit_id || '',
-    program_id: initialData?.program_id || '',
-    episode_id: initialData?.episode_id || '',
+    desk_id: initialData?.desk_id ? initialData.desk_id.toString() : '',
+    priority_id: initialData?.priority_id ? initialData.priority_id.toString() : '3', // Default to Medium
+    media_unit_id: initialData?.media_unit_id ? initialData.media_unit_id.toString() : '',
+    program_id: initialData?.program_id ? initialData.program_id.toString() : '',
+    episode_id: initialData?.episode_id ? initialData.episode_id.toString() : '',
     deadline: initialData?.deadline ? format(new Date(initialData.deadline), 'yyyy-MM-dd') : format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd'),
     notes: initialData?.notes || ''
   });

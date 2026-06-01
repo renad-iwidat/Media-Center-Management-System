@@ -35,12 +35,12 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    order_id: fixedOrderId || initialData?.order_id || '',
-    assigned_to: initialData?.assigned_to || '',
-    status_id: initialData?.status_id || 1,
-    priority_id: initialData?.priority_id || 3,
+    order_id: fixedOrderId ? fixedOrderId.toString() : (initialData?.order_id ? initialData.order_id.toString() : ''),
+    assigned_to: initialData?.assigned_to ? initialData.assigned_to.toString() : '',
+    status_id: initialData?.status_id ? initialData.status_id.toString() : '1',
+    priority_id: initialData?.priority_id ? initialData.priority_id.toString() : '3',
     deadline: initialData?.deadline ? format(new Date(initialData.deadline), 'yyyy-MM-dd') : format(new Date(new Date().setDate(new Date().getDate() + 3)), 'yyyy-MM-dd'),
-    task_type_id: initialData?.task_type_id || ''
+    task_type_id: initialData?.task_type_id ? initialData.task_type_id.toString() : ''
   });
 
   const [shootingData, setShootingData] = useState<Partial<TaskShootingData>>({
