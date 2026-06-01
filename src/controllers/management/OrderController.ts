@@ -120,7 +120,18 @@ export class OrderController {
   async updateOrder(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { title, description, deadline, program_id, episode_id } = req.body;
+      const { 
+        title, 
+        description, 
+        deadline, 
+        program_id, 
+        episode_id,
+        desk_id,
+        status_id,
+        priority_id,
+        media_unit_id,
+        notes
+      } = req.body;
 
       if (!id) {
         this.sendError(res, 'Order ID is required', 400);
@@ -133,6 +144,11 @@ export class OrderController {
       if (deadline) updates.deadline = new Date(deadline);
       if (program_id) updates.program_id = BigInt(program_id);
       if (episode_id) updates.episode_id = BigInt(episode_id);
+      if (desk_id) updates.desk_id = BigInt(desk_id);
+      if (status_id) updates.status_id = BigInt(status_id);
+      if (priority_id) updates.priority_id = BigInt(priority_id);
+      if (media_unit_id) updates.media_unit_id = BigInt(media_unit_id);
+      if (notes !== undefined) updates.notes = notes;
 
       const order = await this.orderService.updateOrder(BigInt(id), updates);
       this.sendSuccess(res, order, 200);
