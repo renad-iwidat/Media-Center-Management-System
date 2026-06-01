@@ -15,6 +15,7 @@ interface TaskFormProps {
 export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCancel }: TaskFormProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [lookups, setLookups] = useState<{
     orders: Order[];
     users: User[];
@@ -112,6 +113,7 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
     if (!user) return;
     
     setLoading(true);
+    setError(null);
     try {
       const payload = {
         ...formData,
@@ -123,8 +125,8 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
       };
 
       const res = initialData?.id 
-        ? await api.patch<{ success: boolean; data: Task }>(`/api/tasks/${initialData.id}`, payload)
-        : await api.post<{ success: boolean; data: Task }>('/api/tasks', payload);
+        ? await api.patch<{ success: boolean; data: Task; error?: string }>(`/api/tasks/${initialData.id}`, payload)
+        : await api.post<{ success: boolean; data: Task; error?: string }>('/api/tasks', payload);
 
       if (res.success) {
         const selectedType = lookups.taskTypes.find(t => t.id === Number(formData.task_type_id));
@@ -151,9 +153,12 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
         } else {
           onSuccess();
         }
+      } else {
+        setError(res.error || 'حدث خطأ أثناء حفظ المهمة');
       }
     } catch (err) {
       console.error(err);
+      setError('حدث خطأ في الاتصال بالخادم');
     } finally {
       setLoading(false);
     }
@@ -368,6 +373,11 @@ export default function TaskForm({ initialData, fixedOrderId, onSuccess, onCance
       {renderDynamicFields()}
 
       <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+        {error && (
+          <p className="flex-1 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+            ⚠️ {error}
+          </p>
+        )}
         <Button variant="ghost" type="button" onClick={onCancel} disabled={loading}>
           إلغاء
         </Button>
