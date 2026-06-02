@@ -268,6 +268,175 @@ export class NewsDeskProxyController {
       res.status(502).json({ success: false, message: 'فشل جلب إحصائيات التصنيف', error: (error as Error).message });
     }
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Media Units (من الـ API الخارجي)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  static async listMediaUnits(req: Request, res: Response): Promise<void> {
+    try {
+      const activeOnly = req.query.active_only === 'true';
+      const data = await newsDeskApiService.getAdminMediaUnits(activeOnly);
+      res.json({ success: true, count: Array.isArray(data) ? data.length : 0, data });
+    } catch (error) {
+      res.status(502).json({ success: false, message: 'فشل جلب الوحدات الإعلامية', error: (error as Error).message });
+    }
+  }
+
+  static async getMediaUnit(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await newsDeskApiService.getAdminMediaUnitBySlug(req.params.slug);
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(502).json({ success: false, message: 'فشل جلب الوحدة الإعلامية', error: (error as Error).message });
+    }
+  }
+
+  /**
+   * POST /api/newsdesk/sync/all
+   * مزامنة كاملة: وحدات إعلامية + مصادر + ربط
+   * يجلب من الـ API الخارجي ويحفظ في الداتابيس المحلي
+   */
+  static async syncAll(req: Request, res: Response): Promise<void> {
+    try {
+      const { SourceService } = await import('../../services/database/database.service');
+      const { MediaUnitSourceService } = await import('../../services/database/media-unit-source.service');
+      const { query } = await import('../../config/database');
+
+      // جلب كل الوحدات مع مصادرها من الـ API الخارجي
+      const { mediaUnits } = await newsDeskApiService.syncAllMediaUnitsAndSources();
+
+      let syncedUnits = 0;
+      let syncedSources = 0;
+      let syncedLinks = 0;
+      const errors: string[] = [];
+
+      for (const apiUnit of mediaUnits) {
+        try {
+          // 1. إنشاء/تحديث الوحدة الإعلامية محلياً
+          const slug = apiUnit.slug || apiUnit.name?.toLowerCase().replace(/\s+/g, '-') || '';
+          if (!slug) {
+            errors.push(`تخطي وحدة بدون slug: ${apiUnit.name}`);
+            continue;
+          }
+
+          // التحقق من وجود الوحدة محلياً
+          const existingUnit = await query(
+            `SELECT id FROM media_units WHERE slug = $1 LIMIT 1`,
+            [slug]
+          );
+
+          let localUnitId: number;
+
+          if (existingUnit.rows.length > 0) {
+            // تحديث الوحدة الموجودة (بدون updated_at لأن الجدول قد لا يحتويه)
+            await query(
+              `UPDATE media_units SET name = $1, is_active = $2 WHERE slug = $3`,
+              [apiUnit.name, apiUnit.is_active !== false, slug]
+            );
+            localUnitId = existingUnit.rows[0].id;
+          } else {
+            // إنشاء وحدة جديدة
+            const insertResult = await query(
+              `INSERT INTO media_units (name, slug, is_active, created_at)
+               VALUES ($1, $2, $3, NOW())
+               RETURNING id`,
+              [apiUnit.name, slug, apiUnit.is_active !== false]
+            );
+            localUnitId = insertResult.rows[0].id;
+          }
+
+          syncedUnits++;
+
+          // 2. مزامنة المصادر المرتبطة بالوحدة
+          const apiSources = apiUnit.sources || [];
+          for (const apiSource of apiSources) {
+            try {
+              const sourceSlug = apiSource.source_slug || apiSource.slug || '';
+              if (!sourceSlug) continue;
+
+              // البحث عن أو إنشاء المصدر محلياً
+              const localSource = await SourceService.findOrCreateBySlug(
+                sourceSlug,
+                apiSource.source_name || apiSource.name || sourceSlug,
+                apiSource.source_url || apiSource.base_url || ''
+              );
+
+              syncedSources++;
+
+              // ربط المصدر بالوحدة
+              await MediaUnitSourceService.linkSource(
+                localUnitId,
+                localSource.id,
+                apiSource.priority || 1
+              );
+              syncedLinks++;
+            } catch (sourceError) {
+              errors.push(`خطأ في مصدر "${apiSource.source_name || apiSource.slug}": ${sourceError}`);
+            }
+          }
+        } catch (unitError) {
+          errors.push(`خطأ في وحدة "${apiUnit.name}": ${unitError}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `تمت المزامنة: ${syncedUnits} وحدة، ${syncedSources} مصدر، ${syncedLinks} ربط`,
+        data: {
+          synced_units: syncedUnits,
+          synced_sources: syncedSources,
+          synced_links: syncedLinks,
+          total_api_units: mediaUnits.length,
+          errors: errors.length > 0 ? errors : undefined,
+        },
+      });
+    } catch (error) {
+      res.status(502).json({ success: false, message: 'فشل المزامنة الكاملة', error: (error as Error).message });
+    }
+  }
+
+  /**
+   * POST /api/newsdesk/sync/sources
+   * مزامنة المصادر فقط من الـ API الخارجي إلى الداتابيس المحلي
+   */
+  static async syncSources(req: Request, res: Response): Promise<void> {
+    try {
+      const { SourceService } = await import('../../services/database/database.service');
+
+      const apiSources = await newsDeskApiService.getSources(false);
+      let synced = 0;
+      const errors: string[] = [];
+
+      for (const apiSource of apiSources) {
+        try {
+          const slug = apiSource.slug || apiSource.name?.toLowerCase().replace(/\s+/g, '-') || '';
+          if (!slug) continue;
+
+          await SourceService.findOrCreateBySlug(
+            slug,
+            apiSource.name || slug,
+            apiSource.base_url || ''
+          );
+          synced++;
+        } catch (err) {
+          errors.push(`خطأ في مصدر "${apiSource.name}": ${err}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `تمت مزامنة ${synced} مصدر`,
+        data: {
+          synced,
+          total: apiSources.length,
+          errors: errors.length > 0 ? errors : undefined,
+        },
+      });
+    } catch (error) {
+      res.status(502).json({ success: false, message: 'فشل مزامنة المصادر', error: (error as Error).message });
+    }
+  }
 }
 
 export default NewsDeskProxyController;

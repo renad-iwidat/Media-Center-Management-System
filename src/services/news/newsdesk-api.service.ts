@@ -241,10 +241,17 @@ class NewsDeskApiService {
   }
 
   /**
-   * جلب مقالة واحدة بالـ ID
+   * جلب مقالة واحدة بالـ ID — مع النص الكامل
    */
   async getArticleById(id: number): Promise<NewsDeskArticle> {
     return this.request<NewsDeskArticle>(`/articles/${id}`);
+  }
+
+  /**
+   * جلب مقالة خام واحدة بالـ ID — مع raw_text و raw_meta
+   */
+  async getRawArticleById(id: number): Promise<NewsDeskRawArticle> {
+    return this.request<NewsDeskRawArticle>(`/articles/raw/${id}`);
   }
 
   /**
@@ -265,13 +272,17 @@ class NewsDeskApiService {
 
   /**
    * جلب مقالات حسب الوحدة الإعلامية
+   * يُستخدم لسحب الأخبار التابعة لوحدة إعلامية محددة
    */
   async getArticlesByMediaUnit(mediaUnitSlug: string, filters: ArticleFilters = {}): Promise<NewsDeskArticlesResponse> {
     const params = new URLSearchParams();
     if (filters.category) params.append('category', filters.category);
+    if (filters.geo_scope) params.append('geo_scope', filters.geo_scope);
+    if (filters.source) params.append('source', filters.source);
     if (filters.language) params.append('language', filters.language);
     if (filters.date_from) params.append('date_from', filters.date_from);
     if (filters.date_to) params.append('date_to', filters.date_to);
+    if (filters.search) params.append('search', filters.search);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.page_size) params.append('page_size', filters.page_size.toString());
 
@@ -465,6 +476,56 @@ class NewsDeskApiService {
       ? `/geographic-scopes?scope_level=${scopeLevel}` 
       : '/geographic-scopes';
     return this.request<any[]>(endpoint);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Media Units
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * جلب جميع الوحدات الإعلامية من الـ API الخارجي
+   */
+  async getMediaUnits(activeOnly: boolean = false): Promise<any[]> {
+    const endpoint = activeOnly ? '/media-units?active_only=true' : '/media-units';
+    return this.request<any[]>(endpoint);
+  }
+
+  /**
+   * جلب وحدة إعلامية واحدة مع مصادرها
+   */
+  async getMediaUnitBySlug(slug: string): Promise<any> {
+    return this.request<any>(`/media-units/${slug}`);
+  }
+
+  /**
+   * جلب الوحدات الإعلامية من الـ admin endpoint (مع تفاصيل كاملة)
+   */
+  async getAdminMediaUnits(activeOnly: boolean = false): Promise<any[]> {
+    const endpoint = activeOnly ? '/admin/media-units?active_only=true' : '/admin/media-units';
+    return this.request<any[]>(endpoint);
+  }
+
+  /**
+   * جلب وحدة إعلامية واحدة من الـ admin endpoint
+   */
+  async getAdminMediaUnitBySlug(slug: string): Promise<any> {
+    return this.request<any>(`/admin/media-units/${slug}`);
+  }
+
+  /**
+   * مزامنة الوحدات الإعلامية والمصادر من الـ API الخارجي إلى الداتابيس المحلي
+   * يُستخدم لإنشاء/تحديث media_units و sources و media_unit_sources
+   */
+  async syncAllMediaUnitsAndSources(): Promise<{
+    mediaUnits: any[];
+    totalSources: number;
+  }> {
+    const mediaUnits = await this.getAdminMediaUnits();
+    let totalSources = 0;
+    for (const unit of mediaUnits) {
+      totalSources += (unit.sources || []).length;
+    }
+    return { mediaUnits, totalSources };
   }
 
   // ══════════════════════════════════════════════════════════════════════════

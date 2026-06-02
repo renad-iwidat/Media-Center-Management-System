@@ -51,6 +51,7 @@ export interface RawData {
   source_type_id: number;
   category_id: number | null;
   geo_scope_id?: number | null;  // FK → geographic_scopes
+  media_unit_id?: number | null; // FK → media_units (الوحدة الإعلامية التي سحبت الخبر)
   url: string;
   title: string;
   content: string;           // النص الكامل للخبر

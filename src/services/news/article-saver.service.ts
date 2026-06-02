@@ -113,6 +113,7 @@ class ArticleSaverService {
             ai_confidence: article.ai_confidence || undefined,
             newsdesk_article_id: article.newsdesk_article_id || undefined,
             category_slug: article.ai_category_slug || '',
+            media_unit_id: article.media_unit_id || undefined,
           });
         })
       );

@@ -593,6 +593,50 @@ export const api = {
     console.log('✅ [API] تم تسجيل الخروج من API');
   },
 
+  // --- NewsDesk API (الـ API الخارجي — عبر الـ proxy) ---
+  // المصادر من الـ API الخارجي
+  getNewsDeskSources: (activeOnly = false) =>
+    request<any>(`/newsdesk/sources${activeOnly ? '?active_only=true' : ''}`),
+  getNewsDeskSource: (slug: string) =>
+    request<any>(`/newsdesk/sources/${slug}`),
+
+  // الوحدات الإعلامية من الـ API الخارجي
+  getNewsDeskMediaUnits: (activeOnly = false) =>
+    request<any>(`/newsdesk/media-units${activeOnly ? '?active_only=true' : ''}`),
+  getNewsDeskMediaUnit: (slug: string) =>
+    request<any>(`/newsdesk/media-units/${slug}`),
+
+  // مزامنة من الـ API الخارجي إلى الداتابيس المحلي
+  syncAllFromNewsDesk: () =>
+    request<any>('/newsdesk/sync/all', { method: 'POST' }),
+  syncSourcesFromNewsDesk: () =>
+    request<any>('/newsdesk/sync/sources', { method: 'POST' }),
+
+  // التصنيفات من الـ API الخارجي
+  getNewsDeskCategories: (activeOnly = false) =>
+    request<any>(`/newsdesk/categories${activeOnly ? '?active_only=true' : ''}`),
+
+  // الأخبار من الـ API الخارجي
+  getNewsDeskArticles: (filters?: { category?: string; source?: string; media_unit?: string; language?: string; page?: number; page_size?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.source) params.append('source', filters.source);
+    if (filters?.media_unit) params.append('media_unit', filters.media_unit);
+    if (filters?.language) params.append('language', filters.language);
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.page_size) params.append('page_size', String(filters.page_size));
+    const qs = params.toString();
+    return request<any>(`/newsdesk/articles${qs ? `?${qs}` : ''}`);
+  },
+
+  // إحصائيات الـ admin من الـ API الخارجي
+  getNewsDeskAdminStats: () =>
+    request<any>('/newsdesk/admin/stats'),
+
+  // حالة الـ scheduler الخارجي
+  getNewsDeskSchedulerStatus: () =>
+    request<any>('/newsdesk/scheduler/status'),
+
   // --- Auto-Publish (النشر التلقائي على المواقع الخارجية) ---
   getAutoPublishStatus: () => request<any>("/auto-publish/status"),
   toggleAutoPublishMaster: (enabled: boolean) =>

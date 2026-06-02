@@ -53,4 +53,12 @@ router.get('/admin/logs', NewsDeskProxyController.adminLogs);
 router.post('/admin/classifier/run', NewsDeskProxyController.runClassifier);
 router.get('/admin/classifier/stats', NewsDeskProxyController.classifierStats);
 
+// ── Media Units (من الـ API الخارجي) ─────────────────────────────────────
+router.get('/media-units', NewsDeskProxyController.listMediaUnits);
+router.get('/media-units/:slug', NewsDeskProxyController.getMediaUnit);
+
+// ── Sync (مزامنة من الـ API الخارجي إلى الداتابيس المحلي) ────────────────
+router.post('/sync/all', NewsDeskProxyController.syncAll);
+router.post('/sync/sources', NewsDeskProxyController.syncSources);
+
 export default router;
