@@ -479,6 +479,56 @@ class NewsDeskApiService {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // Media Units
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * جلب جميع الوحدات الإعلامية من الـ API الخارجي
+   */
+  async getMediaUnits(activeOnly: boolean = false): Promise<any[]> {
+    const endpoint = activeOnly ? '/media-units?active_only=true' : '/media-units';
+    return this.request<any[]>(endpoint);
+  }
+
+  /**
+   * جلب وحدة إعلامية واحدة مع مصادرها
+   */
+  async getMediaUnitBySlug(slug: string): Promise<any> {
+    return this.request<any>(`/media-units/${slug}`);
+  }
+
+  /**
+   * جلب الوحدات الإعلامية من الـ admin endpoint (مع تفاصيل كاملة)
+   */
+  async getAdminMediaUnits(activeOnly: boolean = false): Promise<any[]> {
+    const endpoint = activeOnly ? '/admin/media-units?active_only=true' : '/admin/media-units';
+    return this.request<any[]>(endpoint);
+  }
+
+  /**
+   * جلب وحدة إعلامية واحدة من الـ admin endpoint
+   */
+  async getAdminMediaUnitBySlug(slug: string): Promise<any> {
+    return this.request<any>(`/admin/media-units/${slug}`);
+  }
+
+  /**
+   * مزامنة الوحدات الإعلامية والمصادر من الـ API الخارجي إلى الداتابيس المحلي
+   * يُستخدم لإنشاء/تحديث media_units و sources و media_unit_sources
+   */
+  async syncAllMediaUnitsAndSources(): Promise<{
+    mediaUnits: any[];
+    totalSources: number;
+  }> {
+    const mediaUnits = await this.getAdminMediaUnits();
+    let totalSources = 0;
+    for (const unit of mediaUnits) {
+      totalSources += (unit.sources || []).length;
+    }
+    return { mediaUnits, totalSources };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // Scheduler (Remote)
   // ══════════════════════════════════════════════════════════════════════════
 

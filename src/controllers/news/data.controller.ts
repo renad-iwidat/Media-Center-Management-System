@@ -75,9 +75,13 @@ export async function getMediaUnits(req: Request, res: Response): Promise<void> 
 /**
  * الحصول على الأخبار ذات المحتوى الناقص
  */
-export async function getIncompleteArticles(_req: Request, res: Response): Promise<void> {
+export async function getIncompleteArticles(req: Request, res: Response): Promise<void> {
   try {
-    const queryStr = `
+    const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
+
+    // الأخبار الناقصة موجودة في editorial_queue بحالة 'incomplete'
+    // نربطها بالوحدة الإعلامية عبر editorial_queue.media_unit_id
+    let queryStr = `
       SELECT DISTINCT ON (rd.id)
         rd.id, rd.title, rd.content, rd.summary, rd.url, rd.image_url,
         rd.fetch_status, rd.fetched_at, rd.category_id, rd.geo_scope_id,
@@ -94,10 +98,24 @@ export async function getIncompleteArticles(_req: Request, res: Response): Promi
       LEFT JOIN geographic_scopes gs ON rd.geo_scope_id = gs.id
       WHERE rd.is_incomplete = true
         AND rd.fetch_status = 'processed'
-      ORDER BY rd.id, rd.fetched_at DESC
     `;
 
-    const result = await query(queryStr);
+    const params: any[] = [];
+
+    if (mediaUnitId) {
+      // فلترة بالوحدة الإعلامية — الخبر مربوط بالوحدة عبر editorial_queue أو raw_data.media_unit_id
+      params.push(mediaUnitId);
+      queryStr += `
+        AND (
+          rd.media_unit_id = $${params.length}
+          OR rd.id IN (SELECT raw_data_id FROM editorial_queue WHERE media_unit_id = $${params.length} AND status = 'incomplete')
+        )
+      `;
+    }
+
+    queryStr += ` ORDER BY rd.id, rd.fetched_at DESC`;
+
+    const result = await query(queryStr, params);
     res.status(200).json({
       success: true,
       count: result.rows.length,
