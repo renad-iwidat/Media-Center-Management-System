@@ -193,13 +193,21 @@ export class SourceService {
       return { ...byUrl.rows[0], slug: byUrl.rows[0].slug || slug };
     }
 
-    // رابعاً: إنشاء مصدر جديد مع ON CONFLICT كـ fallback للـ race conditions
+    // رابعاً: ضمان وجود source_type_id = 2 (API) في source_types
+    await query(
+      `INSERT INTO source_types (id, name) VALUES (2, 'API') ON CONFLICT (id) DO NOTHING`
+    );
+
+    // خامساً: إنشاء مصدر جديد
+    // إذا الـ URL فاضي، نستخدم slug كـ URL مؤقت لتجنب conflict على URL فاضي
+    const effectiveUrl = baseUrl && baseUrl.trim() ? baseUrl.trim() : `api://${slug}`;
+    
     const result = await query(
       `INSERT INTO sources (source_type_id, url, name, slug, is_active, created_at) 
        VALUES ($1, $2, $3, $4, true, NOW()) 
        ON CONFLICT (url) DO UPDATE SET slug = COALESCE(sources.slug, EXCLUDED.slug)
        RETURNING *`,
-      [2, baseUrl, name, slug] // source_type_id = 2 (API)
+      [2, effectiveUrl, name, slug] // source_type_id = 2 (API)
     );
     return result.rows[0];
   }
