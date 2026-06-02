@@ -342,8 +342,24 @@ app.listen(PORT, '0.0.0.0', async () => {
   // 🚀 بدء الـ Scheduler تلقائياً عند تشغيل السيرفر
   console.log(`\n⏰ بدء الـ Scheduler تلقائياً...`);
   try {
-    await schedulerService.start(15); // 15 دقيقة
-    console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 15 دقيقة`);
+    // ضمان وجود source_types الأساسية
+    const { query: dbQuery } = await import('./config/database');
+    await dbQuery(`
+      INSERT INTO source_types (id, name) VALUES 
+        (1, 'RSS'),
+        (2, 'API'),
+        (3, 'Telegram'),
+        (4, 'Web Scraper'),
+        (5, 'Manual'),
+        (6, 'user_input_text'),
+        (7, 'user_input_audio'),
+        (8, 'user_input_video')
+      ON CONFLICT (id) DO NOTHING
+    `);
+    console.log(`✅ تم ضمان وجود source_types الأساسية`);
+
+    await schedulerService.start(5); // 5 دقائق
+    console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 5 دقائق`);
   } catch (error) {
     console.error(`❌ خطأ في بدء الـ Scheduler:`, error);
   }
