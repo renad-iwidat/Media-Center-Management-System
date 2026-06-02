@@ -95,7 +95,7 @@ export class OrderController {
 
   /**
    * GET /api/orders
-   * Get all orders with pagination
+   * Get all orders with pagination (filtered by user access)
    */
   async getAllOrders(req: Request, res: Response): Promise<void> {
     try {
@@ -105,9 +105,43 @@ export class OrderController {
       const desk_id = req.query.desk_id ? BigInt(req.query.desk_id as string) : undefined;
       const status_id = req.query.status_id ? BigInt(req.query.status_id as string) : undefined;
       const program_id = req.query.program_id ? BigInt(req.query.program_id as string) : undefined;
+      
+      // Get current user ID for filtering
+      const userId = req.user ? BigInt(req.user.user_id) : undefined;
+      const userPermissions = req.userPermissions || [];
 
-      const orders = await this.orderService.searchOrders(limit, offset, search, desk_id, status_id, program_id);
-      this.sendSuccess(res, orders, 200);
+      // إذا المستخدم عنده صلاحية مشاهدة كل الطلبات، يشوف الكل
+      // مدير المركز (role_id = 22) يشوف كل الطلبات
+      const canViewAll = userPermissions.includes('orders.viewAll') || 
+                        userPermissions.includes('admin') ||
+                        userPermissions.includes('manager') ||
+                        userPermissions.includes('orders.view') ||
+                        req.user?.role_name === 'مدير المركز' ||
+                        req.user?.role_name === 'مدير' ||
+                        req.user?.role_name === 'Admin' ||
+                        req.user?.role_name === 'مدير عام' ||
+                        BigInt(req.user?.role_id || 0) === BigInt(22); // مدير المركز
+
+      const orders = await this.orderService.searchOrders(
+        limit, 
+        offset, 
+        search, 
+        desk_id, 
+        status_id, 
+        program_id,
+        canViewAll ? undefined : userId // فلترة حسب المستخدم إذا ما عنده صلاحية شاملة
+      );
+
+      // جلب العدد الكلي للـ pagination
+      const total = await this.orderService.countOrders(
+        search,
+        desk_id,
+        status_id,
+        program_id,
+        canViewAll ? undefined : userId
+      );
+      
+      res.json({ success: true, data: orders, total });
     } catch (error) {
       this.sendError(res, error, 400);
     }
@@ -389,7 +423,8 @@ export class OrderController {
       }
 
       const result = await this.orderService.canDeleteOrder(BigInt(id));
-      this.sendSuccess(res, result, 200);
+      // الفرونت اند يتوقع boolean مباشرة
+      this.sendSuccess(res, result.canDelete, 200);
     } catch (error) {
       this.sendError(res, error, 400);
     }

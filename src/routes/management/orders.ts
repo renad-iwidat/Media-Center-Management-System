@@ -8,6 +8,19 @@ const orderController = new OrderController();
 // كل نقاط الوصول تحتاج تسجيل دخول فقط
 router.use(authenticate);
 
+// إضافة صلاحيات المستخدم للـ request
+router.use(async (req, res, next) => {
+  if (req.user) {
+    try {
+      const { PermissionService } = await import('../../services/management/PermissionService');
+      req.userPermissions = await PermissionService.getUserPermissions(BigInt(req.user.user_id));
+    } catch (error) {
+      req.userPermissions = [];
+    }
+  }
+  next();
+});
+
 // ============ إنشاء (يحتاج صلاحية) ============
 router.post('/', requirePermission('orders.create'), (req: Request, res: Response) => { orderController.createOrder(req, res); });
 

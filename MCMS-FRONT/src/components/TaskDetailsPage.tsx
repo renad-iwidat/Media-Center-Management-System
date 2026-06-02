@@ -224,10 +224,15 @@ export default function TaskDetailsPage() {
   const handleDelete = async () => {
     if (!window.confirm('هل أنت متأكد من حذف هذه المهمة؟')) return;
     try {
-      const res = await api.delete<{ success: boolean }>(`/api/tasks/${id}`);
-      if (res.success) navigate('/tasks');
-    } catch (err) {
-      console.error(err);
+      const res = await api.delete<{ success: boolean; error?: string }>(`/api/tasks/${id}`);
+      if (res.success) {
+        navigate('/tasks');
+      } else {
+        alert('فشل حذف المهمة: ' + (res.error || 'خطأ غير معروف'));
+      }
+    } catch (err: any) {
+      console.error('Delete task error:', err);
+      alert('فشل حذف المهمة: ' + (err?.message || 'خطأ في الاتصال'));
     }
   };
 

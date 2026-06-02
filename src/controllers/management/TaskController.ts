@@ -805,6 +805,10 @@ export class TaskController {
         return;
       }
 
+      // إضافة can_delete للـ response
+      const canDeleteResult = await this.taskService.canDeleteTask(BigInt(id));
+      task.can_delete = canDeleteResult.canDelete;
+
       this.sendSuccess(res, task, 200);
     } catch (error) {
       this.sendError(res, error, 400);

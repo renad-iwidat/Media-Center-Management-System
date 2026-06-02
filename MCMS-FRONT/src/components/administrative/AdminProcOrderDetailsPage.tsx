@@ -13,7 +13,8 @@ import {
   Trash2,
   FileText,
   Lock,
-  Edit
+  Edit,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -61,6 +62,12 @@ export default function AdminProcOrderDetailsPage() {
     }
   };
 
+  const [isEditOrderOpen, setIsEditOrderOpen] = useState(false);
+  const [editedDeadline, setEditedDeadline] = useState('');
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
+  const [editedNotes, setEditedNotes] = useState('');
+
   const handleOrderStatusChange = async (newStatusId: string) => {
     try {
       await api.put(`/api/administrative/orders/${id}`, {
@@ -70,6 +77,31 @@ export default function AdminProcOrderDetailsPage() {
     } catch (err) {
       console.error(err);
       alert('فشل تغيير حالة الطلب');
+    }
+  };
+
+  const handleEditOrder = () => {
+    if (!order) return;
+    setEditedTitle(order.title);
+    setEditedDescription(order.description || '');
+    setEditedNotes(order.notes || '');
+    setEditedDeadline(order.deadline ? new Date(order.deadline).toISOString().split('T')[0] : '');
+    setIsEditOrderOpen(true);
+  };
+
+  const handleSaveOrderEdit = async () => {
+    try {
+      await api.put(`/api/administrative/orders/${id}`, {
+        title: editedTitle,
+        description: editedDescription || null,
+        notes: editedNotes || null,
+        deadline: editedDeadline || null,
+      });
+      setIsEditOrderOpen(false);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert('فشل تعديل الطلب');
     }
   };
 
@@ -173,6 +205,13 @@ export default function AdminProcOrderDetailsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleEditOrder}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 font-semibold text-sm transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              تعديل
+            </button>
             <button
               onClick={handleArchive}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold text-sm transition-colors"
@@ -448,6 +487,105 @@ export default function AdminProcOrderDetailsPage() {
           onClose={() => setShowTaskForm(false)}
           onCreated={handleTaskCreated}
         />
+      )}
+
+      {/* Edit Order Modal */}
+      {isEditOrderOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-indigo-600 p-6 border-b-4 border-[#FF9F4A] z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Edit className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">تعديل بيانات الطلب</h2>
+                </div>
+                <button
+                  onClick={() => setIsEditOrderOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  عنوان الطلب <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                  placeholder="أدخل عنوان الطلب..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  الوصف
+                </label>
+                <textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors resize-none"
+                  placeholder="وصف اختياري للطلب..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  الملاحظات
+                </label>
+                <textarea
+                  value={editedNotes}
+                  onChange={(e) => setEditedNotes(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors resize-none"
+                  placeholder="ملاحظات إضافية..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  الموعد النهائي
+                </label>
+                <input
+                  type="date"
+                  value={editedDeadline}
+                  onChange={(e) => setEditedDeadline(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setIsEditOrderOpen(false)}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleSaveOrderEdit}
+                  disabled={!editedTitle.trim()}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  حفظ التعديلات
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );

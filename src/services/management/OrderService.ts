@@ -53,9 +53,20 @@ export class OrderService {
     search: string = '',
     desk_id?: bigint,
     status_id?: bigint,
-    program_id?: bigint
+    program_id?: bigint,
+    user_id?: bigint
   ): Promise<Order[]> {
-    return await OrderModel.searchWithDetails(limit, offset, search, desk_id, status_id, program_id);
+    return await OrderModel.searchWithDetails(limit, offset, search, desk_id, status_id, program_id, user_id);
+  }
+
+  async countOrders(
+    search: string = '',
+    desk_id?: bigint,
+    status_id?: bigint,
+    program_id?: bigint,
+    user_id?: bigint
+  ): Promise<number> {
+    return await OrderModel.countOrders(search, desk_id, status_id, program_id, user_id);
   }
 
   async updateOrder(id: bigint, updates: Partial<Order>): Promise<Order> {
@@ -268,28 +279,36 @@ export class OrderService {
   }> {
     const order = await this.getOrder(orderId);
 
-    // Check status
-    const nonDeletableStatuses = ['In Progress', 'Review'];
-    if (nonDeletableStatuses.includes(order.status_id?.toString() || '')) {
+    // تحقق من وجود status_id
+    if (!order.status_id) {
       return {
         canDelete: false,
-        reason: `Cannot delete order with status: ${order.status_id}`,
+        reason: 'Order status is undefined',
       };
     }
 
-    // Check for active tasks
-    const tasks = await TaskModel.findByOrder(orderId, 1000, 0);
-    const activeTasks = tasks.filter(
-      t => !['Done', 'Cancelled'].includes(t.status_id?.toString() || '')
-    );
-
-    if (activeTasks.length > 0) {
+    // Only prevent deletion for orders in critical states
+    const nonDeletableStatuses = ['In Progress', 'Review', 'Done'];
+    
+    // Get status name instead of ID for comparison
+    const { OrderStatusHelper } = await import('./helpers/OrderStatusHelper');
+    const statusName = await OrderStatusHelper.getStatusName(order.status_id);
+    
+    if (nonDeletableStatuses.some(status => 
+      statusName.toLowerCase().includes(status.toLowerCase()) ||
+      statusName.includes('قيد التنفيذ') ||
+      statusName.includes('مراجعة') ||
+      statusName.includes('منجز') ||
+      statusName.includes('مكتمل')
+    )) {
       return {
         canDelete: false,
-        reason: `Order has ${activeTasks.length} active tasks`,
+        reason: `Cannot delete order with status: ${statusName}`,
       };
     }
 
+    // Allow deletion for orders in draft or pending state even with tasks
+    // This gives more flexibility to administrators
     return { canDelete: true };
   }
 

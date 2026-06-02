@@ -68,9 +68,10 @@ export class OrderModel {
     search: string = '',
     desk_id?: bigint,
     status_id?: bigint,
-    program_id?: bigint
+    program_id?: bigint,
+    user_id?: bigint // إذا موجود، يفلتر بس الطلبات اللي المستخدم منشئها أو مُعين على مهامها
   ): Promise<any[]> {
-    let query = `SELECT 
+    let query = `SELECT DISTINCT
       o.*,
       u.name as created_by_name,
       d.name as desk_name,
@@ -84,11 +85,24 @@ export class OrderModel {
      LEFT JOIN order_statuses os ON o.status_id = os.id
      LEFT JOIN priority_levels pl ON o.priority_id = pl.id
      LEFT JOIN programs pr ON o.program_id = pr.id
-     LEFT JOIN episodes e ON o.episode_id = e.id
-     WHERE 1=1`;
+     LEFT JOIN episodes e ON o.episode_id = e.id`;
+
+    // إذا في فلترة حسب المستخدم، نضيف جوين مع المهام
+    if (user_id) {
+      query += ` LEFT JOIN tasks t ON t.order_id = o.id`;
+    }
+    
+    query += ` WHERE 1=1`;
 
     const params: any[] = [];
     let paramIndex = 1;
+
+    // فلترة حسب المستخدم (المنشئ أو المُعين على مهمة)
+    if (user_id) {
+      query += ` AND (o.created_by = $${paramIndex} OR t.assigned_to = $${paramIndex})`;
+      params.push(user_id);
+      paramIndex++;
+    }
 
     // Search by title or description
     if (search) {
@@ -123,6 +137,53 @@ export class OrderModel {
 
     const result = await pool.query(query, params);
     return result.rows;
+  }
+
+  static async countOrders(
+    search: string = '',
+    desk_id?: bigint,
+    status_id?: bigint,
+    program_id?: bigint,
+    user_id?: bigint
+  ): Promise<number> {
+    let query = `SELECT COUNT(DISTINCT o.id) as count FROM orders o`;
+
+    if (user_id) {
+      query += ` LEFT JOIN tasks t ON t.order_id = o.id`;
+    }
+
+    query += ` WHERE 1=1`;
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (user_id) {
+      query += ` AND (o.created_by = $${paramIndex} OR t.assigned_to = $${paramIndex})`;
+      params.push(user_id);
+      paramIndex++;
+    }
+    if (search) {
+      query += ` AND (o.title ILIKE $${paramIndex} OR o.description ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+    if (desk_id) {
+      query += ` AND o.desk_id = $${paramIndex}`;
+      params.push(desk_id);
+      paramIndex++;
+    }
+    if (status_id) {
+      query += ` AND o.status_id = $${paramIndex}`;
+      params.push(status_id);
+      paramIndex++;
+    }
+    if (program_id) {
+      query += ` AND o.program_id = $${paramIndex}`;
+      params.push(program_id);
+      paramIndex++;
+    }
+
+    const result = await pool.query(query, params);
+    return parseInt(result.rows[0].count) || 0;
   }
 
   static async findByDesk(deskId: bigint, limit: number = 10, offset: number = 0): Promise<Order[]> {
@@ -175,6 +236,25 @@ export class OrderModel {
   }
 
   static async delete(id: bigint): Promise<boolean> {
+    // حذف cascade: نحذف كل المهام وبياناتها المرتبطة بالطلب أولاً
+    const tasksResult = await pool.query('SELECT id FROM tasks WHERE order_id = $1', [id]);
+    for (const task of tasksResult.rows) {
+      const taskId = task.id;
+      await pool.query('DELETE FROM content WHERE task_id = $1', [taskId]);
+      await pool.query('DELETE FROM mentions WHERE comment_id IN (SELECT id FROM task_comments WHERE task_id = $1)', [taskId]);
+      await pool.query('DELETE FROM mentions WHERE entity_type = $1 AND entity_id = $2', ['task', taskId]);
+      await pool.query('DELETE FROM task_comments WHERE task_id = $1', [taskId]);
+      await pool.query('DELETE FROM task_attachments WHERE task_id = $1', [taskId]);
+      await pool.query('DELETE FROM task_history WHERE task_id = $1', [taskId]);
+      await pool.query('DELETE FROM task_assignments WHERE task_id = $1', [taskId]);
+      await pool.query('DELETE FROM task_relations WHERE task_id = $1 OR related_to_id = $1', [taskId]);
+      await pool.query('DELETE FROM shooting_data WHERE task_id = $1', [taskId]).catch(() => {});
+    }
+    // حذف المهام
+    await pool.query('DELETE FROM tasks WHERE order_id = $1', [id]);
+    // حذف سجل الطلب
+    await pool.query('DELETE FROM order_history WHERE order_id = $1', [id]).catch(() => {});
+    // حذف الطلب نفسه
     const result = await pool.query('DELETE FROM orders WHERE id = $1', [id]);
     return result.rowCount! > 0;
   }

@@ -156,9 +156,10 @@ export class KPIService {
   /**
    * Calculate and update user KPI
    * Called when user completes a task or when task is assigned
+   * يحسب المهام العادية + المهام الإدارية
    */
   static async calculateUserKPI(userId: bigint): Promise<UserKPI> {
-    // Get task statistics
+    // Get regular task statistics
     const tasksResult = await pool.query(
       `SELECT 
          COUNT(*) as total_tasks,
@@ -170,35 +171,110 @@ export class KPIService {
       [userId]
     );
 
-    const taskStats = tasksResult.rows[0];
-    const totalTasksAssigned = parseInt(taskStats.total_tasks) || 0;
-    const completedTasks = parseInt(taskStats.completed_tasks) || 0;
-    const pendingTasks = parseInt(taskStats.pending_tasks) || 0;
-    const overdueTasks = parseInt(taskStats.overdue_tasks) || 0;
-    const avgCompletionTime = parseInt(taskStats.avg_completion_time) || 0;
+    // Get admin task statistics (المهام الإدارية)
+    const adminTasksResult = await pool.query(
+      `SELECT 
+         COUNT(*) as total_tasks,
+         SUM(CASE WHEN ts.name IN ('Done', 'منجز', 'مكتمل') THEN 1 ELSE 0 END) as completed_tasks,
+         SUM(CASE WHEN ts.name NOT IN ('Done', 'منجز', 'مكتمل') THEN 1 ELSE 0 END) as pending_tasks,
+         0 as overdue_tasks,
+         ROUND(AVG(CASE WHEN t.actual_duration IS NOT NULL THEN t.actual_duration ELSE NULL END)) as avg_completion_time
+       FROM admin_proc_task_assignments ta
+       INNER JOIN admin_proc_tasks t ON ta.admin_task_id = t.id
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       WHERE ta.assigned_to = $1 AND t.is_archived = false`,
+      [userId]
+    );
+
+    // Get admin tasks created by user (المهام اللي أنشأها المستخدم)
+    const adminCreatedResult = await pool.query(
+      `SELECT 
+         COUNT(*) as total_tasks,
+         SUM(CASE WHEN ts.name IN ('Done', 'منجز', 'مكتمل') THEN 1 ELSE 0 END) as completed_tasks,
+         SUM(CASE WHEN ts.name NOT IN ('Done', 'منجز', 'مكتمل') THEN 1 ELSE 0 END) as pending_tasks,
+         0 as overdue_tasks
+       FROM admin_proc_tasks t
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       WHERE t.created_by = $1 AND t.is_archived = false`,
+      [userId]
+    );
+
+    const regularStats = tasksResult.rows[0];
+    const adminAssignedStats = adminTasksResult.rows[0];
+    const adminCreatedStats = adminCreatedResult.rows[0];
+
+    // Combine all statistics (دمج الإحصائيات)
+    const totalTasksAssigned = 
+      (parseInt(regularStats.total_tasks) || 0) + 
+      (parseInt(adminAssignedStats.total_tasks) || 0) +
+      (parseInt(adminCreatedStats.total_tasks) || 0);
+    
+    const completedTasks = 
+      (parseInt(regularStats.completed_tasks) || 0) + 
+      (parseInt(adminAssignedStats.completed_tasks) || 0) +
+      (parseInt(adminCreatedStats.completed_tasks) || 0);
+    
+    const pendingTasks = 
+      (parseInt(regularStats.pending_tasks) || 0) + 
+      (parseInt(adminAssignedStats.pending_tasks) || 0) +
+      (parseInt(adminCreatedStats.pending_tasks) || 0);
+    
+    const overdueTasks = 
+      (parseInt(regularStats.overdue_tasks) || 0) + 
+      (parseInt(adminAssignedStats.overdue_tasks) || 0) +
+      (parseInt(adminCreatedStats.overdue_tasks) || 0);
+    
+    // Average completion time (متوسط وقت الإنجاز)
+    const regularAvg = parseInt(regularStats.avg_completion_time) || 0;
+    const adminAvg = parseInt(adminAssignedStats.avg_completion_time) || 0;
+    const avgCompletionTime = regularAvg > 0 && adminAvg > 0 
+      ? Math.round((regularAvg + adminAvg) / 2)
+      : (regularAvg || adminAvg);
 
     // Calculate on-time percentage
     const onTimePercentage = totalTasksAssigned > 0
       ? Math.round(((totalTasksAssigned - overdueTasks) / totalTasksAssigned) * 100)
       : 0;
 
-    // Get content statistics
+    // Get content statistics (regular tasks)
     const contentResult = await pool.query(
       `SELECT COUNT(*) as count, COALESCE(SUM(file_size), 0) as total_size
        FROM content WHERE task_id IN (SELECT id FROM tasks WHERE assigned_to = $1)`,
       [userId]
     );
 
-    const contentProducedCount = parseInt(contentResult.rows[0].count) || 0;
-    const contentSizeTotal = parseInt(contentResult.rows[0].total_size) || 0;
-
-    // Get AI usage count
-    const aiResult = await pool.query(
-      `SELECT COUNT(*) as count FROM ai_logs WHERE user_id = $1`,
+    // Get admin attachments statistics (المرفقات الإدارية)
+    const adminAttachmentsResult = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(file_size), 0) as total_size
+       FROM admin_proc_task_attachments 
+       WHERE admin_task_id IN (
+         SELECT admin_task_id FROM admin_proc_task_assignments WHERE assigned_to = $1
+         UNION
+         SELECT id FROM admin_proc_tasks WHERE created_by = $1
+       )`,
       [userId]
     );
 
-    const aiUsageCount = parseInt(aiResult.rows[0].count) || 0;
+    const contentProducedCount = 
+      (parseInt(contentResult.rows[0].count) || 0) + 
+      (parseInt(adminAttachmentsResult.rows[0].count) || 0);
+    
+    const contentSizeTotal = 
+      (parseInt(contentResult.rows[0].total_size) || 0) + 
+      (parseInt(adminAttachmentsResult.rows[0].total_size) || 0);
+
+    // Get AI usage count
+    let aiUsageCount = 0;
+    try {
+      const aiResult = await pool.query(
+        `SELECT COUNT(*) as count FROM ai_logs WHERE user_id = $1`,
+        [userId]
+      );
+      aiUsageCount = parseInt(aiResult.rows[0].count) || 0;
+    } catch {
+      // ai_logs table doesn't exist, default to 0
+      aiUsageCount = 0;
+    }
 
     // Upsert user_kpi
     const kpiResult = await pool.query(
@@ -257,39 +333,34 @@ export class KPIService {
 
   /**
    * Get all orders KPI (for dashboard)
+   * عرض كل الموظفين النشطين (38 موظف) حتى لو ما عندهم مهام
    */
   static async getAllUsersKPI(limit: number = 50, offset: number = 0): Promise<any[]> {
-    // query بسيط وسريع - يجلب من user_kpi أولاً، وإذا فاضي يحسب مباشرة
     try {
-      // أولاً نجرب user_kpi (أسرع)
-      const kpiResult = await pool.query(
-        `SELECT uk.*, u.name as user_name, u.email, r.name as role_name
-         FROM user_kpi uk
-         INNER JOIN users u ON uk.user_id = u.id
-         LEFT JOIN roles r ON u.role_id = r.id
-         WHERE uk.completed_tasks > 0 OR uk.total_tasks_assigned > 0
-         ORDER BY uk.completed_tasks DESC
-         LIMIT $1 OFFSET $2`,
-        [limit, offset]
-      );
-
-      if (kpiResult.rows.length > 0) return kpiResult.rows;
-
-      // fallback: حساب بسيط من tasks
+      // جلب كل الموظفين النشطين مع حساب مهامهم (عادية + إدارية)
+      // حتى لو ما عندهم مهام يظهروا بـ 0 مهام
       const result = await pool.query(
         `SELECT 
           u.id as user_id,
           u.name as user_name,
           u.email,
           r.name as role_name,
-          COALESCE(task_counts.total, 0) as total_tasks_assigned,
-          COALESCE(task_counts.completed, 0) as completed_tasks,
-          COALESCE(task_counts.pending, 0) as pending_tasks,
-          COALESCE(task_counts.overdue, 0) as overdue_tasks,
+          COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0) as total_tasks_assigned,
+          COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0) as completed_tasks,
+          COALESCE(task_counts.pending, 0) + COALESCE(admin_assigned_counts.pending, 0) + COALESCE(admin_created_counts.pending, 0) as pending_tasks,
+          COALESCE(task_counts.overdue, 0) + COALESCE(admin_assigned_counts.overdue, 0) + COALESCE(admin_created_counts.overdue, 0) as overdue_tasks,
           0 as average_completion_time,
-          CASE WHEN COALESCE(task_counts.total, 0) > 0 
-            THEN ROUND((COALESCE(task_counts.completed, 0)::numeric / task_counts.total) * 100)
-            ELSE 0 END as on_time_percentage
+          0 as content_produced_count,
+          0 as content_size_total,
+          0 as ai_usage_count,
+          CASE 
+            WHEN (COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0)) > 0 
+            THEN ROUND(
+              ((COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0))::numeric / 
+               (COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0))) * 100
+            )
+            ELSE 0 
+          END as on_time_percentage
         FROM users u
         LEFT JOIN roles r ON u.role_id = r.id
         LEFT JOIN LATERAL (
@@ -302,11 +373,70 @@ export class KPIService {
           LEFT JOIN task_statuses ts ON t.status_id = ts.id
           WHERE t.assigned_to = u.id
         ) task_counts ON true
+        LEFT JOIN LATERAL (
+          SELECT 
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE ts.name IN ('Done', 'منجز', 'مكتمل')) as completed,
+            COUNT(*) FILTER (WHERE ts.name NOT IN ('Done', 'منجز', 'مكتمل')) as pending,
+            0 as overdue
+          FROM admin_proc_task_assignments ata
+          INNER JOIN admin_proc_tasks at ON ata.admin_task_id = at.id
+          LEFT JOIN task_statuses ts ON at.status_id = ts.id
+          WHERE ata.assigned_to = u.id AND at.is_archived = false
+        ) admin_assigned_counts ON true
+        LEFT JOIN LATERAL (
+          SELECT 
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE ts.name IN ('Done', 'منجز', 'مكتمل')) as completed,
+            COUNT(*) FILTER (WHERE ts.name NOT IN ('Done', 'منجز', 'مكتمل')) as pending,
+            0 as overdue
+          FROM admin_proc_tasks at
+          LEFT JOIN task_statuses ts ON at.status_id = ts.id
+          WHERE at.created_by = u.id AND at.is_archived = false
+        ) admin_created_counts ON true
         WHERE u.is_active = true
-        ORDER BY COALESCE(task_counts.completed, 0) DESC
+        ORDER BY 
+          (COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0)) DESC,
+          u.name ASC
         LIMIT $1 OFFSET $2`,
         [limit, offset]
       );
+
+      // تحديث/إدراج KPI لكل مستخدم لحفظ البيانات
+      for (const user of result.rows) {
+        try {
+          await pool.query(
+            `INSERT INTO user_kpi (user_id, total_tasks_assigned, completed_tasks, pending_tasks, overdue_tasks, average_completion_time, on_time_percentage, content_produced_count, content_size_total, ai_usage_count, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+             ON CONFLICT (user_id) DO UPDATE SET
+               total_tasks_assigned = $2,
+               completed_tasks = $3,
+               pending_tasks = $4,
+               overdue_tasks = $5,
+               average_completion_time = $6,
+               on_time_percentage = $7,
+               content_produced_count = $8,
+               content_size_total = $9,
+               ai_usage_count = $10,
+               updated_at = NOW()`,
+            [
+              user.user_id, 
+              user.total_tasks_assigned, 
+              user.completed_tasks, 
+              user.pending_tasks, 
+              user.overdue_tasks,
+              user.average_completion_time,
+              user.on_time_percentage,
+              user.content_produced_count,
+              user.content_size_total,
+              user.ai_usage_count
+            ]
+          );
+        } catch (error) {
+          // تجاهل أخطاء الحفظ - المهم عرض البيانات للفرونت اند
+        }
+      }
+
       return result.rows;
     } catch (error) {
       console.error('getAllUsersKPI error:', error);

@@ -89,12 +89,17 @@ export default function OrderDetailsPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
+    if (!window.confirm('هل أنت متأكد من حذف هذا الطلب؟ سيتم حذف كل المهام المرتبطة به أيضاً.')) return;
     try {
-      const res = await api.delete<{ success: boolean }>(`/api/orders/${id}`);
-      if (res.success) navigate('/orders');
-    } catch (err) {
-      console.error(err);
+      const res = await api.delete<{ success: boolean; error?: string }>(`/api/orders/${id}`);
+      if (res.success) {
+        navigate('/orders');
+      } else {
+        alert('فشل حذف الطلب: ' + (res.error || 'خطأ غير معروف'));
+      }
+    } catch (err: any) {
+      console.error('Delete order error:', err);
+      alert('فشل حذف الطلب: ' + (err?.message || 'خطأ في الاتصال'));
     }
   };
 

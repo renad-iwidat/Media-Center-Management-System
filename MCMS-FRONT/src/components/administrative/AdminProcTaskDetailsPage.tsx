@@ -61,6 +61,10 @@ export default function AdminProcTaskDetailsPage() {
   const [fileDescription, setFileDescription] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
+  const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
+  const [editedTaskTitle, setEditedTaskTitle] = useState('');
+  const [editedTaskDescription, setEditedTaskDescription] = useState('');
+  const [editedTaskDeadline, setEditedTaskDeadline] = useState('');
 
   useEffect(() => {
     if (id) loadData();
@@ -291,6 +295,29 @@ export default function AdminProcTaskDetailsPage() {
     }
   };
 
+  const handleEditTask = () => {
+    if (!task) return;
+    setEditedTaskTitle(task.title);
+    setEditedTaskDescription(task.description || '');
+    setEditedTaskDeadline(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '');
+    setIsEditTaskOpen(true);
+  };
+
+  const handleSaveTaskEdit = async () => {
+    try {
+      await api.put(`/api/administrative/tasks/${id}`, {
+        title: editedTaskTitle,
+        description: editedTaskDescription || null,
+        deadline: editedTaskDeadline || null,
+      });
+      setIsEditTaskOpen(false);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert('فشل تعديل المهمة');
+    }
+  };
+
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(mentionQuery.toLowerCase())
   ).slice(0, 5);
@@ -365,6 +392,13 @@ export default function AdminProcTaskDetailsPage() {
 
           {/* أزرار الإجراءات */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleEditTask}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 font-semibold text-sm transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              تعديل
+            </button>
             <button
               onClick={handleArchiveTask}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold text-sm transition-colors"
@@ -701,6 +735,92 @@ export default function AdminProcTaskDetailsPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Task Modal */}
+      {isEditTaskOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-indigo-600 p-6 border-b-4 border-[#FF9F4A] z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Edit className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">تعديل بيانات المهمة</h2>
+                </div>
+                <button
+                  onClick={() => setIsEditTaskOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  عنوان المهمة <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editedTaskTitle}
+                  onChange={(e) => setEditedTaskTitle(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+                  placeholder="أدخل عنوان المهمة..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  الوصف
+                </label>
+                <textarea
+                  value={editedTaskDescription}
+                  onChange={(e) => setEditedTaskDescription(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors resize-none"
+                  placeholder="وصف اختياري للمهمة..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  الموعد النهائي
+                </label>
+                <input
+                  type="date"
+                  value={editedTaskDeadline}
+                  onChange={(e) => setEditedTaskDeadline(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setIsEditTaskOpen(false)}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleSaveTaskEdit}
+                  disabled={!editedTaskTitle.trim()}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:from-purple-600 hover:to-indigo-700 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  حفظ التعديلات
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

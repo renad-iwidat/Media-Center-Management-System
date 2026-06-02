@@ -140,6 +140,18 @@ export class TaskModel {
   }
 
   static async delete(id: bigint): Promise<boolean> {
+    // حذف cascade: نحذف كل البيانات المرتبطة بالمهمة أولاً
+    await pool.query('DELETE FROM content WHERE task_id = $1', [id]);
+    await pool.query('DELETE FROM mentions WHERE entity_type = $1 AND entity_id = $2', ['task', id]);
+    await pool.query('DELETE FROM mentions WHERE comment_id IN (SELECT id FROM task_comments WHERE task_id = $1)', [id]);
+    await pool.query('DELETE FROM task_comments WHERE task_id = $1', [id]);
+    await pool.query('DELETE FROM task_attachments WHERE task_id = $1', [id]);
+    await pool.query('DELETE FROM task_history WHERE task_id = $1', [id]);
+    await pool.query('DELETE FROM task_assignments WHERE task_id = $1', [id]);
+    await pool.query('DELETE FROM task_relations WHERE task_id = $1 OR related_to_id = $1', [id]);
+    // حذف بيانات التصوير المرتبطة
+    await pool.query('DELETE FROM shooting_data WHERE task_id = $1', [id]).catch(() => {});
+    // حذف المهمة نفسها
     const result = await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
     return result.rowCount! > 0;
   }

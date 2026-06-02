@@ -783,6 +783,48 @@ export class AdminProcedureService {
       // إرسال إشعارات للمعينين
       await this.notifyTaskStatusChanged(taskId, taskTitle, newStatusId, userId);
 
+      // حساب KPI للمستخدمين المعينين على المهمة (إذا المهمة اكتملت)
+      try {
+        const statusResult = await pool.query(
+          'SELECT name FROM task_statuses WHERE id = $1',
+          [newStatusId]
+        );
+        const statusName = statusResult.rows[0]?.name;
+        
+        if (statusName && ['Done', 'منجز', 'مكتمل'].includes(statusName)) {
+          // جلب المستخدمين المعينين
+          const assignedUsers = await pool.query(
+            'SELECT assigned_to FROM admin_proc_task_assignments WHERE admin_task_id = $1',
+            [taskId]
+          );
+          
+          // تحديث KPI لكل مستخدم معين
+          const { KPIService } = await import('../management/KPIService');
+          for (const assignment of assignedUsers.rows) {
+            try {
+              await KPIService.calculateUserKPI(assignment.assigned_to);
+            } catch (error) {
+              console.warn('Failed to calculate KPI for user:', assignment.assigned_to, error);
+            }
+          }
+          
+          // تحديث KPI لمنشئ المهمة
+          const creatorResult = await pool.query(
+            'SELECT created_by FROM admin_proc_tasks WHERE id = $1',
+            [taskId]
+          );
+          if (creatorResult.rows[0]?.created_by) {
+            try {
+              await KPIService.calculateUserKPI(creatorResult.rows[0].created_by);
+            } catch (error) {
+              console.warn('Failed to calculate KPI for creator:', creatorResult.rows[0].created_by, error);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to update KPI after status change:', error);
+      }
+
       return result.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
@@ -822,6 +864,14 @@ export class AdminProcedureService {
         assignments.push(result.rows[0]);
         // إرسال إشعار للمستخدم المعين
         await this.sendAssignmentNotification(userId, taskId, taskTitle, assignedBy);
+        
+        // تحديث KPI للمستخدم المعين
+        try {
+          const { KPIService } = await import('../management/KPIService');
+          await KPIService.calculateUserKPI(userId);
+        } catch (error) {
+          console.warn('Failed to calculate KPI for assigned user:', userId, error);
+        }
       }
     }
 
