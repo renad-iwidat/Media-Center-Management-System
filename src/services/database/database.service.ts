@@ -342,15 +342,17 @@ export class RawDataService {
 
   /**
    * التحقق من وجود خبر مكرر بناءً على العنوان والمحتوى
-   * يستخدم similarity للتحقق من الأخبار المتشابهة جداً
+   * يستخدم exact match على العنوان (case-insensitive + trimmed)
+   * أو أول 200 حرف من المحتوى
    */
   static async existsBySimilarity(title: string, content: string): Promise<boolean> {
     try {
       // تطبيع النصوص: إزالة المسافات الزائدة وتحويل لأحرف صغيرة
       const normalizedTitle = title.trim().toLowerCase();
-      const normalizedContent = content.trim().toLowerCase().substring(0, 200); // أول 200 حرف
+      
+      if (!normalizedTitle) return false;
 
-      // البحث عن أخبار بنفس العنوان تماماً
+      // البحث عن أخبار بنفس العنوان تماماً (الطريقة الأكثر فعالية)
       const exactMatch = await query(
         `SELECT id FROM raw_data 
          WHERE LOWER(TRIM(title)) = $1 
@@ -362,15 +364,21 @@ export class RawDataService {
         return true;
       }
 
-      // البحث عن أخبار بمحتوى متشابه جداً (نفس أول 200 حرف)
-      const contentMatch = await query(
-        `SELECT id FROM raw_data 
-         WHERE LOWER(TRIM(SUBSTRING(content, 1, 200))) = $1 
-         LIMIT 1`,
-        [normalizedContent]
-      );
+      // البحث عن أخبار بعنوان مشابه جداً (أول 50 حرف) — لمعالجة حالات الاختلاف البسيط
+      if (normalizedTitle.length > 30) {
+        const partialMatch = await query(
+          `SELECT id FROM raw_data 
+           WHERE LOWER(TRIM(SUBSTRING(title, 1, 50))) = $1 
+           LIMIT 1`,
+          [normalizedTitle.substring(0, 50)]
+        );
 
-      return contentMatch.rows.length > 0;
+        if (partialMatch.rows.length > 0) {
+          return true;
+        }
+      }
+
+      return false;
     } catch (error) {
       console.error('❌ خطأ في التحقق من التشابه:', error);
       return false;
