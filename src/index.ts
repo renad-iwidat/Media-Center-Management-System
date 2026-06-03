@@ -356,7 +356,20 @@ app.listen(PORT, '0.0.0.0', async () => {
         (8, 'user_input_video')
       ON CONFLICT (id) DO NOTHING
     `);
-    console.log(`✅ تم ضمان وجود source_types الأساسية`);
+
+    // ضمان وجود system_settings الأساسية
+    await dbQuery(`
+      INSERT INTO system_settings (key, value, description) VALUES 
+        ('scheduler_enabled', 'true', 'تشغيل/إيقاف السحب التلقائي'),
+        ('scheduler_interval_minutes', '5', 'الفاصل بين كل دورة سحب (بالدقائق)'),
+        ('articles_per_source', '20', 'عدد المقالات لكل صفحة من الـ API'),
+        ('classifier_enabled', 'true', 'تشغيل/إيقاف التصنيف الآلي بالـ AI'),
+        ('flow_enabled', 'true', 'تشغيل/إيقاف توجيه الأخبار (FlowRouter)'),
+        ('auto_publish_enabled', 'true', 'تشغيل/إيقاف النشر التلقائي على المواقع الخارجية')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    console.log(`✅ تم ضمان وجود source_types و system_settings الأساسية`);
 
     await schedulerService.start(5); // 5 دقائق
     console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 5 دقائق`);
