@@ -79,8 +79,10 @@ const DETAIL_FETCH_BATCH = 5;
 /**
  * تحويل مقالة كاملة (من /articles/{id}) إلى الصيغة المحلية
  * هذه المقالة فيها كل التفاصيل: text + classifications + source + category + geo_scope
+ * 
+ * إذا text ناقص → يجلب raw_text من /articles/raw/{id}
  */
-function mapFullArticleToLocal(article: NewsDeskArticle, mediaUnitId: number): ArticleToSave {
+function mapFullArticleToLocal(article: NewsDeskArticle, mediaUnitId: number, rawText?: string): ArticleToSave {
   // تحويل keywords string إلى array (هي الـ tags عندنا)
   const tags: string[] = [];
   if (article.keywords) {
@@ -91,6 +93,9 @@ function mapFullArticleToLocal(article: NewsDeskArticle, mediaUnitId: number): A
   const sourceSlug = article.source?.slug || '';
   const sourceName = article.source?.name || 'NewsDesk';
   const sourceBaseUrl = article.source?.base_url || '';
+
+  // النص الكامل: أولوية لـ article.text ثم rawText ثم summary
+  const fullText = article.text || rawText || article.summary || '';
 
   return {
     title: article.title,
@@ -106,9 +111,9 @@ function mapFullArticleToLocal(article: NewsDeskArticle, mediaUnitId: number): A
     },
     sourceName,
     sourceBaseUrl,
-    // ── البيانات الكاملة من /articles/{id} ──
+    // ── البيانات الكاملة ──
     summary: article.summary || '',
-    full_text: article.text || article.summary || '', // النص الكامل من الـ API
+    full_text: fullText,
     language: article.language || 'ar',
     authors: article.authors || undefined,
     ai_category_slug: article.category?.slug || undefined,
@@ -314,7 +319,15 @@ class NewsPipelineService {
       const results = await Promise.allSettled(
         batch.map(async ({ id, mediaUnitId }) => {
           const fullArticle = await newsDeskApiService.getArticleById(id);
-          return mapFullArticleToLocal(fullArticle, mediaUnitId);
+          // إذا النص الكامل ناقص → نجلبه من /articles/raw/{id}
+          let rawText: string | undefined;
+          if (!fullArticle.text) {
+            try {
+              const rawArticle = await newsDeskApiService.getRawArticleById(id);
+              rawText = rawArticle.raw_text || undefined;
+            } catch { /* تجاهل */ }
+          }
+          return mapFullArticleToLocal(fullArticle, mediaUnitId, rawText);
         })
       );
 
@@ -462,7 +475,14 @@ class NewsPipelineService {
       const results = await Promise.allSettled(
         batch.map(async ({ id, mediaUnitId }) => {
           const fullArticle = await newsDeskApiService.getArticleById(id);
-          return mapFullArticleToLocal(fullArticle, mediaUnitId);
+          let rawText: string | undefined;
+          if (!fullArticle.text) {
+            try {
+              const rawArticle = await newsDeskApiService.getRawArticleById(id);
+              rawText = rawArticle.raw_text || undefined;
+            } catch { /* تجاهل */ }
+          }
+          return mapFullArticleToLocal(fullArticle, mediaUnitId, rawText);
         })
       );
       for (const result of results) {
