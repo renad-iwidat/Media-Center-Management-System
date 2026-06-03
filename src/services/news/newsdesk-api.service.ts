@@ -154,32 +154,55 @@ class NewsDeskApiService {
   }
 
   /**
-   * طلب HTTP عام
+   * طلب HTTP عام — مع retry ذكي وRate Limiting
    */
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(endpoint: string, options?: RequestInit, retries: number = 3): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    let lastError: Error | null = null;
     
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...options?.headers,
+          },
+          ...options,
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(`NewsDesk API Error: ${response.status} ${response.statusText} — ${errorText}`);
-      }
+        // Rate limiting — انتظر وأعد المحاولة
+        if (response.status === 429) {
+          const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+          console.warn(`⚠️ Rate limited (429) — انتظار ${retryAfter}s (محاولة ${attempt}/${retries})`);
+          if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+            continue;
+          }
+        }
 
-      return await response.json() as T;
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('NewsDesk API Error')) {
-        throw error;
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          throw new Error(`NewsDesk API Error: ${response.status} ${response.statusText} — ${errorText}`);
+        }
+
+        return await response.json() as T;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        // لا نعيد المحاولة على أخطاء 4xx (client errors) ما عدا 429
+        if (lastError.message.includes('4') && !lastError.message.includes('429')) {
+          throw lastError;
+        }
+
+        if (attempt < retries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          console.warn(`⚠️ محاولة ${attempt}/${retries} فشلت — انتظار ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      throw new Error(`فشل الاتصال بـ NewsDesk API (${url}): ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
     }
+
+    throw lastError || new Error(`فشل الاتصال بـ NewsDesk API (${url})`);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

@@ -20,6 +20,7 @@ import { RawDataService, SourceService } from '../database/database.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
 import { newsDeskApiService, NewsDeskArticle } from './newsdesk-api.service';
 import { SystemSettingsService } from '../database/system-settings.service';
+import { syncStateService } from './sync-state.service';
 
 export interface ArticleToSave {
   title: string;
@@ -211,10 +212,9 @@ class NewsPipelineService {
       console.log(`   • ${unit.name} (${unit.slug}) — ${unit.source_slugs.length} مصدر`);
     }
 
-    // ── المرحلة 2: سحب قوائم المقالات لكل وحدة ────────────────────────────
-    const twoHoursAgo = new Date();
-    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-    const dateFrom = twoHoursAgo.toISOString().split('T')[0];
+    // ── المرحلة 2: سحب قوائم المقالات لكل وحدة (Incremental Sync) ─────────
+    // بدلاً من "آخر ساعتين" الثابتة — نستخدم last_sync_time لكل وحدة
+    // أول مزامنة → آخر 7 أيام | بعدها → ساعة overlap من آخر مزامنة ناجحة
 
     // تجميع المقالات الجديدة (بعد فلترة المكرر) مع media_unit_id
     const newArticleIds: Array<{ id: number; mediaUnitId: number }> = [];
@@ -222,8 +222,17 @@ class NewsPipelineService {
     const mediaUnitDetails: PipelineResult['mediaUnitDetails'] = [];
 
     for (const unit of mediaUnits) {
-      console.log(`\n📰 [${unit.name}] Step 1: جلب قائمة المقالات من /articles/by-media-unit/${unit.slug}...`);
+      // حساب date_from بناءً على آخر مزامنة ناجحة (Incremental)
+      const dateFrom = await syncStateService.getDateFromForUnit(unit.id);
+      console.log(`\n📰 [${unit.name}] Step 1: جلب المقالات من ${dateFrom} (incremental sync)...`);
 
+      // بدء سجل المزامنة
+      let logId: number | null = null;
+      try {
+        logId = await syncStateService.startLog(unit.id, 'articles');
+      } catch { /* تجاهل */ }
+
+      const unitStartTime = Date.now();
       let unitArticles: NewsDeskArticle[] = [];
 
       try {
@@ -238,8 +247,8 @@ class NewsPipelineService {
         const totalPages = firstResponse.pages;
         console.log(`   📥 صفحة 1/${totalPages}: ${firstResponse.items.length} مقالة (إجمالي: ${firstResponse.total})`);
 
-        // جلب باقي الصفحات (حد أقصى 5)
-        const maxPages = Math.min(totalPages, 5);
+        // جلب باقي الصفحات (حد أقصى 10 بدلاً من 5 — لضمان عدم تفويت أخبار)
+        const maxPages = Math.min(totalPages, 10);
         for (let page = 2; page <= maxPages; page++) {
           const response = await newsDeskApiService.getArticlesByMediaUnit(unit.slug, {
             date_from: dateFrom,
@@ -248,9 +257,20 @@ class NewsPipelineService {
           });
           unitArticles.push(...response.items);
           console.log(`   📥 صفحة ${page}/${totalPages}: ${response.items.length} مقالة`);
+
+          // إذا الصفحة فاضية — انتهت البيانات
+          if (response.items.length === 0) break;
         }
       } catch (error) {
-        console.error(`   ❌ خطأ في سحب قائمة أخبار [${unit.name}]:`, error instanceof Error ? error.message : error);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error(`   ❌ خطأ في سحب قائمة أخبار [${unit.name}]:`, errMsg);
+        
+        // تسجيل الخطأ
+        try {
+          await syncStateService.recordError(unit.id, errMsg);
+          if (logId) await syncStateService.completeLog(logId, 'failed', { errors: [errMsg], duration_ms: Date.now() - unitStartTime });
+        } catch { /* تجاهل */ }
+
         mediaUnitDetails.push({
           mediaUnit: unit.name,
           slug: unit.slug,
@@ -288,6 +308,33 @@ class NewsPipelineService {
 
       totalSkipped += unitSkipped;
       console.log(`   ✅ [${unit.name}] ${unitNewCount} جديد | ⏭️ ${unitSkipped} مكرر`);
+
+      // تحديث حالة المزامنة + إكمال السجل
+      try {
+        // حساب آخر تاريخ مقالة
+        let lastArticleDate: Date | null = null;
+        if (unitArticles.length > 0) {
+          const dates = unitArticles
+            .map(a => a.published_at || a.created_at)
+            .filter(Boolean)
+            .map(d => new Date(d))
+            .filter(d => !isNaN(d.getTime()));
+          if (dates.length > 0) {
+            lastArticleDate = new Date(Math.max(...dates.map(d => d.getTime())));
+          }
+        }
+
+        await syncStateService.updateState(unit.id, unit.slug, unitNewCount, lastArticleDate);
+        
+        if (logId) {
+          await syncStateService.completeLog(logId, 'success', {
+            articles_fetched: unitArticles.length,
+            articles_saved: unitNewCount,
+            articles_skipped: unitSkipped,
+            duration_ms: Date.now() - unitStartTime,
+          });
+        }
+      } catch { /* تجاهل أخطاء التسجيل */ }
 
       mediaUnitDetails.push({
         mediaUnit: unit.name,
@@ -408,9 +455,10 @@ class NewsPipelineService {
   private async runGlobalPipeline(pageSize: number): Promise<PipelineResult> {
     console.log('\n⚠️ Fallback: سحب عام (لا توجد وحدات مربوطة بمصادر)...');
 
-    const twoHoursAgo = new Date();
-    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-    const dateFrom = twoHoursAgo.toISOString().split('T')[0];
+    // سحب آخر 7 أيام (بدلاً من ساعتين) لضمان وجود أخبار
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const dateFrom = sevenDaysAgo.toISOString().split('T')[0];
 
     let listArticles: NewsDeskArticle[] = [];
 

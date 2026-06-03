@@ -61,4 +61,8 @@ router.get('/media-units/:slug', NewsDeskProxyController.getMediaUnit);
 router.post('/sync/all', NewsDeskProxyController.syncAll);
 router.post('/sync/sources', NewsDeskProxyController.syncSources);
 
+// ── Sync State & Logs (حالة المزامنة والسجلات) ────────────────────────────
+router.get('/sync/status', NewsDeskProxyController.getSyncStatus);
+router.get('/sync/logs', NewsDeskProxyController.getSyncLogs);
+
 export default router;
