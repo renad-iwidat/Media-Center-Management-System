@@ -344,6 +344,235 @@ app.listen(PORT, '0.0.0.0', async () => {
   try {
     // ضمان وجود source_types الأساسية
     const { query: dbQuery } = await import('./config/database');
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // ضمان وجود الجداول الأساسية (Auto-Migration)
+    // هذه الجداول قد لا تكون موجودة إذا تم إعادة إنشاء الـ DB من الصفر
+    // ══════════════════════════════════════════════════════════════════════════
+    console.log('🗄️  ضمان وجود الجداول الأساسية...');
+
+    // جدول source_types (يجب أن يكون أولاً — باقي الجداول تعتمد عليه)
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS source_types (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL
+      )
+    `);
+
+    // جدول media_units
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS media_units (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // جدول sources (إذا ما كان موجود)
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS sources (
+        id SERIAL PRIMARY KEY,
+        source_type_id INTEGER REFERENCES source_types(id),
+        url VARCHAR(1024) UNIQUE,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(),
+        default_category_id INTEGER,
+        last_fetched_at TIMESTAMP
+      )
+    `);
+
+    // جدول media_unit_sources — الجدول المفقود!
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS media_unit_sources (
+        id SERIAL PRIMARY KEY,
+        media_unit_id INTEGER NOT NULL REFERENCES media_units(id) ON DELETE CASCADE,
+        source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+        priority INTEGER DEFAULT 1,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(media_unit_id, source_id)
+      )
+    `);
+
+    // جدول categories
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE,
+        flow VARCHAR(50) DEFAULT 'editorial',
+        is_active BOOLEAN DEFAULT true
+      )
+    `);
+
+    // جدول geographic_scopes
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS geographic_scopes (
+        id SERIAL PRIMARY KEY,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        name_ar VARCHAR(255) DEFAULT '',
+        name_en VARCHAR(255) DEFAULT '',
+        scope_level VARCHAR(50) DEFAULT 'local',
+        country_code VARCHAR(10),
+        region_slug VARCHAR(255),
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true
+      )
+    `);
+
+    // جدول raw_data
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS raw_data (
+        id SERIAL PRIMARY KEY,
+        source_id INTEGER REFERENCES sources(id),
+        source_type_id INTEGER REFERENCES source_types(id),
+        category_id INTEGER REFERENCES categories(id),
+        geo_scope_id INTEGER REFERENCES geographic_scopes(id),
+        media_unit_id INTEGER REFERENCES media_units(id),
+        url TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        content TEXT DEFAULT '',
+        image_url TEXT DEFAULT '',
+        tags TEXT[] DEFAULT '{}',
+        fetch_status VARCHAR(50) DEFAULT 'pending',
+        fetched_at TIMESTAMP DEFAULT NOW(),
+        pub_date TIMESTAMP,
+        summary TEXT DEFAULT '',
+        authors TEXT DEFAULT '',
+        language VARCHAR(10) DEFAULT 'ar',
+        source_slug VARCHAR(255) DEFAULT '',
+        geo_scope_slug VARCHAR(255) DEFAULT '',
+        ai_confidence FLOAT,
+        newsdesk_article_id INTEGER,
+        category_slug VARCHAR(255) DEFAULT '',
+        is_incomplete BOOLEAN DEFAULT false,
+        publish_status VARCHAR(50) DEFAULT 'draft'
+      )
+    `);
+
+    // جدول editorial_queue
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS editorial_queue (
+        id SERIAL PRIMARY KEY,
+        media_unit_id INTEGER NOT NULL REFERENCES media_units(id),
+        raw_data_id INTEGER NOT NULL REFERENCES raw_data(id),
+        policy_id INTEGER,
+        status VARCHAR(50) DEFAULT 'pending',
+        editor_notes TEXT,
+        user_id INTEGER,
+        task_id INTEGER,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // جدول published_items
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS published_items (
+        id SERIAL PRIMARY KEY,
+        media_unit_id INTEGER NOT NULL REFERENCES media_units(id),
+        raw_data_id INTEGER NOT NULL REFERENCES raw_data(id),
+        queue_id INTEGER,
+        content_type_id INTEGER DEFAULT 1,
+        title TEXT NOT NULL DEFAULT '',
+        content TEXT DEFAULT '',
+        image_url TEXT,
+        tags TEXT[] DEFAULT '{}',
+        is_active BOOLEAN DEFAULT true,
+        published_at TIMESTAMP DEFAULT NOW(),
+        approved_by INTEGER,
+        task_id INTEGER
+      )
+    `);
+
+    // جدول system_settings
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT NOT NULL DEFAULT '',
+        description TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Indexes مهمة
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_raw_data_newsdesk_id ON raw_data(newsdesk_article_id)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_raw_data_url ON raw_data(url)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_raw_data_fetch_status ON raw_data(fetch_status)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_raw_data_media_unit ON raw_data(media_unit_id)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_editorial_queue_status ON editorial_queue(status)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_published_items_media_unit ON published_items(media_unit_id)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_sources_slug ON sources(slug)`);
+
+    // جدول auto_publish_targets (مطلوب لـ published_items queries)
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS auto_publish_targets (
+        id SERIAL PRIMARY KEY,
+        media_unit_id INTEGER REFERENCES media_units(id),
+        name VARCHAR(255) NOT NULL DEFAULT '',
+        api_url TEXT DEFAULT '',
+        api_token TEXT DEFAULT '',
+        default_category_id INTEGER,
+        is_enabled BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // جدول auto_publish_log
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS auto_publish_log (
+        id SERIAL PRIMARY KEY,
+        target_id INTEGER REFERENCES auto_publish_targets(id),
+        raw_data_id INTEGER REFERENCES raw_data(id),
+        status VARCHAR(50) DEFAULT 'pending',
+        external_url TEXT,
+        error_message TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // جدول platform_configs (مطلوب لنظام النشر المتعدد)
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS platform_configs (
+        id SERIAL PRIMARY KEY,
+        platform VARCHAR(50) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        credentials JSONB NOT NULL DEFAULT '{}',
+        is_enabled BOOLEAN NOT NULL DEFAULT false,
+        media_unit_id INTEGER NOT NULL REFERENCES media_units(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        CONSTRAINT unique_platform_per_unit UNIQUE (platform, media_unit_id, name)
+      )
+    `);
+
+    // جدول publishing_status (مطلوب لـ published_items queries)
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS publishing_status (
+        id SERIAL PRIMARY KEY,
+        article_id INTEGER NOT NULL,
+        platform VARCHAR(50) NOT NULL,
+        platform_config_id INTEGER NOT NULL REFERENCES platform_configs(id) ON DELETE CASCADE,
+        status VARCHAR(20) NOT NULL DEFAULT 'publishing',
+        external_post_id VARCHAR(255),
+        external_url TEXT,
+        published_at TIMESTAMP WITH TIME ZONE,
+        error_message TEXT,
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_retry_at TIMESTAMP WITH TIME ZONE,
+        metadata JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        CONSTRAINT unique_article_platform UNIQUE (article_id, platform_config_id)
+      )
+    `);
+
+    console.log('✅ جميع الجداول الأساسية موجودة');
+
     await dbQuery(`
       INSERT INTO source_types (id, name) VALUES 
         (1, 'RSS'),
