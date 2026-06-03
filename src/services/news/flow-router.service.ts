@@ -90,6 +90,7 @@ interface Category {
   id: number;
   name: string;
   is_active: boolean;
+  flow?: string;
 }
 
 interface MediaUnit {
@@ -135,27 +136,24 @@ export class FlowRouterService {
     let errors = 0;
 
     try {
-      // التصنيفات الأوتوماتيكية (من CATEGORY_FLOW_MAP)
-      const automatedCategoryIds = Object.entries(CATEGORY_FLOW_MAP)
-        .filter(([_, flow]) => flow === 'automated')
-        .map(([id]) => parseInt(id));
-
       // جلب الأخبار الأوتوماتيكية العالقة (pending + مكتملة + غير منشورة)
+      // التصنيف الأوتوماتيكي يُحدّد من categories.flow = 'automated' (مستقر بالـ slug)
       const stuckItems = await query(
         `SELECT eq.id as queue_id, eq.media_unit_id, eq.raw_data_id,
                 rd.title, rd.content, rd.tags
          FROM editorial_queue eq
          JOIN raw_data rd ON eq.raw_data_id = rd.id
-         WHERE rd.category_id = ANY($1)
+         JOIN categories c ON rd.category_id = c.id
+         WHERE c.flow = 'automated'
            AND eq.status = 'pending'
-           AND LENGTH(rd.content) >= $2
+           AND LENGTH(rd.content) >= $1
            AND NOT EXISTS (
              SELECT 1 FROM published_items pi 
              WHERE pi.raw_data_id = eq.raw_data_id AND pi.media_unit_id = eq.media_unit_id
            )
          ORDER BY eq.created_at ASC
          LIMIT 200`,
-        [automatedCategoryIds, this.MIN_CONTENT_LENGTH]
+        [this.MIN_CONTENT_LENGTH]
       );
 
       if (stuckItems.rows.length === 0) return { published: 0, errors: 0 };
@@ -320,9 +318,13 @@ export class FlowRouterService {
             flowType = 'editorial';
             console.log(`📝 الخبر ${article.id} — إدخال يدوي → تحرير إجباري`);
           } else if (article.category_id) {
-            // تحديد الفلو من التصنيف مباشرة
-            flowType = getFlowByCategory(article.category_id);
+            // تحديد الفلو: أولاً من categories.flow (الداتابيس) → ثانياً من الـ map الثابت
             const category = categoryMap.get(article.category_id);
+            if (category?.flow === 'automated' || category?.flow === 'editorial') {
+              flowType = category.flow;
+            } else {
+              flowType = getFlowByCategory(article.category_id);
+            }
             const categoryName = category?.name || `ID:${article.category_id}`;
             console.log(`   ${flowType === 'automated' ? '⚡' : '📝'} الخبر ${article.id} — تصنيف: ${categoryName} → ${flowType}`);
           } else {
@@ -589,7 +591,7 @@ export class FlowRouterService {
 
   private async getActiveCategories(): Promise<Category[]> {
     const result = await query(
-      `SELECT id, name, is_active FROM categories WHERE is_active = true`
+      `SELECT id, name, flow, is_active FROM categories WHERE is_active = true`
     );
     return result.rows;
   }

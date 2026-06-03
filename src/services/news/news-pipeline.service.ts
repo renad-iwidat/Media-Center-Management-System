@@ -475,11 +475,19 @@ class NewsPipelineService {
       }
     }
 
-    // ربط المصادر
+    // ربط المصادر + ربط الوحدة الإعلامية عبر media_unit_sources
     for (const article of newArticles) {
       try {
         const sourceId = await this.resolveSourceId(article);
         article.source.id = sourceId;
+        
+        // ربط الوحدة الإعلامية: إذا المقالة جاية من مصدر مربوط بوحدة → نربطها
+        if (!article.media_unit_id || article.media_unit_id === 0) {
+          const linkedUnits = await MediaUnitSourceService.getMediaUnitsBySourceId(sourceId);
+          if (linkedUnits.length > 0) {
+            article.media_unit_id = linkedUnits[0].id; // أول وحدة مرتبطة بالمصدر
+          }
+        }
       } catch (error) {
         console.warn(`   ⚠️ فشل ربط مصدر "${article.sourceName}":`, error instanceof Error ? error.message : error);
       }

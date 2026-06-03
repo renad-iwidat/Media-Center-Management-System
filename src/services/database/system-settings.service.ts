@@ -95,7 +95,7 @@ export class SystemSettingsService {
       classifier_enabled: true,
       flow_enabled: true,
       auto_publish_enabled: false,
-      scheduler_interval_minutes: 15,
+      scheduler_interval_minutes: 5,
       articles_per_source: 20, // حجم الصفحة من الـ API
     };
 

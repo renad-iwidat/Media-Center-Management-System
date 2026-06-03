@@ -246,123 +246,15 @@ class SchedulerService {
   }
 
   /**
-   * مزامنة الوحدات الإعلامية والمصادر والتصنيفات من الـ API الخارجي
+   * مزامنة الوحدات الإعلامية والمصادر والتصنيفات والنطاقات من الـ API الخارجي
    * تُستدعى في بداية كل دورة — تضمن أن الداتابيس المحلي محدّث
+   * تعتمد على newsDeskSyncService (طبقة المزامنة الموحّدة)
    */
   private async syncFromExternalApi(): Promise<void> {
-    const { newsDeskApiService } = await import('./newsdesk-api.service');
-    const { SourceService, CategoryService } = await import('../database/database.service');
-    const { MediaUnitSourceService } = await import('../database/media-unit-source.service');
-    const { query } = await import('../../config/database');
-
-    let syncedUnits = 0;
-    let syncedSources = 0;
-    let syncedLinks = 0;
-    let syncedCategories = 0;
-
-    // ── 1. مزامنة التصنيفات ────────────────────────────────────────────────
-    try {
-      const apiCategories = await newsDeskApiService.getCategories(false);
-      if (Array.isArray(apiCategories) && apiCategories.length > 0) {
-        for (const cat of apiCategories) {
-          const slug = cat.slug || '';
-          if (!slug) continue;
-          const nameAr = cat.name_ar || cat.name || slug;
-          // التحقق من وجود التصنيف — إنشاء أو تحديث
-          const existing = await query(
-            `SELECT id FROM categories WHERE slug = $1 LIMIT 1`,
-            [slug]
-          );
-          if (existing.rows.length > 0) {
-            await query(`UPDATE categories SET name = $1, is_active = true WHERE slug = $2`, [nameAr, slug]);
-          } else {
-            await query(
-              `INSERT INTO categories (name, slug, is_active) VALUES ($1, $2, true)`,
-              [nameAr, slug]
-            );
-          }
-          syncedCategories++;
-        }
-        console.log(`   ✅ تصنيفات: ${syncedCategories}`);
-      }
-    } catch (err) {
-      console.warn(`   ⚠️  فشل مزامنة التصنيفات:`, err instanceof Error ? err.message : err);
-    }
-
-    // ── 2. مزامنة الوحدات الإعلامية ومصادرها ────────────────────────────────
-    try {
-      const apiMediaUnits = await newsDeskApiService.getAdminMediaUnits(false);
-      if (Array.isArray(apiMediaUnits) && apiMediaUnits.length > 0) {
-        for (const apiUnit of apiMediaUnits) {
-          const slug = apiUnit.slug || apiUnit.name?.toLowerCase().replace(/\s+/g, '-') || '';
-          if (!slug) continue;
-
-          // إنشاء/تحديث الوحدة
-          const existingUnit = await query(
-            `SELECT id FROM media_units WHERE slug = $1 LIMIT 1`,
-            [slug]
-          );
-
-          let localUnitId: number;
-          if (existingUnit.rows.length > 0) {
-            await query(
-              `UPDATE media_units SET name = $1, is_active = $2 WHERE slug = $3`,
-              [apiUnit.name, apiUnit.is_active !== false, slug]
-            );
-            localUnitId = existingUnit.rows[0].id;
-          } else {
-            const insertResult = await query(
-              `INSERT INTO media_units (name, slug, is_active, created_at)
-               VALUES ($1, $2, $3, NOW()) RETURNING id`,
-              [apiUnit.name, slug, apiUnit.is_active !== false]
-            );
-            localUnitId = insertResult.rows[0].id;
-          }
-          syncedUnits++;
-
-          // ربط المصادر بالوحدة
-          const apiSources = apiUnit.sources || [];
-          for (const apiSource of apiSources) {
-            const sourceSlug = apiSource.source_slug || apiSource.slug || '';
-            if (!sourceSlug) continue;
-
-            try {
-              const localSource = await SourceService.findOrCreateBySlug(
-                sourceSlug,
-                apiSource.source_name || apiSource.name || sourceSlug,
-                apiSource.source_url || apiSource.base_url || ''
-              );
-              syncedSources++;
-
-              await MediaUnitSourceService.linkSource(localUnitId, localSource.id, apiSource.priority || 1);
-              syncedLinks++;
-            } catch { /* تجاهل الأخطاء الفردية */ }
-          }
-        }
-        console.log(`   ✅ وحدات: ${syncedUnits} | مصادر: ${syncedSources} | ربط: ${syncedLinks}`);
-      }
-    } catch (err) {
-      console.warn(`   ⚠️  فشل مزامنة الوحدات:`, err instanceof Error ? err.message : err);
-    }
-
-    // ── 3. مزامنة المصادر المنفردة (اللي مش مرتبطة بوحدات) ──────────────────
-    try {
-      const apiSources = await newsDeskApiService.getSources(false);
-      if (Array.isArray(apiSources) && apiSources.length > 0) {
-        let newSourcesCount = 0;
-        for (const src of apiSources) {
-          const srcSlug = src.slug || '';
-          if (!srcSlug) continue;
-          // findOrCreateBySlug بيتحقق إذا موجود — فلا يكرر
-          try {
-            await SourceService.findOrCreateBySlug(srcSlug, src.name || srcSlug, src.base_url || '');
-            newSourcesCount++;
-          } catch { /* تجاهل */ }
-        }
-        console.log(`   ✅ مصادر منفردة: ${newSourcesCount}`);
-      }
-    } catch (err) {
-      console.warn(`   ⚠️  فشل مزامنة المصادر:`, err instanceof Error ? err.message : err);
+    const { newsDeskSyncService } = await import('./newsdesk-sync.service');
+    const result = await newsDeskSyncService.syncAll();
+    if (result.errors.length > 0) {
+      console.warn(`   ⚠️  أخطاء المزامنة (${result.errors.length}):`, result.errors.slice(0, 3));
     }
   }
 

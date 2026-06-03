@@ -356,7 +356,20 @@ app.listen(PORT, '0.0.0.0', async () => {
         (8, 'user_input_video')
       ON CONFLICT (id) DO NOTHING
     `);
-    console.log(`✅ تم ضمان وجود source_types الأساسية`);
+
+    // ضمان وجود system_settings الأساسية
+    await dbQuery(`
+      INSERT INTO system_settings (key, value, description) VALUES 
+        ('scheduler_enabled', 'true', 'تشغيل/إيقاف السحب التلقائي'),
+        ('scheduler_interval_minutes', '5', 'الفاصل بين كل دورة سحب (بالدقائق)'),
+        ('articles_per_source', '20', 'عدد المقالات لكل صفحة من الـ API'),
+        ('classifier_enabled', 'true', 'تشغيل/إيقاف التصنيف الآلي بالـ AI'),
+        ('flow_enabled', 'true', 'تشغيل/إيقاف توجيه الأخبار (FlowRouter)'),
+        ('auto_publish_enabled', 'true', 'تشغيل/إيقاف النشر التلقائي على المواقع الخارجية')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    console.log(`✅ تم ضمان وجود source_types و system_settings الأساسية`);
 
     await schedulerService.start(5); // 5 دقائق
     console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 5 دقائق`);
@@ -367,6 +380,22 @@ app.listen(PORT, '0.0.0.0', async () => {
   // 🗄️ تشغيل migration نظام النشر المتعدد المنصات
   try {
     await runPublishingMigration();
+
+    // ضمان وجود إعداد فيسبوك لكل وحدة إعلامية نشطة
+    const { query: dbQ } = await import('./config/database');
+    const activeUnits = await dbQ(`SELECT id, name FROM media_units WHERE is_active = true`);
+    
+    if (activeUnits.rows.length > 0) {
+      for (const unit of activeUnits.rows) {
+        await dbQ(
+          `INSERT INTO platform_configs (platform, name, credentials, is_enabled, media_unit_id)
+           VALUES ('facebook', $1, '{}'::jsonb, true, $2)
+           ON CONFLICT (platform, media_unit_id, name) DO NOTHING`,
+          [`صفحة فيسبوك - ${unit.name}`, unit.id]
+        );
+      }
+      console.log(`✅ تم ضمان وجود إعدادات فيسبوك لـ ${activeUnits.rows.length} وحدة إعلامية`);
+    }
   } catch (error) {
     console.error(`❌ خطأ في migration نظام النشر:`, error);
   }

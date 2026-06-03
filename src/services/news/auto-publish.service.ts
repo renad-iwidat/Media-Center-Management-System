@@ -56,21 +56,6 @@ export interface AutoPublishResult {
   }[];
 }
 
-// ── Category Flow Map ────────────────────────────────────────────────────────
-// تحديد الفلو (automated / editorial) حسب التصنيف — نفس الـ map من flow-router
-const CATEGORY_FLOW_MAP: Record<number, 'automated' | 'editorial'> = {
-  1:  'editorial',   // محلي
-  2:  'editorial',   // دولي
-  11: 'editorial',   // سياسي
-  3:  'automated',   // اقتصاد
-  4:  'automated',   // رياضة
-  5:  'automated',   // صحة
-  6:  'automated',   // علوم وتكنولوجيا
-  7:  'automated',   // فن و ثقافة
-  9:  'automated',   // بيئة
-  10: 'automated',   // غذاء
-};
-
 // ── Category Mapping ────────────────────────────────────────────────────────
 // ربط تصنيفات النظام المحلي بتصنيفات موقع هنا غزة
 //
@@ -253,11 +238,7 @@ class AutoPublishService {
    * - الأخبار التحريرية (محلي، سياسي، دولي) → المحرر ينشرها يدوياً من استديو التحرير
    */
   async getUnpublishedForTarget(targetId: number, mediaUnitId: number, limit: number = 20): Promise<AutoPublishArticle[]> {
-    // التصنيفات الأوتوماتيكية — من CATEGORY_FLOW_MAP مباشرة (بدون الاعتماد على c.flow)
-    const automatedCategoryIds = Object.entries(CATEGORY_FLOW_MAP)
-      .filter(([_, flow]) => flow === 'automated')
-      .map(([id]) => parseInt(id));
-
+    // التصنيفات الأوتوماتيكية — من categories.flow = 'automated' (مستقر بالـ slug)
     const result = await query(
       `SELECT rd.id,
               COALESCE(pi.title, rd.title)         AS title,
@@ -268,17 +249,17 @@ class AutoPublishService {
               c.slug as category_slug, pi.media_unit_id
        FROM published_items pi
        JOIN raw_data rd ON rd.id = pi.raw_data_id
-       LEFT JOIN categories c ON c.id = rd.category_id
+       JOIN categories c ON c.id = rd.category_id
        WHERE pi.media_unit_id = $1
          AND pi.is_active = true
-         AND rd.category_id = ANY($4)
+         AND c.flow = 'automated'
          AND rd.id NOT IN (
            SELECT raw_data_id FROM auto_publish_log 
            WHERE target_id = $2 AND status = 'success'
          )
        ORDER BY pi.published_at DESC
        LIMIT $3`,
-      [mediaUnitId, targetId, limit, automatedCategoryIds]
+      [mediaUnitId, targetId, limit]
     );
 
     return result.rows.map((row: any) => ({
