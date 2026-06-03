@@ -88,7 +88,7 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, NULLIF(rd.source_slug, ''), st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
@@ -148,7 +148,7 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, NULLIF(rd.source_slug, ''), st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
@@ -199,7 +199,7 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, NULLIF(rd.source_slug, ''), st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id
@@ -495,7 +495,7 @@ export class EditorialQueueService {
           c.name as category_name,
           c.flow as category_flow,
           mu.name as media_unit_name,
-          COALESCE(s.name, st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
+          COALESCE(s.name, NULLIF(rd.source_slug, ''), st.name, SPLIT_PART(SPLIT_PART(rd.url, '://', 2), '/', 1), '—') as source_name
         FROM editorial_queue eq
         JOIN raw_data rd ON eq.raw_data_id = rd.id
         LEFT JOIN categories c ON rd.category_id = c.id

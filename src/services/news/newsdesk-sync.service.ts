@@ -123,6 +123,22 @@ class NewsDeskSyncService {
            AND r.media_unit_id IS NULL
            AND r.source_id IS NOT NULL`
       );
+
+      // 5. إنشاء سجلات editorial_queue للأخبار اللي عندها media_unit_id بس ما عندها queue entry
+      //    (يحصل لما الأخبار اتخزنت قبل ما الوحدات تتزامن)
+      await query(
+        `INSERT INTO editorial_queue (media_unit_id, raw_data_id, status, created_at, updated_at)
+         SELECT r.media_unit_id, r.id, 
+           CASE WHEN r.is_incomplete THEN 'incomplete' ELSE 'pending' END,
+           NOW(), NOW()
+         FROM raw_data r
+         WHERE r.media_unit_id IS NOT NULL
+           AND r.fetch_status IN ('fetched', 'processed')
+           AND NOT EXISTS (
+             SELECT 1 FROM editorial_queue eq 
+             WHERE eq.raw_data_id = r.id AND eq.media_unit_id = r.media_unit_id
+           )`
+      );
     } catch (err) {
       result.errors.push(`backfillRawDataLinks: ${err instanceof Error ? err.message : err}`);
       console.warn(`   ⚠️  فشل إصلاح روابط الأخبار:`, err instanceof Error ? err.message : err);
