@@ -439,6 +439,10 @@ export class FlowRouterService {
   /**
    * توزيع الخبر على كل media_units النشطة عبر editorial_queue
    * يرجع array من queue IDs اللي تم إنشاؤها
+   * 
+   * حماية مزدوجة ضد التكرار:
+   * 1. فحص بـ raw_data_id + media_unit_id (نفس المقالة بالضبط)
+   * 2. فحص بالعنوان + media_unit_id (نفس الخبر من مصدر مختلف)
    */
   private async distributeToQueue(
     article: RawDataItem,
@@ -449,19 +453,7 @@ export class FlowRouterService {
 
     for (const unit of mediaUnits) {
       try {
-        // ضمان وجود نسخة (projection) للوحدة + مزامنة حالتها/تصنيفها
-        try {
-          await MediaUnitArticleService.createProjection({
-            rawDataId: article.id,
-            mediaUnitId: unit.id,
-            sourceId: article.source_id || null,
-            categoryId: article.category_id,
-            status: status === 'incomplete' ? 'pending' : 'pending',
-            isIncomplete: status === 'incomplete',
-          });
-        } catch { /* النسخة موجودة — تجاهل */ }
-
-        // التحقق من عدم وجود سجل مسبق
+        // التحقق 1: نفس raw_data_id + media_unit_id
         const existsResult = await query(
           `SELECT id FROM editorial_queue WHERE raw_data_id = $1 AND media_unit_id = $2`,
           [article.id, unit.id]
@@ -469,6 +461,23 @@ export class FlowRouterService {
         if (existsResult.rows.length > 0) {
           createdItems.push({ queueId: existsResult.rows[0].id, mediaUnitId: unit.id });
           continue;
+        }
+
+        // التحقق 2: نفس العنوان بنفس الوحدة (يمنع التكرار من مصادر مختلفة)
+        if (article.title && article.title.trim()) {
+          const titleExists = await query(
+            `SELECT eq.id FROM editorial_queue eq
+             JOIN raw_data rd ON eq.raw_data_id = rd.id
+             WHERE eq.media_unit_id = $1 
+               AND LOWER(TRIM(rd.title)) = LOWER(TRIM($2))
+               AND eq.status NOT IN ('rejected')
+             LIMIT 1`,
+            [unit.id, article.title]
+          );
+          if (titleExists.rows.length > 0) {
+            createdItems.push({ queueId: titleExists.rows[0].id, mediaUnitId: unit.id });
+            continue;
+          }
         }
 
         const insertResult = await query(

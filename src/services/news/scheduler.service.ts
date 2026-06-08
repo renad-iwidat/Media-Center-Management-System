@@ -12,6 +12,7 @@ import { articleSaverService } from './article-saver.service';
 import FlowRouterService from './flow-router.service';
 import { SystemSettingsService } from '../database/system-settings.service';
 import { autoPublishService } from './auto-publish.service';
+import { syncStateService } from './sync-state.service';
 
 /**
  * واجهة لحالة الـ scheduler
@@ -45,6 +46,13 @@ class SchedulerService {
     if (this.status.isRunning) {
       console.log('⚠️  الـ scheduler يعمل بالفعل');
       return;
+    }
+
+    // ضمان وجود جداول sync_state و sync_logs
+    try {
+      await syncStateService.ensureTables();
+    } catch (err) {
+      console.warn('⚠️ فشل إنشاء جداول sync:', err instanceof Error ? err.message : err);
     }
 
     // قراءة الـ interval من الداتابيس
@@ -229,6 +237,14 @@ class SchedulerService {
       // ── ملخص ──────────────────────────────────────────────────────────────
       this.status.lastRun = now;
       this.status.totalRuns++;
+
+      // تنظيف سجلات قديمة (أكثر من 30 يوم) — كل 10 دورات
+      if (this.status.totalRuns % 10 === 0) {
+        try {
+          const deleted = await syncStateService.cleanupOldLogs(30);
+          if (deleted > 0) console.log(`🗑️ تم حذف ${deleted} سجل مزامنة قديم`);
+        } catch { /* تجاهل */ }
+      }
 
       console.log(`\n✅ انتهت الدورة بنجاح`);
       console.log(`   الوقت المستغرق: ${((Date.now() - now.getTime()) / 1000).toFixed(2)} ثانية`);
