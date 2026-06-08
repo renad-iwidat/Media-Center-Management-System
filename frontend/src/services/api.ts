@@ -120,8 +120,9 @@ async function request<T>(url: string, options?: RequestInit, useManagementAPI: 
 
 // --- Data / Statistics ---
 export const api = {
-  // إحصائيات
-  getStatistics: () => request<any>("/data/statistics"),
+  // إحصائيات - يمكن تصفية حسب unitId
+  getStatistics: (unitId?: number | null) => 
+    request<any>(`/data/statistics${unitId ? `?unitId=${unitId}` : ""}`),
   
   // مصادر
   getSources: () => request<any>("/sources"),

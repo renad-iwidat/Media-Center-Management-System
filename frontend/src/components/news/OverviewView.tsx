@@ -17,7 +17,8 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
   const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
-      api.getStatistics().catch(() => null),
+      // إذا كان هناك unitId، أرسله مع الطلب
+      api.getStatistics(unitId).catch(() => null),
       api.getQueueStats().catch(() => null),
       api.getPublishedStats().catch(() => null),
       api.getEditorialStudio(unitId).catch(() => null),

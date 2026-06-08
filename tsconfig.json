@@ -14,8 +14,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "moduleResolution": "node",
-    "noImplicitAny": true,
-    "lib": ["ES2020"]
+    "noImplicitAny": true
   },
   "include": ["src/**/*"],
   "exclude": [

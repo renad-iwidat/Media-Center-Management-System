@@ -635,13 +635,46 @@ export async function getComprehensiveData(_req: Request, res: Response): Promis
 
 /**
  * الحصول على إحصائيات
+ * يمكن تصفية النتائج حسب وحدة إعلامية معينة باستخدام query parameter: ?unitId=123
  */
-export async function getStatistics(_req: Request, res: Response): Promise<void> {
+export async function getStatistics(req: Request, res: Response): Promise<void> {
   try {
-    const sources = await SourceService.getAll();
-    const activeSources = await SourceService.getActive();
-    const articles = await RawDataService.getAll();
-    const categories = await CategoryService.getAll();
+    const unitId = req.query.unitId ? Number(req.query.unitId) : null;
+    
+    let sources: any[] = [];
+    let activeSources: any[] = [];
+    let articles: any[] = [];
+    let categories = await CategoryService.getAll();
+
+    if (unitId) {
+      // إذا تم تحديد وحدة إعلامية، احصل على المصادر المرتبطة بها فقط
+      const { query: dbQuery } = await import('../../config/database');
+      
+      // جلب المصادر المرتبطة بالوحدة الإعلامية
+      const sourcesResult = await dbQuery(
+        `SELECT DISTINCT s.* FROM sources s
+         INNER JOIN media_unit_sources mus ON s.id = mus.source_id
+         WHERE mus.media_unit_id = $1`,
+        [unitId]
+      );
+      sources = sourcesResult.rows;
+      
+      // جلب المصادر النشطة للوحدة
+      activeSources = sources.filter((s: any) => s.is_active);
+      
+      // جلب الأخبار للوحدة
+      const articlesResult = await dbQuery(
+        `SELECT rd.* FROM raw_data rd
+         WHERE rd.media_unit_id = $1`,
+        [unitId]
+      );
+      articles = articlesResult.rows;
+    } else {
+      // بدون تصفية، احصل على كل شيء
+      sources = await SourceService.getAll();
+      activeSources = await SourceService.getActive();
+      articles = await RawDataService.getAll();
+    }
 
     const articlesByCategory: Record<number, number> = {};
     articles.forEach((article: any) => {
