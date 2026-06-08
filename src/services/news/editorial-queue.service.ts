@@ -106,7 +106,7 @@ export class EditorialQueueService {
         params.push(taskId);
         sql += ` AND eq.task_id = $${params.length}`;
       }
-      sql += ` ORDER BY eq.created_at ASC`;
+      sql += ` ORDER BY eq.created_at DESC`; // الأحدث أولاً
 
       const result = await query(sql, params);
       console.log('📊 البيانات المرجعة من getPendingItems:', result.rows.length, 'عنصر');
@@ -166,7 +166,7 @@ export class EditorialQueueService {
         params.push(taskId);
         sql += ` AND eq.task_id = $${params.length}`;
       }
-      sql += ` ORDER BY eq.created_at ASC`;
+      sql += ` ORDER BY eq.created_at DESC`; // الأحدث أولاً
 
       const result = await query(sql, params);
       return result.rows;

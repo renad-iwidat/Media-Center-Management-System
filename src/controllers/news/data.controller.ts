@@ -112,7 +112,7 @@ export async function getIncompleteArticles(req: Request, res: Response): Promis
       `;
     }
 
-    queryStr += ` ORDER BY rd.id, rd.fetched_at DESC`;
+    queryStr += ` ORDER BY rd.fetched_at DESC, rd.id DESC`;
 
     const result = await query(queryStr, params);
     res.status(200).json({
