@@ -76,3 +76,30 @@ SELECT
 FROM media_units mu
 WHERE mu.name = 'هنا غزة'
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- إدراج هدف "موقع النجاح" — الوحدة الإعلامية "النجاح"
+-- ============================================================
+-- Category Mapping (محلي → موقع النجاح nn.ps):
+--   1  محلي              →  12 الأخبار المحلية
+--   2  دولي              →  4  الأخبار الدولية
+--   3  اقتصاد            →  6  الاقتصاد
+--   4  رياضة             →  7  الرياضة
+--   5  صحة               →  2  الصحة
+--   6  علوم وتكنولوجيا   →  8  تكنولوجيا
+--   7  فن و ثقافة        →  9  الثقافة
+--   9  بيئة              →  10 اجتماعي
+--   10 غذاء              →  13 أخبار عامة
+--   11 سياسي             →  5  السياسة
+-- ============================================================
+INSERT INTO auto_publish_targets (media_unit_id, name, api_url, api_token, default_category_id, is_enabled)
+SELECT 
+  mu.id,
+  'موقع النجاح',
+  'https://nn.najah.edu/api/v1/news/article/',
+  '9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320',
+  12,
+  false
+FROM media_units mu
+WHERE mu.name = 'النجاح'
+ON CONFLICT DO NOTHING;

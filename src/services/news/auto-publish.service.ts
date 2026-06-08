@@ -22,7 +22,12 @@ export interface AutoPublishTarget {
   name: string;
   api_url: string;
   api_token: string;
+  auth_type: 'bearer' | 'token';            // نوع المصادقة
   default_category_id: number;
+  category_mappings: Record<string, number>; // { "local_id": external_id }
+  default_auto_publish: boolean;             // نشر مباشر أم مسودة (للمواقع التي تدعمه)
+  default_pin: number;                       // قيمة pin الافتراضية (0-5)
+  categories_api_url: string | null;         // رابط API التصنيفات من الموقع الخارجي
   is_enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -57,21 +62,10 @@ export interface AutoPublishResult {
 }
 
 // ── Category Mapping ────────────────────────────────────────────────────────
-// ربط تصنيفات النظام المحلي بتصنيفات موقع هنا غزة
-//
-// المحلي:                          هنا غزة:
-// 1  محلي (editorial)         →    1  الأخبار المحلية
-// 2  دولي (editorial)         →    4  الأخبار الدولية
-// 3  اقتصاد (automated)       →    6  الاقتصاد
-// 4  رياضة (automated)        →    7  الرياضة
-// 5  صحة (automated)          →    2  الصحة
-// 6  علوم وتكنولوجيا (automated) → 8  تكنولوجيا
-// 7  فن و ثقافة (automated)   →    9  الثقافة
-// 9  بيئة (automated)         →    10 اجتماعي (أقرب تصنيف)
-// 10 غذاء (automated)         →    13 أخبار عامة
-// 11 سياسي (editorial)        →    5  السياسة
-//
-const LOCAL_TO_HGAZA_CATEGORY: Record<number, number> = {
+// التصنيفات الآن محفوظة في الداتابيس (category_mappings JSONB) لكل هدف
+// هذا fallback فقط للأهداف القديمة التي ليس لها mappings في الداتابيس
+
+const FALLBACK_HGAZA_CATEGORY: Record<number, number> = {
   1:  1,   // محلي → الأخبار المحلية
   2:  4,   // دولي → الأخبار الدولية
   3:  6,   // اقتصاد → الاقتصاد
@@ -83,6 +77,29 @@ const LOCAL_TO_HGAZA_CATEGORY: Record<number, number> = {
   10: 13,  // غذاء → أخبار عامة
   11: 5,   // سياسي → السياسة
 };
+
+/**
+ * تحديد التصنيف الخارجي من mappings الداتابيس
+ * إذا ما في mapping → يرجع default_category_id
+ */
+function resolveExternalCategory(
+  localCategoryId: number | null,
+  target: AutoPublishTarget
+): number {
+  if (!localCategoryId) return target.default_category_id;
+
+  // من الداتابيس أولاً
+  const dbMappings = target.category_mappings || {};
+  const dbMapped = dbMappings[String(localCategoryId)];
+  if (dbMapped) return dbMapped;
+
+  // fallback: للأهداف القديمة التي ليس لها mappings
+  if (target.api_url.includes('hgaza.nn.ps')) {
+    return FALLBACK_HGAZA_CATEGORY[localCategoryId] || target.default_category_id;
+  }
+
+  return target.default_category_id;
+}
 
 // ── Service Class ───────────────────────────────────────────────────────────
 
@@ -142,19 +159,31 @@ class AutoPublishService {
     name: string;
     api_url: string;
     api_token: string;
+    auth_type?: 'bearer' | 'token';
     default_category_id?: number;
+    category_mappings?: Record<string, number>;
+    default_auto_publish?: boolean;
+    default_pin?: number;
+    categories_api_url?: string;
     is_enabled?: boolean;
   }): Promise<AutoPublishTarget> {
     const result = await query(
-      `INSERT INTO auto_publish_targets (media_unit_id, name, api_url, api_token, default_category_id, is_enabled)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO auto_publish_targets
+         (media_unit_id, name, api_url, api_token, auth_type,
+          default_category_id, category_mappings, default_auto_publish, default_pin, categories_api_url, is_enabled)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         data.media_unit_id,
         data.name,
         data.api_url,
         data.api_token,
+        data.auth_type || 'bearer',
         data.default_category_id || 1,
+        JSON.stringify(data.category_mappings || {}),
+        data.default_auto_publish ?? true,
+        data.default_pin ?? 0,
+        data.categories_api_url || null,
         data.is_enabled ?? false,
       ]
     );
@@ -168,33 +197,28 @@ class AutoPublishService {
     name: string;
     api_url: string;
     api_token: string;
+    auth_type: 'bearer' | 'token';
     default_category_id: number;
+    category_mappings: Record<string, number>;
+    default_auto_publish: boolean;
+    default_pin: number;
+    categories_api_url: string;
     is_enabled: boolean;
   }>): Promise<AutoPublishTarget | null> {
     const fields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
-    if (data.name !== undefined) {
-      fields.push(`name = $${paramIndex++}`);
-      values.push(data.name);
-    }
-    if (data.api_url !== undefined) {
-      fields.push(`api_url = $${paramIndex++}`);
-      values.push(data.api_url);
-    }
-    if (data.api_token !== undefined) {
-      fields.push(`api_token = $${paramIndex++}`);
-      values.push(data.api_token);
-    }
-    if (data.default_category_id !== undefined) {
-      fields.push(`default_category_id = $${paramIndex++}`);
-      values.push(data.default_category_id);
-    }
-    if (data.is_enabled !== undefined) {
-      fields.push(`is_enabled = $${paramIndex++}`);
-      values.push(data.is_enabled);
-    }
+    if (data.name !== undefined)               { fields.push(`name = $${paramIndex++}`);               values.push(data.name); }
+    if (data.api_url !== undefined)            { fields.push(`api_url = $${paramIndex++}`);            values.push(data.api_url); }
+    if (data.api_token !== undefined)          { fields.push(`api_token = $${paramIndex++}`);          values.push(data.api_token); }
+    if (data.auth_type !== undefined)          { fields.push(`auth_type = $${paramIndex++}`);          values.push(data.auth_type); }
+    if (data.default_category_id !== undefined){ fields.push(`default_category_id = $${paramIndex++}`);values.push(data.default_category_id); }
+    if (data.category_mappings !== undefined)  { fields.push(`category_mappings = $${paramIndex++}`); values.push(JSON.stringify(data.category_mappings)); }
+    if (data.default_auto_publish !== undefined){ fields.push(`default_auto_publish = $${paramIndex++}`); values.push(data.default_auto_publish); }
+    if (data.default_pin !== undefined)        { fields.push(`default_pin = $${paramIndex++}`);        values.push(data.default_pin); }
+    if (data.categories_api_url !== undefined) { fields.push(`categories_api_url = $${paramIndex++}`); values.push(data.categories_api_url); }
+    if (data.is_enabled !== undefined)         { fields.push(`is_enabled = $${paramIndex++}`);         values.push(data.is_enabled); }
 
     if (fields.length === 0) return null;
 
@@ -276,24 +300,39 @@ class AutoPublishService {
 
   /**
    * نشر خبر واحد على هدف معين
+   * overrides: إعدادات يختارها المحرر (تصنيف، pin، auto_publish) — تأتي من dialog الفرونت
    */
   async publishOneToTarget(
     article: AutoPublishArticle,
-    target: AutoPublishTarget
+    target: AutoPublishTarget,
+    overrides?: {
+      category_id?: number;       // التصنيف الخارجي الذي اختاره المحرر
+      auto_publish?: boolean;     // نشر فوري أم مسودة
+      pin?: number;               // 0-5
+    }
   ): Promise<{ success: boolean; responseCode?: number; error?: string; responseBody?: string; externalUrl?: string; externalId?: number }> {
     try {
-      // تحديد التصنيف الخارجي
-      const externalCategoryId = article.category_id
-        ? (LOCAL_TO_HGAZA_CATEGORY[article.category_id] || target.default_category_id)
-        : target.default_category_id;
+      // تحديد التصنيف الخارجي — overrides من المحرر أولاً ثم mapping الداتابيس
+      const externalCategoryId = overrides?.category_id !== undefined
+        ? overrides.category_id
+        : resolveExternalCategory(article.category_id, target);
 
-      // تجهيز الـ tags و keywords
+      // قيم auto_publish و pin — overrides أولاً ثم إعدادات الهدف
+      const autoPublish = overrides?.auto_publish !== undefined
+        ? overrides.auto_publish
+        : target.default_auto_publish;
+
+      const pinValue = overrides?.pin !== undefined
+        ? overrides.pin
+        : target.default_pin;
+
+      // تجهيز الـ keywords
       const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
 
       console.log(`   📡 Sending to: ${target.api_url}`);
-      console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." category_id=${externalCategoryId} image_url=${article.image_url ? 'yes' : 'no'}`);
+      console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." cat=${externalCategoryId} auto_publish=${autoPublish} pin=${pinValue} auth=${target.auth_type}`);
 
-      // تحميل الصورة مرة واحدة وتحويلها لـ base64
+      // تحميل الصورة وتحويلها لـ base64
       let imageBase64: string | null = null;
       if (article.image_url) {
         try {
@@ -310,21 +349,36 @@ class AutoPublishService {
         }
       }
 
-      // إرسال الطلب كـ multipart/form-data مع retry في حالة 500 (rate limiting)
+      // Authorization header حسب auth_type من الداتابيس
+      const authHeader = target.auth_type === 'token'
+        ? `Token ${target.api_token}`
+        : `Bearer ${target.api_token}`;
+
+      // نوع الموقع للحقول الإضافية
+      const supportsAutoPublish = target.auth_type === 'token' || target.api_url.includes('nn.najah.edu');
+
       let response!: Response;
       let responseBody = '';
       const maxRetries = 2;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        // إعادة بناء FormData لكل محاولة (لأن الـ body يُستهلك)
         const retryFormData = new FormData();
         retryFormData.append('title', article.title);
         retryFormData.append('content', article.content);
         retryFormData.append('category_id', String(externalCategoryId));
-        retryFormData.append('tags', tagsString);
         retryFormData.append('keywords', tagsString);
 
-        // إضافة الصورة كـ base64 إذا تم تحميلها بنجاح
+        // هنا غزة يقبل tags إضافة للـ keywords
+        if (target.auth_type === 'bearer') {
+          retryFormData.append('tags', tagsString);
+        }
+
+        // المواقع التي تدعم auto_publish و pin (مثل موقع النجاح)
+        if (supportsAutoPublish) {
+          retryFormData.append('auto_publish', autoPublish ? 'true' : 'false');
+          retryFormData.append('pin', String(pinValue));
+        }
+
         if (imageBase64) {
           retryFormData.append('image_base64', imageBase64);
         }
@@ -333,18 +387,15 @@ class AutoPublishService {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Authorization': `Bearer ${target.api_token}`,
+            'Authorization': authHeader,
           },
           body: retryFormData,
         });
 
         responseBody = await response.text();
 
-        if (response.status !== 500 || attempt === maxRetries) {
-          break;
-        }
+        if (response.status !== 500 || attempt === maxRetries) break;
 
-        // انتظار قبل إعادة المحاولة (exponential backoff)
         const waitTime = (attempt + 1) * 5000;
         console.log(`   🔄 Retry ${attempt + 1}/${maxRetries} after ${waitTime / 1000}s...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -353,46 +404,39 @@ class AutoPublishService {
       console.log(`   📋 Response [${response.status}]: ${responseBody.substring(0, 300)}`);
 
       if (response.ok) {
-        // استخراج ID الخبر المنشور ورابطه من الـ response
         let externalId: number | undefined;
         let externalUrl: string | undefined;
         try {
           const parsed = JSON.parse(responseBody);
-          externalId = parsed?.data?.id;
-          // استخدم الـ url المرجع مباشرة من الـ API (الصيغة الصحيحة: /article/{slug})
-          if (parsed?.data?.url) {
-            externalUrl = parsed.data.url;
-          }
-          // fallback: بناء الرابط بصيغة /article/{slug} من العنوان
+          externalId = parsed?.data?.id || parsed?.id;
+          if (parsed?.data?.url) externalUrl = parsed.data.url;
+          else if (parsed?.url) externalUrl = parsed.url;
+          // fallback slug
           if (!externalUrl && article.title) {
-            const baseUrl = target.api_url.replace('/api/v1/automation/news', '');
+            const baseUrl = target.api_url.replace(/\/api\/.*$/, '');
             const slug = article.title
               .trim()
-              .replace(/[^\u0600-\u06FF\u0750-\u077Fa-zA-Z0-9\s-]/g, '') // إبقاء العربي والإنجليزي والأرقام
-              .replace(/\s+/g, '-')       // مسافات → شرطات
-              .replace(/-+/g, '-')        // شرطات متكررة → شرطة واحدة
-              .replace(/^-|-$/g, '');     // إزالة شرطات من البداية والنهاية
+              .replace(/[^\u0600-\u06FF\u0750-\u077Fa-zA-Z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '');
             externalUrl = `${baseUrl}/article/${encodeURIComponent(slug)}`;
           }
         } catch { /* تجاهل */ }
 
         console.log(`   🔗 External URL: ${externalUrl || '(لم يُرجع رابط)'}`);
-        console.log(`   📋 API response: ${responseBody.substring(0, 500)}`);
-
 
         await this.logPublish(target.id, article.id, 'success', response.status, responseBody, undefined, externalUrl, externalId);
-        
-        // تحديث حالة المقال في raw_data — لتتبع أنه منشور خارجياً
         await query(
-          `UPDATE raw_data SET publish_status = 'published_external' 
+          `UPDATE raw_data SET publish_status = 'published_external'
            WHERE id = $1 AND publish_status NOT IN ('archived')`,
           [article.id]
         );
-        
+
         return { success: true, responseCode: response.status, responseBody, externalUrl, externalId };
       } else {
         await this.logPublish(target.id, article.id, 'failed', response.status, responseBody, `HTTP ${response.status}`);
-        return { success: false, responseCode: response.status, error: `HTTP ${response.status}: ${responseBody}` };
+        return { success: false, responseCode: response.status, error: `HTTP ${response.status}: ${responseBody.substring(0, 200)}` };
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -552,12 +596,15 @@ class AutoPublishService {
       return { total: 0, success: 0, failed: 0, skipped: 0, details: [] };
     }
 
-    // جلب المقالات الفاشلة مع أهدافها
+    // جلب المقالات الفاشلة مع أهدافها (كل أعمدة الهدف)
     const failedResult = await query(
       `SELECT apl.target_id, apl.raw_data_id,
               rd.title, rd.content, rd.image_url, rd.tags, rd.category_id,
               c.slug as category_slug,
-              apt.media_unit_id, apt.name as target_name, apt.api_url, apt.api_token, apt.default_category_id
+              apt.media_unit_id, apt.name as target_name,
+              apt.api_url, apt.api_token, apt.auth_type,
+              apt.default_category_id, apt.category_mappings,
+              apt.default_auto_publish, apt.default_pin, apt.categories_api_url
        FROM auto_publish_log apl
        JOIN auto_publish_targets apt ON apt.id = apl.target_id
        JOIN raw_data rd ON rd.id = apl.raw_data_id
@@ -601,7 +648,12 @@ class AutoPublishService {
         name: row.target_name,
         api_url: row.api_url,
         api_token: row.api_token,
+        auth_type: row.auth_type || 'bearer',
         default_category_id: row.default_category_id,
+        category_mappings: row.category_mappings || {},
+        default_auto_publish: row.default_auto_publish ?? true,
+        default_pin: row.default_pin ?? 0,
+        categories_api_url: row.categories_api_url || null,
         is_enabled: true,
         created_at: '',
         updated_at: '',
@@ -669,8 +721,13 @@ class AutoPublishService {
   /**
    * نشر خبر واحد يدوياً (للمحرر) على هدف معين
    * يُستخدم للأخبار التحريرية — المحرر يكبس زر وينشر
+   * overrides: الإعدادات التي اختارها من dialog قبل النشر
    */
-  async publishOneManually(rawDataId: number, targetId: number): Promise<{
+  async publishOneManually(rawDataId: number, targetId: number, overrides?: {
+    category_id?: number;
+    auto_publish?: boolean;
+    pin?: number;
+  }): Promise<{
     success: boolean;
     responseCode?: number;
     error?: string;
@@ -734,7 +791,72 @@ class AutoPublishService {
       return { success: false, error: 'الخبر منشور مسبقاً على هذا الهدف' };
     }
 
-    return this.publishOneToTarget(article, target);
+    return this.publishOneToTarget(article, target, overrides);
+  }
+
+  /**
+   * جلب التصنيفات من API الموقع الخارجي (مثل موقع النجاح)
+   * يُستخدم في dialog قبل النشر لعرض قائمة التصنيفات للمحرر
+   */
+  async fetchExternalCategories(targetId: number): Promise<{
+    id: number;
+    title: string;
+    parent_id?: number | null;
+    children?: { id: number; title: string }[];
+  }[]> {
+    const target = await this.getTargetById(targetId);
+    if (!target || !target.categories_api_url) {
+      return [];
+    }
+
+    const authHeader = target.auth_type === 'token'
+      ? `Token ${target.api_token}`
+      : `Bearer ${target.api_token}`;
+
+    // جلب كل الصفحات
+    const allCategories: any[] = [];
+    let nextUrl: string | null = target.categories_api_url;
+
+    try {
+      while (nextUrl) {
+        const currentUrl = nextUrl;
+        const fetchRes = await fetch(currentUrl, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': authHeader,
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+
+        if (!fetchRes.ok) {
+          console.error(`❌ فشل جلب التصنيفات (${fetchRes.status}) من: ${currentUrl}`);
+          break;
+        }
+
+        const pageData = await fetchRes.json() as { results?: any[]; next?: string | null } | any[];
+        const results = (pageData as any).results || (Array.isArray(pageData) ? pageData : []);
+        allCategories.push(...results);
+
+        // pagination
+        const maybeNext = (pageData as any).next;
+        nextUrl = (typeof maybeNext === 'string' && maybeNext.startsWith('http')) ? maybeNext : null;
+      }
+    } catch (err) {
+      console.error('❌ خطأ في جلب التصنيفات الخارجية:', err);
+    }
+
+    // تسطيح الشجرة (parent + children)
+    const flat: { id: number; title: string; parent_id?: number | null; children?: any[] }[] = [];
+    for (const cat of allCategories) {
+      flat.push({ id: cat.id, title: cat.title, parent_id: null, children: cat.children || [] });
+      if (cat.children && cat.children.length > 0) {
+        for (const child of cat.children) {
+          flat.push({ id: child.id, title: child.title, parent_id: cat.id });
+        }
+      }
+    }
+
+    return flat;
   }
 
   /**

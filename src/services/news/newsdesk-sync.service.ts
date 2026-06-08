@@ -102,15 +102,29 @@ class NewsDeskSyncService {
            AND r.source_id IS NOT NULL`
       );
 
-      // 5. إنشاء سجلات editorial_queue للأخبار اللي عندها media_unit_id بس ما عندها queue entry
-      //    (يحصل لما الأخبار اتخزنت قبل ما الوحدات تتزامن)
+      // 5. إنشاء سجلات editorial_queue للأخبار المعالجة/المنشورة التي ليس لها queue entry
+      //    لكل وحدة مرتبطة بمصدر الخبر (ليس فقط الوحدة الأساسية media_unit_id)
       await query(
         `INSERT INTO editorial_queue (media_unit_id, raw_data_id, status, created_at, updated_at)
-         SELECT r.media_unit_id, r.id, 
+         SELECT DISTINCT mus.media_unit_id, r.id,
+           CASE WHEN r.is_incomplete THEN 'incomplete' ELSE 'pending' END,
+           NOW(), NOW()
+         FROM raw_data r
+         JOIN media_unit_sources mus ON mus.source_id = r.source_id AND mus.is_active = true
+         JOIN media_units mu ON mu.id = mus.media_unit_id AND mu.is_active = true
+         WHERE r.fetch_status IN ('fetched', 'processed')
+           AND NOT EXISTS (
+             SELECT 1 FROM editorial_queue eq 
+             WHERE eq.raw_data_id = r.id AND eq.media_unit_id = mus.media_unit_id
+           )
+         UNION ALL
+         -- أخبار لها media_unit_id بس ليس لها ربط بالمصدر (fallback)
+         SELECT r.media_unit_id, r.id,
            CASE WHEN r.is_incomplete THEN 'incomplete' ELSE 'pending' END,
            NOW(), NOW()
          FROM raw_data r
          WHERE r.media_unit_id IS NOT NULL
+           AND r.source_id IS NULL
            AND r.fetch_status IN ('fetched', 'processed')
            AND NOT EXISTS (
              SELECT 1 FROM editorial_queue eq 

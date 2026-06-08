@@ -26,6 +26,9 @@ router.get('/targets', AutoPublishController.getTargets);
 // GET /api/auto-publish/targets/:id — هدف واحد
 router.get('/targets/:id', AutoPublishController.getTarget);
 
+// GET /api/auto-publish/targets/:id/categories — تصنيفات الموقع الخارجي (للعرض قبل النشر)
+router.get('/targets/:id/categories', AutoPublishController.getExternalCategories);
+
 // POST /api/auto-publish/targets — إنشاء هدف جديد
 router.post('/targets', AutoPublishController.createTarget);
 

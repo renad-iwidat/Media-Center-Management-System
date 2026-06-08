@@ -109,12 +109,15 @@ export class MediaUnitArticleService {
   }): Promise<{ mediaUnitIds: number[]; created: number }> {
     let mediaUnitIds: number[] = [];
 
-    // 1. الوحدات الصريحة (من الـ API: article.media_units[]) لها الأولوية
+    // 1. الوحدات الصريحة (من السحب: media_unit_id) — نضيفها كنقطة بداية
+    //    لكن لا نكتفي بها — نكمل دائماً للمصادر المشتركة
     if (params.explicitMediaUnitIds && params.explicitMediaUnitIds.length > 0) {
       mediaUnitIds = [...params.explicitMediaUnitIds];
     }
 
-    // 2. كل الوحدات المرتبطة بالمصدر (مصدر مشترك)
+    // 2. كل الوحدات المرتبطة بالمصدر (مصدر مشترك بين عدة وحدات)
+    //    يضمن وصول الخبر لكل وحدة تشترك في هذا المصدر، بغض النظر عن
+    //    الوحدة التي سحبت الخبر أصلاً.
     if (params.sourceId) {
       const linked = await query(
         `SELECT DISTINCT mus.media_unit_id

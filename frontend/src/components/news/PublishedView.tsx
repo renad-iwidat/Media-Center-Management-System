@@ -38,6 +38,16 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [showSocialPostCreator, setShowSocialPostCreator] = useState(false);
 
+  // dialog إعدادات النشر (تصنيف، auto_publish، pin)
+  const [publishConfigTarget, setPublishConfigTarget] = useState<any | null>(null); // الهدف المختار
+  const [externalCategories, setExternalCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [publishConfig, setPublishConfig] = useState<{
+    category_id: number | undefined;
+    auto_publish: boolean;
+    pin: number;
+  }>({ category_id: undefined, auto_publish: true, pin: 0 });
+
   const loadData = useCallback(() => {
     setLoading(true);
     api.getPublished(unitId)
@@ -57,43 +67,66 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   const handleOpenExternalPublish = async (item: any) => {
     setSelectedPublishItem(item);
     setLastPublishedUrl(null);
+    setPublishConfigTarget(null);
+    setExternalCategories([]);
+    setPublishConfig({ category_id: undefined, auto_publish: true, pin: 0 });
     try {
       const res = await api.getAutoPublishTargets();
       const targets = (res.data || []).filter((t: any) => t.is_enabled);
       setPublishTargets(targets);
     } catch {
-      setNotification({
-        type: "error",
-        message: "❌ فشل تحميل المواقع الخارجية",
-      });
+      setNotification({ type: "error", message: "❌ فشل تحميل المواقع الخارجية" });
     }
   };
 
-  // نشر على موقع خارجي
-  const handlePublishToExternal = async (targetId: number) => {
-    if (!selectedPublishItem?.raw_data_id) return;
-    setPublishingToTarget(targetId);
+  // عند اختيار موقع — جلب تصنيفاته
+  const handleSelectTarget = async (target: any) => {
+    setPublishConfigTarget(target);
+    // إعادة تعيين الإعدادات بالقيم الافتراضية من الداتابيس
+    setPublishConfig({
+      category_id: target.default_category_id || undefined,
+      auto_publish: target.default_auto_publish ?? true,
+      pin: target.default_pin ?? 0,
+    });
+
+    if (target.categories_api_url) {
+      setLoadingCategories(true);
+      try {
+        const res = await api.getExternalTargetCategories(target.id);
+        setExternalCategories(res.data || []);
+      } catch {
+        setExternalCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    } else {
+      setExternalCategories([]);
+    }
+  };
+
+  // النشر الفعلي بعد تأكيد الإعدادات
+  const handleConfirmPublish = async () => {
+    if (!selectedPublishItem?.raw_data_id || !publishConfigTarget) return;
+    setPublishingToTarget(publishConfigTarget.id);
     setLastPublishedUrl(null);
     try {
-      const res = await api.publishOneToExternal(selectedPublishItem.raw_data_id, targetId);
+      const res = await api.publishOneToExternal(
+        selectedPublishItem.raw_data_id,
+        publishConfigTarget.id,
+        {
+          category_id: publishConfig.category_id,
+          auto_publish: publishConfig.auto_publish,
+          pin: publishConfig.pin,
+        }
+      );
       const externalUrl = res?.data?.externalUrl;
+      setPublishConfigTarget(null); // إغلاق dialog الإعدادات
       if (externalUrl) {
         setLastPublishedUrl(externalUrl);
-        setNotification({
-          type: "success",
-          message: `✅ تم نشر الخبر بنجاح`,
-        });
-      } else {
-        setNotification({
-          type: "success",
-          message: `✅ تم نشر الخبر على الموقع الخارجي`,
-        });
       }
+      setNotification({ type: "success", message: "✅ تم نشر الخبر بنجاح على الموقع الخارجي" });
     } catch (err: any) {
-      setNotification({
-        type: "error",
-        message: err?.message || `❌ فشل النشر على الموقع الخارجي`,
-      });
+      setNotification({ type: "error", message: err?.message || "❌ فشل النشر على الموقع الخارجي" });
     } finally {
       setPublishingToTarget(null);
     }
@@ -588,35 +621,208 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="space-y-2 border border-[#e2e8f0] rounded-xl p-4 bg-[#f8fafc]"
+                    className="space-y-3 border border-[#e2e8f0] rounded-xl p-4 bg-[#f8fafc]"
                   >
-                    <p className="text-[10px] text-[#94a3b8] font-bold uppercase flex items-center gap-1 mb-2">
-                      <ExternalLink size={12} /> المواقع الخارجية المتاحة
-                    </p>
-                    {publishTargets.length > 0 ? (
-                      publishTargets.map((target) => (
-                        <button
-                          key={target.id}
-                          onClick={() => handlePublishToExternal(target.id)}
-                          disabled={publishingToTarget !== null}
-                          className="w-full p-3 rounded-xl border border-[#e2e8f0] hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center justify-between group bg-white"
-                        >
-                          <div className="flex items-center gap-3">
-                            <ExternalLink size={14} className="text-blue-500 group-hover:text-blue-600" />
-                            <div className="text-right">
-                              <p className="text-xs font-semibold text-[#1e293b]">{target.name}</p>
-                              <p className="text-[10px] text-[#64748b]">{target.media_unit_name || target.mediaUnitName}</p>
+                    {/* ── الخطوة 1: اختيار الموقع ── */}
+                    {!publishConfigTarget && (
+                      <>
+                        <p className="text-[10px] text-[#94a3b8] font-bold uppercase flex items-center gap-1">
+                          <ExternalLink size={12} /> اختر الموقع الخارجي
+                        </p>
+                        {publishTargets.length > 0 ? (
+                          publishTargets.map((target) => (
+                            <button
+                              key={target.id}
+                              onClick={() => handleSelectTarget(target)}
+                              className="w-full p-3 rounded-xl border border-[#e2e8f0] hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center justify-between group bg-white"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                                  <Globe size={14} className="text-blue-500" />
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs font-semibold text-[#1e293b]">{target.name}</p>
+                                  <p className="text-[10px] text-[#64748b]">{target.media_unit_name || target.mediaUnitName}</p>
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg">اختيار</span>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="text-xs text-[#94a3b8] text-center py-2">لا توجد مواقع خارجية مفعّلة</p>
+                        )}
+                      </>
+                    )}
+
+                    {/* ── الخطوة 2: إعدادات النشر ── */}
+                    {publishConfigTarget && (
+                      <div className="space-y-4">
+                        {/* Header الموقع المختار */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Globe size={13} className="text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-[#1e293b]">{publishConfigTarget.name}</p>
+                              <p className="text-[9px] text-[#94a3b8]">إعدادات النشر</p>
                             </div>
                           </div>
-                          {publishingToTarget === target.id ? (
-                            <Loader2 size={14} className="text-blue-600 animate-spin" />
+                          <button
+                            onClick={() => { setPublishConfigTarget(null); setExternalCategories([]); }}
+                            className="text-[10px] text-[#94a3b8] hover:text-[#1e293b] flex items-center gap-1"
+                          >
+                            <X size={11} /> تغيير
+                          </button>
+                        </div>
+
+                        {/* التصنيف */}
+                        <div>
+                          <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-1.5">
+                            التصنيف على الموقع الخارجي
+                          </label>
+                          {loadingCategories ? (
+                            <div className="flex items-center gap-2 py-2 text-[11px] text-[#94a3b8]">
+                              <Loader2 size={12} className="animate-spin" /> جاري تحميل التصنيفات...
+                            </div>
+                          ) : externalCategories.length > 0 ? (
+                            <select
+                              value={publishConfig.category_id ?? ''}
+                              onChange={(e) => setPublishConfig(prev => ({
+                                ...prev,
+                                category_id: e.target.value ? Number(e.target.value) : undefined
+                              }))}
+                              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-400 text-[#1e293b]"
+                            >
+                              <option value="">— اختر تصنيفاً —</option>
+                              {externalCategories
+                                .filter((c: any) => c.parent_id === null || c.parent_id === undefined)
+                                .map((cat: any) => (
+                                  <optgroup key={cat.id} label={cat.title}>
+                                    <option value={cat.id}>{cat.title}</option>
+                                    {externalCategories
+                                      .filter((c: any) => c.parent_id === cat.id)
+                                      .map((child: any) => (
+                                        <option key={child.id} value={child.id}>
+                                          &nbsp;&nbsp;↳ {child.title}
+                                        </option>
+                                      ))}
+                                  </optgroup>
+                                ))}
+                            </select>
                           ) : (
-                            <span className="text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">نشر</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min={1}
+                                value={publishConfig.category_id ?? ''}
+                                onChange={(e) => setPublishConfig(prev => ({
+                                  ...prev,
+                                  category_id: e.target.value ? Number(e.target.value) : undefined
+                                }))}
+                                placeholder={`افتراضي: ${publishConfigTarget.default_category_id}`}
+                                className="flex-1 bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-400 text-[#1e293b]"
+                              />
+                              <span className="text-[10px] text-[#94a3b8]">ID التصنيف</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* auto_publish و pin — فقط للمواقع التي تدعمها (مثل النجاح) */}
+                        {(publishConfigTarget.auth_type === 'token' || publishConfigTarget.api_url?.includes('nn.najah.edu')) && (
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* auto_publish */}
+                            <div>
+                              <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-1.5">
+                                حالة النشر
+                              </label>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setPublishConfig(prev => ({ ...prev, auto_publish: true }))}
+                                  className={`flex-1 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                                    publishConfig.auto_publish
+                                      ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
+                                      : 'bg-white border-[#e2e8f0] text-[#64748b] hover:border-emerald-300'
+                                  }`}
+                                >
+                                  نشر فوري
+                                </button>
+                                <button
+                                  onClick={() => setPublishConfig(prev => ({ ...prev, auto_publish: false }))}
+                                  className={`flex-1 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                                    !publishConfig.auto_publish
+                                      ? 'bg-amber-100 border-amber-400 text-amber-700'
+                                      : 'bg-white border-[#e2e8f0] text-[#64748b] hover:border-amber-300'
+                                  }`}
+                                >
+                                  مسودة
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* pin */}
+                            <div>
+                              <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-1.5">
+                                تثبيت في الرئيسية
+                              </label>
+                              <div className="flex gap-1">
+                                {[0, 1, 2, 3, 4, 5].map(v => (
+                                  <button
+                                    key={v}
+                                    onClick={() => setPublishConfig(prev => ({ ...prev, pin: v }))}
+                                    title={v === 0 ? 'غير مثبت' : `موضع ${v} في الرئيسية${v === 5 ? ' (أول خبر)' : ''}`}
+                                    className={`flex-1 py-2 rounded-lg text-[11px] font-bold border transition-all ${
+                                      publishConfig.pin === v
+                                        ? v === 0
+                                          ? 'bg-slate-200 border-slate-400 text-slate-700'
+                                          : 'bg-blue-100 border-blue-400 text-blue-700'
+                                        : 'bg-white border-[#e2e8f0] text-[#64748b] hover:border-blue-200'
+                                    }`}
+                                  >
+                                    {v}
+                                  </button>
+                                ))}
+                              </div>
+                              <p className="text-[9px] text-[#94a3b8] mt-1">
+                                {publishConfig.pin === 0 ? 'غير مثبت' : `مثبت بموضع ${publishConfig.pin}${publishConfig.pin === 5 ? ' (أول خبر)' : ''}`}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ملخص الإعدادات */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1">
+                          <p className="text-[10px] font-bold text-blue-700 mb-1.5">ملخص النشر:</p>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="text-[10px] bg-white border border-blue-200 rounded-lg px-2 py-1 text-blue-700">
+                              📁 تصنيف: {publishConfig.category_id ?? publishConfigTarget.default_category_id}
+                            </span>
+                            {(publishConfigTarget.auth_type === 'token' || publishConfigTarget.api_url?.includes('nn.najah.edu')) && (
+                              <>
+                                <span className={`text-[10px] rounded-lg px-2 py-1 border ${publishConfig.auto_publish ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                                  {publishConfig.auto_publish ? '✅ نشر فوري' : '📝 مسودة'}
+                                </span>
+                                <span className="text-[10px] bg-white border border-blue-200 rounded-lg px-2 py-1 text-blue-700">
+                                  📌 pin: {publishConfig.pin === 0 ? 'بدون تثبيت' : `موضع ${publishConfig.pin}`}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* زر النشر */}
+                        <button
+                          onClick={handleConfirmPublish}
+                          disabled={publishingToTarget !== null}
+                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                        >
+                          {publishingToTarget === publishConfigTarget.id ? (
+                            <><Loader2 size={14} className="animate-spin" /> جاري النشر...</>
+                          ) : (
+                            <><Globe size={14} /> نشر على {publishConfigTarget.name}</>
                           )}
                         </button>
-                      ))
-                    ) : (
-                      <p className="text-xs text-[#94a3b8] text-center py-2">لا توجد مواقع خارجية مفعّلة</p>
+                      </div>
                     )}
                   </motion.div>
                 )}

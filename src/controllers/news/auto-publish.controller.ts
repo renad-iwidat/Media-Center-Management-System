@@ -297,11 +297,11 @@ export class AutoPublishController {
   /**
    * POST /api/auto-publish/publish-one
    * نشر خبر واحد يدوياً على هدف معين (للمحرر — أخبار تحريرية)
-   * Body: { raw_data_id: number, target_id: number }
+   * Body: { raw_data_id, target_id, category_id?, auto_publish?, pin? }
    */
   static async publishOneManually(req: Request, res: Response): Promise<void> {
     try {
-      const { raw_data_id, target_id } = req.body;
+      const { raw_data_id, target_id, category_id, auto_publish, pin } = req.body;
 
       if (!raw_data_id || !target_id) {
         res.status(400).json({
@@ -311,8 +311,17 @@ export class AutoPublishController {
         return;
       }
 
-      console.log(`📤 نشر يدوي: خبر #${raw_data_id} → هدف #${target_id}`);
-      const result = await autoPublishService.publishOneManually(Number(raw_data_id), Number(target_id));
+      const overrides: { category_id?: number; auto_publish?: boolean; pin?: number } = {};
+      if (category_id !== undefined) overrides.category_id = Number(category_id);
+      if (auto_publish !== undefined) overrides.auto_publish = Boolean(auto_publish);
+      if (pin !== undefined) overrides.pin = Number(pin);
+
+      console.log(`📤 نشر يدوي: خبر #${raw_data_id} → هدف #${target_id}`, overrides);
+      const result = await autoPublishService.publishOneManually(
+        Number(raw_data_id),
+        Number(target_id),
+        Object.keys(overrides).length > 0 ? overrides : undefined
+      );
 
       if (result.success) {
         res.status(200).json({
@@ -335,6 +344,29 @@ export class AutoPublishController {
       res.status(500).json({
         success: false,
         message: 'خطأ في نشر الخبر',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * GET /api/auto-publish/targets/:id/categories
+   * جلب التصنيفات من API الموقع الخارجي (للعرض في dialog قبل النشر)
+   */
+  static async getExternalCategories(req: Request, res: Response): Promise<void> {
+    try {
+      const targetId = Number(req.params.id);
+      const categories = await autoPublishService.fetchExternalCategories(targetId);
+
+      res.status(200).json({
+        success: true,
+        data: categories,
+        total: categories.length,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب التصنيفات الخارجية',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

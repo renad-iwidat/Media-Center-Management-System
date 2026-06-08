@@ -522,6 +522,27 @@ app.listen(PORT, '0.0.0.0', async () => {
       )
     `);
 
+    // أعمدة إضافية لـ auto_publish_targets (safe migration)
+    await dbQuery(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='auto_publish_targets' AND column_name='auth_type') THEN
+          ALTER TABLE auto_publish_targets ADD COLUMN auth_type VARCHAR(20) NOT NULL DEFAULT 'bearer';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='auto_publish_targets' AND column_name='category_mappings') THEN
+          ALTER TABLE auto_publish_targets ADD COLUMN category_mappings JSONB DEFAULT '{}';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='auto_publish_targets' AND column_name='default_auto_publish') THEN
+          ALTER TABLE auto_publish_targets ADD COLUMN default_auto_publish BOOLEAN NOT NULL DEFAULT true;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='auto_publish_targets' AND column_name='default_pin') THEN
+          ALTER TABLE auto_publish_targets ADD COLUMN default_pin INTEGER NOT NULL DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='auto_publish_targets' AND column_name='categories_api_url') THEN
+          ALTER TABLE auto_publish_targets ADD COLUMN categories_api_url TEXT;
+        END IF;
+      END $$;
+    `);
+
     // جدول auto_publish_log
     await dbQuery(`
       CREATE TABLE IF NOT EXISTS auto_publish_log (

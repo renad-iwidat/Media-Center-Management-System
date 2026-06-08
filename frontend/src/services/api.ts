@@ -673,11 +673,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ enabled }),
     }),
-  publishOneToExternal: (raw_data_id: number, target_id: number) =>
+  publishOneToExternal: (raw_data_id: number, target_id: number, overrides?: {
+    category_id?: number;
+    auto_publish?: boolean;
+    pin?: number;
+  }) =>
     request<any>("/auto-publish/publish-one", {
       method: "POST",
-      body: JSON.stringify({ raw_data_id, target_id }),
+      body: JSON.stringify({ raw_data_id, target_id, ...overrides }),
     }),
+  getExternalTargetCategories: (targetId: number) =>
+    request<any>(`/auto-publish/targets/${targetId}/categories`),
   runAutoPublish: () =>
     request<any>("/auto-publish/run", { method: "POST" }),
   retryAutoPublish: () =>

@@ -281,24 +281,33 @@ export class FlowRouterService {
           // إذا ما في ربط → يروح لكل الوحدات النشطة (fallback)
           let targetMediaUnits: MediaUnit[] = [];
 
+          // ── تجميع الوحدات المستهدفة من كل المصادر الممكنة ────────────────
+          // لا نكتفي بالوحدة الصريحة من السحب — بل ندمجها مع كل الوحدات
+          // المرتبطة بنفس المصدر حتى يصل الخبر لكل وحدة تشترك في هذا المصدر.
+          const unitIdsSeen = new Set<number>();
+
+          // 1. الوحدة الصريحة من السحب (media_unit_id المخزن في raw_data)
           if (article.media_unit_id) {
-            // الخبر مربوط بوحدة محددة من السحب
             const unit = allMediaUnits.find(u => u.id === article.media_unit_id);
             if (unit) {
-              targetMediaUnits = [unit];
-            }
-          }
-          
-          if (targetMediaUnits.length === 0 && article.source_id) {
-            // بحث عن الوحدات المرتبطة بالمصدر
-            const linkedUnits = await MediaUnitSourceService.getMediaUnitsBySourceId(article.source_id);
-            if (linkedUnits.length > 0) {
-              targetMediaUnits = linkedUnits.map(u => ({ id: u.id, name: u.name, is_active: u.is_active }));
+              targetMediaUnits.push(unit);
+              unitIdsSeen.add(unit.id);
             }
           }
 
+          // 2. كل الوحدات المرتبطة بمصدر الخبر (مصدر مشترك → كل الوحدات تأخذ الخبر)
+          if (article.source_id) {
+            const linkedUnits = await MediaUnitSourceService.getMediaUnitsBySourceId(article.source_id);
+            for (const u of linkedUnits) {
+              if (!unitIdsSeen.has(u.id)) {
+                targetMediaUnits.push({ id: u.id, name: u.name, is_active: u.is_active });
+                unitIdsSeen.add(u.id);
+              }
+            }
+          }
+
+          // 3. Fallback: كل الوحدات النشطة (إذا لم يُعثر على أي ربط)
           if (targetMediaUnits.length === 0) {
-            // Fallback: كل الوحدات النشطة
             targetMediaUnits = allMediaUnits;
           }
           // ── أ. فحص اكتمال المحتوى ─────────────────────────────────────
