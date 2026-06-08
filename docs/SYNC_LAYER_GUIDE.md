@@ -17,6 +17,32 @@
 
 ---
 
+## 🆕 التحسينات الجديدة (v2)
+
+### 1. Incremental Sync (التحديث التدريجي)
+- **جدول `sync_state`**: يخزّن `last_sync_at` و `last_article_date` لكل وحدة إعلامية
+- **date_from ديناميكي**: بدلاً من "آخر ساعتين" الثابت:
+  - أول مزامنة → آخر 7 أيام
+  - بعدها → ساعة قبل آخر مزامنة ناجحة (overlap للأمان)
+- **لا يُفوّت أخبار**: حتى لو النظام كان متوقف عدة أيام
+- **يتوقف عند انتهاء البيانات**: إذا الصفحة فاضية يتوقف
+
+### 2. Sync Logging (تسجيل المزامنة في الداتابيس)
+- **جدول `sync_logs`**: يسجل كل عملية مزامنة (بداية/انتهاء/نجاح/فشل)
+- يحفظ: `articles_fetched`, `articles_saved`, `articles_skipped`, `errors[]`, `duration_ms`
+- **تنظيف تلقائي**: حذف سجلات أقدم من 30 يوم (كل 10 دورات)
+- **API Endpoints**:
+  - `GET /api/newsdesk/sync/status` → حالة كل الوحدات + إحصائيات 24 ساعة
+  - `GET /api/newsdesk/sync/logs?limit=50` → آخر سجلات المزامنة
+
+### 3. Retry + Rate Limiting المحسّن
+- **NewsDesk API Client**: retry 3 مرات مع exponential backoff
+- **Rate Limiting**: إذا 429 → انتظار `retry-after` ثم إعادة المحاولة
+- **لا يعيد المحاولة على 4xx** (client errors) — فقط network/5xx/429
+- **Pagination محسّنة**: حتى 10 صفحات (بدلاً من 5) + يتوقف إذا فاضية
+
+---
+
 ## الملف الجديد: `src/services/news/newsdesk-sync.service.ts`
 
 طبقة المزامنة الموحّدة. الدالة الرئيسية `syncAll()`:

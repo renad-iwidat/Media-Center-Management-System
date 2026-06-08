@@ -437,6 +437,59 @@ export class NewsDeskProxyController {
       res.status(502).json({ success: false, message: 'فشل مزامنة المصادر', error: (error as Error).message });
     }
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Sync State & Logs (حالة المزامنة التدريجية)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * GET /api/newsdesk/sync/status
+   * جلب حالة المزامنة لكل وحدة إعلامية + إحصائيات عامة
+   */
+  static async getSyncStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { syncStateService } = await import('../../services/news/sync-state.service');
+
+      const [states, stats] = await Promise.all([
+        syncStateService.getAllStates(),
+        syncStateService.getSyncStats(),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          states,
+          stats,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'فشل جلب حالة المزامنة', error: (error as Error).message });
+    }
+  }
+
+  /**
+   * GET /api/newsdesk/sync/logs
+   * جلب سجلات المزامنة الأخيرة
+   * Query: ?limit=50&media_unit_id=1
+   */
+  static async getSyncLogs(req: Request, res: Response): Promise<void> {
+    try {
+      const { syncStateService } = await import('../../services/news/sync-state.service');
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
+
+      const logs = await syncStateService.getRecentLogs(limit, mediaUnitId);
+
+      res.json({
+        success: true,
+        data: logs,
+        count: logs.length,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'فشل جلب سجلات المزامنة', error: (error as Error).message });
+    }
+  }
 }
 
 export default NewsDeskProxyController;

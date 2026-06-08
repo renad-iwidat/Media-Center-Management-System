@@ -613,6 +613,12 @@ export const api = {
     request<any>('/newsdesk/sync/all', { method: 'POST' }),
   syncSourcesFromNewsDesk: () =>
     request<any>('/newsdesk/sync/sources', { method: 'POST' }),
+  
+  // حالة المزامنة والسجلات
+  getSyncStatus: () =>
+    request<any>('/newsdesk/sync/status'),
+  getSyncLogs: (limit: number = 50, mediaUnitId?: number) =>
+    request<any>(`/newsdesk/sync/logs?limit=${limit}${mediaUnitId ? `&media_unit_id=${mediaUnitId}` : ''}`),
 
   // التصنيفات من الـ API الخارجي
   getNewsDeskCategories: (activeOnly = false) =>
