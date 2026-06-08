@@ -486,6 +486,18 @@ export class CategoryService {
   }
 
   /**
+   * الحصول على flow التصنيف بالـ ID مباشرة من الداتابيس
+   * (categories.flow هو المصدر الموثوق — يُعبّأ عند المزامنة من category-flow.config)
+   * يرجع 'editorial' كافتراضي لو ما لقى التصنيف أو ما عنده flow
+   */
+  static async getFlowById(id: number | null): Promise<'automated' | 'editorial'> {
+    if (!id) return 'editorial';
+    const result = await query('SELECT flow FROM categories WHERE id = $1', [id]);
+    const flow = result.rows[0]?.flow;
+    return flow === 'automated' ? 'automated' : 'editorial';
+  }
+
+  /**
    * إنشاء تصنيف جديد
    */
   static async create(

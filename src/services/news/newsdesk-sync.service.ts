@@ -16,29 +16,7 @@ import { query } from '../../config/database';
 import { newsDeskApiService } from './newsdesk-api.service';
 import { SourceService } from '../database/database.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
-
-/**
- * خريطة الـ flow حسب slug التصنيف (مستقرة — لا تعتمد على الـ id)
- * editorial = يروح لقسم التحرير | automated = نشر تلقائي
- */
-const CATEGORY_FLOW_BY_SLUG: Record<string, 'automated' | 'editorial'> = {
-  // تحريري
-  politics: 'editorial',
-  society: 'editorial',     // محلي
-  security: 'editorial',    // أمن وعسكري
-  other: 'editorial',       // دولي/أخرى
-  religion: 'editorial',
-  // أوتوماتيكي
-  economy: 'automated',
-  sports: 'automated',
-  health: 'automated',
-  technology: 'automated',
-  culture: 'automated',
-  environment: 'automated',
-  food: 'automated',
-};
-
-const DEFAULT_FLOW: 'automated' | 'editorial' = 'editorial';
+import { getFlowBySlug } from './category-flow.config';
 
 export interface SyncResult {
   categories: number;
@@ -158,7 +136,7 @@ class NewsDeskSyncService {
         if (!slug) continue;
 
         const nameAr = cat.name_ar || cat.name || slug;
-        const flow = CATEGORY_FLOW_BY_SLUG[slug] || DEFAULT_FLOW;
+        const flow = getFlowBySlug(slug);
 
         try {
           const existing = await query(
