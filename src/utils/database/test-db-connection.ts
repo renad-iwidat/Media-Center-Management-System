@@ -3,7 +3,7 @@
  * اختبار الاتصال بقاعدة البيانات
  */
 
-import { testConnection } from '../config/database';
+import { testConnection } from '../../config/database';
 
 async function main() {
   try {

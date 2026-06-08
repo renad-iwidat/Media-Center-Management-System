@@ -3,9 +3,9 @@
  * اختبار فلو معالجة الأخبار
  */
 
-import FlowRouterService from '../services/news/flow-router.service';
-import EditorialQueueService from '../services/news/editorial-queue.service';
-import PublishedItemsService from '../services/news/published-items.service';
+import FlowRouterService from '../../services/news/flow-router.service';
+import EditorialQueueService from '../../services/news/editorial-queue.service';
+import PublishedItemsService from '../../services/news/published-items.service';
 
 /**
  * اختبار شامل للفلو
@@ -25,7 +25,7 @@ export async function testCompleteFlow(): Promise<void> {
 
     if (routingResult.errors.length > 0) {
       console.log(`⚠️ أخطاء: ${routingResult.errors.length}`);
-      routingResult.errors.forEach(err => console.log(`   - ${err}`));
+      routingResult.errors.forEach((err: any) => console.log(`   - ${err}`));
     }
 
     // 2. اختبار جلب الأخبار المعلقة
@@ -54,7 +54,7 @@ export async function testCompleteFlow(): Promise<void> {
     console.log('─'.repeat(50));
     const queueStats = await EditorialQueueService.getQueueStats();
     console.log(`✅ وجدنا ${queueStats.length} وحدة إعلام`);
-    queueStats.forEach(stat => {
+    queueStats.forEach((stat: any) => {
       console.log(`   - ${stat.name}:`);
       console.log(`     • معلق: ${stat.pending_count}`);
       console.log(`     • قيد المراجعة: ${stat.in_review_count}`);
@@ -86,14 +86,14 @@ export async function testCompleteFlow(): Promise<void> {
 
     if (publishedStats.by_category.length > 0) {
       console.log(`   - الفئات:`);
-      publishedStats.by_category.forEach(cat => {
+      publishedStats.by_category.forEach((cat: any) => {
         console.log(`     • ${cat.category}: ${cat.count}`);
       });
     }
 
     if (publishedStats.by_media_unit.length > 0) {
       console.log(`   - الوحدات:`);
-      publishedStats.by_media_unit.forEach(unit => {
+      publishedStats.by_media_unit.forEach((unit: any) => {
         console.log(`     • ${unit.media_unit}: ${unit.count}`);
       });
     }
@@ -146,31 +146,31 @@ export async function testAPIEndpoints(): Promise<void> {
     const processResponse = await fetch(`${baseUrl}/process`, {
       method: 'POST',
     });
-    const processData = await processResponse.json();
+    const processData = (await processResponse.json()) as any;
     console.log(`✅ الاستجابة:`, processData.message);
 
     // 2. اختبار جلب الطابور
     console.log('\n2️⃣ اختبار GET /api/flow/queue/pending');
     const queueResponse = await fetch(`${baseUrl}/queue/pending`);
-    const queueData = await queueResponse.json();
+    const queueData = (await queueResponse.json()) as any;
     console.log(`✅ وجدنا ${queueData.count} عنصر معلق`);
 
     // 3. اختبار إحصائيات الطابور
     console.log('\n3️⃣ اختبار GET /api/flow/queue/stats');
     const statsResponse = await fetch(`${baseUrl}/queue/stats`);
-    const statsData = await statsResponse.json();
+    const statsData = (await statsResponse.json()) as any;
     console.log(`✅ وجدنا ${statsData.data.length} وحدة إعلام`);
 
     // 4. اختبار جلب المحتوى المنشور
     console.log('\n4️⃣ اختبار GET /api/flow/published');
     const publishedResponse = await fetch(`${baseUrl}/published?limit=5`);
-    const publishedData = await publishedResponse.json();
+    const publishedData = (await publishedResponse.json()) as any;
     console.log(`✅ وجدنا ${publishedData.count} محتوى منشور`);
 
     // 5. اختبار إحصائيات المحتوى
     console.log('\n5️⃣ اختبار GET /api/flow/published/stats');
     const publishedStatsResponse = await fetch(`${baseUrl}/published/stats`);
-    const publishedStatsData = await publishedStatsResponse.json();
+    const publishedStatsData = (await publishedStatsResponse.json()) as any;
     console.log(`✅ إجمالي المنشور: ${publishedStatsData.data.total_published}`);
 
     console.log('\n✅ انتهى اختبار API بنجاح!\n');
@@ -202,3 +202,5 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+
+

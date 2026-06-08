@@ -85,7 +85,7 @@ export async function transcribeAudioFromUrl(
       throw new Error(`STT API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    const data: STTResponse = await response.json();
+    const data: STTResponse = (await response.json()) as STTResponse;
 
     console.log(`📥 STT Response:`, {
       id: data.id,
@@ -178,7 +178,7 @@ export async function transcribeAudioFromFile(
       throw new Error(`STT API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    const data: STTResponse = await response.json();
+    const data: STTResponse = (await response.json()) as STTResponse;
 
     console.log(`📥 STT Response:`, {
       id: data.id,
@@ -400,7 +400,7 @@ async function transcribeAudioBufferSingle(
         throw new Error(`STT API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as any;
 
       console.log(`📥 STT Response:`, {
         id: data.id,

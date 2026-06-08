@@ -3,9 +3,9 @@
  * تشغيل فلو معالجة الأخبار من السحب للنشر
  */
 
-import FlowRouterService from '../services/news/flow-router.service';
-import EditorialQueueService from '../services/news/editorial-queue.service';
-import PublishedItemsService from '../services/news/published-items.service';
+import FlowRouterService from '../../services/news/flow-router.service';
+import EditorialQueueService from '../../services/news/editorial-queue.service';
+import PublishedItemsService from '../../services/news/published-items.service';
 
 /**
  * تشغيل الفلو الكامل
@@ -29,7 +29,7 @@ export async function runNewsFlow(): Promise<void> {
 
     if (routingResult.errors.length > 0) {
       console.log(`\n⚠️ أخطاء:`);
-      routingResult.errors.forEach(err => console.log(`   - ${err}`));
+      routingResult.errors.forEach((err: any) => console.log(`   - ${err}`));
     }
 
     // المرحلة 2: عرض طابور التحرير
@@ -57,12 +57,12 @@ export async function runNewsFlow(): Promise<void> {
     console.log(`   - تحريري: ${publishedStats.editorial_count}`);
 
     console.log(`\n📂 حسب الفئة:`);
-    publishedStats.by_category.forEach(cat => {
+    publishedStats.by_category.forEach((cat: any) => {
       console.log(`   - ${cat.category}: ${cat.count}`);
     });
 
     console.log(`\n🏢 حسب وحدة الإعلام:`);
-    publishedStats.by_media_unit.forEach(unit => {
+    publishedStats.by_media_unit.forEach((unit: any) => {
       console.log(`   - ${unit.media_unit}: ${unit.count}`);
     });
 
@@ -87,7 +87,7 @@ export async function showPendingItems(): Promise<void> {
       return;
     }
 
-    pendingItems.forEach((item, index) => {
+    pendingItems.forEach((item: any, index: any) => {
       console.log(`${index + 1}. [ID: ${item.id}] ${item.title}`);
       console.log(`   - الوحدة: ${item.media_unit_name}`);
       console.log(`   - الفئة: ${item.category_name}`);
@@ -113,7 +113,7 @@ export async function showLatestPublished(limit: number = 10): Promise<void> {
       return;
     }
 
-    published.forEach((item, index) => {
+    published.forEach((item: any, index: any) => {
       const flowType = item.flow_type === 'automated' ? '🚀 أوتوماتيكي' : '📝 تحريري';
       console.log(`${index + 1}. [${flowType}] ${item.title}`);
       console.log(`   - الوحدة: ${item.media_unit_name}`);
@@ -187,3 +187,4 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+

@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import * as db from '../config/database';
+import * as db from '../../config/database';
 
 const API_BASE = 'http://localhost:3000/api';
 const AI_API_URL = process.env.AI_MODEL || 'http://93.127.132.59:8080';

@@ -142,7 +142,7 @@ export async function transcribeAudioWithOpenAI(
           throw new Error(errorMessage);
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as any;
 
         console.log(`📥 OpenAI Response received`);
         

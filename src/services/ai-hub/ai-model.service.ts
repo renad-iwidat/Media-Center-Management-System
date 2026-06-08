@@ -65,7 +65,7 @@ export async function generateAIResponse(
       throw new Error(`AI Model API error: ${response.status} ${response.statusText}`);
     }
 
-    const data: AIModelResponse = await response.json();
+    const data: AIModelResponse = (await response.json()) as AIModelResponse;
 
     console.log(`📥 Response Data:`, {
       id: data.id,
@@ -130,7 +130,7 @@ export async function* streamAIResponse(
       throw new Error(`AI Model API error: ${response.status} ${response.statusText}`);
     }
 
-    const data: AIModelResponse = await response.json();
+    const data: AIModelResponse = (await response.json()) as AIModelResponse;
 
     if (data.error) {
       throw new Error(`AI Model error: ${data.error}`);

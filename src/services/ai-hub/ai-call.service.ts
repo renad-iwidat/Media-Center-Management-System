@@ -96,7 +96,7 @@ export async function callOpenAIChatAPI(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  return (data as any).choices?.[0]?.message?.content || '';
 }
 
 /**

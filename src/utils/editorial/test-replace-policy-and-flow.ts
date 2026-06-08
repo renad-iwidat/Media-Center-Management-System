@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import * as db from '../config/database';
+import * as db from '../../config/database';
 
 const API_BASE = 'http://localhost:3000/api';
 
@@ -349,7 +349,7 @@ async function testFlowRouting() {
     const articles = articlesResult.rows;
 
     console.log(`وجدنا ${articles.length} أخبار:\n`);
-    articles.forEach((article, i) => {
+    articles.forEach((article: any, i: any) => {
       console.log(`${i + 1}. ${article.title}`);
       console.log(`   - الفئة: ${article.category_name}`);
       console.log(`   - المسار: ${article.flow === 'automated' ? '🚀 أوتوماتيكي' : '📝 تحريري'}\n`);
@@ -411,3 +411,4 @@ async function main() {
 
 // تشغيل البرنامج
 main().catch(console.error);
+
