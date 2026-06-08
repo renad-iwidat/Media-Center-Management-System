@@ -1,6 +1,7 @@
 import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
+import { MediaUnitArticleService } from '../database/media-unit-article.service';
 import { contentCleanerService } from './content-cleaner.service';
 import { aiClassifierService } from './ai-classifier.service';
 
@@ -536,6 +537,12 @@ export class FlowRouterService {
            VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())`,
           [mediaUnitId, article.id, queueId, this.NEWS_CONTENT_TYPE_ID, article.title, article.content, article.tags]
         );
+
+        // مزامنة حالة النسخة → published
+        try {
+          const proj = await MediaUnitArticleService.getResolved(article.id, mediaUnitId);
+          if (proj?.id) await MediaUnitArticleService.updateStatus(proj.id, 'published');
+        } catch { /* تجاهل */ }
       } catch (error) {
         console.error(`  ❌ خطأ في auto-approve للخبر ${article.id} في يونت ${mediaUnitId}:`, error);
         throw error;

@@ -321,9 +321,11 @@ class NewsDeskSyncService {
   }
 
   /**
-   * إنشاء أو تحديث وحدة إعلامية بالـ slug (يتعامل مع غياب updated_at)
+   * إنشاء أو تحديث وحدة إعلامية بالـ slug
+   * يتعامل مع حالة وجود وحدة بنفس الاسم لكن slug مختلف (تعارض على الاسم)
    */
   private async upsertMediaUnit(slug: string, name: string, isActive: boolean): Promise<number> {
+    // 1. بحث بالـ slug
     const existing = await query(
       `SELECT id FROM media_units WHERE slug = $1 LIMIT 1`,
       [slug]
@@ -337,6 +339,21 @@ class NewsDeskSyncService {
       return existing.rows[0].id;
     }
 
+    // 2. بحث بالاسم (وحدة موجودة بنفس الاسم بس slug مختلف/قديم)
+    //    → نتبنّى الـ slug من الـ API بدل ما ننشئ وحدة مكررة
+    const byName = await query(
+      `SELECT id, slug FROM media_units WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1`,
+      [name]
+    );
+    if (byName.rows.length > 0) {
+      await query(
+        `UPDATE media_units SET slug = $1, is_active = $2 WHERE id = $3`,
+        [slug, isActive, byName.rows[0].id]
+      );
+      return byName.rows[0].id;
+    }
+
+    // 3. إنشاء وحدة جديدة
     const inserted = await query(
       `INSERT INTO media_units (name, slug, is_active, created_at) 
        VALUES ($1, $2, $3, NOW()) RETURNING id`,
