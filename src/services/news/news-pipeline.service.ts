@@ -18,6 +18,7 @@
 
 import { RawDataService, SourceService } from '../database/database.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
+import { MediaUnitArticleService } from '../database/media-unit-article.service';
 import { newsDeskApiService, NewsDeskArticle } from './newsdesk-api.service';
 import { SystemSettingsService } from '../database/system-settings.service';
 import { syncStateService } from './sync-state.service';
@@ -217,7 +218,10 @@ class NewsPipelineService {
     // أول مزامنة → آخر 7 أيام | بعدها → ساعة overlap من آخر مزامنة ناجحة
 
     // تجميع المقالات الجديدة (بعد فلترة المكرر) مع media_unit_id
+    // ملاحظة: نفس الخبر قد يظهر تحت أكثر من وحدة — نسحبه مرة وحدة فقط
+    // (الـ fanOut بمرحلة الحفظ بيربطه بكل الوحدات المعنية)
     const newArticleIds: Array<{ id: number; mediaUnitId: number }> = [];
+    const queuedArticleIds = new Set<number>();
     let totalSkipped = 0;
     const mediaUnitDetails: PipelineResult['mediaUnitDetails'] = [];
 
@@ -282,32 +286,54 @@ class NewsPipelineService {
       }
 
       // ── فلترة المكرر (بالـ newsdesk_article_id أو URL) ──
+      // المكرر ما منتخطاه كلياً: إذا الخبر موجود بـ raw_data بس مش مربوط بهالوحدة
+      // → منعمل نسخة (projection) للوحدة بدون تكرار المحتوى
       let unitNewCount = 0;
       let unitSkipped = 0;
+      let unitLinked = 0;
 
       for (let i = 0; i < unitArticles.length; i += URL_CHECK_BATCH) {
         const batch = unitArticles.slice(i, i + URL_CHECK_BATCH);
-        const existsResults = await Promise.all(
+        const existingIds = await Promise.all(
           batch.map(async (a) => {
-            // فحص بـ newsdesk_article_id (أسرع وأدق)
-            const existsById = await RawDataService.existsByNewsDeskId(a.id);
-            if (existsById) return true;
-            // فحص بالـ URL
-            return RawDataService.existsByUrl(a.url);
+            // جلب id الخبر الأصلي إن وُجد (بالـ newsdesk id أولاً ثم URL)
+            let rawId = await RawDataService.getIdByNewsDeskId(a.id);
+            if (!rawId) rawId = await RawDataService.getIdByUrl(a.url);
+            return rawId;
           })
         );
         for (let j = 0; j < batch.length; j++) {
-          if (existsResults[j]) {
-            unitSkipped++;
+          const rawId = existingIds[j];
+          if (rawId) {
+            // الخبر موجود — نتأكد إنه مربوط بهالوحدة (نسخة)
+            const hasProjection = await MediaUnitArticleService.exists(rawId, unit.id);
+            if (hasProjection) {
+              unitSkipped++;
+            } else {
+              // موجود بس مش مربوط بهالوحدة → نعمل نسخة (بدون إعادة سحب المحتوى)
+              await MediaUnitArticleService.createProjection({
+                rawDataId: rawId,
+                mediaUnitId: unit.id,
+                status: 'pending',
+              });
+              unitLinked++;
+            }
           } else {
-            newArticleIds.push({ id: batch[j].id, mediaUnitId: unit.id });
-            unitNewCount++;
+            // خبر جديد — نسحبه مرة وحدة فقط حتى لو ظهر تحت أكثر من وحدة
+            if (!queuedArticleIds.has(batch[j].id)) {
+              queuedArticleIds.add(batch[j].id);
+              newArticleIds.push({ id: batch[j].id, mediaUnitId: unit.id });
+              unitNewCount++;
+            } else {
+              // ظهر تحت وحدة سابقة بنفس الدورة — رح يتربط بالـ fanOut
+              unitNewCount++;
+            }
           }
         }
       }
 
       totalSkipped += unitSkipped;
-      console.log(`   ✅ [${unit.name}] ${unitNewCount} جديد | ⏭️ ${unitSkipped} مكرر`);
+      console.log(`   ✅ [${unit.name}] ${unitNewCount} جديد | 🔗 ${unitLinked} نسخة لخبر موجود | ⏭️ ${unitSkipped} مكرر`);
 
       // تحديث حالة المزامنة + إكمال السجل
       try {

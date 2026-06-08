@@ -330,6 +330,28 @@ export class RawDataService {
   }
 
   /**
+   * جلب id الخبر بالـ URL (أو null إذا غير موجود)
+   */
+  static async getIdByUrl(url: string): Promise<number | null> {
+    const result = await query(
+      'SELECT id FROM raw_data WHERE url = $1 LIMIT 1',
+      [url]
+    );
+    return result.rows[0]?.id ?? null;
+  }
+
+  /**
+   * جلب id الخبر بـ newsdesk_article_id (أو null إذا غير موجود)
+   */
+  static async getIdByNewsDeskId(newsDeskId: number): Promise<number | null> {
+    const result = await query(
+      'SELECT id FROM raw_data WHERE newsdesk_article_id = $1 LIMIT 1',
+      [newsDeskId]
+    );
+    return result.rows[0]?.id ?? null;
+  }
+
+  /**
    * التحقق من وجود خبر بـ newsdesk_article_id
    */
   static async existsByNewsDeskId(newsDeskId: number): Promise<boolean> {
@@ -461,6 +483,18 @@ export class CategoryService {
   static async getBySlug(slug: string): Promise<Category | null> {
     const result = await query('SELECT * FROM categories WHERE slug = $1', [slug]);
     return result.rows[0] || null;
+  }
+
+  /**
+   * الحصول على flow التصنيف بالـ ID مباشرة من الداتابيس
+   * (categories.flow هو المصدر الموثوق — يُعبّأ عند المزامنة من category-flow.config)
+   * يرجع 'editorial' كافتراضي لو ما لقى التصنيف أو ما عنده flow
+   */
+  static async getFlowById(id: number | null): Promise<'automated' | 'editorial'> {
+    if (!id) return 'editorial';
+    const result = await query('SELECT flow FROM categories WHERE id = $1', [id]);
+    const flow = result.rows[0]?.flow;
+    return flow === 'automated' ? 'automated' : 'editorial';
   }
 
   /**

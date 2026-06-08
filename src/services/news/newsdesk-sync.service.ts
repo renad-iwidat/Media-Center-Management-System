@@ -16,29 +16,7 @@ import { query } from '../../config/database';
 import { newsDeskApiService } from './newsdesk-api.service';
 import { SourceService } from '../database/database.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
-
-/**
- * خريطة الـ flow حسب slug التصنيف (مستقرة — لا تعتمد على الـ id)
- * editorial = يروح لقسم التحرير | automated = نشر تلقائي
- */
-const CATEGORY_FLOW_BY_SLUG: Record<string, 'automated' | 'editorial'> = {
-  // تحريري
-  politics: 'editorial',
-  society: 'editorial',     // محلي
-  security: 'editorial',    // أمن وعسكري
-  other: 'editorial',       // دولي/أخرى
-  religion: 'editorial',
-  // أوتوماتيكي
-  economy: 'automated',
-  sports: 'automated',
-  health: 'automated',
-  technology: 'automated',
-  culture: 'automated',
-  environment: 'automated',
-  food: 'automated',
-};
-
-const DEFAULT_FLOW: 'automated' | 'editorial' = 'editorial';
+import { getFlowBySlug } from './category-flow.config';
 
 export interface SyncResult {
   categories: number;
@@ -158,7 +136,7 @@ class NewsDeskSyncService {
         if (!slug) continue;
 
         const nameAr = cat.name_ar || cat.name || slug;
-        const flow = CATEGORY_FLOW_BY_SLUG[slug] || DEFAULT_FLOW;
+        const flow = getFlowBySlug(slug);
 
         try {
           const existing = await query(
@@ -321,9 +299,11 @@ class NewsDeskSyncService {
   }
 
   /**
-   * إنشاء أو تحديث وحدة إعلامية بالـ slug (يتعامل مع غياب updated_at)
+   * إنشاء أو تحديث وحدة إعلامية بالـ slug
+   * يتعامل مع حالة وجود وحدة بنفس الاسم لكن slug مختلف (تعارض على الاسم)
    */
   private async upsertMediaUnit(slug: string, name: string, isActive: boolean): Promise<number> {
+    // 1. بحث بالـ slug
     const existing = await query(
       `SELECT id FROM media_units WHERE slug = $1 LIMIT 1`,
       [slug]
@@ -337,6 +317,21 @@ class NewsDeskSyncService {
       return existing.rows[0].id;
     }
 
+    // 2. بحث بالاسم (وحدة موجودة بنفس الاسم بس slug مختلف/قديم)
+    //    → نتبنّى الـ slug من الـ API بدل ما ننشئ وحدة مكررة
+    const byName = await query(
+      `SELECT id, slug FROM media_units WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1`,
+      [name]
+    );
+    if (byName.rows.length > 0) {
+      await query(
+        `UPDATE media_units SET slug = $1, is_active = $2 WHERE id = $3`,
+        [slug, isActive, byName.rows[0].id]
+      );
+      return byName.rows[0].id;
+    }
+
+    // 3. إنشاء وحدة جديدة
     const inserted = await query(
       `INSERT INTO media_units (name, slug, is_active, created_at) 
        VALUES ($1, $2, $3, NOW()) RETURNING id`,

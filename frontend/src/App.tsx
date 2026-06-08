@@ -637,7 +637,7 @@ export default function App() {
 
               {/* News Views */}
               {activeSection === 'overview'   && <OverviewView unitId={selectedMediaUnitId} />}
-              {activeSection === 'sources'    && <SourcesView autoEnabled={isSystemOnline} />}
+              {activeSection === 'sources'    && <SourcesView autoEnabled={isSystemOnline} unitId={selectedMediaUnitId} />}
               {activeSection === 'incomplete' && <IncompleteView unitId={selectedMediaUnitId} />}
               {activeSection === 'queue'      && <QueueView unitId={selectedMediaUnitId} />}
               {activeSection === 'policies'   && <PoliciesView unitId={selectedMediaUnitId} />}

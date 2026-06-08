@@ -129,6 +129,8 @@ export const api = {
 
   // وحدات الإعلام
   getMediaUnits: () => request<any>("/data/media-units"), // استخدام سيرفر الأخبار (News API)
+  getMediaUnitsWithSources: () => request<any>("/data/media-units/with-sources"),
+  getMediaUnitSources: (slug: string) => request<any>(`/data/media-units/${slug}/sources`),
 
   // أخبار
   getArticles: (limit = 100, offset = 0) =>
