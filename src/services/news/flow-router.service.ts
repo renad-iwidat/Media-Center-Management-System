@@ -34,31 +34,29 @@ import { aiClassifierService } from './ai-classifier.service';
  * automated = ينشر أوتوماتيكي بدون تدخل المحرر
  * ═══════════════════════════════════════════════════════════════════
  */
-export const CATEGORY_FLOW_MAP: Record<number, 'automated' | 'editorial'> = {
-  // ── تحريري (editorial) ──────────────────────
-  1:  'editorial',   // محلي
-  2:  'editorial',   // دولي
-  11: 'editorial',   // سياسي
-
-  // ── أوتوماتيكي (automated) ──────────────────
-  3:  'automated',   // اقتصاد
-  4:  'automated',   // رياضة
-  5:  'automated',   // صحة
-  6:  'automated',   // علوم وتكنولوجيا
-  7:  'automated',   // فن و ثقافة
-  9:  'automated',   // بيئة
-  10: 'automated',   // غذاء
-};
-
-/** الفلو الافتراضي لأي تصنيف غير معروف */
-const DEFAULT_FLOW: 'automated' | 'editorial' = 'editorial';
+/**
+ * ═══════════════════════════════════════════════════════════════════
+ * توجيه التصنيف → الفلو
+ *
+ * المصدر الموثوق هو عمود categories.flow بالداتابيس، والذي يُعبّأ عند
+ * المزامنة من category-flow.config (المصدر الوحيد للقاعدة بالـ slug).
+ *
+ * الدالة التالية fallback فقط لو ما توفّر flow بالداتابيس.
+ * ═══════════════════════════════════════════════════════════════════
+ */
 
 /**
- * تحديد الفلو من category_id مباشرة
+ * الفلو الافتراضي (fallback) — يُستخدم فقط حين لا يتوفر categories.flow
+ * بالداتابيس. القيمة الموثوقة دائماً من الداتابيس (تُعبّأ عند المزامنة
+ * من category-flow.config).
+ *
+ * ← 'automated': أي تصنيف غير معروف لم يُمزامن بعد → ينشر تلقائياً
+ * (التصنيفات التحريرية مضمونة الوجود في الداتابيس بعد أول مزامنة)
  */
-export function getFlowByCategory(categoryId: number | null): 'automated' | 'editorial' {
-  if (!categoryId) return DEFAULT_FLOW;
-  return CATEGORY_FLOW_MAP[categoryId] || DEFAULT_FLOW;
+const DEFAULT_FLOW: 'automated' | 'editorial' = 'automated';
+
+export function getFlowByCategory(_categoryId: number | null): 'automated' | 'editorial' {
+  return DEFAULT_FLOW;
 }
 
 /**
@@ -311,7 +309,7 @@ export class FlowRouterService {
           await this.markAsIncomplete(article.id, !isComplete);
 
           // ── ب. تحديد نوع الفلو ────────────────────────────────────────
-          // الفلو يتحدد من التصنيف مباشرة عبر CATEGORY_FLOW_MAP
+          // الفلو يتحدد من categories.flow بالداتابيس (المصدر الموثوق)
           let flowType: 'automated' | 'editorial' = 'editorial'; // افتراضي
 
           // الإدخال اليدوي → تحرير إجباري (دائماً)
@@ -329,10 +327,10 @@ export class FlowRouterService {
             const categoryName = category?.name || `ID:${article.category_id}`;
             console.log(`   ${flowType === 'automated' ? '⚡' : '📝'} الخبر ${article.id} — تصنيف: ${categoryName} → ${flowType}`);
           } else {
-            // بدون تصنيف → تحرير (fallback)
-            console.warn(`⚠️  الخبر ${article.id} — بدون تصنيف → تحرير (fallback)`);
-            result.errors.push(`الخبر ${article.id}: بدون تصنيف — تم توجيهه للتحرير`);
-            flowType = 'editorial';
+            // بدون تصنيف → automated (fallback) — يُنشر تلقائياً
+            console.warn(`⚠️  الخبر ${article.id} — بدون تصنيف → أوتوماتيك (fallback)`);
+            result.errors.push(`الخبر ${article.id}: بدون تصنيف — تم توجيهه أوتوماتيك`);
+            flowType = 'automated';
           }
 
           // ── ج. تنظيف النص — فقط للأوتوماتيك ───────────────────────────

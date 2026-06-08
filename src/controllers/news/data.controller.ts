@@ -6,7 +6,6 @@
 import { Request, Response } from 'express';
 import { SourceService, RawDataService, CategoryService, GeoScopeService } from '../../services/database/database.service';
 import { query } from '../../config/database';
-import { getFlowByCategory } from '../../services/news/flow-router.service';
 
 /**
  * الحصول على جميع وحدات الإعلام النشطة
@@ -337,8 +336,8 @@ export async function updateArticleContent(req: Request, res: Response): Promise
       return;
     }
 
-    // تحديد نوع الفلو — من CATEGORY_FLOW_MAP مباشرة (بدون query)
-    const flowType = getFlowByCategory(article.category_id);
+    // تحديد نوع الفلو — من categories.flow بالداتابيس (المصدر الموثوق)
+    const flowType = await CategoryService.getFlowById(article.category_id);
 
     console.log(`📰 الخبر ${articleId} — التصنيف: ${article.category_id} — الفلو: ${flowType}`);
 
