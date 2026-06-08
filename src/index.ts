@@ -371,6 +371,55 @@ app.listen(PORT, '0.0.0.0', async () => {
 
     console.log(`✅ تم ضمان وجود source_types و system_settings الأساسية`);
 
+    // ضمان وجود جدول media_unit_articles (النسخة المعالجة لكل وحدة) + الـ view
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS media_unit_articles (
+        id                  BIGSERIAL PRIMARY KEY,
+        raw_data_id         BIGINT  NOT NULL REFERENCES raw_data(id)     ON DELETE CASCADE,
+        media_unit_id       BIGINT  NOT NULL REFERENCES media_units(id)  ON DELETE CASCADE,
+        source_id           BIGINT  REFERENCES sources(id),
+        newsdesk_article_id INTEGER,
+        title               TEXT,
+        summary             TEXT,
+        content             TEXT,
+        image_url           TEXT,
+        tags                TEXT[] DEFAULT '{}',
+        category_id         BIGINT  REFERENCES categories(id),
+        geo_scope_id        INTEGER REFERENCES geographic_scopes(id),
+        ai_confidence       NUMERIC(5,4) DEFAULT NULL,
+        ai_processed        BOOLEAN DEFAULT false,
+        status              VARCHAR(20) DEFAULT 'pending',
+        flow                VARCHAR(20),
+        is_modified         BOOLEAN DEFAULT false,
+        is_incomplete       BOOLEAN DEFAULT false,
+        created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE (raw_data_id, media_unit_id)
+      )
+    `);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_mua_raw_data ON media_unit_articles(raw_data_id)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_mua_unit_status ON media_unit_articles(media_unit_id, status)`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_mua_newsdesk ON media_unit_articles(newsdesk_article_id) WHERE newsdesk_article_id IS NOT NULL`);
+    await dbQuery(`CREATE INDEX IF NOT EXISTS idx_mua_source ON media_unit_articles(source_id)`);
+    await dbQuery(`
+      CREATE OR REPLACE VIEW v_media_unit_articles AS
+      SELECT
+        mua.id, mua.raw_data_id, mua.media_unit_id, mua.source_id, mua.newsdesk_article_id,
+        mua.status, mua.flow, mua.is_modified, mua.is_incomplete, mua.ai_processed,
+        COALESCE(mua.title, rd.title) AS title,
+        COALESCE(mua.summary, rd.summary) AS summary,
+        COALESCE(mua.content, rd.content) AS content,
+        COALESCE(mua.image_url, rd.image_url) AS image_url,
+        COALESCE(NULLIF(mua.tags, '{}'), rd.tags) AS tags,
+        COALESCE(mua.category_id, rd.category_id) AS category_id,
+        COALESCE(mua.geo_scope_id, rd.geo_scope_id) AS geo_scope_id,
+        COALESCE(mua.ai_confidence, rd.ai_confidence) AS ai_confidence,
+        rd.url, rd.language, rd.pub_date, mua.created_at, mua.updated_at
+      FROM media_unit_articles mua
+      JOIN raw_data rd ON rd.id = mua.raw_data_id
+    `);
+    console.log(`✅ تم ضمان وجود جدول media_unit_articles + الـ view`);
+
     await schedulerService.start(5); // 5 دقائق
     console.log(`✅ الـ Scheduler بدأ بنجاح — السحب كل 5 دقائق`);
   } catch (error) {

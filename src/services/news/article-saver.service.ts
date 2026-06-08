@@ -9,6 +9,7 @@
  */
 
 import { RawDataService, CategoryService, GeoScopeService } from '../database/database.service';
+import { MediaUnitArticleService } from '../database/media-unit-article.service';
 import { ArticleToSave } from './news-pipeline.service';
 import { mapApiCategoryToLocalId } from './ai-classifier.service';
 
@@ -92,7 +93,7 @@ class ArticleSaverService {
             } catch { /* تجاهل */ }
           }
 
-          return RawDataService.create({
+          const created = await RawDataService.create({
             source_id: article.source.id, // مربوط بجدول sources (تم ربطه بالـ pipeline)
             source_type_id: article.source.source_type_id,
             category_id: categoryId,
@@ -115,6 +116,25 @@ class ArticleSaverService {
             category_slug: article.ai_category_slug || '',
             media_unit_id: article.media_unit_id || undefined,
           });
+
+          // ── إنشاء النسخ (projections) للوحدات الإعلامية ──────────────
+          // الخبر الأصلي اتخزن مرة وحدة في raw_data؛ هلق منعمل نسخة لكل
+          // وحدة مرتبطة بالمصدر (أو الوحدة اللي سحبت الخبر) — بدون تكرار المحتوى.
+          try {
+            await MediaUnitArticleService.fanOut({
+              rawDataId: created.id,
+              sourceId: article.source.id || null,
+              newsdeskArticleId: article.newsdesk_article_id || null,
+              categoryId: categoryId,
+              geoScopeId: geoScopeId,
+              aiConfidence: article.ai_confidence || null,
+              explicitMediaUnitIds: article.media_unit_id ? [article.media_unit_id] : [],
+            });
+          } catch (fanErr) {
+            console.warn(`   ⚠️ فشل إنشاء نسخ الوحدات للخبر ${created.id}:`, fanErr instanceof Error ? fanErr.message : fanErr);
+          }
+
+          return created;
         })
       );
 
