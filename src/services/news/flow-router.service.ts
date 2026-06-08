@@ -112,8 +112,9 @@ interface FlowRoutingResult {
 export class FlowRouterService {
   /**
    * الحد الأدنى لطول المحتوى عشان يعتبر مكتمل (بالأحرف)
+   * تم رفعه إلى 300 حرف لضمان جودة المحتوى
    */
-  private readonly MIN_CONTENT_LENGTH = 100;
+  private readonly MIN_CONTENT_LENGTH = 300;
 
   /**
    * content_type_id للأخبار — ثابت = 1

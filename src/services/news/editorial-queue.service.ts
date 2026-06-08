@@ -219,6 +219,8 @@ export class EditorialQueueService {
   /**
    * موافقة المحرر على الخبر
    * pending → in_review → approved → published_items
+   * 
+   * ⚠️ شروط صارمة: لا يُنشر أي خبر بدون صورة أو أقل من 300 حرف
    */
   async approveItem(
     queueId: number,
@@ -231,6 +233,60 @@ export class EditorialQueueService {
     taskId?: number
   ): Promise<ApprovalResult> {
     try {
+      // ═══════════════════════════════════════════════════════════════════
+      // 🔒 فحص الشروط الصارمة قبل الموافقة (بدون استثناءات)
+      // ═══════════════════════════════════════════════════════════════════
+      
+      // جلب بيانات الخبر
+      const itemData = await query(
+        `SELECT rd.id, rd.content, rd.image_url, rd.title, rd.source_type_id
+         FROM editorial_queue eq
+         JOIN raw_data rd ON eq.raw_data_id = rd.id
+         WHERE eq.id = $1`,
+        [queueId]
+      );
+
+      if (itemData.rows.length === 0) {
+        return {
+          success: false,
+          message: 'الخبر غير موجود',
+          queueId,
+        };
+      }
+
+      const article = itemData.rows[0];
+      
+      // المحتوى النهائي (إما المعدّل أو الأصلي)
+      const contentToCheck = finalContent || article.content || '';
+      const imageToCheck = finalImageUrl !== undefined ? finalImageUrl : article.image_url;
+      
+      // 1️⃣ فحص طول المحتوى (300 حرف على الأقل)
+      const MIN_CONTENT_LENGTH = 300;
+      if (contentToCheck.length < MIN_CONTENT_LENGTH) {
+        console.warn(`❌ رفض الموافقة على الخبر ${queueId}: المحتوى قصير (${contentToCheck.length} حرف، المطلوب ${MIN_CONTENT_LENGTH})`);
+        return {
+          success: false,
+          message: `لا يمكن نشر الخبر: المحتوى قصير جداً (${contentToCheck.length} حرف). يجب أن يكون ${MIN_CONTENT_LENGTH} حرف على الأقل.`,
+          queueId,
+        };
+      }
+      
+      // 2️⃣ فحص وجود الصورة (إلزامي)
+      if (!imageToCheck || imageToCheck.trim() === '') {
+        console.warn(`❌ رفض الموافقة على الخبر ${queueId}: بدون صورة`);
+        return {
+          success: false,
+          message: 'لا يمكن نشر الخبر: الصورة مفقودة. يجب إضافة صورة للخبر.',
+          queueId,
+        };
+      }
+
+      console.log(`✅ الخبر ${queueId} يستوفي الشروط: ${contentToCheck.length} حرف + صورة موجودة`);
+      
+      // ═══════════════════════════════════════════════════════════════════
+      // المتابعة بالموافقة
+      // ═══════════════════════════════════════════════════════════════════
+      
       // 1. تحديث الحالة إلى 'in_review' مع اختيار السياسة (اختياري)
       await query(
         `UPDATE editorial_queue 
