@@ -424,19 +424,29 @@ class AutoPublishService {
       let tagsString: string;
       const rawTags = article.tags as any;
       if (Array.isArray(rawTags) && rawTags.length > 0) {
-        tagsString = rawTags.join(', ');
+        // تأكد أن كل عنصر string وليس object
+        tagsString = rawTags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0).join(',');
       } else if (typeof rawTags === 'string' && rawTags.trim()) {
-        tagsString = rawTags;
+        // قد يكون string representation of array: "['tag1', 'tag2']" أو "{tag1,tag2}"
+        let cleaned = rawTags.trim();
+        if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
+          cleaned = cleaned.replace(/[\[\]{}"']/g, '');
+        }
+        tagsString = cleaned;
       } else {
         // لا توجد تاجز → توليد بالذكاء الاصطناعي وتخزينها
         console.log(`   🤖 لا توجد تاجز — جاري التوليد بالـ AI...`);
         const aiTags = await generateAndSaveTags(article.id, article.title, article.content);
         if (aiTags.length > 0) {
-          tagsString = aiTags.join(', ');
+          tagsString = aiTags.join(',');
         } else {
           // fallback أخير: أول 5 كلمات من العنوان
-          tagsString = article.title.split(/\s+/).slice(0, 5).join(', ');
+          tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
         }
+      }
+      // ضمان نهائي: لو لأي سبب صارت فارغة
+      if (!tagsString || tagsString.trim().length === 0) {
+        tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
       }
 
       console.log(`   📡 Sending to: ${target.api_url}`);
