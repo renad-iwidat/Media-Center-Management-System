@@ -35,7 +35,7 @@ SELECT
   mu.id,
   'موقع النجاح',
   'https://nn.najah.edu/api/v1/news/article/',
-  '9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320',
+  '<NAJAH_API_TOKEN>',  -- ضع القيمة الحقيقية هنا أو في .env
   12,  -- التصنيف الافتراضي: الأخبار المحلية
   false -- متوقف افتراضياً — يمكن تفعيله لاحقاً
 FROM media_units mu

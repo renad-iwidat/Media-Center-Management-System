@@ -14,9 +14,9 @@
 ### موقع النجاح (nn.najah.edu)
 
 ```
-Username: liminal
-Password: najah@2020
-Token: 9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320
+Username: [مخزّن في .env]
+Password: [مخزّن في .env]
+Token: [مخزّن في قاعدة البيانات - جدول auto_publish_targets]
 API URL: https://nn.najah.edu/api/v1/news/article/
 ```
 
@@ -24,12 +24,12 @@ API URL: https://nn.najah.edu/api/v1/news/article/
 
 - **موقع النجاح**: يستخدم `Token` Authentication
   ```
-  Authorization: Token 9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320
+  Authorization: Token <NAJAH_API_TOKEN>
   ```
 
 - **موقع هنا غزة**: يستخدم `Bearer` Token
   ```
-  Authorization: Bearer 2|wN4CYvKv2ND3paNMgG8VxOntVBwG5a5mFdaEE5sY76c8b503
+  Authorization: Bearer <HGAZA_API_TOKEN>
   ```
 
 ---
@@ -63,7 +63,7 @@ API URL: https://nn.najah.edu/api/v1/news/article/
 
 ```bash
 curl -X POST \
-  -H "Authorization: Token 9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320" \
+  -H "Authorization: Token <NAJAH_API_TOKEN>" \
   -F "title=عنوان الخبر" \
   -F "category_id=12" \
   -F "content=<p>محتوى الخبر</p>" \

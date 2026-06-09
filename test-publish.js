@@ -1,7 +1,7 @@
 // تست النشر على الموقع الخارجي — لتشخيص مشكلة 500
 
 async function test() {
-  const token = '2|wN4CYvKv2ND3paNMgG8VxOntVBwG5a5mFdaEE5sY76c8b503';
+  const token = process.env.HGAZA_API_TOKEN || '<HGAZA_API_TOKEN>';  // لا ترفع التوكن الحقيقي على git
   const apiUrl = 'https://hgaza.nn.ps/api/v1/automation/news';
   
   // تست: محتوى طويل مع image_url (مثل الأخبار الحقيقية)

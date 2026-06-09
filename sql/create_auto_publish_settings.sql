@@ -70,7 +70,7 @@ SELECT
   mu.id,
   'موقع هنا غزة',
   'https://hgaza.nn.ps/api/v1/automation/news',
-  E'2|wN4CYvKv2ND3paNMgG8VxOntVBwG5a5mFdaEE5sY76c8b503',
+  '<HGAZA_API_TOKEN>',  -- ضع القيمة الحقيقية هنا أو في .env
   1,
   false
 FROM media_units mu
@@ -97,7 +97,7 @@ SELECT
   mu.id,
   'موقع النجاح',
   'https://nn.najah.edu/api/v1/news/article/',
-  '9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320',
+  '<NAJAH_API_TOKEN>',  -- ضع القيمة الحقيقية هنا أو في .env
   12,
   false
 FROM media_units mu

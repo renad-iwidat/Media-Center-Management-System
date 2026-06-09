@@ -11,7 +11,7 @@ echo ""
 
 # API Configuration
 API_URL="https://nn.najah.edu/api/v1/news/article/"
-TOKEN="9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320"
+TOKEN="<NAJAH_API_TOKEN>"  # ضع التوكن الحقيقي هنا (لا ترفعه على git)
 
 # Test Article Data
 TITLE="اختبار من نظام إدارة الأخبار"

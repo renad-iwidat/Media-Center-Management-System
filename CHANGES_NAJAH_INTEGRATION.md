@@ -52,7 +52,7 @@ SELECT
   mu.id,
   'موقع النجاح',
   'https://nn.najah.edu/api/v1/news/article/',
-  '9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320',
+  '<NAJAH_API_TOKEN>',  -- مخزّن في .env أو قاعدة البيانات
   12,
   false
 FROM media_units mu
@@ -168,7 +168,7 @@ id                  | SERIAL PRIMARY KEY
 media_unit_id       | INTEGER REFERENCES media_units(id)
 name                | VARCHAR(255)  -- "موقع النجاح"
 api_url             | TEXT          -- "https://nn.najah.edu/..."
-api_token           | TEXT          -- "9eedb2ef..."
+api_token           | TEXT          -- مخزّن في .env أو قاعدة البيانات
 default_category_id | INTEGER       -- 12
 is_enabled          | BOOLEAN       -- false (افتراضي)
 created_at          | TIMESTAMP
@@ -189,7 +189,7 @@ auto_publish_targets:
   media_unit_id: (من media_units)
   name: 'موقع النجاح'
   api_url: 'https://nn.najah.edu/api/v1/news/article/'
-  api_token: '9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320'
+  api_token: '<NAJAH_API_TOKEN>'  -- مخزّن في .env أو قاعدة البيانات
   default_category_id: 12
   is_enabled: false
 ```

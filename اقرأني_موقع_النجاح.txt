@@ -92,9 +92,9 @@ JOIN media_units mu ON mu.id = apt.media_unit_id;
 ═══════════════════════════════════════════════════════════════════
 
 URL:      https://nn.najah.edu/api/v1/news/article/
-Token:    9eedb2ef002f23c08c23b2b1adbc2fc2ff3da320
-Username: liminal
-Password: najah@2020
+Token:    [مخزّن في قاعدة البيانات - جدول auto_publish_targets]
+Username: [مخزّن في .env]
+Password: [مخزّن في .env]
 
 ⚠️ ملاحظة: Token مخزّن في قاعدة البيانات، مش محتاج تكتبه بالكود
 

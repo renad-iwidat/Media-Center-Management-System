@@ -8,7 +8,7 @@
 # 1. سجّل دخول من نظام الإدارة
 curl -X POST "https://media-center-management-system.onrender.com/api/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"email": "a.moqadi@najah.edu", "password": "a.mo1234"}'
+  -d '{"email": "your_email@example.com", "password": "your_password"}'
 
 # 2. احصل على التوكن من الرد
 # "token": "eyJhbGciOiJIUzI1NiIs..."

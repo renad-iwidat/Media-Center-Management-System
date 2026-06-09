@@ -50,8 +50,8 @@ router.get('/login-info', (_req: Request, res: Response): void => {
         method: 'POST',
         url: 'https://media-center-management-system.onrender.com/api/auth/login',
         body: {
-          email: 'a.moqadi@najah.edu',
-          password: 'a.mo1234'
+          email: 'user@example.com',
+          password: 'your_password'
         }
       },
       loginResponse: {
