@@ -42,7 +42,7 @@ import { QueueView } from './components/news/QueueView';
 import { PoliciesView } from './components/news/PoliciesView';
 import { PublishedView } from './components/news/PublishedView';
 import { ArchiveView } from './components/news/ArchiveView';
-import { SystemSettingsModal } from './components/shared/SystemSettingsModal';
+import { SystemSettingsPage } from './components/settings/SystemSettingsPage';
 import { LoginPage } from './components/auth/LoginPage';
 import IdeaGeneration from './components/ai/IdeaGeneration';
 import TextEditing from './components/ai/TextEditing';
@@ -66,7 +66,8 @@ const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
 
 type SectionId =
   | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published' | 'archive'
-  | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat' | 'smart-transcription';
+  | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat' | 'smart-transcription'
+  | 'settings';
 
 interface NavItem {
   id: SectionId;
@@ -84,6 +85,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
   { id: 'published',  label: 'قسم النشر',           description: 'الأخبار التحريرية الجاهزة للنشر', icon: CheckCircle,    group: 'news' },
   { id: 'archive',    label: 'الأرشيف',             description: 'الأخبار المؤرشفة مع روابط النشر', icon: Archive,       group: 'news' },
+  { id: 'settings',   label: 'إعدادات النظام',      description: 'إعدادات النظام ومواقع النشر', icon: Settings2,      group: 'news' },
   { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
   { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },
   { id: 'editing',    label: 'التحرير الصحفي',     description: 'إعادة صياغة وتلخيص',          icon: PenTool,        group: 'ai' },
@@ -131,7 +133,6 @@ export default function App() {
   });
 
   const [isSystemOnline, setIsSystemOnline] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { mediaUnits, loading, refetch: refetchMediaUnits } = useMediaUnits();
 
@@ -479,12 +480,17 @@ export default function App() {
         {/* Settings + User Footer */}
         <div className="border-t border-white/8 p-3 space-y-1 shrink-0">
           <button
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => setActiveSection('settings')}
             title="إعدادات النظام"
             aria-label="إعدادات النظام"
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-white/50 hover:bg-white/8 hover:text-white group ${!isSidebarOpen ? 'justify-center' : ''}`}
+            aria-current={activeSection === 'settings' ? 'page' : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
+              activeSection === 'settings'
+                ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                : 'text-white/50 hover:bg-white/8 hover:text-white'
+            } ${!isSidebarOpen ? 'justify-center' : ''}`}
           >
-            <div className="w-8 h-8 flex items-center justify-center rounded-lg group-hover:bg-white/8">
+            <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${activeSection === 'settings' ? 'bg-white/20' : 'group-hover:bg-white/8'}`}>
               <Settings2 size={16} />
             </div>
             {isSidebarOpen && <span className="text-sm font-medium">إعدادات النظام</span>}
@@ -646,6 +652,7 @@ export default function App() {
                 setActiveSection(section as SectionId);
               }} />}
               {activeSection === 'archive'    && <ArchiveView unitId={selectedMediaUnitId} />}
+              {activeSection === 'settings'   && <SystemSettingsPage onSystemStatusChange={(enabled) => setIsSystemOnline(enabled)} />}
 
               {/* AI Views */}
               {activeSection === 'ai-dashboard' && <AIDashboard setActiveSection={setActiveSection} />}
@@ -661,12 +668,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* System Settings Modal */}
-      <SystemSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onSystemStatusChange={(enabled) => setIsSystemOnline(enabled)}
-      />
     </div>
   );
 }
