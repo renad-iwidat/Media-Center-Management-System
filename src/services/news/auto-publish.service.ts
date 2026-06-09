@@ -113,18 +113,18 @@ function resolveExternalCategory(
  */
 async function generateAndSaveTags(articleId: number, title: string, content: string): Promise<string[]> {
   try {
-    const prompt = `أنت محرر SEO محترف. استخرج 5-8 كلمات مفتاحية (keywords/tags) من الخبر التالي.
-الكلمات يجب أن تكون:
-- مفردة أو مركبة (كلمة أو كلمتين)
+    const prompt = `أنت محرر SEO محترف. استخرج 5-8 كلمات مفتاحية (keywords) من الخبر التالي.
+القواعد:
+- كل كلمة مفتاحية يجب أن تكون كلمة واحدة فقط (بدون مسافات)
+- بالعربية
 - ذات صلة بالمحتوى
 - مناسبة لمحركات البحث
-- بالعربية
 
 العنوان: ${title}
 المحتوى: ${content.substring(0, 500)}
 
-أرجع الكلمات المفتاحية فقط مفصولة بفواصل، بدون ترقيم أو شرح.
-مثال: غزة, صحة, مستشفى, طوارئ, جرحى`;
+أرجع الكلمات المفتاحية فقط مفصولة بفواصل، بدون ترقيم أو شرح. كل كلمة يجب أن تكون مفردة.
+مثال: غزة,صحة,مستشفى,طوارئ,جرحى,فلسطين,علاج,إصابات`;
 
     const aiResponse = await callOpenAIChatAPI(prompt);
     
@@ -420,34 +420,31 @@ class AutoPublishService {
         ? overrides.pin
         : target.default_pin;
 
-      // تجهيز الـ keywords — يجب أن يكون string مفصول بفواصل (Django يرفض array)
+      // تجهيز الـ keywords — يجب أن يكون string مفصول بفواصل
+      // ⚠️ Django API تبع النجاح وهنا غزة يعالج keywords بطريقة خاصة:
+      // يعمل split بالفاصلة ثم add() — لذلك نرسل string بسيط بدون quotes
       let tagsString: string;
       const rawTags = article.tags as any;
       if (Array.isArray(rawTags) && rawTags.length > 0) {
-        // تأكد أن كل عنصر string وليس object — ولف كل واحد بعلامات اقتباس
-        tagsString = rawTags.map((t: any) => `"${String(t).trim()}"`).filter((t: string) => t.length > 2).join(',');
+        tagsString = rawTags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0).join(',');
       } else if (typeof rawTags === 'string' && rawTags.trim()) {
-        // قد يكون string representation of array: "['tag1', 'tag2']" أو "{tag1,tag2}"
         let cleaned = rawTags.trim();
         if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
           cleaned = cleaned.replace(/[\[\]{}"']/g, '');
         }
-        // لف كل tag بعلامات اقتباس
-        tagsString = cleaned.split(',').map(t => `"${t.trim()}"`).filter(t => t.length > 2).join(',');
+        tagsString = cleaned;
       } else {
         // لا توجد تاجز → توليد بالذكاء الاصطناعي وتخزينها
         console.log(`   🤖 لا توجد تاجز — جاري التوليد بالـ AI...`);
         const aiTags = await generateAndSaveTags(article.id, article.title, article.content);
         if (aiTags.length > 0) {
-          tagsString = aiTags.map(t => `"${t}"`).join(',');
+          tagsString = aiTags.join(',');
         } else {
-          // fallback أخير: أول 5 كلمات من العنوان
-          tagsString = article.title.split(/\s+/).slice(0, 5).map(t => `"${t}"`).join(',');
+          tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
         }
       }
-      // ضمان نهائي: لو لأي سبب صارت فارغة
       if (!tagsString || tagsString.trim().length === 0) {
-        tagsString = article.title.split(/\s+/).slice(0, 5).map(t => `"${t}"`).join(',');
+        tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
       }
 
       console.log(`   📡 Sending to: ${target.api_url}`);
@@ -494,42 +491,69 @@ class AutoPublishService {
       const maxRetries = 2;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const retryFormData = new FormData();
-        retryFormData.append('title', article.title);
-        retryFormData.append('content', article.content);
-        retryFormData.append('category_id', String(externalCategoryId));
-        // keywords كـ string واحد — Django يعالجها داخلياً
-        retryFormData.append('keywords', tagsString);
+        const boundary = `----FormBoundary${Date.now()}${Math.random().toString(36).slice(2)}`;
+        const CRLF = '\r\n';
+        
+        // بناء multipart/form-data يدوياً مثل curl بالضبط
+        const parts: (string | Buffer)[] = [];
+        
+        const addField = (name: string, value: string) => {
+          parts.push(
+            `--${boundary}${CRLF}` +
+            `Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+            `${value}${CRLF}`
+          );
+        };
+        
+        addField('title', article.title);
+        addField('content', article.content);
+        addField('category_id', String(externalCategoryId));
+        addField('keywords', tagsString);
 
         // المواقع التي تدعم auto_publish و pin (مثل موقع النجاح)
         if (supportsAutoPublish) {
-          retryFormData.append('auto_publish', autoPublish ? 'true' : 'false');
-          retryFormData.append('pin', String(pinValue));
-          // image_caption مطلوب لموقع النجاح
-          retryFormData.append('image_caption', article.title.substring(0, 100));
+          addField('auto_publish', autoPublish ? 'true' : 'false');
+          addField('pin', String(pinValue));
+          addField('image_caption', article.title.substring(0, 100));
+          addField('content_format', 'html');
         }
 
-        // إرسال الصورة — كملف للمواقع التي تدعم Token (النجاح)، أو base64 للمواقع الأخرى
+        // إرسال الصورة كـ binary part
         if (imageBlob) {
+          const imgBuffer = Buffer.from(await imageBlob.arrayBuffer());
+          const contentType = imageBlob.type || 'image/jpeg';
+          
           if (target.auth_type === 'token') {
             // موقع النجاح يتوقع ملف image
-            retryFormData.append('image', imageBlob, imageName);
+            parts.push(
+              `--${boundary}${CRLF}` +
+              `Content-Disposition: form-data; name="image"; filename="${imageName}"${CRLF}` +
+              `Content-Type: ${contentType}${CRLF}${CRLF}`
+            );
+            parts.push(imgBuffer);
+            parts.push(CRLF);
           } else {
             // المواقع الأخرى (مثل هنا غزة) تقبل base64
-            const imgBuffer = Buffer.from(await imageBlob.arrayBuffer());
-            const contentType = imageBlob.type || 'image/jpeg';
             const imageBase64 = `data:${contentType};base64,${imgBuffer.toString('base64')}`;
-            retryFormData.append('image_base64', imageBase64);
+            addField('image_base64', imageBase64);
           }
         }
+
+        // إغلاق الـ boundary
+        parts.push(`--${boundary}--${CRLF}`);
+
+        // بناء الـ body كـ Buffer
+        const bodyParts = parts.map(p => typeof p === 'string' ? Buffer.from(p, 'utf-8') : p);
+        const bodyBuffer = Buffer.concat(bodyParts);
 
         response = await fetch(target.api_url, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
             'Authorization': authHeader,
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
           },
-          body: retryFormData,
+          body: bodyBuffer,
         });
 
         responseBody = await response.text();
