@@ -28,7 +28,10 @@ export interface AutoPublishTarget {
   default_auto_publish: boolean;             // نشر مباشر أم مسودة (للمواقع التي تدعمه)
   default_pin: number;                       // قيمة pin الافتراضية (0-5)
   categories_api_url: string | null;         // رابط API التصنيفات من الموقع الخارجي
-  is_enabled: boolean;
+  publish_mode: 'automated' | 'manual';      // automated = سكيدولر / manual = المحرر فقط
+  manual_enabled: boolean;                   // تفعيل/إيقاف النشر اليدوي من قِبل المحرر
+  auto_enabled: boolean;                     // تفعيل/إيقاف النشر التلقائي بالسكيدولر
+  is_enabled: boolean;                       // محتفظ به للتوافق مع الكود القديم (= manual_enabled || auto_enabled)
   created_at: string;
   updated_at: string;
   media_unit_name?: string;
@@ -165,13 +168,19 @@ class AutoPublishService {
     default_auto_publish?: boolean;
     default_pin?: number;
     categories_api_url?: string;
+    publish_mode?: 'automated' | 'manual';
+    manual_enabled?: boolean;
+    auto_enabled?: boolean;
     is_enabled?: boolean;
   }): Promise<AutoPublishTarget> {
+    const manualEnabled = data.manual_enabled ?? data.is_enabled ?? false;
+    const autoEnabled   = data.auto_enabled   ?? data.is_enabled ?? false;
     const result = await query(
       `INSERT INTO auto_publish_targets
          (media_unit_id, name, api_url, api_token, auth_type,
-          default_category_id, category_mappings, default_auto_publish, default_pin, categories_api_url, is_enabled)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          default_category_id, category_mappings, default_auto_publish, default_pin,
+          categories_api_url, publish_mode, manual_enabled, auto_enabled, is_enabled)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         data.media_unit_id,
@@ -184,7 +193,10 @@ class AutoPublishService {
         data.default_auto_publish ?? true,
         data.default_pin ?? 0,
         data.categories_api_url || null,
-        data.is_enabled ?? false,
+        data.publish_mode || 'automated',
+        manualEnabled,
+        autoEnabled,
+        manualEnabled || autoEnabled,  // is_enabled = OR من الاثنين
       ]
     );
     return result.rows[0];
@@ -203,6 +215,9 @@ class AutoPublishService {
     default_auto_publish: boolean;
     default_pin: number;
     categories_api_url: string;
+    publish_mode: 'automated' | 'manual';
+    manual_enabled: boolean;
+    auto_enabled: boolean;
     is_enabled: boolean;
   }>): Promise<AutoPublishTarget | null> {
     const fields: string[] = [];
@@ -218,7 +233,22 @@ class AutoPublishService {
     if (data.default_auto_publish !== undefined){ fields.push(`default_auto_publish = $${paramIndex++}`); values.push(data.default_auto_publish); }
     if (data.default_pin !== undefined)        { fields.push(`default_pin = $${paramIndex++}`);        values.push(data.default_pin); }
     if (data.categories_api_url !== undefined) { fields.push(`categories_api_url = $${paramIndex++}`); values.push(data.categories_api_url); }
-    if (data.is_enabled !== undefined)         { fields.push(`is_enabled = $${paramIndex++}`);         values.push(data.is_enabled); }
+    if (data.publish_mode !== undefined)       { fields.push(`publish_mode = $${paramIndex++}`);       values.push(data.publish_mode); }
+    if (data.manual_enabled !== undefined)     { fields.push(`manual_enabled = $${paramIndex++}`);     values.push(data.manual_enabled); }
+    if (data.auto_enabled !== undefined)       { fields.push(`auto_enabled = $${paramIndex++}`);       values.push(data.auto_enabled); }
+
+    // is_enabled = manual_enabled OR auto_enabled (يُحدَّث تلقائياً)
+    if (data.manual_enabled !== undefined || data.auto_enabled !== undefined) {
+      fields.push(`is_enabled = (
+        COALESCE($${paramIndex}::boolean, manual_enabled) OR COALESCE($${paramIndex + 1}::boolean, auto_enabled)
+      )`);
+      values.push(data.manual_enabled !== undefined ? data.manual_enabled : null);
+      values.push(data.auto_enabled !== undefined ? data.auto_enabled : null);
+      paramIndex += 2;
+    } else if (data.is_enabled !== undefined) {
+      fields.push(`is_enabled = $${paramIndex++}`);
+      values.push(data.is_enabled);
+    }
 
     if (fields.length === 0) return null;
 
@@ -243,10 +273,27 @@ class AutoPublishService {
   }
 
   /**
-   * تفعيل/إيقاف هدف نشر
+   * تفعيل/إيقاف هدف نشر (is_enabled — للتوافق مع الكود القديم)
+   * @deprecated استخدم toggleManualEnabled أو toggleAutoEnabled بدلاً منه
    */
   async toggleTarget(targetId: number, enabled: boolean): Promise<AutoPublishTarget | null> {
-    return this.updateTarget(targetId, { is_enabled: enabled });
+    return this.updateTarget(targetId, { manual_enabled: enabled, auto_enabled: enabled });
+  }
+
+  /**
+   * تفعيل/إيقاف النشر اليدوي لهدف معين
+   * يتحكم في قدرة المحرر على النشر اليدوي من واجهة التحرير
+   */
+  async toggleManualEnabled(targetId: number, enabled: boolean): Promise<AutoPublishTarget | null> {
+    return this.updateTarget(targetId, { manual_enabled: enabled });
+  }
+
+  /**
+   * تفعيل/إيقاف النشر التلقائي لهدف معين
+   * يتحكم في السكيدولر — لا يؤثر على النشر اليدوي
+   */
+  async toggleAutoEnabled(targetId: number, enabled: boolean): Promise<AutoPublishTarget | null> {
+    return this.updateTarget(targetId, { auto_enabled: enabled });
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -496,12 +543,12 @@ class AutoPublishService {
       return { total: 0, success: 0, failed: 0, skipped: 0, details: [] };
     }
 
-    // جلب جميع الأهداف المفعّلة
+    // جلب جميع الأهداف المفعّلة للنشر التلقائي فقط (auto_enabled = true)
     const targetsResult = await query(
       `SELECT apt.*, mu.name as media_unit_name
        FROM auto_publish_targets apt
        JOIN media_units mu ON mu.id = apt.media_unit_id
-       WHERE apt.is_enabled = true`
+       WHERE apt.auto_enabled = true`
     );
     const enabledTargets: AutoPublishTarget[] = targetsResult.rows;
 
@@ -611,7 +658,8 @@ class AutoPublishService {
        LEFT JOIN categories c ON c.id = rd.category_id
        WHERE apl.status = 'failed' 
          AND apl.retry_count < 3
-         AND apt.is_enabled = true
+         AND apt.auto_enabled = true
+         AND apt.publish_mode = 'automated'
        ORDER BY apl.updated_at ASC
        LIMIT 10`
     );
@@ -654,6 +702,9 @@ class AutoPublishService {
         default_auto_publish: row.default_auto_publish ?? true,
         default_pin: row.default_pin ?? 0,
         categories_api_url: row.categories_api_url || null,
+        publish_mode: row.publish_mode || 'automated',
+        manual_enabled: row.manual_enabled ?? false,
+        auto_enabled: row.auto_enabled ?? true,
         is_enabled: true,
         created_at: '',
         updated_at: '',
@@ -739,8 +790,8 @@ class AutoPublishService {
     if (!target) {
       return { success: false, error: 'هدف النشر غير موجود' };
     }
-    if (!target.is_enabled) {
-      return { success: false, error: 'هدف النشر متوقف' };
+    if (!target.is_enabled && !target.manual_enabled) {
+      return { success: false, error: 'النشر اليدوي متوقف لهذا الهدف' };
     }
 
     // جلب بيانات الخبر — نُفضّل النسخة المعدّلة من published_items (للأخبار التحريرية)
@@ -913,6 +964,8 @@ class AutoPublishService {
       name: string;
       mediaUnitName: string;
       isEnabled: boolean;
+      manualEnabled: boolean;
+      autoEnabled: boolean;
       totalPublished: number;
       totalFailed: number;
       publishedToday: number;
@@ -923,7 +976,8 @@ class AutoPublishService {
 
     const result = await query(
       `SELECT 
-         apt.id, apt.name, apt.is_enabled, mu.name as media_unit_name,
+         apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled,
+         mu.name as media_unit_name,
          COUNT(apl.id) FILTER (WHERE apl.status = 'success') as total_published,
          COUNT(apl.id) FILTER (WHERE apl.status = 'failed') as total_failed,
          COUNT(apl.id) FILTER (WHERE apl.status = 'success' AND apl.published_at > NOW() - INTERVAL '24 hours') as published_today,
@@ -931,7 +985,7 @@ class AutoPublishService {
        FROM auto_publish_targets apt
        JOIN media_units mu ON mu.id = apt.media_unit_id
        LEFT JOIN auto_publish_log apl ON apl.target_id = apt.id
-       GROUP BY apt.id, apt.name, apt.is_enabled, mu.name
+       GROUP BY apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled, mu.name
        ORDER BY apt.media_unit_id, apt.name`
     );
 
@@ -942,6 +996,8 @@ class AutoPublishService {
         name: row.name,
         mediaUnitName: row.media_unit_name,
         isEnabled: row.is_enabled,
+        manualEnabled: row.manual_enabled ?? false,
+        autoEnabled: row.auto_enabled ?? false,
         totalPublished: parseInt(row.total_published) || 0,
         totalFailed: parseInt(row.total_failed) || 0,
         publishedToday: parseInt(row.published_today) || 0,

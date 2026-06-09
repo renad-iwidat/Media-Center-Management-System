@@ -72,7 +72,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
     setPublishConfig({ category_id: undefined, auto_publish: true, pin: 0 });
     try {
       const res = await api.getAutoPublishTargets();
-      const targets = (res.data || []).filter((t: any) => t.is_enabled);
+      const targets = (res.data || []).filter((t: any) => t.is_enabled || t.manual_enabled);
       setPublishTargets(targets);
     } catch {
       setNotification({ type: "error", message: "❌ فشل تحميل المواقع الخارجية" });
@@ -562,9 +562,9 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                 <p className="text-[10px] text-[#94a3b8] font-bold uppercase pt-2">إجراءات النشر المتاحة</p>
 
                 {/* الخيارات حسب حالة النشر الفعلية */}
-                <div className={`grid grid-cols-1 ${!selectedItem.is_published_external && selectedItem.flow_type !== "automated" && !selectedItem.is_published_social ? "sm:grid-cols-2" : ""} gap-3`}>
-                  {/* نشر موقع خارجي — فقط إذا مش منشور خارجياً بعد */}
-                  {!selectedItem.is_published_external && selectedItem.flow_type !== "automated" && (
+                <div className={`grid grid-cols-1 ${!selectedItem.is_published_external && !selectedItem.is_published_social ? "sm:grid-cols-2" : ""} gap-3`}>
+                  {/* نشر موقع خارجي — لجميع الأخبار (تحريرية وآلية) إذا لم تُنشر خارجياً بعد */}
+                  {!selectedItem.is_published_external && (
                     <button
                       onClick={() => { setShowPublishOptions(true); setShowSocialPostCreator(false); handleOpenExternalPublish(selectedItem); }}
                       className={`p-4 rounded-xl border-2 transition-all text-right ${
@@ -645,7 +645,14 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                                   <p className="text-[10px] text-[#64748b]">{target.media_unit_name || target.mediaUnitName}</p>
                                 </div>
                               </div>
-                              <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg">اختيار</span>
+                              <div className="flex items-center gap-2">
+                                {target.publish_mode === 'manual' ? (
+                                  <span className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">✋ يدوي</span>
+                                ) : (
+                                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">⚡ تلقائي</span>
+                                )}
+                                <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg">اختيار</span>
+                              </div>
                             </button>
                           ))
                         ) : (

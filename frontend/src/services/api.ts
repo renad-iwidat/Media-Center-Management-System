@@ -673,6 +673,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ enabled }),
     }),
+  toggleManualPublishTarget: (id: number, enabled: boolean) =>
+    request<any>(`/auto-publish/targets/${id}/toggle-manual`, {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
+  toggleAutoPublishOnlyTarget: (id: number, enabled: boolean) =>
+    request<any>(`/auto-publish/targets/${id}/toggle-auto`, {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
   publishOneToExternal: (raw_data_id: number, target_id: number, overrides?: {
     category_id?: number;
     auto_publish?: boolean;

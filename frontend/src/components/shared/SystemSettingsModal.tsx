@@ -95,13 +95,13 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
     }
   };
 
-  // تفعيل/إيقاف هدف نشر معين
-  const handleToggleTarget = async (targetId: number, currentEnabled: boolean) => {
+  // تفعيل/إيقاف النشر اليدوي لهدف معين
+  const handleToggleManual = async (targetId: number, currentEnabled: boolean) => {
     setSaveStatus("saving");
     try {
-      await api.toggleAutoPublishTarget(targetId, !currentEnabled);
+      await api.toggleManualPublishTarget(targetId, !currentEnabled);
       setAutoPublishTargets(prev =>
-        prev.map(t => t.id === targetId ? { ...t, isEnabled: !currentEnabled } : t)
+        prev.map(t => t.id === targetId ? { ...t, manualEnabled: !currentEnabled } : t)
       );
       setSaveStatus("success");
     } catch {
@@ -109,6 +109,27 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
     } finally {
       setTimeout(() => setSaveStatus("idle"), 2000);
     }
+  };
+
+  // تفعيل/إيقاف النشر التلقائي لهدف معين
+  const handleToggleAuto = async (targetId: number, currentEnabled: boolean) => {
+    setSaveStatus("saving");
+    try {
+      await api.toggleAutoPublishOnlyTarget(targetId, !currentEnabled);
+      setAutoPublishTargets(prev =>
+        prev.map(t => t.id === targetId ? { ...t, autoEnabled: !currentEnabled } : t)
+      );
+      setSaveStatus("success");
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    }
+  };
+
+  // تفعيل/إيقاف هدف نشر معين (قديم — للتوافق)
+  const handleToggleTarget = async (targetId: number, currentEnabled: boolean) => {
+    await handleToggleAuto(targetId, currentEnabled);
   };
 
   // حفظ الإعدادات الرقمية
@@ -297,42 +318,80 @@ export function SystemSettingsModal({ isOpen, onClose, onSystemStatusChange }: P
                       </div>
                     </button>
 
-                    {/* أهداف النشر */}
+                    {/* أهداف النشر — زرين لكل موقع */}
                     {autoPublishTargets.length > 0 && (
                       <div className="space-y-2">
-                        {autoPublishTargets.map((target) => (
-                          <div
-                            key={target.id}
-                            className={`p-3 rounded-xl border transition-colors flex items-center justify-between
-                              ${target.isEnabled
-                                ? "bg-blue-50/50 border-blue-200"
-                                : "bg-f8fafc border-e2e8f0"
-                              }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <ExternalLink size={14} className={target.isEnabled ? "text-blue-500" : "text-[#94a3b8]"} />
-                              <div>
-                                <p className="text-xs font-semibold text-[#1e293b]">{target.name}</p>
-                                <p className="text-[10px] text-[#64748b]">
-                                  {target.mediaUnitName} · {target.totalPublished || 0} منشور
-                                  {target.publishedToday > 0 && ` · ${target.publishedToday} اليوم`}
-                                </p>
+                        {autoPublishTargets.map((target) => {
+                          const manualOn: boolean = target.manualEnabled ?? target.manual_enabled ?? target.isEnabled ?? false;
+                          const autoOn: boolean   = target.autoEnabled   ?? target.auto_enabled   ?? target.isEnabled ?? false;
+                          const anyOn = manualOn || autoOn;
+                          return (
+                            <div
+                              key={target.id}
+                              className={`p-3 rounded-xl border transition-colors
+                                ${anyOn ? "bg-blue-50/50 border-blue-200" : "bg-[#f8fafc] border-[#e2e8f0]"}`}
+                            >
+                              {/* اسم الموقع */}
+                              <div className="flex items-center gap-2 mb-2.5">
+                                <ExternalLink size={13} className={anyOn ? "text-blue-500" : "text-[#94a3b8]"} />
+                                <div>
+                                  <p className="text-xs font-semibold text-[#1e293b]">{target.name}</p>
+                                  <p className="text-[10px] text-[#64748b]">
+                                    {target.mediaUnitName} · {target.totalPublished || 0} منشور
+                                    {target.publishedToday > 0 && ` · ${target.publishedToday} اليوم`}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* زرا التحكم */}
+                              <div className="flex gap-2">
+                                {/* ✋ يدوي */}
+                                <button
+                                  onClick={() => handleToggleManual(target.id, manualOn)}
+                                  disabled={saveStatus === "saving"}
+                                  className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg border text-[11px] font-bold transition-all
+                                    ${saveStatus === "saving" ? "opacity-50 cursor-not-allowed" : ""}
+                                    ${manualOn
+                                      ? "bg-amber-50 border-amber-300 text-amber-700"
+                                      : "bg-white border-[#e2e8f0] text-[#94a3b8] hover:border-amber-200"
+                                    }`}
+                                >
+                                  <span>✋ يدوي</span>
+                                  <div className={`w-7 h-[14px] rounded-full relative transition-colors shrink-0
+                                    ${manualOn ? "bg-amber-500" : "bg-[#cbd5e1]"}`}>
+                                    <motion.div
+                                      animate={{ x: manualOn ? 14 : 1 }}
+                                      transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                                      className="absolute top-[2px] left-0 w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+                                    />
+                                  </div>
+                                </button>
+
+                                {/* ⚡ تلقائي */}
+                                <button
+                                  onClick={() => handleToggleAuto(target.id, autoOn)}
+                                  disabled={saveStatus === "saving"}
+                                  className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg border text-[11px] font-bold transition-all
+                                    ${saveStatus === "saving" ? "opacity-50 cursor-not-allowed" : ""}
+                                    ${autoOn
+                                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                                      : "bg-white border-[#e2e8f0] text-[#94a3b8] hover:border-blue-200"
+                                    }`}
+                                >
+                                  <span>⚡ تلقائي</span>
+                                  <div className={`w-7 h-[14px] rounded-full relative transition-colors shrink-0
+                                    ${autoOn ? "bg-blue-500" : "bg-[#cbd5e1]"}`}>
+                                    <motion.div
+                                      animate={{ x: autoOn ? 14 : 1 }}
+                                      transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                                      className="absolute top-[2px] left-0 w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+                                    />
+                                  </div>
+                                </button>
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleToggleTarget(target.id, target.isEnabled)}
-                              disabled={saveStatus === "saving"}
-                              className={`w-9 h-5 rounded-full relative transition-colors shrink-0
-                                ${target.isEnabled ? "bg-blue-600" : "bg-[#cbd5e1]"}`}
-                            >
-                              <motion.div
-                                animate={{ x: target.isEnabled ? 18 : 2 }}
-                                transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                                className="absolute top-1 left-0 w-3 h-3 bg-white rounded-full shadow-sm"
-                              />
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

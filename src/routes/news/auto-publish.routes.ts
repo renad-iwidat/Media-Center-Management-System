@@ -38,8 +38,14 @@ router.patch('/targets/:id', AutoPublishController.updateTarget);
 // DELETE /api/auto-publish/targets/:id — حذف هدف
 router.delete('/targets/:id', AutoPublishController.deleteTarget);
 
-// POST /api/auto-publish/targets/:id/toggle — تفعيل/إيقاف هدف معين
+// POST /api/auto-publish/targets/:id/toggle — تفعيل/إيقاف هدف معين (الاثنين معاً — للتوافق مع القديم)
 router.post('/targets/:id/toggle', AutoPublishController.toggleTarget);
+
+// POST /api/auto-publish/targets/:id/toggle-manual — تفعيل/إيقاف النشر اليدوي فقط
+router.post('/targets/:id/toggle-manual', AutoPublishController.toggleManualEnabled);
+
+// POST /api/auto-publish/targets/:id/toggle-auto — تفعيل/إيقاف النشر التلقائي فقط
+router.post('/targets/:id/toggle-auto', AutoPublishController.toggleAutoEnabled);
 
 // ── Manual Publish (للمحرر) + Run & Log ─────────────────────────────────────
 // POST /api/auto-publish/publish-one — نشر خبر واحد يدوياً (المحرر يكبس زر)

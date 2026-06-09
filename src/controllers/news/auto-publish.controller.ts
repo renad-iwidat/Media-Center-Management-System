@@ -253,7 +253,7 @@ export class AutoPublishController {
 
   /**
    * POST /api/auto-publish/targets/:id/toggle
-   * تفعيل/إيقاف هدف نشر معين
+   * تفعيل/إيقاف هدف نشر معين (الاثنين معاً — للتوافق مع الكود القديم)
    * Body: { enabled: boolean }
    */
   static async toggleTarget(req: Request, res: Response): Promise<void> {
@@ -285,6 +285,84 @@ export class AutoPublishController {
       res.status(500).json({
         success: false,
         message: 'خطأ في تبديل حالة هدف النشر',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * POST /api/auto-publish/targets/:id/toggle-manual
+   * تفعيل/إيقاف النشر اليدوي فقط — لا يؤثر على التلقائي
+   * Body: { enabled: boolean }
+   */
+  static async toggleManualEnabled(req: Request, res: Response): Promise<void> {
+    try {
+      const targetId = Number(req.params.id);
+      const { enabled } = req.body;
+
+      if (enabled === undefined) {
+        res.status(400).json({ success: false, message: 'الحقل enabled مطلوب' });
+        return;
+      }
+
+      const updated = await autoPublishService.toggleManualEnabled(targetId, Boolean(enabled));
+
+      if (!updated) {
+        res.status(404).json({ success: false, message: 'الهدف غير موجود' });
+        return;
+      }
+
+      const status = enabled ? 'مفعّل ✅' : 'متوقف ⏸️';
+      console.log(`✋ النشر اليدوي لـ "${updated.name}": ${status}`);
+
+      res.status(200).json({
+        success: true,
+        message: `النشر اليدوي لـ "${updated.name}" الآن ${status}`,
+        data: { id: targetId, manual_enabled: Boolean(enabled) },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في تبديل حالة النشر اليدوي',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * POST /api/auto-publish/targets/:id/toggle-auto
+   * تفعيل/إيقاف النشر التلقائي فقط — لا يؤثر على اليدوي
+   * Body: { enabled: boolean }
+   */
+  static async toggleAutoEnabled(req: Request, res: Response): Promise<void> {
+    try {
+      const targetId = Number(req.params.id);
+      const { enabled } = req.body;
+
+      if (enabled === undefined) {
+        res.status(400).json({ success: false, message: 'الحقل enabled مطلوب' });
+        return;
+      }
+
+      const updated = await autoPublishService.toggleAutoEnabled(targetId, Boolean(enabled));
+
+      if (!updated) {
+        res.status(404).json({ success: false, message: 'الهدف غير موجود' });
+        return;
+      }
+
+      const status = enabled ? 'مفعّل ✅' : 'متوقف ⏸️';
+      console.log(`⚡ النشر التلقائي لـ "${updated.name}": ${status}`);
+
+      res.status(200).json({
+        success: true,
+        message: `النشر التلقائي لـ "${updated.name}" الآن ${status}`,
+        data: { id: targetId, auto_enabled: Boolean(enabled) },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في تبديل حالة النشر التلقائي',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
