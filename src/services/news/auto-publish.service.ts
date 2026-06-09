@@ -508,8 +508,11 @@ class AutoPublishService {
         addField('title', article.title);
         addField('content', article.content);
         addField('category_id', String(externalCategoryId));
-        // keywords: حقل واحد بقيمة مفصولة بفواصل — تماماً مثل curl: -F "keywords=test,api"
-        addField('keywords', tagsString);
+        // ⚠️ Django API تبع النجاح فيه bug: أي keywords فيها فاصلة تتحول list وتفشل
+        // (يعمل split(',') ثم add(list) بدل add(*list))
+        // الحل: إرسال أهم keyword واحد فقط بدون فواصل ليبقى string
+        const firstKeyword = tagsString.split(',')[0]?.trim() || 'أخبار';
+        addField('keywords', firstKeyword);
 
         // المواقع التي تدعم auto_publish و pin (مثل موقع النجاح)
         if (supportsAutoPublish) {
