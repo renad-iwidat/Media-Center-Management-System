@@ -627,7 +627,7 @@ export default function App() {
               className="max-w-7xl mx-auto p-4 sm:p-6"
             >
               {/* Page Header */}
-              {!isAISection && activeSection !== 'overview' && (
+              {!isAISection && activeSection !== 'overview' && activeSection !== 'settings' && (
                 <div className="mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-[#3d6a8a] to-[#2d5570] rounded-2xl flex items-center justify-center shadow-lg shadow-[#3d6a8a]/20 shrink-0">
