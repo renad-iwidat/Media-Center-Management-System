@@ -13,6 +13,7 @@
 
 import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
+import { callOpenAIChatAPI } from '../ai-hub/ai-call.service';
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -102,6 +103,52 @@ function resolveExternalCategory(
   }
 
   return target.default_category_id;
+}
+
+// ── AI Tag Generation ────────────────────────────────────────────────────────
+
+/**
+ * توليد تاجز (كلمات مفتاحية) بالذكاء الاصطناعي من العنوان والمحتوى
+ * وتخزينها في قاعدة البيانات
+ */
+async function generateAndSaveTags(articleId: number, title: string, content: string): Promise<string[]> {
+  try {
+    const prompt = `أنت محرر SEO محترف. استخرج 5-8 كلمات مفتاحية (keywords/tags) من الخبر التالي.
+الكلمات يجب أن تكون:
+- مفردة أو مركبة (كلمة أو كلمتين)
+- ذات صلة بالمحتوى
+- مناسبة لمحركات البحث
+- بالعربية
+
+العنوان: ${title}
+المحتوى: ${content.substring(0, 500)}
+
+أرجع الكلمات المفتاحية فقط مفصولة بفواصل، بدون ترقيم أو شرح.
+مثال: غزة, صحة, مستشفى, طوارئ, جرحى`;
+
+    const aiResponse = await callOpenAIChatAPI(prompt);
+    
+    // تنظيف الرد وتحويله لمصفوفة
+    const tags = aiResponse
+      .split(/[,،\n]/)
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0 && tag.length < 50)
+      .slice(0, 8);
+
+    if (tags.length > 0) {
+      // حفظ التاجز في قاعدة البيانات
+      await query(
+        `UPDATE raw_data SET tags = $1 WHERE id = $2`,
+        [tags, articleId]
+      );
+      console.log(`   🏷️ AI Tags generated and saved: [${tags.join(', ')}]`);
+    }
+
+    return tags;
+  } catch (err) {
+    console.log(`   ⚠️ فشل توليد التاجز بالـ AI: ${err instanceof Error ? err.message : 'unknown'}`);
+    return [];
+  }
 }
 
 // ── Service Class ───────────────────────────────────────────────────────────
@@ -373,13 +420,28 @@ class AutoPublishService {
         ? overrides.pin
         : target.default_pin;
 
-      // تجهيز الـ keywords
-      const tagsString = Array.isArray(article.tags) && article.tags.length > 0
-        ? article.tags.join(',')
-        : article.title.split(' ').slice(0, 5).join(','); // fallback: أول 5 كلمات من العنوان
+      // تجهيز الـ keywords — يجب أن يكون string مفصول بفواصل (Django يرفض array)
+      let tagsString: string;
+      const rawTags = article.tags as any;
+      if (Array.isArray(rawTags) && rawTags.length > 0) {
+        tagsString = rawTags.join(', ');
+      } else if (typeof rawTags === 'string' && rawTags.trim()) {
+        tagsString = rawTags;
+      } else {
+        // لا توجد تاجز → توليد بالذكاء الاصطناعي وتخزينها
+        console.log(`   🤖 لا توجد تاجز — جاري التوليد بالـ AI...`);
+        const aiTags = await generateAndSaveTags(article.id, article.title, article.content);
+        if (aiTags.length > 0) {
+          tagsString = aiTags.join(', ');
+        } else {
+          // fallback أخير: أول 5 كلمات من العنوان
+          tagsString = article.title.split(/\s+/).slice(0, 5).join(', ');
+        }
+      }
 
       console.log(`   📡 Sending to: ${target.api_url}`);
       console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." cat=${externalCategoryId} auto_publish=${autoPublish} pin=${pinValue} auth=${target.auth_type}`);
+      console.log(`   🏷️ Keywords: "${tagsString}" (type: ${typeof tagsString}, from tags: ${JSON.stringify(article.tags)})`);
 
       // تحميل الصورة وتحويلها لـ Blob (ملف) للرفع
       let imageBlob: Blob | null = null;
@@ -425,7 +487,7 @@ class AutoPublishService {
         retryFormData.append('title', article.title);
         retryFormData.append('content', article.content);
         retryFormData.append('category_id', String(externalCategoryId));
-        retryFormData.append('keywords', tagsString);
+        retryFormData.append('keywords', String(tagsString));
 
         // هنا غزة يقبل tags إضافة للـ keywords
         if (target.auth_type === 'bearer') {
