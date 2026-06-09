@@ -34,7 +34,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
   const [searchTitle, setSearchTitle] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
 
   // Pagination state
@@ -84,13 +85,12 @@ export function QueueView({ unitId }: { unitId: number | null }) {
       filtered = filtered.filter(item => item.status === selectedStatus);
     }
 
-    // Filter by date
-    if (selectedDate) {
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.created_at).toLocaleDateString('ar-SA');
-        const filterDate = new Date(selectedDate).toLocaleDateString('ar-SA');
-        return itemDate === filterDate;
-      });
+    // Filter by date range
+    if (dateFrom) {
+      filtered = filtered.filter(item => new Date(item.created_at) >= new Date(dateFrom));
+    }
+    if (dateTo) {
+      filtered = filtered.filter(item => new Date(item.created_at) <= new Date(dateTo + 'T23:59:59'));
     }
 
     // Sort
@@ -102,7 +102,7 @@ export function QueueView({ unitId }: { unitId: number | null }) {
 
     setFilteredQueue(filtered);
     setCurrentPage(1);
-  }, [queue, searchTitle, selectedCategory, selectedStatus, selectedDate, sortBy]);
+  }, [queue, searchTitle, selectedCategory, selectedStatus, dateFrom, dateTo, sortBy]);
 
   // منع السكرول عند فتح التحرير - مع cleanup صحيح
   useEffect(() => {
@@ -587,15 +587,31 @@ export function QueueView({ unitId }: { unitId: number | null }) {
         <div className="space-y-6">
           {/* Filters */}
           <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-[#1e293b] flex items-center gap-2">
-              <Search size={14} className="text-[#4A7C9E]" />
-              البحث والفلترة
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#1e293b] flex items-center gap-2">
+                <Search size={14} className="text-[#4A7C9E]" />
+                البحث والفلترة
+              </h3>
+              {(searchTitle || selectedCategory || selectedStatus || dateFrom || dateTo || sortBy !== "newest") && (
+                <button
+                  onClick={() => {
+                    setSearchTitle("");
+                    setSelectedCategory("");
+                    setSelectedStatus("");
+                    setDateFrom("");
+                    setDateTo("");
+                    setSortBy("newest");
+                  }}
+                  className="text-xs text-[#FF9F4A] hover:text-[#FF8C2E] font-bold flex items-center gap-1"
+                >
+                  <X size={12} /> مسح الفلاتر
+                </button>
+              )}
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
               {/* Search by title */}
-              <div className="space-y-2">
-                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">البحث عن عنوان</label>
+              <div className="col-span-2">
                 <input
                   type="text"
                   value={searchTitle}
@@ -606,77 +622,59 @@ export function QueueView({ unitId }: { unitId: number | null }) {
               </div>
 
               {/* Filter by category */}
-              <div className="space-y-2">
-                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">التصنيف</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-                >
-                  <option value="">كل التصنيفات</option>
-                  {[...new Set(queue.map(item => item.category_name))].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+              >
+                <option value="">كل التصنيفات</option>
+                {[...new Set(queue.map(item => item.category_name))].filter(Boolean).map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
 
               {/* Filter by status */}
-              <div className="space-y-2">
-                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الحالة</label>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-                >
-                  <option value="">كل الحالات</option>
-                  <option value="pending">في الانتظار</option>
-                  <option value="in_review">قيد المراجعة</option>
-                  <option value="incomplete">غير مكتمل</option>
-                  <option value="approved">موافق عليه</option>
-                  <option value="rejected">مرفوض</option>
-                </select>
-              </div>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+              >
+                <option value="">كل الحالات</option>
+                <option value="pending">في الانتظار</option>
+                <option value="in_review">قيد المراجعة</option>
+                <option value="incomplete">غير مكتمل</option>
+                <option value="approved">موافق عليه</option>
+                <option value="rejected">مرفوض</option>
+              </select>
 
-              {/* Filter by date */}
-              <div className="space-y-2">
-                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">التاريخ</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-                />
-              </div>
+              {/* Date from */}
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+                title="من تاريخ"
+              />
+
+              {/* Date to */}
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+                title="إلى تاريخ"
+              />
 
               {/* Sort */}
-              <div className="space-y-2">
-                <label className="text-[10px] text-[#64748b] font-bold uppercase tracking-wide">الترتيب</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                  className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-                >
-                  <option value="newest">الأحدث أولاً</option>
-                  <option value="oldest">الأقدم أولاً</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Clear filters */}
-            {(searchTitle || selectedCategory || selectedStatus || selectedDate || sortBy !== "newest") && (
-              <button
-                onClick={() => {
-                  setSearchTitle("");
-                  setSelectedCategory("");
-                  setSelectedStatus("");
-                  setSelectedDate("");
-                  setSortBy("newest");
-                }}
-                className="text-xs text-[#FF9F4A] hover:text-[#FF8C2E] font-bold flex items-center gap-1"
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
+                className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
               >
-                × مسح الفلاتر
-              </button>
-            )}
+                <option value="newest">الأحدث أولاً</option>
+                <option value="oldest">الأقدم أولاً</option>
+              </select>
+            </div>
           </div>
 
           {/* Results count and pagination info */}

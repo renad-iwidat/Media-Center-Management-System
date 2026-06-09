@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { AlertTriangle, Search, ArrowRight, Trash2, Save, Trash } from "lucide-react";
+import { AlertTriangle, Search, ArrowRight, Trash2, Save, Trash, X } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -27,7 +27,8 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
   const [searchTitle, setSearchTitle] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,13 +72,12 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       filtered = filtered.filter(a => a.category_name === selectedCategory);
     }
 
-    // Filter by date
-    if (selectedDate) {
-      filtered = filtered.filter(a => {
-        const articleDate = new Date(a.fetched_at).toLocaleDateString('ar-SA');
-        const filterDate = new Date(selectedDate).toLocaleDateString('ar-SA');
-        return articleDate === filterDate;
-      });
+    // Filter by date range
+    if (dateFrom) {
+      filtered = filtered.filter(a => new Date(a.fetched_at) >= new Date(dateFrom));
+    }
+    if (dateTo) {
+      filtered = filtered.filter(a => new Date(a.fetched_at) <= new Date(dateTo + 'T23:59:59'));
     }
 
     // Sort
@@ -89,7 +89,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
 
     setFilteredArticles(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [articles, searchTitle, selectedCategory, sortBy, selectedDate]);
+  }, [articles, searchTitle, selectedCategory, sortBy, dateFrom, dateTo]);
 
   const handleEdit = useCallback((article: any) => {
     setEditingArticle(article);
@@ -457,79 +457,80 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
       <Notification notification={notification} onClose={() => setNotification(null)} />
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl p-6 border border-[#e2e8f0] shadow-md space-y-4">
-        <h3 className="text-base font-bold text-[#1e293b] flex items-center gap-2">
-          <Search size={16} className="text-[#4A7C9E]" />
-          البحث والفلترة
-        </h3>
+      <div className="bg-white rounded-2xl p-5 border border-[#e2e8f0] shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-[#1e293b] flex items-center gap-2">
+            <Search size={14} className="text-[#4A7C9E]" />
+            البحث والفلترة
+          </h3>
+          {(searchTitle || selectedCategory || dateFrom || dateTo || sortBy !== "newest") && (
+            <button
+              onClick={() => {
+                setSearchTitle("");
+                setSelectedCategory("");
+                setDateFrom("");
+                setDateTo("");
+                setSortBy("newest");
+              }}
+              className="text-xs text-[#FF9F4A] hover:text-[#FF8C2E] font-bold flex items-center gap-1"
+            >
+              <X size={12} /> مسح الفلاتر
+            </button>
+          )}
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search by title */}
-          <div className="space-y-2">
-            <label className="text-xs text-[#64748b] font-bold uppercase">البحث عن عنوان</label>
+          <div className="col-span-2">
             <input
               type="text"
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
               placeholder="ابحث عن عنوان..."
-              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
+              className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
             />
           </div>
 
           {/* Filter by category */}
-          <div className="space-y-2">
-            <label className="text-xs text-[#64748b] font-bold uppercase">التصنيف</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-            >
-              <option value="">كل التصنيفات</option>
-              {[...new Set(articles.map(a => a.category_name))].map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+          >
+            <option value="">كل التصنيفات</option>
+            {[...new Set(articles.map(a => a.category_name))].filter(Boolean).map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
 
-          {/* Filter by date */}
-          <div className="space-y-2">
-            <label className="text-xs text-[#64748b] font-bold uppercase">التاريخ</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-            />
-          </div>
+          {/* Date from */}
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+            title="من تاريخ"
+          />
+
+          {/* Date to */}
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+            title="إلى تاريخ"
+          />
 
           {/* Sort */}
-          <div className="space-y-2">
-            <label className="text-xs text-[#64748b] font-bold uppercase">الترتيب</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-              className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-            >
-              <option value="newest">الأحدث أولاً</option>
-              <option value="oldest">الأقدم أولاً</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Clear filters */}
-        {(searchTitle || selectedCategory || selectedDate || sortBy !== "newest") && (
-          <button
-            onClick={() => {
-              setSearchTitle("");
-              setSelectedCategory("");
-              setSelectedDate("");
-              setSortBy("newest");
-            }}
-            className="text-xs text-[#4A7C9E] hover:text-[#3d6a8a] font-bold"
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
+            className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
           >
-            مسح الفلاتر
-          </button>
-        )}
+            <option value="newest">الأحدث أولاً</option>
+            <option value="oldest">الأقدم أولاً</option>
+          </select>
+        </div>
       </div>
 
       {/* Results count and pagination info */}

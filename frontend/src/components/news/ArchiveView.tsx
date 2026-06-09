@@ -68,6 +68,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
 
   const [searchTitle, setSearchTitle] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
@@ -107,6 +108,9 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
         item.title?.toLowerCase().includes(searchTitle.toLowerCase())
       );
     }
+    if (selectedCategory) {
+      filtered = filtered.filter(item => item.category_name === selectedCategory);
+    }
     if (dateFrom) {
       filtered = filtered.filter(item =>
         new Date(item.fetched_at) >= new Date(dateFrom)
@@ -114,7 +118,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
     }
     if (dateTo) {
       filtered = filtered.filter(item =>
-        new Date(item.fetched_at) <= new Date(dateTo)
+        new Date(item.fetched_at) <= new Date(dateTo + 'T23:59:59')
       );
     }
     if (sortBy === "newest") {
@@ -123,7 +127,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
       filtered.sort((a, b) => new Date(a.fetched_at).getTime() - new Date(b.fetched_at).getTime());
     }
     setFilteredItems(filtered);
-  }, [items, searchTitle, dateFrom, dateTo, sortBy]);
+  }, [items, searchTitle, selectedCategory, dateFrom, dateTo, sortBy]);
 
   const toggleExpand = (id: number) => {
     setExpandedItems(prev => {
@@ -135,7 +139,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
   };
 
   const totalPages = Math.ceil(total / itemsPerPage);
-  const hasFilters = !!(searchTitle || selectedPlatform || dateFrom || dateTo);
+  const hasFilters = !!(searchTitle || selectedPlatform || selectedCategory || dateFrom || dateTo);
 
   if (loading) return <LoadingSpinner />;
 
@@ -160,7 +164,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
             </h3>
             {hasFilters && (
               <button
-                onClick={() => { setSearchTitle(""); setSelectedPlatform(""); setDateFrom(""); setDateTo(""); setCurrentPage(1); }}
+                onClick={() => { setSearchTitle(""); setSelectedPlatform(""); setSelectedCategory(""); setDateFrom(""); setDateTo(""); setCurrentPage(1); }}
                 className="text-xs text-[#FF9F4A] hover:text-[#FF8C2E] font-bold flex items-center gap-1"
               >
                 <X size={12} /> مسح الفلاتر
@@ -168,7 +172,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
             <div className="col-span-2">
               <input
                 type="text"
@@ -178,6 +182,16 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
                 className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b] placeholder:text-[#cbd5e1]"
               />
             </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); }}
+              className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+            >
+              <option value="">كل التصنيفات</option>
+              {[...new Set(items.map(item => item.category_name))].filter(Boolean).map(cat => (
+                <option key={cat} value={cat!}>{cat}</option>
+              ))}
+            </select>
             <select
               value={selectedPlatform}
               onChange={(e) => { setSelectedPlatform(e.target.value); setCurrentPage(1); }}
@@ -194,15 +208,23 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-              placeholder="من تاريخ"
+              title="من تاريخ"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
-              placeholder="إلى تاريخ"
+              title="إلى تاريخ"
             />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
+              className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF9F4A] focus:ring-1 focus:ring-[#FF9F4A]/20 text-[#1e293b]"
+            >
+              <option value="newest">الأحدث أولاً</option>
+              <option value="oldest">الأقدم أولاً</option>
+            </select>
           </div>
         </div>
 
