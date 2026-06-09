@@ -489,11 +489,6 @@ class AutoPublishService {
         retryFormData.append('category_id', String(externalCategoryId));
         retryFormData.append('keywords', String(tagsString));
 
-        // هنا غزة يقبل tags إضافة للـ keywords
-        if (target.auth_type === 'bearer') {
-          retryFormData.append('tags', tagsString);
-        }
-
         // المواقع التي تدعم auto_publish و pin (مثل موقع النجاح)
         if (supportsAutoPublish) {
           retryFormData.append('auto_publish', autoPublish ? 'true' : 'false');
@@ -745,7 +740,6 @@ class AutoPublishService {
        WHERE apl.status = 'failed' 
          AND apl.retry_count < 3
          AND apt.auto_enabled = true
-         AND apt.publish_mode = 'automated'
        ORDER BY apl.updated_at ASC
        LIMIT 10`
     );
