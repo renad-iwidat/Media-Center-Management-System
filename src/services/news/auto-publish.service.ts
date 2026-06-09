@@ -424,29 +424,30 @@ class AutoPublishService {
       let tagsString: string;
       const rawTags = article.tags as any;
       if (Array.isArray(rawTags) && rawTags.length > 0) {
-        // تأكد أن كل عنصر string وليس object
-        tagsString = rawTags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0).join(',');
+        // تأكد أن كل عنصر string وليس object — ولف كل واحد بعلامات اقتباس
+        tagsString = rawTags.map((t: any) => `"${String(t).trim()}"`).filter((t: string) => t.length > 2).join(',');
       } else if (typeof rawTags === 'string' && rawTags.trim()) {
         // قد يكون string representation of array: "['tag1', 'tag2']" أو "{tag1,tag2}"
         let cleaned = rawTags.trim();
         if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
           cleaned = cleaned.replace(/[\[\]{}"']/g, '');
         }
-        tagsString = cleaned;
+        // لف كل tag بعلامات اقتباس
+        tagsString = cleaned.split(',').map(t => `"${t.trim()}"`).filter(t => t.length > 2).join(',');
       } else {
         // لا توجد تاجز → توليد بالذكاء الاصطناعي وتخزينها
         console.log(`   🤖 لا توجد تاجز — جاري التوليد بالـ AI...`);
         const aiTags = await generateAndSaveTags(article.id, article.title, article.content);
         if (aiTags.length > 0) {
-          tagsString = aiTags.join(',');
+          tagsString = aiTags.map(t => `"${t}"`).join(',');
         } else {
           // fallback أخير: أول 5 كلمات من العنوان
-          tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
+          tagsString = article.title.split(/\s+/).slice(0, 5).map(t => `"${t}"`).join(',');
         }
       }
       // ضمان نهائي: لو لأي سبب صارت فارغة
       if (!tagsString || tagsString.trim().length === 0) {
-        tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
+        tagsString = article.title.split(/\s+/).slice(0, 5).map(t => `"${t}"`).join(',');
       }
 
       console.log(`   📡 Sending to: ${target.api_url}`);
@@ -497,7 +498,8 @@ class AutoPublishService {
         retryFormData.append('title', article.title);
         retryFormData.append('content', article.content);
         retryFormData.append('category_id', String(externalCategoryId));
-        retryFormData.append('keywords', String(tagsString));
+        // keywords كـ string واحد — Django يعالجها داخلياً
+        retryFormData.append('keywords', tagsString);
 
         // المواقع التي تدعم auto_publish و pin (مثل موقع النجاح)
         if (supportsAutoPublish) {
