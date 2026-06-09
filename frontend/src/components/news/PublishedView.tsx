@@ -54,8 +54,13 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
       .then((res) => {
         // قسم النشر = فقط الأخبار التحريرية (اللي وافق عليها المحرر)
         const allItems = res.data || [];
-        // قسم النشر = كل الأخبار المنشورة (تحريرية + أوتوماتيكية مكتملة يدوياً)
-        setItems(allItems);
+        // تصفية: فقط الأخبار التحريرية (editorial) اللي ما تم نشرها على أي موقع خارجي بعد
+        // (نشر يدوي فقط - ليس أوتوماتيكي)
+        const editorialOnlyItems = allItems.filter((item: any) => {
+          // فقط الأخبار التحريرية
+          return item.flow_type === 'editorial';
+        });
+        setItems(editorialOnlyItems);
       })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
@@ -72,7 +77,16 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
     setPublishConfig({ category_id: undefined, auto_publish: true, pin: 0 });
     try {
       const res = await api.getAutoPublishTargets();
-      const targets = (res.data || []).filter((t: any) => t.is_enabled || t.manual_enabled);
+      // جلب أسماء المواقع المنشور عليها فعلاً من published_platforms
+      const publishedTargetNames: string[] = (item.published_platforms || [])
+        .filter((p: any) => p.platform === 'external_website')
+        .map((p: any) => p.name);
+
+      // إظهار فقط المواقع التي manual_enabled = true وغير منشور عليها بعد
+      const targets = (res.data || []).filter((t: any) =>
+        (t.is_enabled || t.manual_enabled) &&
+        !publishedTargetNames.includes(t.name)
+      );
       setPublishTargets(targets);
     } catch {
       setNotification({ type: "error", message: "❌ فشل تحميل المواقع الخارجية" });
@@ -562,9 +576,16 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                 <p className="text-[10px] text-[#94a3b8] font-bold uppercase pt-2">إجراءات النشر المتاحة</p>
 
                 {/* الخيارات حسب حالة النشر الفعلية */}
-                <div className={`grid grid-cols-1 ${!selectedItem.is_published_external && !selectedItem.is_published_social ? "sm:grid-cols-2" : ""} gap-3`}>
-                  {/* نشر موقع خارجي — لجميع الأخبار (تحريرية وآلية) إذا لم تُنشر خارجياً بعد */}
-                  {!selectedItem.is_published_external && (
+                {(() => {
+                  const publishedTargetNames: string[] = (selectedItem.published_platforms || [])
+                    .filter((p: any) => p.platform === 'external_website')
+                    .map((p: any) => p.name);
+                  // هل في موقع خارجي مفعّل لم يُنشر عليه بعد؟ — نحدده لاحقاً عند فتح القائمة
+                  const canPublishExternal = true; // دائماً اظهر الزر، الفلتر يصير عند الفتح
+                  return (
+                <div className={`grid grid-cols-1 ${canPublishExternal && !selectedItem.is_published_social ? "sm:grid-cols-2" : ""} gap-3`}>
+                  {/* نشر موقع خارجي — يظهر دائماً (الفلتر يصير عند اختيار الموقع) */}
+                  {canPublishExternal && (
                     <button
                       onClick={() => { setShowPublishOptions(true); setShowSocialPostCreator(false); handleOpenExternalPublish(selectedItem); }}
                       className={`p-4 rounded-xl border-2 transition-all text-right ${
@@ -579,13 +600,17 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-[#1e293b]">نشر موقع خارجي</p>
-                          <p className="text-[10px] text-[#94a3b8]">نشر الخبر على المواقع المرتبطة</p>
+                          <p className="text-[10px] text-[#94a3b8]">
+                            {publishedTargetNames.length > 0
+                              ? `منشور على: ${publishedTargetNames.join('، ')} — نشر على موقع آخر`
+                              : 'نشر الخبر على المواقع المرتبطة'}
+                          </p>
                         </div>
                       </div>
                     </button>
                   )}
 
-                  {/* إنشاء منشور على السوشال ميديا — إذا مش منشور على سوشال بعد */}
+                  {/* إنشاء منشور على السوشال ميديا */}
                   {!selectedItem.is_published_social && (
                     <button
                       onClick={() => { setShowSocialPostCreator(true); setShowPublishOptions(false); }}
@@ -606,15 +631,9 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                       </div>
                     </button>
                   )}
-
-                  {/* إذا كل شي منشور — رسالة */}
-                  {selectedItem.is_published_external && selectedItem.is_published_social && (
-                    <div className="col-span-full bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
-                      <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                      <p className="text-xs text-emerald-700 font-medium">تم النشر على جميع المنصات المتاحة</p>
-                    </div>
-                  )}
                 </div>
+                  );
+                })()}
 
                 {/* ═══ محتوى الخيار 1: نشر موقع خارجي ═══ */}
                 {showPublishOptions && !showSocialPostCreator && (
@@ -645,18 +664,11 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                                   <p className="text-[10px] text-[#64748b]">{target.media_unit_name || target.mediaUnitName}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {target.publish_mode === 'manual' ? (
-                                  <span className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">✋ يدوي</span>
-                                ) : (
-                                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">⚡ تلقائي</span>
-                                )}
-                                <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg">اختيار</span>
-                              </div>
+                              <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg">اختيار</span>
                             </button>
                           ))
                         ) : (
-                          <p className="text-xs text-[#94a3b8] text-center py-2">لا توجد مواقع خارجية مفعّلة</p>
+                          <p className="text-xs text-[#94a3b8] text-center py-2">لا توجد مواقع خارجية متاحة (إما منشور على الكل أو لا يوجد مواقع مفعّلة)</p>
                         )}
                       </>
                     )}
@@ -737,32 +749,34 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
 
                         {/* auto_publish و pin — فقط للمواقع التي تدعمها (مثل النجاح) */}
                         {(publishConfigTarget.auth_type === 'token' || publishConfigTarget.api_url?.includes('nn.najah.edu')) && (
-                          <div className="grid grid-cols-2 gap-3">
-                            {/* auto_publish */}
+                          <div className="space-y-3">
+                            {/* حالة النشر — بارزة */}
                             <div>
-                              <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-1.5">
-                                حالة النشر
+                              <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-2">
+                                طريقة النشر على {publishConfigTarget.name}
                               </label>
-                              <div className="flex gap-2">
+                              <div className="grid grid-cols-2 gap-2">
                                 <button
                                   onClick={() => setPublishConfig(prev => ({ ...prev, auto_publish: true }))}
-                                  className={`flex-1 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                                  className={`p-3 rounded-xl border-2 transition-all text-right ${
                                     publishConfig.auto_publish
-                                      ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
-                                      : 'bg-white border-[#e2e8f0] text-[#64748b] hover:border-emerald-300'
+                                      ? 'bg-emerald-50 border-emerald-400'
+                                      : 'bg-white border-[#e2e8f0] hover:border-emerald-200'
                                   }`}
                                 >
-                                  نشر فوري
+                                  <p className={`text-sm font-bold ${publishConfig.auto_publish ? 'text-emerald-700' : 'text-[#64748b]'}`}>✅ نشر فوري</p>
+                                  <p className="text-[10px] text-[#94a3b8] mt-0.5">يظهر للزوار فوراً</p>
                                 </button>
                                 <button
                                   onClick={() => setPublishConfig(prev => ({ ...prev, auto_publish: false }))}
-                                  className={`flex-1 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                                  className={`p-3 rounded-xl border-2 transition-all text-right ${
                                     !publishConfig.auto_publish
-                                      ? 'bg-amber-100 border-amber-400 text-amber-700'
-                                      : 'bg-white border-[#e2e8f0] text-[#64748b] hover:border-amber-300'
+                                      ? 'bg-amber-50 border-amber-400'
+                                      : 'bg-white border-[#e2e8f0] hover:border-amber-200'
                                   }`}
                                 >
-                                  مسودة
+                                  <p className={`text-sm font-bold ${!publishConfig.auto_publish ? 'text-amber-700' : 'text-[#64748b]'}`}>📝 مسودة</p>
+                                  <p className="text-[10px] text-[#94a3b8] mt-0.5">يُحفظ draft — تنشره لاحقاً</p>
                                 </button>
                               </div>
                             </div>
@@ -777,12 +791,10 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                                   <button
                                     key={v}
                                     onClick={() => setPublishConfig(prev => ({ ...prev, pin: v }))}
-                                    title={v === 0 ? 'غير مثبت' : `موضع ${v} في الرئيسية${v === 5 ? ' (أول خبر)' : ''}`}
+                                    title={v === 0 ? 'غير مثبت' : `موضع ${v}${v === 5 ? ' (أول خبر)' : ''}`}
                                     className={`flex-1 py-2 rounded-lg text-[11px] font-bold border transition-all ${
                                       publishConfig.pin === v
-                                        ? v === 0
-                                          ? 'bg-slate-200 border-slate-400 text-slate-700'
-                                          : 'bg-blue-100 border-blue-400 text-blue-700'
+                                        ? v === 0 ? 'bg-slate-200 border-slate-400 text-slate-700' : 'bg-blue-100 border-blue-400 text-blue-700'
                                         : 'bg-white border-[#e2e8f0] text-[#64748b] hover:border-blue-200'
                                     }`}
                                   >
@@ -791,7 +803,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                                 ))}
                               </div>
                               <p className="text-[9px] text-[#94a3b8] mt-1">
-                                {publishConfig.pin === 0 ? 'غير مثبت' : `مثبت بموضع ${publishConfig.pin}${publishConfig.pin === 5 ? ' (أول خبر)' : ''}`}
+                                {publishConfig.pin === 0 ? 'غير مثبت' : `مثبت بموضع ${publishConfig.pin}${publishConfig.pin === 5 ? ' (أول خبر — صورة كبيرة)' : ''}`}
                               </p>
                             </div>
                           </div>

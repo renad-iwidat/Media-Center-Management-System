@@ -50,7 +50,17 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
       setArticlesInput(String(d.articles_per_source ?? 20));
       const autoData = autoRes.data || {};
       setAutoPublishEnabled(!!autoData.masterEnabled);
-      setAutoPublishTargets(autoData.targets || []);
+      
+      // إزالة التكرار: تصفية المواقع المكررة باستخدام الـ ID الفريد
+      const uniqueTargets = [];
+      const seenIds = new Set();
+      for (const target of (autoData.targets || [])) {
+        if (!seenIds.has(target.id)) {
+          uniqueTargets.push(target);
+          seenIds.add(target.id);
+        }
+      }
+      setAutoPublishTargets(uniqueTargets);
     }).finally(() => setLoading(false));
   };
 
