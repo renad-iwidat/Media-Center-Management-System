@@ -374,20 +374,32 @@ class AutoPublishService {
         : target.default_pin;
 
       // تجهيز الـ keywords
-      const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
+      const tagsString = Array.isArray(article.tags) && article.tags.length > 0
+        ? article.tags.join(',')
+        : article.title.split(' ').slice(0, 5).join(','); // fallback: أول 5 كلمات من العنوان
 
       console.log(`   📡 Sending to: ${target.api_url}`);
       console.log(`   📦 Payload: title="${article.title.substring(0, 50)}..." cat=${externalCategoryId} auto_publish=${autoPublish} pin=${pinValue} auth=${target.auth_type}`);
 
-      // تحميل الصورة وتحويلها لـ base64
-      let imageBase64: string | null = null;
+      // تحميل الصورة وتحويلها لـ Blob (ملف) للرفع
+      let imageBlob: Blob | null = null;
+      let imageName = 'image.jpg';
       if (article.image_url) {
         try {
           const imgResponse = await fetch(article.image_url, { signal: AbortSignal.timeout(15000) });
           if (imgResponse.ok) {
             const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
             const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
-            imageBase64 = `data:${contentType};base64,${imgBuffer.toString('base64')}`;
+            imageBlob = new Blob([imgBuffer], { type: contentType });
+            // استخراج اسم الملف من الـ URL
+            const urlPath = new URL(article.image_url).pathname;
+            const fileName = urlPath.split('/').pop();
+            if (fileName && /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName)) {
+              imageName = fileName;
+            } else {
+              const ext = contentType.split('/')[1] || 'jpg';
+              imageName = `image.${ext}`;
+            }
           } else {
             console.log(`   ⚠️ فشل تحميل الصورة (${imgResponse.status}), سيتم النشر بدون صورة`);
           }
@@ -424,10 +436,22 @@ class AutoPublishService {
         if (supportsAutoPublish) {
           retryFormData.append('auto_publish', autoPublish ? 'true' : 'false');
           retryFormData.append('pin', String(pinValue));
+          // image_caption مطلوب لموقع النجاح
+          retryFormData.append('image_caption', article.title.substring(0, 100));
         }
 
-        if (imageBase64) {
-          retryFormData.append('image_base64', imageBase64);
+        // إرسال الصورة — كملف للمواقع التي تدعم Token (النجاح)، أو base64 للمواقع الأخرى
+        if (imageBlob) {
+          if (target.auth_type === 'token') {
+            // موقع النجاح يتوقع ملف image
+            retryFormData.append('image', imageBlob, imageName);
+          } else {
+            // المواقع الأخرى (مثل هنا غزة) تقبل base64
+            const imgBuffer = Buffer.from(await imageBlob.arrayBuffer());
+            const contentType = imageBlob.type || 'image/jpeg';
+            const imageBase64 = `data:${contentType};base64,${imgBuffer.toString('base64')}`;
+            retryFormData.append('image_base64', imageBase64);
+          }
         }
 
         response = await fetch(target.api_url, {
