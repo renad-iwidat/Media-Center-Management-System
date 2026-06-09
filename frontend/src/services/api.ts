@@ -203,6 +203,8 @@ export const api = {
     request<any>(`/flow/queue/${id}/reject`, { method: "POST" }),
 
   // منشورات
+  getReadyToPublish: (mediaUnitId?: number | null) =>
+    request<any>(`/flow/ready-to-publish${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
   getPublished: (mediaUnitId?: number | null) =>
     request<any>(`/flow/published${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
   getPublishedStats: () => request<any>("/flow/published/stats"),

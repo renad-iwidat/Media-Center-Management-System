@@ -249,6 +249,41 @@ export class FlowController {
   }
 
   /**
+   * GET /api/flow/ready-to-publish
+   * جلب الأخبار المرشحة للنشر (المعتمدة من المحرر - approved)
+   * هذه الأخبار بحالة 'approved' من جدول editorial_queue
+   */
+  static async getReadyToPublish(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
+      
+      if (!mediaUnitId) {
+        res.status(400).json({
+          success: false,
+          message: 'يجب تحديد وحدة إعلامية (media_unit_id)',
+        });
+        return;
+      }
+
+      const readyToPublish = await PublishedItemsService.getReadyToPublish(mediaUnitId, limit);
+
+      res.status(200).json({
+        success: true,
+        data: readyToPublish,
+        count: readyToPublish.length,
+      });
+    } catch (error) {
+      console.error('❌ خطأ في جلب الأخبار المرشحة للنشر:', error);
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب الأخبار المرشحة للنشر',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * GET /api/flow/published
    * جلب المحتوى المنشور
    */

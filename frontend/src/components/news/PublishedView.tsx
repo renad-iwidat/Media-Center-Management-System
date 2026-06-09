@@ -50,17 +50,12 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
 
   const loadData = useCallback(() => {
     setLoading(true);
-    api.getPublished(unitId)
+    // جلب الأخبار المرشحة للنشر (status = approved في editorial_queue)
+    api.getReadyToPublish(unitId)
       .then((res) => {
-        // قسم النشر = فقط الأخبار التحريرية (اللي وافق عليها المحرر)
         const allItems = res.data || [];
-        // تصفية: فقط الأخبار التحريرية (editorial) اللي ما تم نشرها على أي موقع خارجي بعد
-        // (نشر يدوي فقط - ليس أوتوماتيكي)
-        const editorialOnlyItems = allItems.filter((item: any) => {
-          // فقط الأخبار التحريرية
-          return item.flow_type === 'editorial';
-        });
-        setItems(editorialOnlyItems);
+        // الأخبار هنا مصفاة من الـ Backend (approved — تحريرية وأوتوماتيكية)
+        setItems(allItems);
       })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));

@@ -183,7 +183,74 @@ export class PublishedItemsService {
   }
 
   /**
+   * جلب الأخبار المرشحة للنشر (المعتمدة)
+   * هذه الأخبار بحالة 'approved' من editorial_queue
+   * تشمل التحريرية والأوتوماتيكية معاً
+   */
+  async getReadyToPublish(
+    mediaUnitId: number,
+    limit: number = 50
+  ): Promise<PublishedItemWithDetails[]> {
+    try {
+      const result = await query(
+        `SELECT 
+          eq.id,
+          eq.media_unit_id,
+          eq.raw_data_id,
+          eq.id as queue_id,
+          rd.id as content_type_id,
+          rd.title,
+          rd.content,
+          rd.tags,
+          true as is_active,
+          eq.updated_at as published_at,
+          rd.image_url,
+          rd.url as original_url,
+          rd.pub_date,
+          COALESCE(c.name, '—') as category_name,
+          mu.name as media_unit_name,
+          COALESCE(c.flow, 'editorial') as flow_type,
+          rd.tags as tag_names,
+          COALESCE(rd.publish_status, 'draft') as publish_status,
+          (SELECT COUNT(*) > 0 FROM auto_publish_log apl WHERE apl.raw_data_id = rd.id AND apl.status = 'success') as is_published_external,
+          (SELECT COUNT(*) > 0 FROM publishing_status ps WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website') as is_published_social,
+          (SELECT json_agg(json_build_object('platform', sub.platform, 'name', sub.platform_name, 'status', sub.status, 'published_at', sub.updated_at))
+           FROM (
+             SELECT 'external_website' as platform, apt.name as platform_name, 'success' as status, apl2.created_at as updated_at
+             FROM auto_publish_log apl2
+             JOIN auto_publish_targets apt ON apt.id = apl2.target_id
+             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success'
+             UNION ALL
+             SELECT ps2.platform, pc.name as platform_name, ps2.status, ps2.updated_at
+             FROM publishing_status ps2
+             JOIN platform_configs pc ON pc.id = ps2.platform_config_id
+             WHERE ps2.article_id = rd.id AND ps2.status = 'success'
+           ) sub
+          ) as published_platforms
+        FROM editorial_queue eq
+        JOIN raw_data rd ON eq.raw_data_id = rd.id
+        LEFT JOIN categories c ON rd.category_id = c.id
+        JOIN media_units mu ON eq.media_unit_id = mu.id
+        WHERE eq.status = 'approved'
+          AND eq.media_unit_id = $1
+          AND COALESCE(rd.publish_status, 'draft') != 'archived'
+        ORDER BY eq.updated_at DESC
+        LIMIT $2`,
+        [mediaUnitId, limit]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error(
+        `❌ خطأ في جلب الأخبار المرشحة للنشر من وحدة ${mediaUnitId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
    * جلب المحتوى المنشور حسب وحدة الإعلام
+   * (الأخبار المنشورة بالفعل على منصات خارجية)
    */
   async getPublishedByMediaUnit(
     mediaUnitId: number,

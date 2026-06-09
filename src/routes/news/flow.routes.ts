@@ -25,6 +25,9 @@ router.get('/queue/:id', FlowController.getQueueItem);
 router.post('/queue/:id/approve', FlowController.approveQueueItem);
 router.post('/queue/:id/reject', FlowController.rejectQueueItem);
 
+// المحتوى المرشح للنشر (معتمد من المحرر - approved)
+router.get('/ready-to-publish', FlowController.getReadyToPublish);
+
 // المحتوى المنشور
 router.get('/published', FlowController.getPublished);
 router.get('/published/stats', FlowController.getPublishedStats);
