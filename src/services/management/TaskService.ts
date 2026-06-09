@@ -5,6 +5,8 @@ import { TaskValidator } from './validators/TaskValidator';
 import { DependencyHelper } from './helpers/DependencyHelper';
 import { OrderStatusHelper } from './helpers/OrderStatusHelper';
 import { NotificationService } from './NotificationService';
+import { TaskAutomationService } from './TaskAutomationService';
+import { StatusRegistry, TASK_PROGRESS } from '../../config/status-mappings';
 import pool from '../../config/database';
 
 export class TaskService {
@@ -43,9 +45,10 @@ export class TaskService {
     search: string = '',
     order_id?: bigint,
     assigned_to?: bigint,
-    status_id?: bigint
+    status_id?: bigint,
+    visibleToUserId?: bigint
   ): Promise<{ rows: any[]; total: number }> {
-    return await TaskModel.searchWithDetails(limit, offset, search, order_id, assigned_to, status_id);
+    return await TaskModel.searchWithDetails(limit, offset, search, order_id, assigned_to, status_id, visibleToUserId);
   }
 
   async updateTask(id: bigint, updates: Partial<Task>): Promise<Task> {
@@ -79,42 +82,29 @@ export class TaskService {
   ): Promise<Task> {
     const task = await this.getTask(taskId);
 
-    // Validate status transition using validator
-    if (!TaskValidator.isValidStatusTransition(task.status_id, newStatusId)) {
-      throw new Error(
-        TaskValidator.getTransitionError(task.status_id, newStatusId)
-      );
+    // تحويل الـ id إلى فئة منطقية عبر السجل المركزي
+    const { StatusRegistry } = await import('../../config/status-mappings');
+    const currentCategory = await StatusRegistry.taskCategoryById(task.status_id);
+    const newCategory = await StatusRegistry.taskCategoryById(newStatusId);
+
+    // التحقق من صحّة الانتقال بالفئة
+    if (!TaskValidator.isValidCategoryTransition(currentCategory, newCategory)) {
+      throw new Error(TaskValidator.getCategoryTransitionError(currentCategory, newCategory));
     }
 
-    // Check dependencies if moving to In Progress
-    if (newStatusId?.toString() === 'In Progress') {
+    // فحص التبعيّات عند الانتقال لحالة "قيد التنفيذ"
+    if (newCategory === 'in_progress') {
       const dependency = await DependencyHelper.canTaskStart(taskId);
       if (!dependency.canStart) {
         throw new Error(
-          `Task blocked by: ${dependency.blockedBy.map(t => t.title).join(', ')}`
+          `المهمة محظورة بتبعيّات غير مكتملة: ${dependency.blockedBy.map(t => t.title).join(', ')}`
         );
       }
     }
 
-    // Update task status
-    const updated = await TaskModel.update(taskId, { status_id: newStatusId });
-    if (!updated) {
-      throw new Error(`Failed to update task status: ${taskId}`);
-    }
-
-    // Record in history
-    await TaskModel.addHistory({
-      task_id: taskId,
-      old_status_id: task.status_id,
-      changed_by: changedBy,
-      new_status_id: newStatusId,
-    });
-
-    // Check if all tasks in order are done and update order status
-    if (task.order_id) {
-      await this.checkAndUpdateOrderStatus(task.order_id, changedBy);
-    }
-
+    // تفويض التنفيذ الفعلي لخدمة الأتمتة (ضبط التواريخ + KPI + مزامنة الطلب + الإشعارات)
+    // لضمان مسار واحد متّسق لتغيير الحالة عبر كل النظام.
+    const updated = await TaskAutomationService.handleTaskStatusChange(taskId, newStatusId, changedBy);
     return updated;
   }
 
@@ -417,18 +407,11 @@ export class TaskService {
     percentage: number;
   }> {
     const task = await this.getTask(taskId);
-    const statusPercentages: Record<string, number> = {
-      'Pending': 0,
-      'In Progress': 50,
-      'Review': 75,
-      'Done': 100,
-      'Cancelled': 0,
-    };
+    const category = await StatusRegistry.taskCategoryById(task.status_id);
+    const statusName = await StatusRegistry.taskNameById(task.status_id);
+    const percentage = TASK_PROGRESS[category] ?? 0;
 
-    const status = task.status_id?.toString() || 'Pending';
-    const percentage = statusPercentages[status] || 0;
-
-    return { status, percentage };
+    return { status: statusName || category, percentage };
   }
 
   async canDeleteTask(taskId: bigint): Promise<{
@@ -437,12 +420,14 @@ export class TaskService {
   }> {
     const task = await this.getTask(taskId);
 
-    // Check status
-    const nonDeletableStatuses = ['In Progress', 'Review'];
-    if (nonDeletableStatuses.includes(task.status_id?.toString() || '')) {
+    // لا نسمح بحذف مهمة قيد العمل الفعلي (قيد التنفيذ/مراجعة/يحتاج تعديل)
+    const category = await StatusRegistry.taskCategoryById(task.status_id);
+    const nonDeletable: typeof category[] = ['in_progress', 'review', 'needs_edit'];
+    if (nonDeletable.includes(category)) {
+      const statusName = await StatusRegistry.taskNameById(task.status_id);
       return {
         canDelete: false,
-        reason: `Cannot delete task with status: ${task.status_id}`,
+        reason: `لا يمكن حذف مهمة بحالة: ${statusName || category}`,
       };
     }
 

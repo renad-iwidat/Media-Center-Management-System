@@ -409,3 +409,55 @@ export interface UserKPI {
   ai_usage_count?: number;
   updated_at?: Date;
 }
+
+// ============ Recurring Daily Tasks Types (المهام اليومية الثابتة) ============
+
+// قالب المهمة اليومية — تعريف ثابت يتكرر كل يوم
+export interface DailyTaskTemplate {
+  id: bigint;
+  title: string;
+  assigned_to: bigint;
+  sequence_order: number;
+  is_active: boolean;
+  deleted_at?: Date | null;
+  created_by: bigint;
+  created_at?: Date;
+  updated_at?: Date;
+  // Joined fields
+  assigned_to_name?: string;
+}
+
+// سجل الإنجاز اليومي — حالة قالب في يوم تشغيلي محدد
+export interface DailyTaskCompletion {
+  id: bigint;
+  template_id: bigint;
+  business_day: string; // YYYY-MM-DD
+  is_completed: boolean;
+  marked_by: bigint;
+  marked_at?: Date;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// عنصر قائمة التحقق اليومية — مُشتق (قالب + حالة إنجاز اليوم)
+export interface DailyChecklistItem {
+  template_id: bigint;
+  title: string;
+  sequence_order: number;
+  is_completed: boolean;
+  marked_at?: Date | null;
+}
+
+// DTOs
+export interface CreateDailyTaskTemplateDTO {
+  title: string;
+  assigned_to: bigint;
+  sequence_order?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateDailyTaskTemplateDTO {
+  title?: string;
+  assigned_to?: bigint;
+  is_active?: boolean;
+}

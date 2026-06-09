@@ -5,6 +5,7 @@ import { ProgramModel } from '../../models/content/Program';
 import { Order, OrderStatus, OrderHistory } from '../../types/management';
 import { OrderValidator } from './validators/OrderValidator';
 import { OrderStatusHelper } from './helpers/OrderStatusHelper';
+import pool from '../../config/database';
 
 export class OrderService {
   // ============ CRUD Operations ============
@@ -96,35 +97,16 @@ export class OrderService {
     changedBy: bigint
   ): Promise<Order> {
     const order = await this.getOrder(orderId);
-    
-    // Validate status transition using validator
+
+    // التحقق من صحّة الانتقال (سياسة الطلبات: أي انتقال مسموح عدا نفس الحالة)
     if (!OrderValidator.isValidStatusTransition(order.status_id, newStatusId)) {
       throw new Error(OrderValidator.getTransitionError(order.status_id, newStatusId));
     }
 
-    // Update order status
-    const updated = await OrderModel.update(orderId, { status_id: newStatusId });
-    if (!updated) {
-      throw new Error(`Failed to update order status: ${orderId}`);
-    }
-
-    // Record in history
-    await OrderModel.addHistory({
-      order_id: orderId,
-      changed_by: changedBy,
-      old_status_id: order.status_id,
-      new_status_id: newStatusId,
-    });
-
-    // Auto-archive: لو الحالة الجديدة "Done" → أرشف الأوردر مع كل مرفقاته
-    try {
-      const { OrderAutomationService } = await import('./OrderAutomationService');
-      await OrderAutomationService.autoArchiveOnDone(orderId, changedBy);
-    } catch (err) {
-      console.error('Auto-archive failed but order status updated:', err);
-    }
-
-    return updated;
+    // تفويض التنفيذ لخدمة الأتمتة لمسار واحد متّسق:
+    // ضبط started_at/completed_at + المدة + التأخير + تسجيل التاريخ + KPI + الأرشفة التلقائية.
+    const { OrderAutomationService } = await import('./OrderAutomationService');
+    return await OrderAutomationService.handleOrderStatusChange(orderId, newStatusId, changedBy);
   }
 
   async cancelOrder(
@@ -134,19 +116,20 @@ export class OrderService {
   ): Promise<Order> {
     const order = await this.getOrder(orderId);
 
-    // Get cancelled status ID dynamically
-    const cancelledStatusId = await OrderStatusHelper.getStatusId('Cancelled');
+    const { StatusRegistry } = await import('../../config/status-mappings');
 
-    // Check if can be cancelled
-    const createdId = await OrderStatusHelper.getStatusId('Created');
-    const inProgressId = await OrderStatusHelper.getStatusId('In Progress');
-    const reviewId = await OrderStatusHelper.getStatusId('Review');
+    // معرّف حالة "ملغي" من السجل المركزي
+    const cancelledStatusId = await StatusRegistry.orderIdOf('cancelled');
+    if (!cancelledStatusId) {
+      throw new Error('حالة "ملغي" غير معرّفة في قاعدة البيانات');
+    }
 
-    const cancelableStatusIds = [createdId, inProgressId, reviewId];
-    if (!order.status_id || !cancelableStatusIds.includes(order.status_id)) {
-      throw new Error(
-        `Cannot cancel order with status: ${order.status_id}`
-      );
+    // الحالات التي يُسمح فيها بالإلغاء (غير المكتملة وغير الملغاة مسبقاً)
+    const currentCategory = await StatusRegistry.orderCategoryById(order.status_id);
+    const cancelable: typeof currentCategory[] = ['draft', 'pending_review', 'in_progress', 'on_hold'];
+    if (!cancelable.includes(currentCategory)) {
+      const statusName = await StatusRegistry.orderNameById(order.status_id);
+      throw new Error(`لا يمكن إلغاء طلب بحالة: ${statusName || currentCategory}`);
     }
 
     // Update order status
@@ -197,10 +180,16 @@ export class OrderService {
     const reasons: string[] = [];
     const tasks = await TaskModel.findByOrder(orderId, 1000, 0);
 
-    // فحص: هل في مهام لسا ما خلصت
-    const pendingTasks = tasks.filter(t => !['Done', 'Cancelled'].includes(t.status_id?.toString() || ''));
-    if (pendingTasks.length > 0) {
-      reasons.push('في ' + pendingTasks.length + ' مهمة لسا ما خلصت');
+    const { StatusRegistry, isTaskTerminal } = await import('../../config/status-mappings');
+
+    // فحص: هل في مهام لسا ما خلصت (غير منجزة وغير مرفوضة)
+    let pendingCount = 0;
+    for (const t of tasks) {
+      const name = await StatusRegistry.taskNameById(t.status_id);
+      if (!isTaskTerminal(name)) pendingCount++;
+    }
+    if (pendingCount > 0) {
+      reasons.push('في ' + pendingCount + ' مهمة لسا ما خلصت');
     }
 
     // فحص: هل في محتوى واحد على الأقل
@@ -222,34 +211,40 @@ export class OrderService {
     pending: number;
     percentage: number;
   }> {
-    const tasks = await TaskModel.findByOrder(orderId, 1000, 0);
+    // نستخدم استعلاماً واحداً مع أسماء الحالات لتصنيف دقيق
+    const result = await pool.query(
+      `SELECT ts.name as status_name
+       FROM tasks t
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       WHERE t.order_id = $1`,
+      [orderId]
+    );
 
-    if (tasks.length === 0) {
+    const rows = result.rows;
+    if (rows.length === 0) {
       return { total: 0, completed: 0, inProgress: 0, pending: 0, percentage: 0 };
     }
 
-    // Get task statuses
-    const allStatuses = await TaskModel.getStatuses();
-    
-    // Find status IDs by name
-    const doneStatus = allStatuses.find(s => s.name === 'منجز' || s.name === 'Done');
-    const inProgressStatus = allStatuses.find(s => s.name === 'قيد التنفيذ' || s.name === 'In Progress');
-    const pendingStatus = allStatuses.find(s => s.name === 'غير مُسند' || s.name === 'Pending');
+    const { classifyTaskStatus } = await import('../../config/status-mappings');
 
-    const doneId = doneStatus?.id?.toString();
-    const inProgressId = inProgressStatus?.id?.toString();
-    const pendingId = pendingStatus?.id?.toString();
+    let completed = 0, inProgress = 0, pending = 0;
+    for (const r of rows) {
+      const cat = classifyTaskStatus(r.status_name);
+      if (cat === 'done') completed++;
+      else if (cat === 'in_progress' || cat === 'review' || cat === 'needs_edit') inProgress++;
+      else if (cat === 'unassigned' || cat === 'assigned') pending++;
+      // 'rejected' لا يُحتسب ضمن أي من الفئات الثلاث (لا منجز ولا قيد عمل)
+    }
 
-    const completed = tasks.filter(t => t.status_id?.toString() === doneId).length;
-    const inProgress = tasks.filter(t => t.status_id?.toString() === inProgressId).length;
-    const pending = tasks.filter(t => t.status_id?.toString() === pendingId).length;
+    // النسبة محسوبة على المهام غير المرفوضة (الفعّالة)
+    const effectiveTotal = rows.filter(r => classifyTaskStatus(r.status_name) !== 'rejected').length;
 
     return {
-      total: tasks.length,
+      total: rows.length,
       completed,
       inProgress,
       pending,
-      percentage: Math.round((completed / tasks.length) * 100),
+      percentage: effectiveTotal > 0 ? Math.round((completed / effectiveTotal) * 100) : 0,
     };
   }
 
@@ -287,28 +282,20 @@ export class OrderService {
       };
     }
 
-    // Only prevent deletion for orders in critical states
-    const nonDeletableStatuses = ['In Progress', 'Review', 'Done'];
-    
-    // Get status name instead of ID for comparison
-    const { OrderStatusHelper } = await import('./helpers/OrderStatusHelper');
-    const statusName = await OrderStatusHelper.getStatusName(order.status_id);
-    
-    if (nonDeletableStatuses.some(status => 
-      statusName.toLowerCase().includes(status.toLowerCase()) ||
-      statusName.includes('قيد التنفيذ') ||
-      statusName.includes('مراجعة') ||
-      statusName.includes('منجز') ||
-      statusName.includes('مكتمل')
-    )) {
+    // منع الحذف للطلبات في حالات حرجة (قيد التنفيذ / مكتمل)
+    const { StatusRegistry } = await import('../../config/status-mappings');
+    const category = await StatusRegistry.orderCategoryById(order.status_id);
+    const nonDeletable: typeof category[] = ['in_progress', 'completed'];
+
+    if (nonDeletable.includes(category)) {
+      const statusName = await StatusRegistry.orderNameById(order.status_id);
       return {
         canDelete: false,
-        reason: `Cannot delete order with status: ${statusName}`,
+        reason: `لا يمكن حذف طلب بحالة: ${statusName || category}`,
       };
     }
 
-    // Allow deletion for orders in draft or pending state even with tasks
-    // This gives more flexibility to administrators
+    // يُسمح بالحذف في حالات المسودة/الانتظار/التعليق/الملغي
     return { canDelete: true };
   }
 

@@ -134,6 +134,15 @@ httpServer.listen(port, async () => {
   try {
     await testConnection();
     console.log('✅ Database connection successful');
+
+    // تهيئة سجل الحالات المركزي (ربط id ↔ name ↔ category) لتسريع منطق الحالات
+    try {
+      const { StatusRegistry } = await import('./config/status-mappings');
+      await StatusRegistry.init();
+      console.log('✅ Status registry initialized');
+    } catch (e) {
+      console.error('⚠️  Status registry init failed:', e instanceof Error ? e.message : String(e));
+    }
   } catch (error) {
     console.error('❌ Database connection failed');
     console.error('Error:', error instanceof Error ? error.message : String(error));

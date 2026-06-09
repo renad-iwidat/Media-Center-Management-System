@@ -111,16 +111,8 @@ export class OrderController {
       const userPermissions = req.userPermissions || [];
 
       // إذا المستخدم عنده صلاحية مشاهدة كل الطلبات، يشوف الكل
-      // مدير المركز (role_id = 22) يشوف كل الطلبات
-      const canViewAll = userPermissions.includes('orders.viewAll') || 
-                        userPermissions.includes('admin') ||
-                        userPermissions.includes('manager') ||
-                        userPermissions.includes('orders.view') ||
-                        req.user?.role_name === 'مدير المركز' ||
-                        req.user?.role_name === 'مدير' ||
-                        req.user?.role_name === 'Admin' ||
-                        req.user?.role_name === 'مدير عام' ||
-                        BigInt(req.user?.role_id || 0) === BigInt(22); // مدير المركز
+      // فقط من يملك صلاحية orders.viewAll الصريحة (مدير المركز / رؤية شاملة)
+      const canViewAll = userPermissions.includes('orders.viewAll');
 
       const orders = await this.orderService.searchOrders(
         limit, 
@@ -227,8 +219,9 @@ export class OrderController {
         return;
       }
 
-      // Use automation service to handle status change with automatic updates
-      const order = await OrderAutomationService.handleOrderStatusChange(
+      // المرور عبر OrderService لتطبيق التحقق من الانتقال
+      // (الذي يفوّض لخدمة الأتمتة لضبط التواريخ وKPI والأرشفة التلقائية)
+      const order = await this.orderService.changeOrderStatus(
         BigInt(id),
         BigInt(status_id),
         BigInt(changed_by)

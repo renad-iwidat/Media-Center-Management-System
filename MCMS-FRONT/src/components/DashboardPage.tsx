@@ -295,7 +295,9 @@ export default function DashboardPage() {
                 <th className="px-6 py-3 text-center">المهام الكلية</th>
                 <th className="px-6 py-3 text-center">منجز</th>
                 <th className="px-6 py-3 text-center">متأخر</th>
-                <th className="px-6 py-3 text-center">نسبة الإنجاز</th>
+                <th className="px-6 py-3 text-center">المهام اليومية</th>
+                <th className="px-6 py-3 text-center">الإنجاز اليومي</th>
+                <th className="px-6 py-3 text-center">نسبة الإنجاز الكلي</th>
                 <th className="px-6 py-3 text-center">الأداء</th>
               </tr>
             </thead>
@@ -327,6 +329,12 @@ export default function DashboardPage() {
                         {user.overdue_tasks}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg text-sm font-bold">
+                        {user.daily_completed_tasks ?? 0} / {user.daily_total_tasks ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center font-bold text-teal-600">{user.daily_completion_rate ?? 0}%</td>
                     <td className="px-6 py-4 text-center font-bold text-gray-700">{rate}%</td>
                     <td className="px-6 py-4">
                       <div className="w-full bg-gray-100 rounded-full h-2.5">

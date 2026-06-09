@@ -1,5 +1,6 @@
 import pool from '../../config/database';
 import { SocketService } from './SocketService';
+import { SQL } from '../../config/status-mappings';
 
 export class NotificationService {
 
@@ -167,7 +168,7 @@ export class NotificationService {
       "LEFT JOIN task_statuses ts ON t.status_id = ts.id " +
       "WHERE t.deadline IS NOT NULL " +
       "AND t.deadline BETWEEN NOW() AND NOW() + INTERVAL '24 hours' " +
-      "AND ts.name NOT IN ('Done', 'Cancelled') " +
+      "AND ts.name NOT IN " + SQL.taskTerminal + " " +
       "AND t.assigned_to IS NOT NULL " +
       "AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.entity_type = 'task' AND n.entity_id = t.id AND n.type = 'deadline_approaching' AND n.created_at > NOW() - INTERVAL '24 hours')"
     );

@@ -17,7 +17,8 @@ import {
   LogOut,
   Briefcase,
   Calendar,
-  Home
+  Home,
+  ListChecks
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -212,6 +213,36 @@ export default function MainLayout() {
             {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">مهامي الإدارية</motion.span>}
             {location.pathname === '/my-admin-tasks' && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-purple-400 rounded-l-full shadow-lg shadow-purple-500/50" />}
           </Link>
+
+          <Link
+            to="/my-daily-tasks"
+            className={cn(
+              "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold",
+              location.pathname === '/my-daily-tasks'
+                ? "bg-gradient-to-l from-emerald-500/30 to-teal-600/20 text-white shadow-lg backdrop-blur-sm border border-emerald-500/30"
+                : "text-white/80 hover:text-white hover:bg-white/10"
+            )}
+          >
+            <CheckSquare size={24} className={cn("min-w-[24px]", location.pathname === '/my-daily-tasks' ? "text-emerald-400 drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+            {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">مهامي اليومية</motion.span>}
+            {location.pathname === '/my-daily-tasks' && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-emerald-400 rounded-l-full shadow-lg shadow-emerald-500/50" />}
+          </Link>
+
+          {user.permissions?.includes('daily_tasks.manage') && (
+            <Link
+              to="/daily-tasks-manage"
+              className={cn(
+                "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group relative text-[15px] font-semibold",
+                location.pathname === '/daily-tasks-manage'
+                  ? "bg-gradient-to-l from-emerald-500/30 to-teal-600/20 text-white shadow-lg backdrop-blur-sm border border-emerald-500/30"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <ListChecks size={24} className={cn("min-w-[24px]", location.pathname === '/daily-tasks-manage' ? "text-emerald-400 drop-shadow-lg" : "text-white/90 group-hover:text-white")} />
+              {isSidebarOpen && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap drop-shadow-sm">إدارة المهام اليومية</motion.span>}
+              {location.pathname === '/daily-tasks-manage' && <motion.div layoutId="active-bar" className="absolute right-0 top-2 bottom-2 w-1.5 bg-emerald-400 rounded-l-full shadow-lg shadow-emerald-500/50" />}
+            </Link>
+          )}
 
           {/* ═══ نظام الذكاء الاصطناعي ═══ */}
           <div className="my-3 px-2">

@@ -71,6 +71,10 @@ export interface UserPerformance {
   on_time_percentage: number;
   content_produced_count: number;
   ai_usage_count: number;
+  // المهام اليومية الثابتة
+  daily_completed_tasks?: number;
+  daily_total_tasks?: number;
+  daily_completion_rate?: number;
 }
 
 export interface OverdueTask {

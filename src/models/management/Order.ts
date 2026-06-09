@@ -97,9 +97,15 @@ export class OrderModel {
     const params: any[] = [];
     let paramIndex = 1;
 
-    // فلترة حسب المستخدم (المنشئ أو المُعين على مهمة)
+    // فلترة حسب المستخدم (المنشئ أو المُعين على مهمة أو ذُكر في الطلب/مهمة)
     if (user_id) {
-      query += ` AND (o.created_by = $${paramIndex} OR t.assigned_to = $${paramIndex})`;
+      query += ` AND (
+        o.created_by = $${paramIndex}
+        OR t.assigned_to = $${paramIndex}
+        OR EXISTS (SELECT 1 FROM task_assignments ta JOIN tasks tt ON tt.id = ta.task_id WHERE tt.order_id = o.id AND ta.assigned_to = $${paramIndex})
+        OR EXISTS (SELECT 1 FROM mentions m WHERE m.entity_type = 'order' AND m.entity_id = o.id AND m.mentioned_user_id = $${paramIndex})
+        OR EXISTS (SELECT 1 FROM mentions m JOIN tasks tt ON tt.id = m.entity_id WHERE m.entity_type = 'task' AND tt.order_id = o.id AND m.mentioned_user_id = $${paramIndex})
+      )`;
       params.push(user_id);
       paramIndex++;
     }
@@ -157,7 +163,13 @@ export class OrderModel {
     let paramIndex = 1;
 
     if (user_id) {
-      query += ` AND (o.created_by = $${paramIndex} OR t.assigned_to = $${paramIndex})`;
+      query += ` AND (
+        o.created_by = $${paramIndex}
+        OR t.assigned_to = $${paramIndex}
+        OR EXISTS (SELECT 1 FROM task_assignments ta JOIN tasks tt ON tt.id = ta.task_id WHERE tt.order_id = o.id AND ta.assigned_to = $${paramIndex})
+        OR EXISTS (SELECT 1 FROM mentions m WHERE m.entity_type = 'order' AND m.entity_id = o.id AND m.mentioned_user_id = $${paramIndex})
+        OR EXISTS (SELECT 1 FROM mentions m JOIN tasks tt ON tt.id = m.entity_id WHERE m.entity_type = 'task' AND tt.order_id = o.id AND m.mentioned_user_id = $${paramIndex})
+      )`;
       params.push(user_id);
       paramIndex++;
     }

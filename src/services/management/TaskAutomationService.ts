@@ -2,6 +2,7 @@ import pool from '../../config/database';
 import { Task } from '../../types/management';
 import { KPIService } from './KPIService';
 import { NotificationService } from './NotificationService';
+import { classifyTaskStatus } from '../../config/status-mappings';
 
 export class TaskAutomationService {
   /**
@@ -33,16 +34,17 @@ export class TaskAutomationService {
     );
 
     const newStatusName = newStatusResult.rows[0]?.name;
+    const newCategory = classifyTaskStatus(newStatusName);
 
     let updates: any = { status_id: newStatusId };
 
-    // Handle "In Progress" status
-    if (newStatusName === 'In Progress' && !task.started_at) {
+    // عند الانتقال لحالة "قيد التنفيذ" → سجّل وقت البدء
+    if (newCategory === 'in_progress' && !task.started_at) {
       updates.started_at = new Date();
     }
 
-    // Handle "Done" status
-    if (newStatusName === 'Done' && !task.completed_at) {
+    // عند الانتقال لحالة "منجز" → سجّل وقت الإنجاز والمدة والتأخير
+    if (newCategory === 'done' && !task.completed_at) {
       updates.completed_at = new Date();
 
       // Calculate actual duration
@@ -82,20 +84,53 @@ export class TaskAutomationService {
     );
 
     // Calculate KPI if task is completed
-    if (newStatusName === 'Done') {
+    if (newCategory === 'done') {
       // Mark all content linked to this task as final and archive them
       await this.markTaskContentAsFinal(taskId);
 
       await KPIService.calculateTaskKPI(taskId);
+    }
 
-      // Also update order KPI if task has an order
-      if (updatedTask.order_id) {
+    // أعد حساب KPI الطلب دائماً (أي تغيّر في مهمة يؤثر على إحصائيات الطلب)
+    if (updatedTask.order_id) {
+      try {
         await KPIService.calculateOrderKPI(updatedTask.order_id);
-      }
+      } catch { /* تجاهل أخطاء KPI */ }
+    }
 
-      // Update user KPI if task is assigned
-      if (updatedTask.assigned_to) {
+    // أعد حساب KPI المستخدم المُسند
+    if (updatedTask.assigned_to) {
+      try {
         await KPIService.calculateUserKPI(updatedTask.assigned_to);
+      } catch { /* تجاهل أخطاء KPI */ }
+    }
+
+    // مزامنة حالة الطلب تلقائياً بناءً على حالات مهامه (كانت غير مُطبّقة في مسار الـ API)
+    if (updatedTask.order_id) {
+      try {
+        const { OrderStatusHelper } = await import('./helpers/OrderStatusHelper');
+        const { OrderModel } = await import('../../models/management/Order');
+        const { TaskModel } = await import('../../models/management/Task');
+
+        const order = await OrderModel.findById(BigInt(updatedTask.order_id));
+        if (order) {
+          const tasks = await TaskModel.findByOrder(BigInt(updatedTask.order_id), 1000, 0);
+          const shouldUpdate = await OrderStatusHelper.shouldUpdateOrderStatus(order.status_id, tasks);
+          if (shouldUpdate.shouldUpdate && shouldUpdate.newStatusId) {
+            await OrderModel.update(BigInt(updatedTask.order_id), { status_id: shouldUpdate.newStatusId });
+            await OrderModel.addHistory({
+              order_id: BigInt(updatedTask.order_id),
+              changed_by: changedBy,
+              old_status_id: order.status_id,
+              new_status_id: shouldUpdate.newStatusId,
+            });
+            // إذا أصبح الطلب مكتملاً → أرشفة تلقائية
+            const { OrderAutomationService } = await import('./OrderAutomationService');
+            await OrderAutomationService.autoArchiveOnDone(BigInt(updatedTask.order_id), changedBy);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync order status after task change:', err);
       }
     }
 

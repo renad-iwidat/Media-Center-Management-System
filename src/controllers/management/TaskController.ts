@@ -3,6 +3,7 @@ import { TaskService } from '../../services/management/TaskService';
 import { TaskAutomationService } from '../../services/management/TaskAutomationService';
 import { KPIService } from '../../services/management/KPIService';
 import { S3Service } from '../../services/management/S3Service';
+import { PermissionService } from '../../services/management/PermissionService';
 
 /**
  * TaskController - Handles all Task-related API endpoints
@@ -86,7 +87,18 @@ export class TaskController {
       const assigned_to = req.query.assigned_to ? BigInt(req.query.assigned_to as string) : undefined;
       const status_id = req.query.status_id ? BigInt(req.query.status_id as string) : undefined;
 
-      const { rows, total } = await this.taskService.searchTasks(limit, offset, search, order_id, assigned_to, status_id);
+      // فلترة الرؤية: المدير (tasks.viewAll) يرى كل المهام؛ غيره يرى ما يخصّه فقط.
+      let visibleToUserId: bigint | undefined = undefined;
+      if (req.user) {
+        const userId = BigInt(req.user.user_id);
+        const perms = await PermissionService.getUserPermissions(userId);
+        const canViewAll = perms.includes('tasks.viewAll');
+        if (!canViewAll) {
+          visibleToUserId = userId;
+        }
+      }
+
+      const { rows, total } = await this.taskService.searchTasks(limit, offset, search, order_id, assigned_to, status_id, visibleToUserId);
 
       res.status(200).json({ success: true, data: rows, total, timestamp: new Date().toISOString() });
     } catch (error) {
@@ -159,8 +171,9 @@ export class TaskController {
         return;
       }
 
-      // Use automation service to handle status change with automatic updates
-      const task = await TaskAutomationService.handleTaskStatusChange(
+      // المرور عبر TaskService لتطبيق التحقق من الانتقال والتبعيّات
+      // (الذي بدوره يفوّض لخدمة الأتمتة لضبط التواريخ وKPI ومزامنة الطلب)
+      const task = await this.taskService.changeTaskStatus(
         BigInt(id),
         BigInt(status_id),
         BigInt(changed_by)

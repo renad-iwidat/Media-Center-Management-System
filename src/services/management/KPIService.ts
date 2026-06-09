@@ -1,5 +1,6 @@
 import pool from '../../config/database';
 import { TaskKPI, OrderKPI, UserKPI } from '../../types/management';
+import { SQL } from '../../config/status-mappings';
 
 export class KPIService {
   /**
@@ -105,10 +106,12 @@ export class KPIService {
     const tasksResult = await pool.query(
       `SELECT 
          COUNT(*) as total_tasks,
-         SUM(CASE WHEN status_id = (SELECT id FROM task_statuses WHERE name = 'Done') THEN 1 ELSE 0 END) as completed_tasks,
-         SUM(CASE WHEN status_id != (SELECT id FROM task_statuses WHERE name = 'Done') THEN 1 ELSE 0 END) as pending_tasks,
-         SUM(CASE WHEN is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks
-       FROM tasks WHERE order_id = $1`,
+         SUM(CASE WHEN ts.name IN ${SQL.taskDone} THEN 1 ELSE 0 END) as completed_tasks,
+         SUM(CASE WHEN ts.name NOT IN ${SQL.taskDone} THEN 1 ELSE 0 END) as pending_tasks,
+         SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks
+       FROM tasks t
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       WHERE t.order_id = $1`,
       [orderId]
     );
 
@@ -163,11 +166,13 @@ export class KPIService {
     const tasksResult = await pool.query(
       `SELECT 
          COUNT(*) as total_tasks,
-         SUM(CASE WHEN status_id = (SELECT id FROM task_statuses WHERE name = 'Done') THEN 1 ELSE 0 END) as completed_tasks,
-         SUM(CASE WHEN status_id != (SELECT id FROM task_statuses WHERE name = 'Done') THEN 1 ELSE 0 END) as pending_tasks,
-         SUM(CASE WHEN is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks,
-         ROUND(AVG(CASE WHEN actual_duration IS NOT NULL THEN actual_duration ELSE NULL END)) as avg_completion_time
-       FROM tasks WHERE assigned_to = $1`,
+         SUM(CASE WHEN ts.name IN ${SQL.taskDone} THEN 1 ELSE 0 END) as completed_tasks,
+         SUM(CASE WHEN ts.name NOT IN ${SQL.taskDone} THEN 1 ELSE 0 END) as pending_tasks,
+         SUM(CASE WHEN t.is_overdue = true THEN 1 ELSE 0 END) as overdue_tasks,
+         ROUND(AVG(CASE WHEN t.actual_duration IS NOT NULL THEN t.actual_duration ELSE NULL END)) as avg_completion_time
+       FROM tasks t
+       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+       WHERE t.assigned_to = $1`,
       [userId]
     );
 
@@ -199,25 +204,60 @@ export class KPIService {
       [userId]
     );
 
+    // Daily task statistics (المهام اليومية الثابتة) — حساب تراكمي عبر كل الأيام
+    // البسط: إجمالي علامات الإنجاز عبر كل الأيام
+    // المقام: مجموع الأيام التشغيلية المنقضية لكل قالب نشط منذ إنشائه
+    let dailyCompleted = 0;
+    let dailyExpected = 0;
+    try {
+      const dailyCompletedResult = await pool.query(
+        `SELECT COUNT(*) AS count
+         FROM daily_task_completions c
+         INNER JOIN daily_task_templates t ON t.id = c.template_id
+         WHERE t.assigned_to = $1 AND t.is_active = true AND t.deleted_at IS NULL AND c.is_completed = true`,
+        [userId]
+      );
+      const dailyExpectedResult = await pool.query(
+        `SELECT COALESCE(SUM(
+           (CURRENT_DATE - (t.created_at AT TIME ZONE 'UTC')::date) + 1
+         ), 0) AS expected
+         FROM daily_task_templates t
+         INNER JOIN users u ON u.id = t.assigned_to
+         WHERE t.assigned_to = $1 AND t.is_active = true AND t.deleted_at IS NULL AND u.is_active = true`,
+        [userId]
+      );
+      dailyCompleted = parseInt(dailyCompletedResult.rows[0].count, 10) || 0;
+      dailyExpected = parseInt(dailyExpectedResult.rows[0].expected, 10) || 0;
+    } catch {
+      // جداول المهام اليومية غير موجودة بعد — تجاهل (لا تؤثر على بقية الحساب)
+      dailyCompleted = 0;
+      dailyExpected = 0;
+    }
+    // المعلّق من المهام اليومية = المتوقّع - المُنجز (لا يقل عن صفر)
+    const dailyPending = Math.max(dailyExpected - dailyCompleted, 0);
+
     const regularStats = tasksResult.rows[0];
     const adminAssignedStats = adminTasksResult.rows[0];
     const adminCreatedStats = adminCreatedResult.rows[0];
 
-    // Combine all statistics (دمج الإحصائيات)
+    // Combine all statistics (دمج الإحصائيات) — المهام اليومية تُضاف ولا تستبدل
     const totalTasksAssigned = 
       (parseInt(regularStats.total_tasks) || 0) + 
       (parseInt(adminAssignedStats.total_tasks) || 0) +
-      (parseInt(adminCreatedStats.total_tasks) || 0);
+      (parseInt(adminCreatedStats.total_tasks) || 0) +
+      dailyExpected;
     
     const completedTasks = 
       (parseInt(regularStats.completed_tasks) || 0) + 
       (parseInt(adminAssignedStats.completed_tasks) || 0) +
-      (parseInt(adminCreatedStats.completed_tasks) || 0);
+      (parseInt(adminCreatedStats.completed_tasks) || 0) +
+      dailyCompleted;
     
     const pendingTasks = 
       (parseInt(regularStats.pending_tasks) || 0) + 
       (parseInt(adminAssignedStats.pending_tasks) || 0) +
-      (parseInt(adminCreatedStats.pending_tasks) || 0);
+      (parseInt(adminCreatedStats.pending_tasks) || 0) +
+      dailyPending;
     
     const overdueTasks = 
       (parseInt(regularStats.overdue_tasks) || 0) + 
@@ -345,19 +385,26 @@ export class KPIService {
           u.name as user_name,
           u.email,
           r.name as role_name,
-          COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0) as total_tasks_assigned,
-          COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0) as completed_tasks,
-          COALESCE(task_counts.pending, 0) + COALESCE(admin_assigned_counts.pending, 0) + COALESCE(admin_created_counts.pending, 0) as pending_tasks,
+          COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0) + COALESCE(daily_expected.expected, 0) as total_tasks_assigned,
+          COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0) + COALESCE(daily_completed.completed, 0) as completed_tasks,
+          COALESCE(task_counts.pending, 0) + COALESCE(admin_assigned_counts.pending, 0) + COALESCE(admin_created_counts.pending, 0) + GREATEST(COALESCE(daily_expected.expected, 0) - COALESCE(daily_completed.completed, 0), 0) as pending_tasks,
           COALESCE(task_counts.overdue, 0) + COALESCE(admin_assigned_counts.overdue, 0) + COALESCE(admin_created_counts.overdue, 0) as overdue_tasks,
+          COALESCE(daily_completed.completed, 0) as daily_completed_tasks,
+          COALESCE(daily_expected.expected, 0) as daily_total_tasks,
+          CASE
+            WHEN COALESCE(daily_expected.expected, 0) > 0
+            THEN ROUND((COALESCE(daily_completed.completed, 0)::numeric / COALESCE(daily_expected.expected, 0)) * 100)
+            ELSE 0
+          END as daily_completion_rate,
           0 as average_completion_time,
           0 as content_produced_count,
           0 as content_size_total,
           0 as ai_usage_count,
           CASE 
-            WHEN (COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0)) > 0 
+            WHEN (COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0) + COALESCE(daily_expected.expected, 0)) > 0 
             THEN ROUND(
-              ((COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0))::numeric / 
-               (COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0))) * 100
+              ((COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0) + COALESCE(daily_completed.completed, 0))::numeric / 
+               (COALESCE(task_counts.total, 0) + COALESCE(admin_assigned_counts.total, 0) + COALESCE(admin_created_counts.total, 0) + COALESCE(daily_expected.expected, 0))) * 100
             )
             ELSE 0 
           END as on_time_percentage
@@ -394,9 +441,20 @@ export class KPIService {
           LEFT JOIN task_statuses ts ON at.status_id = ts.id
           WHERE at.created_by = u.id AND at.is_archived = false
         ) admin_created_counts ON true
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(SUM((CURRENT_DATE - (t.created_at AT TIME ZONE 'UTC')::date) + 1), 0) as expected
+          FROM daily_task_templates t
+          WHERE t.assigned_to = u.id AND t.is_active = true AND t.deleted_at IS NULL
+        ) daily_expected ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) as completed
+          FROM daily_task_completions c
+          INNER JOIN daily_task_templates t2 ON t2.id = c.template_id
+          WHERE t2.assigned_to = u.id AND t2.is_active = true AND t2.deleted_at IS NULL AND c.is_completed = true
+        ) daily_completed ON true
         WHERE u.is_active = true
         ORDER BY 
-          (COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0)) DESC,
+          (COALESCE(task_counts.completed, 0) + COALESCE(admin_assigned_counts.completed, 0) + COALESCE(admin_created_counts.completed, 0) + COALESCE(daily_completed.completed, 0)) DESC,
           u.name ASC
         LIMIT $1 OFFSET $2`,
         [limit, offset]

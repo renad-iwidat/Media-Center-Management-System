@@ -1,6 +1,7 @@
 import pool from '../../config/database';
 import { Order } from '../../types/management';
 import { KPIService } from './KPIService';
+import { classifyOrderStatus } from '../../config/status-mappings';
 
 /**
  * OrderAutomationService - طلب (Order)
@@ -36,16 +37,17 @@ export class OrderAutomationService {
     );
 
     const newStatusName = newStatusResult.rows[0]?.name;
+    const newCategory = classifyOrderStatus(newStatusName);
 
     let updates: any = { status_id: newStatusId };
 
-    // Handle "In Progress" status
-    if (newStatusName === 'In Progress' && !order.started_at) {
+    // عند الانتقال لحالة "قيد التنفيذ" → سجّل وقت البدء
+    if (newCategory === 'in_progress' && !order.started_at) {
       updates.started_at = new Date();
     }
 
-    // Handle "Done" status
-    if (newStatusName === 'Done' && !order.completed_at) {
+    // عند الانتقال لحالة "مكتمل" → سجّل وقت الإنجاز والمدة والتأخير
+    if (newCategory === 'completed' && !order.completed_at) {
       updates.completed_at = new Date();
 
       // Calculate actual duration
@@ -86,6 +88,11 @@ export class OrderAutomationService {
 
     // Calculate KPI
     await KPIService.calculateOrderKPI(orderId);
+
+    // إذا أصبح الطلب مكتملاً → أرشفة تلقائية مع مرفقاته
+    if (newCategory === 'completed') {
+      await this.autoArchiveOnDone(orderId, changedBy);
+    }
 
     return updatedOrder;
   }
@@ -154,9 +161,7 @@ export class OrderAutomationService {
       const order = orderRes.rows[0];
       if (!order) return;
 
-      const isDone = ['Done', 'Completed', 'منجز', 'مكتمل'].some(name =>
-        (order.status_name || '').toLowerCase().includes(name.toLowerCase())
-      );
+      const isDone = classifyOrderStatus(order.status_name) === 'completed';
 
       // إذا الأوردر منجز ومش مؤرشف بعد → أرشفه تلقائياً
       if (isDone && !order.is_archived) {

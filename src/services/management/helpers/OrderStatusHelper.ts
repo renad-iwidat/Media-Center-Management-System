@@ -1,5 +1,6 @@
 import { Task } from '../../../types/management';
 import { OrderModel } from '../../../models/management/Order';
+import { StatusRegistry } from '../../../config/status-mappings';
 
 /**
  * OrderStatusHelper - طلب (Order)
@@ -19,33 +20,55 @@ export class OrderStatusHelper {
     }
   }
 
-  static async calculateOrderStatus(tasks: Task[]): Promise<{ statusId: bigint; statusName: string; reason: string }> {
+  /**
+   * يحسب حالة الطلب المناسبة بناءً على فئات مهامه:
+   *  - لا مهام            → مسودة (draft)
+   *  - كل المهام منجزة     → مكتمل (completed)
+   *  - كل المهام لم تبدأ   → مسودة (draft)
+   *  - غير ذلك            → قيد التنفيذ (in_progress)
+   * تتجاهل المهام المرفوضة عند تقرير الاكتمال.
+   */
+  static async calculateOrderStatus(
+    tasks: Task[]
+  ): Promise<{ statusId: bigint; statusName: string; reason: string }> {
+    const draftId = (await StatusRegistry.orderIdOf('draft')) ?? (await this.fallbackFirstStatusId());
+    const completedId = (await StatusRegistry.orderIdOf('completed')) ?? draftId;
+    const inProgressId = (await StatusRegistry.orderIdOf('in_progress')) ?? draftId;
+
     if (tasks.length === 0) {
-      const pendingId = await this.getStatusId('Pending', 'مسودة', 'بانتظار المراجعة');
-      return { statusId: pendingId, statusName: 'Pending', reason: 'No tasks in order' };
+      return { statusId: draftId, statusName: 'مسودة', reason: 'No tasks in order' };
     }
 
-    const taskStatuses = tasks.map(t => t.status_id);
-    const uniqueStatuses = new Set(taskStatuses);
+    // تصنيف كل مهمة
+    const categories = await Promise.all(
+      tasks.map(t => StatusRegistry.taskCategoryById(t.status_id))
+    );
 
-    const doneId = await this.getStatusId('Done', 'منجز', 'مكتمل');
-    const pendingId = await this.getStatusId('Pending', 'مسودة', 'بانتظار المراجعة', 'غير مُسند', 'تم الإسناد');
-    const inProgressId = await this.getStatusId('In Progress', 'قيد التنفيذ');
-    const reviewId = await this.getStatusId('Review', 'مراجعة');
+    // نتجاهل المرفوضة عند حساب الاكتمال
+    const effective = categories.filter(c => c !== 'rejected');
 
-    if (uniqueStatuses.size === 1 && uniqueStatuses.has(doneId)) {
-      return { statusId: doneId, statusName: 'Done', reason: 'All tasks completed' };
+    if (effective.length === 0) {
+      // كل المهام مرفوضة → نعتبر الطلب قيد التنفيذ (يحتاج تدخّل) بدل اعتباره مكتملاً
+      return { statusId: inProgressId, statusName: 'قيد التنفيذ', reason: 'All tasks rejected' };
     }
-    if (uniqueStatuses.size === 1 && uniqueStatuses.has(pendingId)) {
-      return { statusId: pendingId, statusName: 'Pending', reason: 'All tasks pending' };
+
+    const allDone = effective.every(c => c === 'done');
+    if (allDone) {
+      return { statusId: completedId, statusName: 'مكتمل', reason: 'All tasks completed' };
     }
-    if (taskStatuses.includes(inProgressId)) {
-      return { statusId: inProgressId, statusName: 'In Progress', reason: 'At least one task in progress' };
+
+    const allNotStarted = effective.every(c => c === 'unassigned' || c === 'assigned');
+    if (allNotStarted) {
+      return { statusId: draftId, statusName: 'مسودة', reason: 'All tasks not started' };
     }
-    if (taskStatuses.includes(reviewId)) {
-      return { statusId: inProgressId, statusName: 'In Progress', reason: 'At least one task in review' };
-    }
-    return { statusId: inProgressId, statusName: 'In Progress', reason: 'Mixed task statuses' };
+
+    return { statusId: inProgressId, statusName: 'قيد التنفيذ', reason: 'Tasks in progress / mixed' };
+  }
+
+  private static async fallbackFirstStatusId(): Promise<bigint> {
+    const statuses = await OrderModel.getStatuses();
+    if (statuses.length === 0) throw new Error('No order statuses defined');
+    return statuses[0].id;
   }
 
   static async shouldUpdateOrderStatus(
@@ -53,7 +76,7 @@ export class OrderStatusHelper {
     tasks: Task[]
   ): Promise<{ shouldUpdate: boolean; newStatusId?: bigint; newStatusName?: string; reason?: string }> {
     const calculated = await this.calculateOrderStatus(tasks);
-    if (currentOrderStatus === calculated.statusId) {
+    if (String(currentOrderStatus) === String(calculated.statusId)) {
       return { shouldUpdate: false, reason: 'Order status already matches task statuses' };
     }
     return { shouldUpdate: true, newStatusId: calculated.statusId, newStatusName: calculated.statusName, reason: calculated.reason };

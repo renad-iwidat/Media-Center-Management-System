@@ -30,6 +30,8 @@ import AdminProcTaskDetailsPage from './components/administrative/AdminProcTaskD
 import AdminProcArchivePage from './components/administrative/AdminProcArchivePage';
 import MyLeaveRequestPage from './components/administrative/MyLeaveRequestPage';
 import MyAdminTasksPage from './components/administrative/MyAdminTasksPage';
+import MyDailyChecklistPage from './components/MyDailyChecklistPage';
+import DailyTasksManagePage from './components/DailyTasksManagePage';
 import WelcomePage from './components/WelcomePage';
 import { useAuth } from './contexts/AuthContext';
 import {
@@ -89,6 +91,8 @@ export default function App() {
         {/* خدمات الموظفين (متاحة للجميع) */}
         <Route path="/my-leave-request" element={<MyLeaveRequestPage />} />
         <Route path="/my-admin-tasks" element={<MyAdminTasksPage />} />
+        <Route path="/my-daily-tasks" element={<MyDailyChecklistPage />} />
+        <Route path="/daily-tasks-manage" element={<DailyTasksManagePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -167,7 +167,8 @@ export class TaskModel {
     search: string = '',
     order_id?: bigint,
     assigned_to?: bigint,
-    status_id?: bigint
+    status_id?: bigint,
+    visibleToUserId?: bigint // إذا موجود: يقصر النتائج على المهام المرتبطة بهذا المستخدم
   ): Promise<{ rows: any[]; total: number }> {
     let baseQuery = `FROM tasks t
      LEFT JOIN users u ON t.assigned_to = u.id
@@ -178,6 +179,18 @@ export class TaskModel {
 
     const params: any[] = [];
     let paramIndex = 1;
+
+    // فلترة الرؤية: المهمة تظهر للمستخدم إذا كان مُسنداً إليها حالياً،
+    // أو أُسند إليها سابقاً (سجل الإسناد)، أو ذُكر فيها (منشن مباشر أو في تعليق).
+    if (visibleToUserId) {
+      baseQuery += ` AND (
+        t.assigned_to = $${paramIndex}
+        OR EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.assigned_to = $${paramIndex})
+        OR EXISTS (SELECT 1 FROM mentions m WHERE m.entity_type = 'task' AND m.entity_id = t.id AND m.mentioned_user_id = $${paramIndex})
+      )`;
+      params.push(visibleToUserId);
+      paramIndex++;
+    }
 
     if (search) {
       baseQuery += ` AND (t.title ILIKE $${paramIndex} OR t.description ILIKE $${paramIndex})`;
@@ -200,7 +213,7 @@ export class TaskModel {
       paramIndex++;
     }
 
-    const countResult = await pool.query(`SELECT COUNT(*) as count ${baseQuery}`, params);
+    const countResult = await pool.query(`SELECT COUNT(DISTINCT t.id) as count ${baseQuery}`, params);
     const total = parseInt(countResult.rows[0].count);
 
     const dataResult = await pool.query(
