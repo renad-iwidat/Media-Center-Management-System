@@ -508,6 +508,7 @@ class AutoPublishService {
         addField('title', article.title);
         addField('content', article.content);
         addField('category_id', String(externalCategoryId));
+        // keywords: حقل واحد بقيمة مفصولة بفواصل — تماماً مثل curl: -F "keywords=test,api"
         addField('keywords', tagsString);
 
         // المواقع التي تدعم auto_publish و pin (مثل موقع النجاح)
