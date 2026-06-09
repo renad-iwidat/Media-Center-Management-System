@@ -78,10 +78,8 @@ export async function getIncompleteArticles(req: Request, res: Response): Promis
   try {
     const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
 
-    // الأخبار الناقصة موجودة في editorial_queue بحالة 'incomplete'
-    // نربطها بالوحدة الإعلامية عبر editorial_queue.media_unit_id
     let queryStr = `
-      SELECT DISTINCT ON (rd.id)
+      SELECT
         rd.id, rd.title, rd.content, rd.summary, rd.url, rd.image_url,
         rd.fetch_status, rd.fetched_at, rd.category_id, rd.geo_scope_id,
         rd.is_incomplete, rd.language, rd.authors,
