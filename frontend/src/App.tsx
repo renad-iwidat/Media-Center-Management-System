@@ -51,6 +51,7 @@ import AudioProcessing from './components/ai/AudioProcessing';
 import NewsRoom from './components/ai/NewsRoom';
 import ChatInterface from './components/ai/ChatInterface';
 import SmartTranscription from './components/ai/SmartTranscription';
+import { NewsAdminDashboard } from './components/news/NewsAdminDashboard';
 
 import { api, getAuthToken, setAuthToken, getCurrentUser, setCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
@@ -65,7 +66,7 @@ const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
 };
 
 type SectionId =
-  | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published' | 'archive'
+  | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published' | 'archive' | 'news-admin'
   | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat' | 'smart-transcription'
   | 'settings';
 
@@ -78,6 +79,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { id: 'news-admin', label: 'لوحة الإدارة',      description: 'إحصائيات الموظفين والأداء',   icon: TrendingUp,     group: 'news' },
   { id: 'overview',   label: 'نظرة عامة',         description: 'ملخص الأخبار والإحصائيات',    icon: LayoutDashboard, group: 'news' },
   { id: 'sources',    label: 'مصادر المحتوى',      description: 'إدارة مصادر الأخبار',         icon: Rss,            group: 'news' },
   { id: 'incomplete', label: 'أخبار غير مكتملة',   description: 'أخبار تحتاج إكمال',           icon: AlertTriangle,  group: 'news' },
@@ -109,6 +111,7 @@ NAV_ITEMS.forEach(i => { (SECTION_ICONS as any)[i.id] = i.icon; });
  */
 const SECTION_PERMISSIONS: Record<SectionId, string | null> = {
   // وحدة الأخبار
+  'news-admin':          'news.dashboard',
   'overview':            'news.view',
   'sources':             'news.settings',
   'incomplete':          'news.edit',
@@ -713,6 +716,7 @@ export default function App() {
               )}
 
               {/* News Views */}
+              {activeSection === 'news-admin' && <NewsAdminDashboard />}
               {activeSection === 'overview'   && <OverviewView unitId={selectedMediaUnitId} />}
               {activeSection === 'sources'    && <SourcesView autoEnabled={isSystemOnline} unitId={selectedMediaUnitId} />}
               {activeSection === 'incomplete' && <IncompleteView unitId={selectedMediaUnitId} />}

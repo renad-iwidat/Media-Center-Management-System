@@ -759,4 +759,23 @@ export const api = {
     request<any>(`/bulletins/${id}`, { method: "DELETE" }),
   markBulletinAudioGenerated: (id: number) =>
     request<any>(`/bulletins/${id}/audio`, { method: "PATCH" }),
+
+  // --- News Admin Dashboard ---
+  getNewsAdminOverview: (days = 30) =>
+    request<any>(`/management/news/stats/overview?days=${days}`, undefined, true),
+  getNewsAdminUserStats: (userId: number, days = 30) =>
+    request<any>(`/management/news/stats/user/${userId}?days=${days}`, undefined, true),
+  getAIAnalyticsOverview: () =>
+    request<any>("/ai-hub/analytics/overview"),
+  getAITopUsers: (limit = 10) =>
+    request<any>(`/ai-hub/analytics/top-users?limit=${limit}`),
+  getAllUsers: () =>
+    request<any>("/auth/users"),
+  getAllPermissions: () =>
+    request<any>("/auth/permissions"),
+  updateUserPermissions: (userId: number, permissions: string[]) =>
+    request<any>(`/auth/users/${userId}/permissions`, {
+      method: "PUT",
+      body: JSON.stringify({ permissions }),
+    }),
 };
