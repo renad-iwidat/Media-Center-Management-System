@@ -21,20 +21,20 @@ router.use(authenticate);
  * جلب إحصائيات أداء موظف في نظام الأخبار
  * يتطلب صلاحية: view_employee_stats
  */
-router.get('/stats/user/:userId', requirePermission('view_employee_stats'), getUserNewsStats);
+router.get('/stats/user/:userId', requirePermission('news.dashboard'), getUserNewsStats);
 
 /**
  * GET /api/management/news/stats/overview
  * جلب إحصائيات عامة لنظام الأخبار
- * يتطلب صلاحية: view_news_stats
+ * يتطلب صلاحية: news.dashboard
  */
-router.get('/stats/overview', requirePermission('view_news_stats'), getNewsOverviewStats);
+router.get('/stats/overview', requirePermission('news.dashboard'), getNewsOverviewStats);
 
 /**
  * GET /api/management/news/tasks/:taskId/items
  * جلب جميع المنشورات المرتبطة بمهمة معينة
- * يتطلب صلاحية: view_task_details
+ * يتطلب صلاحية: news.dashboard
  */
-router.get('/tasks/:taskId/items', requirePermission('view_task_details'), getTaskNewsItems);
+router.get('/tasks/:taskId/items', requirePermission('news.dashboard'), getTaskNewsItems);
 
 export default router;
