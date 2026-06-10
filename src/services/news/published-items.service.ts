@@ -67,19 +67,19 @@ export class PublishedItemsService {
           COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names,
           COALESCE(rd.publish_status, 'draft') as publish_status,
-          (SELECT COUNT(*) > 0 FROM auto_publish_log apl WHERE apl.raw_data_id = rd.id AND apl.status = 'success') as is_published_external,
-          (SELECT COUNT(*) > 0 FROM publishing_status ps WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website') as is_published_social,
+          (SELECT COUNT(*) > 0 FROM auto_publish_log apl JOIN auto_publish_targets apt_chk ON apt_chk.id = apl.target_id WHERE apl.raw_data_id = rd.id AND apl.status = 'success' AND apt_chk.media_unit_id = pi.media_unit_id) as is_published_external,
+          (SELECT COUNT(*) > 0 FROM publishing_status ps JOIN platform_configs pc_chk ON pc_chk.id = ps.platform_config_id WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website' AND pc_chk.media_unit_id = pi.media_unit_id) as is_published_social,
           (SELECT json_agg(json_build_object('platform', sub.platform, 'name', sub.platform_name, 'status', sub.status, 'published_at', sub.updated_at))
            FROM (
              SELECT 'external_website' as platform, apt.name as platform_name, 'success' as status, apl2.created_at as updated_at
              FROM auto_publish_log apl2
              JOIN auto_publish_targets apt ON apt.id = apl2.target_id
-             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success'
+             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success' AND apt.media_unit_id = pi.media_unit_id
              UNION ALL
              SELECT ps2.platform, pc.name as platform_name, ps2.status, ps2.updated_at
              FROM publishing_status ps2
              JOIN platform_configs pc ON pc.id = ps2.platform_config_id
-             WHERE ps2.article_id = rd.id AND ps2.status = 'success'
+             WHERE ps2.article_id = rd.id AND ps2.status = 'success' AND pc.media_unit_id = pi.media_unit_id
            ) sub
           ) as published_platforms
         FROM published_items pi
@@ -212,19 +212,19 @@ export class PublishedItemsService {
           COALESCE(c.flow, 'editorial') as flow_type,
           rd.tags as tag_names,
           COALESCE(rd.publish_status, 'draft') as publish_status,
-          (SELECT COUNT(*) > 0 FROM auto_publish_log apl WHERE apl.raw_data_id = rd.id AND apl.status = 'success') as is_published_external,
-          (SELECT COUNT(*) > 0 FROM publishing_status ps WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website') as is_published_social,
+          (SELECT COUNT(*) > 0 FROM auto_publish_log apl JOIN auto_publish_targets apt_chk ON apt_chk.id = apl.target_id WHERE apl.raw_data_id = rd.id AND apl.status = 'success' AND apt_chk.media_unit_id = eq.media_unit_id) as is_published_external,
+          (SELECT COUNT(*) > 0 FROM publishing_status ps JOIN platform_configs pc_chk ON pc_chk.id = ps.platform_config_id WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website' AND pc_chk.media_unit_id = eq.media_unit_id) as is_published_social,
           (SELECT json_agg(json_build_object('platform', sub.platform, 'name', sub.platform_name, 'status', sub.status, 'published_at', sub.updated_at))
            FROM (
              SELECT 'external_website' as platform, apt.name as platform_name, 'success' as status, apl2.created_at as updated_at
              FROM auto_publish_log apl2
              JOIN auto_publish_targets apt ON apt.id = apl2.target_id
-             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success'
+             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success' AND apt.media_unit_id = eq.media_unit_id
              UNION ALL
              SELECT ps2.platform, pc.name as platform_name, ps2.status, ps2.updated_at
              FROM publishing_status ps2
              JOIN platform_configs pc ON pc.id = ps2.platform_config_id
-             WHERE ps2.article_id = rd.id AND ps2.status = 'success'
+             WHERE ps2.article_id = rd.id AND ps2.status = 'success' AND pc.media_unit_id = eq.media_unit_id
            ) sub
           ) as published_platforms
         FROM editorial_queue eq
@@ -277,19 +277,19 @@ export class PublishedItemsService {
           COALESCE(c.flow, 'editorial') as flow_type,
           pi.tags as tag_names,
           COALESCE(rd.publish_status, 'draft') as publish_status,
-          (SELECT COUNT(*) > 0 FROM auto_publish_log apl WHERE apl.raw_data_id = rd.id AND apl.status = 'success') as is_published_external,
-          (SELECT COUNT(*) > 0 FROM publishing_status ps WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website') as is_published_social,
+          (SELECT COUNT(*) > 0 FROM auto_publish_log apl JOIN auto_publish_targets apt_chk ON apt_chk.id = apl.target_id WHERE apl.raw_data_id = rd.id AND apl.status = 'success' AND apt_chk.media_unit_id = pi.media_unit_id) as is_published_external,
+          (SELECT COUNT(*) > 0 FROM publishing_status ps JOIN platform_configs pc_chk ON pc_chk.id = ps.platform_config_id WHERE ps.article_id = rd.id AND ps.status = 'success' AND ps.platform != 'external_website' AND pc_chk.media_unit_id = pi.media_unit_id) as is_published_social,
           (SELECT json_agg(json_build_object('platform', sub.platform, 'name', sub.platform_name, 'status', sub.status, 'published_at', sub.updated_at))
            FROM (
              SELECT 'external_website' as platform, apt.name as platform_name, 'success' as status, apl2.created_at as updated_at
              FROM auto_publish_log apl2
              JOIN auto_publish_targets apt ON apt.id = apl2.target_id
-             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success'
+             WHERE apl2.raw_data_id = rd.id AND apl2.status = 'success' AND apt.media_unit_id = pi.media_unit_id
              UNION ALL
              SELECT ps2.platform, pc.name as platform_name, ps2.status, ps2.updated_at
              FROM publishing_status ps2
              JOIN platform_configs pc ON pc.id = ps2.platform_config_id
-             WHERE ps2.article_id = rd.id AND ps2.status = 'success'
+             WHERE ps2.article_id = rd.id AND ps2.status = 'success' AND pc.media_unit_id = pi.media_unit_id
            ) sub
           ) as published_platforms
         FROM published_items pi

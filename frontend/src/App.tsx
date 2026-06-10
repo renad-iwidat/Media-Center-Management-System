@@ -85,7 +85,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
   { id: 'published',  label: 'قسم النشر',           description: 'الأخبار التحريرية الجاهزة للنشر', icon: CheckCircle,    group: 'news' },
   { id: 'archive',    label: 'الأرشيف',             description: 'الأخبار المؤرشفة مع روابط النشر', icon: Archive,       group: 'news' },
-  { id: 'settings',   label: 'إعدادات النظام',      description: 'إعدادات النظام ومواقع النشر', icon: Settings2,      group: 'news' },
   { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
   { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },
   { id: 'editing',    label: 'التحرير الصحفي',     description: 'إعادة صياغة وتلخيص',          icon: PenTool,        group: 'ai' },
@@ -98,9 +97,11 @@ const NAV_ITEMS: NavItem[] = [
 
 const SECTION_LABELS: Record<SectionId, string> = {} as any;
 NAV_ITEMS.forEach(i => { (SECTION_LABELS as any)[i.id] = i.label; });
+(SECTION_LABELS as any)['settings'] = 'إعدادات النظام';
 
 const SECTION_ICONS: Record<SectionId, any> = {} as any;
 NAV_ITEMS.forEach(i => { (SECTION_ICONS as any)[i.id] = i.icon; });
+(SECTION_ICONS as any)['settings'] = Settings2;
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
