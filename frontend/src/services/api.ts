@@ -762,9 +762,9 @@ export const api = {
 
   // --- News Admin Dashboard ---
   getNewsAdminOverview: (days = 30) =>
-    request<any>(`/management/news/stats/overview?days=${days}`, undefined, true),
+    request<any>(`/management/news/stats/overview?days=${days}`),
   getNewsAdminUserStats: (userId: number, days = 30) =>
-    request<any>(`/management/news/stats/user/${userId}?days=${days}`, undefined, true),
+    request<any>(`/management/news/stats/user/${userId}?days=${days}`),
   getAIAnalyticsOverview: () =>
     request<any>("/ai-hub/analytics/overview"),
   getAITopUsers: (limit = 10) =>
