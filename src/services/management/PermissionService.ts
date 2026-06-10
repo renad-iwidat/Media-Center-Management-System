@@ -3,15 +3,26 @@ import pool from '../../config/database';
 export class PermissionService {
 
   /**
-   * جلب كل صلاحيات المستخدم (من كل أدواره)
+   * جلب كل صلاحيات المستخدم (من كل أدواره + user_permissions + primary role)
    */
   static async getUserPermissions(userId: bigint): Promise<string[]> {
     const result = await pool.query(
-      'SELECT DISTINCT p.name ' +
-      'FROM permissions p ' +
-      'INNER JOIN role_permissions rp ON p.id = rp.permission_id ' +
-      'INNER JOIN user_roles ur ON rp.role_id = ur.role_id ' +
-      'WHERE ur.user_id = $1',
+      `SELECT DISTINCT p.name FROM permissions p
+       WHERE p.id IN (
+         -- صلاحيات من user_roles -> role_permissions
+         SELECT rp.permission_id FROM role_permissions rp
+         INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+         WHERE ur.user_id = $1
+         UNION
+         -- صلاحيات من users.role_id (الدور الأساسي)
+         SELECT rp.permission_id FROM role_permissions rp
+         INNER JOIN users u ON rp.role_id = u.role_id
+         WHERE u.id = $1
+         UNION
+         -- صلاحيات يدوية (user_permissions)
+         SELECT up.permission_id FROM user_permissions up
+         WHERE up.user_id = $1
+       )`,
       [userId]
     );
     return result.rows.map((r: any) => r.name);
