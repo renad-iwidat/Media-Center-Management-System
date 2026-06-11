@@ -96,6 +96,16 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
     setAutoPublishTargets(prev => prev.map(t => t.id === targetId ? { ...t, autoEnabled: !current } : t));
   });
 
+  const handleUpdateTargetPublishMode = (targetId: number, autoPublish: boolean) => withSave(async () => {
+    await api.updateAutoPublishTarget(targetId, { default_auto_publish: autoPublish });
+    setAutoPublishTargets(prev => prev.map(t => t.id === targetId ? { ...t, defaultAutoPublish: autoPublish } : t));
+  });
+
+  const handleUpdateTargetPin = (targetId: number, pin: number) => withSave(async () => {
+    await api.updateAutoPublishTarget(targetId, { default_pin: pin });
+    setAutoPublishTargets(prev => prev.map(t => t.id === targetId ? { ...t, defaultPin: pin } : t));
+  });
+
   const handleSaveNumbers = () => withSave(async () => {
     const mins = parseInt(intervalInput, 10);
     const arts = parseInt(articlesInput, 10);
@@ -422,6 +432,68 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
                       <p className={`text-[10px] font-semibold mt-2.5 ${statusColor}`}>
                         {statusText}
                       </p>
+
+                      {/* إعدادات النشر على الموقع الخارجي */}
+                      {anyOn && (
+                        <div className="mt-3 pt-3 border-t border-[#f1f5f9] space-y-3">
+                          <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">إعدادات النشر الافتراضية</p>
+
+                          {/* وضع النشر: مباشر أو مسودة */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-[#475569]">الوضع عند النشر:</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleUpdateTargetPublishMode(target.id, true)}
+                                disabled={saveStatus === "saving"}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                  (target.defaultAutoPublish ?? target.default_auto_publish ?? true)
+                                    ? "bg-emerald-100 border-emerald-300 text-emerald-700"
+                                    : "bg-[#f8fafc] border-[#e2e8f0] text-[#94a3b8] hover:border-emerald-200"
+                                }`}
+                              >
+                                نشر مباشر
+                              </button>
+                              <button
+                                onClick={() => handleUpdateTargetPublishMode(target.id, false)}
+                                disabled={saveStatus === "saving"}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                  !(target.defaultAutoPublish ?? target.default_auto_publish ?? true)
+                                    ? "bg-amber-100 border-amber-300 text-amber-700"
+                                    : "bg-[#f8fafc] border-[#e2e8f0] text-[#94a3b8] hover:border-amber-200"
+                                }`}
+                              >
+                                مسودة (Draft)
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Pin */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-[#475569]">التثبيت (Pin):</span>
+                            <div className="flex items-center gap-1">
+                              {[0, 1, 2, 3, 4, 5].map((pinVal) => (
+                                <button
+                                  key={pinVal}
+                                  onClick={() => handleUpdateTargetPin(target.id, pinVal)}
+                                  disabled={saveStatus === "saving"}
+                                  className={`w-7 h-7 rounded-lg text-[10px] font-bold border transition-all ${
+                                    (target.defaultPin ?? target.default_pin ?? 0) === pinVal
+                                      ? pinVal === 0
+                                        ? "bg-[#f1f5f9] border-[#cbd5e1] text-[#1e293b]"
+                                        : "bg-blue-100 border-blue-300 text-blue-700"
+                                      : "bg-[#f8fafc] border-[#e2e8f0] text-[#94a3b8] hover:border-blue-200"
+                                  }`}
+                                >
+                                  {pinVal}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-[9px] text-[#94a3b8] leading-relaxed">
+                            0 = بدون تثبيت · 5 = أول خبر بالصفحة الرئيسية (صورة كبيرة)
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })
