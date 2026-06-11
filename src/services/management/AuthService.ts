@@ -87,6 +87,25 @@ export class AuthService {
     const roles = rolesResult.rows;
     const primaryRole = roles[0] || { id: null, name: 'Other Staff' };
 
+    // نجيب كل صلاحيات المستخدم
+    const permsResult = await pool.query(
+      `SELECT DISTINCT p.name FROM permissions p
+       WHERE p.id IN (
+         SELECT rp.permission_id FROM role_permissions rp
+         INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+         WHERE ur.user_id = $1
+         UNION
+         SELECT rp2.permission_id FROM role_permissions rp2
+         INNER JOIN users u ON rp2.role_id = u.role_id
+         WHERE u.id = $1
+         UNION
+         SELECT up.permission_id FROM user_permissions up
+         WHERE up.user_id = $1
+       )`,
+      [user.id]
+    );
+    const permissions = permsResult.rows.map((r: any) => r.name);
+
     const payload: AuthPayload = {
       user_id: String(user.id),
       email: user.email,
@@ -103,6 +122,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         roles: roles,
+        permissions: permissions,
       },
     };
   }
@@ -173,12 +193,21 @@ export class AuthService {
       [userId]
     );
 
-    // جلب كل صلاحيات المستخدم
+    // جلب كل صلاحيات المستخدم (من أدواره + role_id + user_permissions)
     const permsResult = await pool.query(
-      'SELECT DISTINCT p.name FROM permissions p ' +
-      'INNER JOIN role_permissions rp ON p.id = rp.permission_id ' +
-      'INNER JOIN user_roles ur ON rp.role_id = ur.role_id ' +
-      'WHERE ur.user_id = $1',
+      `SELECT DISTINCT p.name FROM permissions p
+       WHERE p.id IN (
+         SELECT rp.permission_id FROM role_permissions rp
+         INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+         WHERE ur.user_id = $1
+         UNION
+         SELECT rp.permission_id FROM role_permissions rp
+         INNER JOIN users u ON rp.role_id = u.role_id
+         WHERE u.id = $1
+         UNION
+         SELECT up.permission_id FROM user_permissions up
+         WHERE up.user_id = $1
+       )`,
       [userId]
     );
 

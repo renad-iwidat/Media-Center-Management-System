@@ -32,6 +32,7 @@ import newsDeskProxyRoutes from './routes/news/newsdesk-proxy.routes';
 import autoPublishRoutes from './routes/news/auto-publish.routes';
 import bulletinsRoutes from './routes/news/bulletins.routes';
 import publishingRoutes from './routes/publishing/publishing.routes';
+import newsIntegrationRoutes from './routes/management/news-integration.routes';
 import { runPublishingMigration } from './services/publishing';
 
 const app = express();
@@ -314,6 +315,7 @@ app.use('/api/newsdesk', newsDeskProxyRoutes);
 app.use('/api/auto-publish', autoPublishRoutes);
 app.use('/api/bulletins', bulletinsRoutes);
 app.use('/api/publishing', publishingRoutes);
+app.use('/api/management/news', newsIntegrationRoutes);
 
 // 404 Handler
 app.use((req, res) => {

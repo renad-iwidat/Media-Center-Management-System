@@ -51,6 +51,7 @@ import AudioProcessing from './components/ai/AudioProcessing';
 import NewsRoom from './components/ai/NewsRoom';
 import ChatInterface from './components/ai/ChatInterface';
 import SmartTranscription from './components/ai/SmartTranscription';
+import { NewsAdminDashboard } from './components/news/NewsAdminDashboard';
 
 import { api, getAuthToken, setAuthToken, getCurrentUser, setCurrentUser, clearAuthToken, clearCurrentUser } from './services/api';
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
@@ -65,7 +66,7 @@ const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
 };
 
 type SectionId =
-  | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published' | 'archive'
+  | 'overview' | 'sources' | 'incomplete' | 'queue' | 'policies' | 'published' | 'archive' | 'news-admin'
   | 'ai-dashboard' | 'ideas' | 'editing' | 'social' | 'audio' | 'newsroom' | 'chat' | 'smart-transcription'
   | 'settings';
 
@@ -78,6 +79,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { id: 'news-admin', label: 'لوحة الإدارة',      description: 'إحصائيات الموظفين والأداء',   icon: TrendingUp,     group: 'news' },
   { id: 'overview',   label: 'نظرة عامة',         description: 'ملخص الأخبار والإحصائيات',    icon: LayoutDashboard, group: 'news' },
   { id: 'sources',    label: 'مصادر المحتوى',      description: 'إدارة مصادر الأخبار',         icon: Rss,            group: 'news' },
   { id: 'incomplete', label: 'أخبار غير مكتملة',   description: 'أخبار تحتاج إكمال',           icon: AlertTriangle,  group: 'news' },
@@ -85,7 +87,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
   { id: 'published',  label: 'قسم النشر',           description: 'الأخبار التحريرية الجاهزة للنشر', icon: CheckCircle,    group: 'news' },
   { id: 'archive',    label: 'الأرشيف',             description: 'الأخبار المؤرشفة مع روابط النشر', icon: Archive,       group: 'news' },
-  { id: 'settings',   label: 'إعدادات النظام',      description: 'إعدادات النظام ومواقع النشر', icon: Settings2,      group: 'news' },
   { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
   { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },
   { id: 'editing',    label: 'التحرير الصحفي',     description: 'إعادة صياغة وتلخيص',          icon: PenTool,        group: 'ai' },
@@ -98,9 +99,62 @@ const NAV_ITEMS: NavItem[] = [
 
 const SECTION_LABELS: Record<SectionId, string> = {} as any;
 NAV_ITEMS.forEach(i => { (SECTION_LABELS as any)[i.id] = i.label; });
+(SECTION_LABELS as any)['settings'] = 'إعدادات النظام';
 
 const SECTION_ICONS: Record<SectionId, any> = {} as any;
 NAV_ITEMS.forEach(i => { (SECTION_ICONS as any)[i.id] = i.icon; });
+(SECTION_ICONS as any)['settings'] = Settings2;
+
+/**
+ * ربط كل section بالـ permission المطلوب
+ * null = متاح للجميع بدون شرط
+ */
+const SECTION_PERMISSIONS: Record<SectionId, string | null> = {
+  // وحدة الأخبار
+  'news-admin':          'news.dashboard',
+  'overview':            'news.view',
+  'sources':             'news.settings',
+  'incomplete':          'news.edit',
+  'queue':               'news.edit',
+  'policies':            'news.settings',
+  'published':           'news.publish',
+  'archive':             'news.view',
+  // وحدة AI (ai.use = الكل)
+  'ai-dashboard':        'ai.use',
+  'ideas':               'ai.use',
+  'editing':             'ai.use',
+  'social':              'ai.use',
+  'audio':               'ai.use',
+  'newsroom':            'ai.use',
+  'chat':                null,
+  'smart-transcription': 'ai.use',
+  // إعدادات
+  'settings':            'settings.manage',
+};
+
+/**
+ * دالة فحص الصلاحية من بيانات المستخدم المحفوظة
+ */
+function hasPermission(user: any, permission: string): boolean {
+  if (!user || !user.permissions) return false;
+  return user.permissions.includes(permission);
+}
+
+/**
+ * فحص إذا المستخدم يملك أي صلاحية أخبار — لإظهار/إخفاء مجموعة الأخبار كاملة
+ */
+function hasAnyNewsPermission(user: any): boolean {
+  if (!user || !user.permissions) return false;
+  return user.permissions.some((p: string) => p.startsWith('news.'));
+}
+
+/**
+ * فحص إذا المستخدم يملك صلاحية AI
+ */
+function hasAIPermission(user: any): boolean {
+  if (!user || !user.permissions) return false;
+  return user.permissions.some((p: string) => p.startsWith('ai.'));
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -405,96 +459,116 @@ export default function App() {
         {/* Navigation Groups */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 custom-scrollbar space-y-1">
           {/* News Management Group */}
-          {isSidebarOpen && (
-            <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
-              إدارة الأخبار
-            </p>
+          {hasAnyNewsPermission(currentUser) && (
+            <>
+              {isSidebarOpen && (
+                <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
+                  إدارة الأخبار
+                </p>
+              )}
+              {NAV_ITEMS.filter(i => i.group === 'news').filter(item => {
+                const perm = SECTION_PERMISSIONS[item.id];
+                if (!perm) return true;
+                return hasPermission(currentUser, perm);
+              }).map((item) => {
+                const isActive = activeSection === item.id;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    title={!isSidebarOpen ? item.label : undefined}
+                    aria-label={item.label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
+                      isActive
+                        ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                        : 'text-white/60 hover:bg-white/8 hover:text-white'
+                    } ${!isSidebarOpen ? 'justify-center' : ''}`}
+                  >
+                    <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
+                      isActive ? 'bg-white/20' : 'group-hover:bg-white/8'
+                    }`}>
+                      <Icon size={16} />
+                    </div>
+                    {isSidebarOpen && (
+                      <span className="text-sm font-medium truncate">{item.label}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
           )}
-          {NAV_ITEMS.filter(i => i.group === 'news').map((item) => {
-            const isActive = activeSection === item.id;
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                title={!isSidebarOpen ? item.label : undefined}
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                  isActive
-                    ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white'
-                } ${!isSidebarOpen ? 'justify-center' : ''}`}
-              >
-                <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
-                  isActive ? 'bg-white/20' : 'group-hover:bg-white/8'
-                }`}>
-                  <Icon size={16} />
-                </div>
-                {isSidebarOpen && (
-                  <span className="text-sm font-medium truncate">{item.label}</span>
-                )}
-              </button>
-            );
-          })}
 
           {/* Divider */}
-          <div className="mx-3 my-3 h-px bg-white/8" />
+          {hasAnyNewsPermission(currentUser) && hasAIPermission(currentUser) && (
+            <div className="mx-3 my-3 h-px bg-white/8" />
+          )}
 
           {/* AI Tools Group */}
-          {isSidebarOpen && (
-            <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
-              أدوات الذكاء الاصطناعي
-            </p>
+          {hasAIPermission(currentUser) && (
+            <>
+              {isSidebarOpen && (
+                <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
+                  أدوات الذكاء الاصطناعي
+                </p>
+              )}
+              {NAV_ITEMS.filter(i => i.group === 'ai').filter(item => {
+                const perm = SECTION_PERMISSIONS[item.id];
+                if (!perm) return true;
+                return hasPermission(currentUser, perm);
+              }).map((item) => {
+                const isActive = activeSection === item.id;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    title={!isSidebarOpen ? item.label : undefined}
+                    aria-label={item.label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
+                      isActive
+                        ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                        : 'text-white/60 hover:bg-white/8 hover:text-white'
+                    } ${!isSidebarOpen ? 'justify-center' : ''}`}
+                  >
+                    <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
+                      isActive ? 'bg-white/20' : 'group-hover:bg-white/8'
+                    }`}>
+                      <Icon size={16} />
+                    </div>
+                    {isSidebarOpen && (
+                      <span className="text-sm font-medium truncate">{item.label}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
           )}
-          {NAV_ITEMS.filter(i => i.group === 'ai').map((item) => {
-            const isActive = activeSection === item.id;
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                title={!isSidebarOpen ? item.label : undefined}
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                  isActive
-                    ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white'
-                } ${!isSidebarOpen ? 'justify-center' : ''}`}
-              >
-                <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
-                  isActive ? 'bg-white/20' : 'group-hover:bg-white/8'
-                }`}>
-                  <Icon size={16} />
-                </div>
-                {isSidebarOpen && (
-                  <span className="text-sm font-medium truncate">{item.label}</span>
-                )}
-              </button>
-            );
-          })}
         </nav>
 
 
         {/* Settings + User Footer */}
         <div className="border-t border-white/8 p-3 space-y-1 shrink-0">
-          <button
-            onClick={() => setActiveSection('settings')}
-            title="إعدادات النظام"
-            aria-label="إعدادات النظام"
-            aria-current={activeSection === 'settings' ? 'page' : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
-              activeSection === 'settings'
-                ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
-                : 'text-white/50 hover:bg-white/8 hover:text-white'
-            } ${!isSidebarOpen ? 'justify-center' : ''}`}
-          >
-            <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${activeSection === 'settings' ? 'bg-white/20' : 'group-hover:bg-white/8'}`}>
-              <Settings2 size={16} />
-            </div>
-            {isSidebarOpen && <span className="text-sm font-medium">إعدادات النظام</span>}
-          </button>
+          {hasPermission(currentUser, 'settings.manage') && (
+            <button
+              onClick={() => setActiveSection('settings')}
+              title="إعدادات النظام"
+              aria-label="إعدادات النظام"
+              aria-current={activeSection === 'settings' ? 'page' : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
+                activeSection === 'settings'
+                  ? 'bg-[#FF9F4A] text-white shadow-lg shadow-[#FF9F4A]/25'
+                  : 'text-white/50 hover:bg-white/8 hover:text-white'
+              } ${!isSidebarOpen ? 'justify-center' : ''}`}
+            >
+              <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${activeSection === 'settings' ? 'bg-white/20' : 'group-hover:bg-white/8'}`}>
+                <Settings2 size={16} />
+              </div>
+              {isSidebarOpen && <span className="text-sm font-medium">إعدادات النظام</span>}
+            </button>
+          )}
 
           {isSidebarOpen ? (
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8">
@@ -642,6 +716,7 @@ export default function App() {
               )}
 
               {/* News Views */}
+              {activeSection === 'news-admin' && <NewsAdminDashboard />}
               {activeSection === 'overview'   && <OverviewView unitId={selectedMediaUnitId} />}
               {activeSection === 'sources'    && <SourcesView autoEnabled={isSystemOnline} unitId={selectedMediaUnitId} />}
               {activeSection === 'incomplete' && <IncompleteView unitId={selectedMediaUnitId} />}

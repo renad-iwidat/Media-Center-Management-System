@@ -112,14 +112,36 @@ export async function getNewsOverviewStats(req: Request, res: Response): Promise
   try {
     const days = req.query.days ? parseInt(req.query.days as string) : 30;
 
-    // إحصائيات المنشورات
+    // إحصائيات المنشورات (كل published_items بغض النظر عن approved_by)
     const publishedStats = await query(`
       SELECT 
         COUNT(*) as total_published,
         COUNT(CASE WHEN published_at >= NOW() - INTERVAL '${days} days' THEN 1 END) as recent_published,
-        COUNT(DISTINCT approved_by) as unique_approvers
+        COUNT(DISTINCT media_unit_id) as active_units
       FROM published_items
-      WHERE approved_by IS NOT NULL
+    `);
+
+    // إحصائيات النشر حسب الوحدة الإعلامية
+    const publishedByUnit = await query(`
+      SELECT 
+        mu.name as unit_name,
+        COUNT(pi.id) as count,
+        COUNT(CASE WHEN pi.published_at >= NOW() - INTERVAL '${days} days' THEN 1 END) as recent_count,
+        MAX(pi.published_at) as last_published
+      FROM published_items pi
+      LEFT JOIN media_units mu ON mu.id = pi.media_unit_id
+      GROUP BY mu.name
+      ORDER BY count DESC
+    `);
+
+    // إحصائيات النشر الخارجي (auto_publish_log)
+    const externalPublishStats = await query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN status = 'success' THEN 1 END) as success_count,
+        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count,
+        COUNT(CASE WHEN created_at >= NOW() - INTERVAL '${days} days' THEN 1 END) as recent_count
+      FROM auto_publish_log
     `);
 
     // إحصائيات الطابور
@@ -176,7 +198,19 @@ export async function getNewsOverviewStats(req: Request, res: Response): Promise
       published: {
         total: parseInt(publishedStats.rows[0]?.total_published || '0'),
         recent: parseInt(publishedStats.rows[0]?.recent_published || '0'),
-        uniqueApprovers: parseInt(publishedStats.rows[0]?.unique_approvers || '0'),
+        activeUnits: parseInt(publishedStats.rows[0]?.active_units || '0'),
+        byUnit: publishedByUnit.rows.map((r: any) => ({
+          unit: r.unit_name,
+          count: parseInt(r.count),
+          recentCount: parseInt(r.recent_count),
+          lastPublished: r.last_published,
+        })),
+        external: {
+          total: parseInt(externalPublishStats.rows[0]?.total || '0'),
+          success: parseInt(externalPublishStats.rows[0]?.success_count || '0'),
+          failed: parseInt(externalPublishStats.rows[0]?.failed_count || '0'),
+          recent: parseInt(externalPublishStats.rows[0]?.recent_count || '0'),
+        },
       },
       queue: queueStats.rows.reduce((acc: Record<string, number>, row: any) => {
         acc[row.status] = parseInt(row.count);
