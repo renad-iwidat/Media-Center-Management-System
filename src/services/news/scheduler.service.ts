@@ -234,6 +234,23 @@ class SchedulerService {
         console.log('\n⏸️  المرحلة 2: المعالجة متوقفة (flow_enabled = false) — تخطي');
       }
 
+      // ══════════════════════════════════════════════════════════════════════
+      // المرحلة 5: إعادة صياغة الأخبار بالخلفية
+      // تأخذ أخبار لم تُعاد صياغتها بعد وتعالجها تدريجياً (50 بكل دورة)
+      // ══════════════════════════════════════════════════════════════════════
+      console.log('\n✍️  المرحلة 5: إعادة صياغة الأخبار (خلفية)...');
+      try {
+        const { articleRewriterService } = await import('./article-rewriter.service');
+        const rewriteResult = await articleRewriterService.processUnrewrittenArticles();
+        if (rewriteResult.processed > 0 || rewriteResult.failed > 0) {
+          console.log(`   📊 صياغة: ✅ ${rewriteResult.processed} | ❌ ${rewriteResult.failed}`);
+        } else {
+          console.log(`   ✅ لا توجد أخبار تحتاج إعادة صياغة`);
+        }
+      } catch (rewriteError) {
+        console.error('   ⚠️ خطأ في إعادة الصياغة:', rewriteError instanceof Error ? rewriteError.message : rewriteError);
+      }
+
       // ── ملخص ──────────────────────────────────────────────────────────────
       this.status.lastRun = now;
       this.status.totalRuns++;

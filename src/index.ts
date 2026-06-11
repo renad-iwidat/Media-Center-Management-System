@@ -456,6 +456,15 @@ app.listen(PORT, '0.0.0.0', async () => {
       )
     `);
 
+    // عمود is_rewritten لتتبع حالة إعادة الصياغة (safe migration)
+    await dbQuery(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='raw_data' AND column_name='is_rewritten') THEN
+          ALTER TABLE raw_data ADD COLUMN is_rewritten BOOLEAN DEFAULT false;
+        END IF;
+      END $$;
+    `);
+
     // جدول editorial_queue
     await dbQuery(`
       CREATE TABLE IF NOT EXISTS editorial_queue (

@@ -1,80 +1,51 @@
 /**
  * Article Rewriter Service
- * إعادة صياغة الأخبار قبل التخزين في raw_data
+ * إعادة صياغة الأخبار — تعمل بالخلفية بعد الحفظ
  *
  * ════════════════════════════════════════════════════════════════
- * الهدف: إنتاج خبر بصياغة موحدة ونظيفة مع الحفاظ الكامل على
- * المعنى والمعلومات والحقائق الواردة في الخبر الأصلي.
- *
- * قواعد التعامل مع المصدر:
+ * الأسلوب: Background Processing
  * ─────────────────────────────────────────────────────────────
- * 1. حذف اسم المصدر من بداية أو نهاية الخبر (وفا، معاً، CNN، Reuters...)
- * 2. الأخبار العامة/البيانات الرسمية → إعادة صياغة بدون ذكر المصدر الإعلامي
- *    مع الإشارة للجهة الرسمية صاحبة البيان/التصريح عند الحاجة
- * 3. المعلومات/التصريحات/التقارير الحصرية → الحفاظ على نسبها
- *    إلى مصدرها داخل متن الخبر (وليس بدايته أو نهايته)
- * 4. يُطبَّق على جميع التصنيفات (سياسي، محلي، اقتصادي، رياضي...)
+ * 1. الأخبار تتحفظ فوراً بالنص الأصلي (fetch_status = 'fetched')
+ * 2. هذه الخدمة تأخذ الأخبار اللي ما اتعالجت وتعيد صياغتها
+ *    واحدة واحدة (أو 3 بالتوازي) وتحدّث الـ DB
+ * 3. تُستدعى من الـ Scheduler بعد مرحلة الحفظ
+ *
+ * هيك الـ pipeline ما ينبلك والأخبار تتخزن فوراً.
  * ─────────────────────────────────────────────────────────────
  *
- * يستخدم AI_MODEL المحلي (vLLM) — نفس الموديل المستخدم في التصنيف والتنظيف
+ * يستخدم AI_MODEL المحلي (vLLM)
  */
 
 import axios from 'axios';
+import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
 
 // ════════════════════════════════════════════════════════════════════════════
-// PROMPT
+// PROMPT — مختصر ومركّز (أقل tokens = أسرع response)
 // ════════════════════════════════════════════════════════════════════════════
 
-const REWRITER_PROMPT = `SYSTEM: أنت محرر صحفي محترف في مركز إعلامي عربي. مهمتك إعادة صياغة الأخبار الواردة لإنتاج نص صحفي نظيف وموحّد الأسلوب.
-
-التعليمات الإلزامية:
-
-المحتوى:
-- أعد صياغة الخبر لغوياً مع الحفاظ الكامل على المعنى والمعلومات والحقائق والأرقام.
-- لا تُضف أي معلومة غير موجودة في النص الأصلي.
-- لا تحذف أي معلومة جوهرية من الخبر.
-- حافظ على جميع الاقتباسات والتصريحات المنسوبة لأشخاص كما هي.
-- حافظ على الأسماء والمناصب والأرقام والتواريخ بدقة.
-
-قواعد التعامل مع المصدر الإعلامي:
-1. إذا ذُكر اسم وكالة أنباء أو وسيلة إعلام في بداية الخبر أو نهايته (مثل: وفا، معاً، رويترز، CNN، الجزيرة، وكالة الأناضول، أ ف ب، سما، القدس، شهاب، فلسطين اليوم، المركز الفلسطيني للإعلام، وغيرها) فاحذفه ولا تذكره.
-2. إذا كان الخبر عاماً أو بياناً رسمياً أو خبراً متداولاً نشرته عدة وسائل إعلام فأعد صياغته بدون ذكر أي وسيلة إعلامية. اذكر فقط الجهة الرسمية صاحبة البيان أو التصريح عند الحاجة.
-3. إذا كانت المعلومة أو التصريح أو المقابلة أو التقرير حصرياً لوسيلة إعلامية محددة فحافظ على نسبة المعلومة إلى مصدرها داخل متن الخبر وليس في بدايته أو نهايته. أمثلة:
-   - "وقال المسؤول في تصريحات لشبكة CNN"
-   - "وذكرت صحيفة هآرتس أن"
-   - "وفي مقابلة أجرتها قناة الجزيرة صرّح"
-4. الأخبار التي لا تحتوي على مصدر إعلامي محدد وكانت أخباراً عامة أو أحداثاً متداولة تُنشر بعد إعادة الصياغة بدون إضافة مصدر إعلامي.
-
-الأسلوب:
-- استخدم لغة عربية فصحى صحفية سليمة.
-- حافظ على تسلسل الأفكار والفقرات.
-- أنتج نصاً جاهزاً للنشر مباشرة.
-
-المخرج:
-- أعد النص المُعاد صياغته فقط بدون أي شرح أو تعليق أو عنوان.
-- لا تبدأ بكلمة "الخبر:" أو "النص:" أو أي مقدمة.
-
-USER:
-أعد صياغة الخبر التالي:`;
+const REWRITER_PROMPT = `SYSTEM: محرر صحفي عربي. أعد صياغة الخبر بلغة صحفية نظيفة مع الحفاظ الكامل على المعنى والحقائق والأرقام والاقتباسات.
+قواعد المصدر: احذف اسم الوكالة/الوسيلة من بداية ونهاية الخبر. الأخبار العامة تُنشر بدون مصدر إعلامي. المعلومات الحصرية تُنسب لمصدرها داخل المتن فقط.
+أعد النص المصاغ فقط بدون شرح أو مقدمة.
+USER:`;
 
 // ════════════════════════════════════════════════════════════════════════════
-// HELPERS
+// CONFIG
 // ════════════════════════════════════════════════════════════════════════════
 
-/** الحد الأدنى لطول النص لتطبيق إعادة الصياغة (بالأحرف) */
-const MIN_CONTENT_LENGTH_FOR_REWRITE = 100;
+/** الحد الأدنى لطول النص لتطبيق إعادة الصياغة */
+const MIN_CONTENT_LENGTH = 100;
 
-/** الحد الأقصى لطول النص لتطبيق إعادة الصياغة (بالأحرف) */
-const MAX_CONTENT_LENGTH_FOR_REWRITE = 15000;
+/** عدد الأخبار اللي تتعالج بالتوازي في الخلفية */
+const BACKGROUND_CONCURRENCY = 3;
 
-/** حجم الـ batch لإعادة الصياغة بالتوازي */
-const REWRITE_BATCH_SIZE = 5;
+/** حد أقصى للأخبار المعالجة بكل دورة (عشان ما تبلّك السيرفر) */
+const MAX_PER_CYCLE = 50;
 
 /**
- * تنظيف النص من الأحرف التي تسبب مشاكل في vLLM
+ * تنظيف النص من الأحرف اللي تسبب مشاكل في vLLM
  */
-function sanitizeForModel(text: string): string {
+function sanitize(text: string): string {
   if (!text) return '';
   return text
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
@@ -100,162 +71,140 @@ class ArticleRewriterService {
   }
 
   /**
-   * إعادة صياغة خبر واحد عبر AI_MODEL المحلي
-   * مع retry تلقائي في حالة timeout
-   *
-   * @param title    عنوان الخبر
-   * @param content  نص الخبر الكامل
-   * @param sourceName اسم المصدر (للسياق)
-   * @returns { title, content } المُعاد صياغتهما، أو الأصليين في حالة خطأ
-   */
-  async rewriteArticle(
-    title: string,
-    content: string,
-    _sourceName?: string
-  ): Promise<{ title: string; content: string }> {
-    // لا نعيد صياغة نصوص قصيرة جداً
-    if (!content || content.trim().length < MIN_CONTENT_LENGTH_FOR_REWRITE) {
-      return { title, content };
-    }
-
-    // محاولتين: الأولى بالنص الكامل، الثانية (retry) بنص مقلّم إذا عمل timeout
-    const maxRetries = 1;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        // تحضير النص — في الـ retry نقلّم أكثر
-        let textToRewrite = content;
-        let maxTokens = 1500;
-
-        if (content.length > MAX_CONTENT_LENGTH_FOR_REWRITE) {
-          textToRewrite = content.substring(0, MAX_CONTENT_LENGTH_FOR_REWRITE);
-        }
-
-        // في الـ retry: نقلّم النص ونقلل tokens عشان يرد أسرع
-        if (attempt > 0) {
-          textToRewrite = textToRewrite.substring(0, Math.min(textToRewrite.length, 3000));
-          maxTokens = 800;
-          console.log(`   🔄 [إعادة صياغة] retry بنص مقلّم (${textToRewrite.length} حرف)...`);
-        }
-
-        // بناء الـ prompt وتنظيفه لتفادي 400 من vLLM
-        const rawPrompt = `${REWRITER_PROMPT}\n${sanitizeForModel(title)}\n${sanitizeForModel(textToRewrite)}/no_think`;
-        const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
-
-        const requestBody = {
-          prompt: cleanPrompt,
-          think: false,
-          max_tokens: maxTokens,
-          temperature: 0.3,
-        };
-
-        const response = await axios.post(this.apiUrl, requestBody, {
-          timeout: 120000, // 120 ثانية
-        });
-
-        const rawData = response.data;
-
-        // فحص خطأ من الـ AI server
-        if (rawData.status === 'failed' || rawData.error) {
-          const errorMsg = rawData.error || 'AI server returned failed status';
-          console.error(`❌ [إعادة صياغة] خطأ من AI server:`, errorMsg);
-          return { title, content };
-        }
-
-        // استخراج النص من الـ response
-        const rewrittenContent: string =
-          rawData.result ||
-          rawData.text ||
-          rawData.output ||
-          rawData.response ||
-          rawData.generated_text ||
-          rawData.content ||
-          (rawData.choices && rawData.choices[0]?.text) ||
-          (rawData.choices && rawData.choices[0]?.message?.content) ||
-          '';
-
-        if (!rewrittenContent || !rewrittenContent.trim()) {
-          console.warn(`⚠️ [إعادة صياغة] الـ AI رجّع نص فارغ — نستخدم الأصلي`);
-          return { title, content };
-        }
-
-        const finalContent = rewrittenContent.trim();
-
-        // فحص أمان: أقصر بكثير أو أطول بكثير → مشبوه
-        if (finalContent.length < content.length * 0.4) {
-          console.warn(`⚠️ [إعادة صياغة] قصير جداً (${finalContent.length} vs ${content.length}) — نستخدم الأصلي`);
-          return { title, content };
-        }
-        if (finalContent.length > content.length * 2) {
-          console.warn(`⚠️ [إعادة صياغة] طويل جداً (${finalContent.length} vs ${content.length}) — نستخدم الأصلي`);
-          return { title, content };
-        }
-
-        console.log(`✅ [إعادة صياغة] تمت (${content.length} → ${finalContent.length} حرف)`);
-        return { title, content: finalContent };
-
-      } catch (error: any) {
-        const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
-
-        if (isTimeout && attempt < maxRetries) {
-          // timeout — نجرب مرة ثانية بنص أقصر
-          console.warn(`⚠️ [إعادة صياغة] timeout — retry بنص مقلّم...`);
-          continue;
-        }
-
-        console.error(`❌ [إعادة صياغة] خطأ:`, error?.message || error);
-        return { title, content };
-      }
-    }
-
-    return { title, content };
-  }
-
-  /**
-   * إعادة صياغة مجموعة أخبار بالتوازي (batches)
-   *
-   * @param articles مصفوفة من الأخبار { title, content, sourceName }
-   * @returns مصفوفة بنفس الترتيب مع النصوص المُعاد صياغتها
-   */
-  async rewriteBatch(
-    articles: Array<{ title: string; content: string; sourceName?: string }>
-  ): Promise<Array<{ title: string; content: string }>> {
-    if (articles.length === 0) return [];
-
-    const results: Array<{ title: string; content: string }> = [];
-
-    for (let i = 0; i < articles.length; i += REWRITE_BATCH_SIZE) {
-      const batch = articles.slice(i, i + REWRITE_BATCH_SIZE);
-
-      const batchResults = await Promise.allSettled(
-        batch.map(a => this.rewriteArticle(a.title, a.content, a.sourceName))
-      );
-
-      for (let j = 0; j < batchResults.length; j++) {
-        const result = batchResults[j];
-        if (result.status === 'fulfilled') {
-          results.push(result.value);
-        } else {
-          // fallback → النص الأصلي
-          results.push({ title: batch[j].title, content: batch[j].content });
-        }
-      }
-
-      // Delay بين الـ batches لتجنب الحمل على السيرفر
-      if (i + REWRITE_BATCH_SIZE < articles.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-
-    return results;
-  }
-
-  /**
    * التحقق مما إذا كانت إعادة الصياغة مفعّلة
-   * يُقرأ من system_settings (rewriter_enabled)
    */
   async isEnabled(): Promise<boolean> {
     return SystemSettingsService.getBoolean('rewriter_enabled', true);
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════
+   * المعالجة بالخلفية — تُستدعى من الـ Scheduler
+   * تأخذ أخبار لم تُعاد صياغتها بعد وتعالجها تدريجياً
+   * ═══════════════════════════════════════════════════════════════════
+   */
+  async processUnrewrittenArticles(): Promise<{ processed: number; failed: number }> {
+    const enabled = await this.isEnabled();
+    if (!enabled) {
+      return { processed: 0, failed: 0 };
+    }
+
+    // جلب أخبار لم تُعاد صياغتها بعد (is_rewritten = false + محتوى كافي)
+    const articles = await query(
+      `SELECT id, title, content FROM raw_data
+       WHERE is_rewritten = false
+         AND LENGTH(content) >= $1
+         AND fetch_status IN ('fetched', 'processed', 'published')
+       ORDER BY fetched_at DESC
+       LIMIT $2`,
+      [MIN_CONTENT_LENGTH, MAX_PER_CYCLE]
+    );
+
+    if (articles.rows.length === 0) {
+      return { processed: 0, failed: 0 };
+    }
+
+    console.log(`\n✍️  [Rewriter Background] معالجة ${articles.rows.length} خبر...`);
+
+    let processed = 0;
+    let failed = 0;
+    let currentIndex = 0;
+
+    const worker = async (): Promise<void> => {
+      while (true) {
+        const idx = currentIndex++;
+        if (idx >= articles.rows.length) break;
+
+        const article = articles.rows[idx];
+        try {
+          const rewritten = await this.rewriteOne(article.title, article.content);
+
+          if (rewritten && rewritten !== article.content) {
+            // تحديث المحتوى + تعليم كمعالج
+            await query(
+              `UPDATE raw_data SET content = $1, is_rewritten = true WHERE id = $2`,
+              [rewritten, article.id]
+            );
+            // تحديث أيضاً في published_items إذا موجود
+            await query(
+              `UPDATE published_items SET content = $1 WHERE raw_data_id = $2`,
+              [rewritten, article.id]
+            );
+            processed++;
+          } else {
+            // لم يتغير أو فشل — نعلمه كمعالج عشان ما يتكرر
+            await query(
+              `UPDATE raw_data SET is_rewritten = true WHERE id = $1`,
+              [article.id]
+            );
+            processed++;
+          }
+        } catch (error: any) {
+          failed++;
+          console.error(`   ❌ خبر ${article.id}:`, error?.message || error);
+          // نعلمه كمعالج حتى لو فشل — عشان ما يتكرر كل دورة
+          try {
+            await query(`UPDATE raw_data SET is_rewritten = true WHERE id = $1`, [article.id]);
+          } catch { /* تجاهل */ }
+        }
+      }
+    };
+
+    // تشغيل workers بالتوازي
+    const workers = Array.from(
+      { length: Math.min(BACKGROUND_CONCURRENCY, articles.rows.length) },
+      () => worker()
+    );
+    await Promise.all(workers);
+
+    console.log(`   ✅ [Rewriter] تمت معالجة ${processed} | فشل ${failed}`);
+    return { processed, failed };
+  }
+
+  /**
+   * إعادة صياغة نص واحد عبر الموديل
+   * يرجع النص المُعاد صياغته أو null إذا فشل
+   */
+  private async rewriteOne(title: string, content: string): Promise<string | null> {
+    // تقليم النص الطويل (أكثر من 4000 حرف → نأخذ أول 4000)
+    const text = content.length > 4000 ? content.substring(0, 4000) : content;
+
+    const cleanPrompt = `${REWRITER_PROMPT} ${sanitize(title)} ${sanitize(text)}/no_think`
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
+    const response = await axios.post(this.apiUrl, {
+      prompt: cleanPrompt,
+      think: false,
+      max_tokens: 1000,
+      temperature: 0.3,
+    }, {
+      timeout: 120000,
+    });
+
+    const data = response.data;
+
+    if (data.status === 'failed' || data.error) {
+      console.warn(`   ⚠️ AI error:`, data.error);
+      return null;
+    }
+
+    const result: string =
+      data.result || data.text || data.output || data.response ||
+      data.generated_text || data.content ||
+      (data.choices?.[0]?.text) || (data.choices?.[0]?.message?.content) || '';
+
+    if (!result.trim()) return null;
+
+    const final = result.trim();
+
+    // فحص أمان
+    if (final.length < content.length * 0.4 || final.length > content.length * 2.5) {
+      return null; // مشبوه — نتجاهل
+    }
+
+    console.log(`   ✅ ${title.substring(0, 40)}... (${content.length}→${final.length})`);
+    return final;
   }
 }
 
