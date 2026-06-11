@@ -12,6 +12,7 @@ import { RawDataService, CategoryService, GeoScopeService } from '../database/da
 import { MediaUnitArticleService } from '../database/media-unit-article.service';
 import { ArticleToSave } from './news-pipeline.service';
 import { mapApiCategoryToLocalId } from './ai-classifier.service';
+import { articleRewriterService } from './article-rewriter.service';
 
 export interface ArticleWithSource extends ArticleToSave {}
 
@@ -57,7 +58,44 @@ class ArticleSaverService {
       }
     }
 
-    // ── المرحلة 2: حفظ DB بـ batches parallel ────────────────────────────
+    // ── المرحلة 2: إعادة صياغة النصوص قبل التخزين ─────────────────────────
+    const rewriterEnabled = await articleRewriterService.isEnabled();
+    if (rewriterEnabled && toSave.length > 0) {
+      console.log(`\n✍️  إعادة صياغة ${toSave.length} خبر قبل التخزين...`);
+      const rewriteStartTime = Date.now();
+
+      const articlesToRewrite = toSave.map(a => ({
+        title: a.title,
+        content: a.full_text || a.description,
+        sourceName: a.sourceName,
+      }));
+
+      const rewrittenResults = await articleRewriterService.rewriteBatch(articlesToRewrite);
+
+      // تحديث النصوص المعاد صياغتها في الـ articles
+      for (let i = 0; i < toSave.length; i++) {
+        const rewritten = rewrittenResults[i];
+        if (rewritten) {
+          // تحديث النص الكامل (full_text) و description
+          if (toSave[i].full_text) {
+            toSave[i].full_text = rewritten.content;
+          } else {
+            toSave[i].description = rewritten.content;
+          }
+          // تحديث العنوان إذا تغيّر (اختياري — الـ rewriter يبقي العنوان الأصلي غالباً)
+          if (rewritten.title && rewritten.title !== toSave[i].title) {
+            toSave[i].title = rewritten.title;
+          }
+        }
+      }
+
+      const rewriteTime = ((Date.now() - rewriteStartTime) / 1000).toFixed(1);
+      console.log(`   ✅ تمت إعادة الصياغة (${rewriteTime}s)\n`);
+    } else if (!rewriterEnabled) {
+      console.log(`   ⏸️  إعادة الصياغة متوقفة (rewriter_enabled = false)`);
+    }
+
+    // ── المرحلة 3: حفظ DB بـ batches parallel ────────────────────────────
     let savedCount = 0;
     let failedCount = 0;
 
