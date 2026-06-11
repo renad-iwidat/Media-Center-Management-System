@@ -466,32 +466,6 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
                               </button>
                             </div>
                           </div>
-
-                          {/* Pin */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-semibold text-[#475569]">التثبيت (Pin):</span>
-                            <div className="flex items-center gap-1">
-                              {[0, 1, 2, 3, 4, 5].map((pinVal) => (
-                                <button
-                                  key={pinVal}
-                                  onClick={() => handleUpdateTargetPin(target.id, pinVal)}
-                                  disabled={saveStatus === "saving"}
-                                  className={`w-7 h-7 rounded-lg text-[10px] font-bold border transition-all ${
-                                    (target.defaultPin ?? target.default_pin ?? 0) === pinVal
-                                      ? pinVal === 0
-                                        ? "bg-[#f1f5f9] border-[#cbd5e1] text-[#1e293b]"
-                                        : "bg-blue-100 border-blue-300 text-blue-700"
-                                      : "bg-[#f8fafc] border-[#e2e8f0] text-[#94a3b8] hover:border-blue-200"
-                                  }`}
-                                >
-                                  {pinVal}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-[9px] text-[#94a3b8] leading-relaxed">
-                            0 = بدون تثبيت · 5 = أول خبر بالصفحة الرئيسية (صورة كبيرة)
-                          </p>
                         </div>
                       )}
                     </div>
