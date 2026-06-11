@@ -129,7 +129,7 @@ const SECTION_PERMISSIONS: Record<SectionId, string | null> = {
   'chat':                null,
   'smart-transcription': 'ai.use',
   // إعدادات
-  'settings':            'settings.manage',
+  'settings':            'news.settings',
 };
 
 /**
@@ -551,7 +551,7 @@ export default function App() {
 
         {/* Settings + User Footer */}
         <div className="border-t border-white/8 p-3 space-y-1 shrink-0">
-          {hasPermission(currentUser, 'settings.manage') && (
+          {hasPermission(currentUser, 'news.settings') && (
             <button
               onClick={() => setActiveSection('settings')}
               title="إعدادات النظام"

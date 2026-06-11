@@ -748,8 +748,8 @@ export function QueueView({ unitId }: { unitId: number | null }) {
                             </td>
                             <td className="py-3 px-4 text-center text-[#64748b] text-xs font-mono">
                               {item.pub_date
-                                ? new Date(item.pub_date).toLocaleDateString('ar-SA')
-                                : new Date(item.created_at).toLocaleDateString('ar-SA')}
+                                ? new Date(item.pub_date).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                : new Date(item.created_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex gap-2 justify-center">

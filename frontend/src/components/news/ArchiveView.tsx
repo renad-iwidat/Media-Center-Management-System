@@ -354,7 +354,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
                   <div className="bg-[#f8fafc] rounded-xl border border-[#e2e8f0] p-3">
                     <p className="text-[10px] text-[#94a3b8] font-semibold mb-1">تاريخ الإضافة</p>
                     <p className="text-sm font-bold text-[#1e293b]">
-                      {new Date(selectedItem.fetched_at).toLocaleDateString('ar-SA')}
+                      {new Date(selectedItem.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
@@ -460,7 +460,7 @@ function ArchiveCard({
                   </span>
                 )}
                 <span className="text-[10px] text-[#94a3b8] font-mono">
-                  {new Date(item.fetched_at).toLocaleDateString('ar-SA')}
+                  {new Date(item.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>

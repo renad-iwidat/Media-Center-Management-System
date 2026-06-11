@@ -333,8 +333,8 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                         </td>
                         <td className="py-3 px-4 text-center text-[#64748b] text-xs font-mono">
                           {item.pub_date
-                            ? new Date(item.pub_date).toLocaleDateString('ar-SA')
-                            : item.published_at ? new Date(item.published_at).toLocaleDateString('ar-SA') : '—'}
+                            ? new Date(item.pub_date).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                            : item.published_at ? new Date(item.published_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <button
@@ -427,7 +427,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                 {[
                   { label: 'التصنيف', value: selectedItem.category_name || '—' },
                   { label: 'النوع', value: selectedItem.flow_type === "automated" ? 'أوتوماتيكي' : 'تحريري' },
-                  { label: 'تاريخ النشر', value: selectedItem.pub_date ? new Date(selectedItem.pub_date).toLocaleDateString('ar-SA') : selectedItem.published_at ? new Date(selectedItem.published_at).toLocaleDateString('ar-SA') : '—' },
+                  { label: 'تاريخ النشر', value: selectedItem.pub_date ? new Date(selectedItem.pub_date).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : selectedItem.published_at ? new Date(selectedItem.published_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—' },
                   { label: 'الوحدة الإعلامية', value: selectedItem.media_unit_name || '—' },
                 ].map(({ label, value }) => (
                   <div key={label} className="bg-[#f8fafc] rounded-xl border border-[#e2e8f0] p-3">

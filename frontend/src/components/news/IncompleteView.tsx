@@ -597,7 +597,7 @@ export function IncompleteView({ unitId }: { unitId: number | null }) {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center text-[#64748b] text-xs font-mono">
-                          {new Date(article.fetched_at).toLocaleDateString('ar-SA')}
+                          {new Date(article.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <div className="flex gap-2 justify-center">
