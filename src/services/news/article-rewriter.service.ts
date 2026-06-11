@@ -37,10 +37,10 @@ USER:`;
 const MIN_CONTENT_LENGTH = 100;
 
 /** عدد الأخبار اللي تتعالج بالتوازي في الخلفية */
-const BACKGROUND_CONCURRENCY = 3;
+const BACKGROUND_CONCURRENCY = 5;
 
-/** حد أقصى للأخبار المعالجة بكل دورة (عشان ما تبلّك السيرفر) */
-const MAX_PER_CYCLE = 50;
+/** حد أقصى للأخبار المعالجة بكل دورة — بدون حد (كل اللي ما اتعالجوا) */
+const MAX_PER_CYCLE = 1000;
 
 /**
  * تنظيف النص من الأحرف اللي تسبب مشاكل في vLLM
@@ -104,11 +104,13 @@ class ArticleRewriterService {
       return { processed: 0, failed: 0 };
     }
 
-    console.log(`\n✍️  [Rewriter Background] معالجة ${articles.rows.length} خبر...`);
+    console.log(`\n✍️  [Rewriter Background] معالجة ${articles.rows.length} خبر (${BACKGROUND_CONCURRENCY} بالتوازي)...`);
 
     let processed = 0;
     let failed = 0;
     let currentIndex = 0;
+    const total = articles.rows.length;
+    const startTime = Date.now();
 
     const worker = async (): Promise<void> => {
       while (true) {
@@ -141,11 +143,18 @@ class ArticleRewriterService {
           }
         } catch (error: any) {
           failed++;
-          console.error(`   ❌ خبر ${article.id}:`, error?.message || error);
           // نعلمه كمعالج حتى لو فشل — عشان ما يتكرر كل دورة
           try {
             await query(`UPDATE raw_data SET is_rewritten = true WHERE id = $1`, [article.id]);
           } catch { /* تجاهل */ }
+        }
+
+        // Progress log كل 10 أخبار
+        const done = processed + failed;
+        if (done % 10 === 0 && done > 0) {
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+          const rate = (done / (Date.now() - startTime) * 60000).toFixed(1);
+          console.log(`   📊 [Rewriter] ${done}/${total} (✅${processed} ❌${failed}) — ${elapsed}s — ${rate} خبر/دقيقة`);
         }
       }
     };
@@ -157,7 +166,7 @@ class ArticleRewriterService {
     );
     await Promise.all(workers);
 
-    console.log(`   ✅ [Rewriter] تمت معالجة ${processed} | فشل ${failed}`);
+    console.log(`   ✅ [Rewriter] انتهى — ✅${processed} | ❌${failed} | ⏱️ ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
     return { processed, failed };
   }
 

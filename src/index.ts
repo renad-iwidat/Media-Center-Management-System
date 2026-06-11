@@ -464,6 +464,9 @@ app.listen(PORT, '0.0.0.0', async () => {
         END IF;
       END $$;
     `);
+    await dbQuery(`
+      CREATE INDEX IF NOT EXISTS idx_raw_data_is_rewritten ON raw_data(is_rewritten) WHERE is_rewritten = false;
+    `);
 
     // جدول editorial_queue
     await dbQuery(`
