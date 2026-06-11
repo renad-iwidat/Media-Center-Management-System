@@ -6,7 +6,7 @@
 import { useState, useEffect } from "react";
 import {
   Clock, Hash, Power, Loader2, CheckCircle2, AlertCircle,
-  Globe, ExternalLink, Zap, RefreshCw, Settings2,
+  Globe, ExternalLink, Zap, RefreshCw, Settings2, History, User,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "../../services/api";
@@ -31,6 +31,9 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
 
   const [autoPublishEnabled, setAutoPublishEnabled] = useState(false);
   const [autoPublishTargets, setAutoPublishTargets] = useState<any[]>([]);
+
+  const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const allEnabled = schedulerEnabled && classifierEnabled && flowEnabled;
 
@@ -62,6 +65,19 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
       }
       setAutoPublishTargets(uniqueTargets);
     }).finally(() => setLoading(false));
+
+    // جلب سجل التغييرات
+    loadAuditLog();
+  };
+
+  const loadAuditLog = () => {
+    setAuditLoading(true);
+    api.getSettingsAuditLog({ limit: 20 })
+      .then((res: any) => {
+        setAuditLog(res.data || []);
+      })
+      .catch(() => setAuditLog([]))
+      .finally(() => setAuditLoading(false));
   };
 
   useEffect(() => { loadData(); }, []);
@@ -477,6 +493,101 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ─── سجل التغييرات (Audit Log) ─── */}
+      <div className="bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#f1f5f9] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History size={14} className="text-[#4A7C9E]" />
+            <p className="text-xs font-bold text-[#64748b] uppercase tracking-widest">سجل تغييرات الإعدادات</p>
+          </div>
+          <button
+            onClick={loadAuditLog}
+            disabled={auditLoading}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#64748b] text-[10px] font-medium transition-all"
+          >
+            <RefreshCw size={11} className={auditLoading ? "animate-spin" : ""} />
+            تحديث
+          </button>
+        </div>
+
+        <div className="p-5">
+          {auditLoading && auditLog.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 size={20} className="text-[#4A7C9E] animate-spin" />
+            </div>
+          ) : auditLog.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <History size={24} className="text-[#cbd5e1]" />
+              <p className="text-xs text-[#94a3b8]">لا توجد تغييرات مسجّلة بعد</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {auditLog.map((entry: any) => {
+                const date = new Date(entry.created_at);
+                const timeStr = date.toLocaleString('ar-PS', {
+                  year: 'numeric', month: 'short', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                });
+
+                // تحديد لون ونوع التغيير
+                const isToggle = entry.action_type === 'toggle';
+                const isEnabled = entry.new_value === 'true';
+                const actionColor = isToggle
+                  ? (isEnabled ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-rose-600 bg-rose-50 border-rose-200')
+                  : 'text-blue-600 bg-blue-50 border-blue-200';
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-start gap-3 p-3 rounded-xl border border-[#f1f5f9] hover:border-[#e2e8f0] transition-colors"
+                  >
+                    {/* أيقونة */}
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${actionColor}`}>
+                      {isToggle ? (
+                        <Power size={12} />
+                      ) : (
+                        <Settings2 size={12} />
+                      )}
+                    </div>
+
+                    {/* التفاصيل */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold text-[#1e293b] truncate">
+                        {entry.description || entry.setting_key}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {entry.old_value && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-500 font-mono">
+                            {entry.old_value.length > 30 ? entry.old_value.substring(0, 30) + '...' : entry.old_value}
+                          </span>
+                        )}
+                        {entry.old_value && <span className="text-[9px] text-[#94a3b8]">←</span>}
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-mono">
+                          {entry.new_value.length > 30 ? entry.new_value.substring(0, 30) + '...' : entry.new_value}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* المستخدم والوقت */}
+                    <div className="text-left shrink-0">
+                      {entry.changed_by_email && (
+                        <div className="flex items-center gap-1 justify-end">
+                          <User size={9} className="text-[#94a3b8]" />
+                          <span className="text-[9px] text-[#64748b] font-medium">
+                            {entry.changed_by_email.split('@')[0]}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-[9px] text-[#94a3b8] mt-0.5">{timeStr}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

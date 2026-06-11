@@ -47,10 +47,21 @@ export class AutoPublishController {
         return;
       }
 
-      await SystemSettingsService.setBoolean('auto_publish_enabled', Boolean(enabled));
+      const userInfo = req.user ? {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role_name: req.user.role_name,
+      } : undefined;
+
+      await SystemSettingsService.setBoolean(
+        'auto_publish_enabled',
+        Boolean(enabled),
+        userInfo,
+        `${enabled ? 'تفعيل' : 'إيقاف'} النشر التلقائي (Master Switch)`
+      );
 
       const status = enabled ? 'مفعّل ✅' : 'متوقف ⏸️';
-      console.log(`🌐 النشر التلقائي (master): ${status}`);
+      console.log(`🌐 النشر التلقائي (master): ${status} — بواسطة: ${userInfo?.email || 'unknown'}`);
 
       res.status(200).json({
         success: true,
@@ -210,7 +221,26 @@ export class AutoPublishController {
         return;
       }
 
-      console.log(`✏️  تم تحديث هدف النشر: ${updated.name} (ID: ${targetId})`);
+      // تسجيل التغيير في audit log
+      const userInfo = req.user ? {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role_name: req.user.role_name,
+      } : undefined;
+
+      const changedFields = Object.keys(updateData).join(', ');
+      await SystemSettingsService.logChange({
+        setting_key: `auto_publish_target_${targetId}`,
+        old_value: null,
+        new_value: JSON.stringify(updateData),
+        action_type: 'update_target',
+        changed_by: userInfo?.user_id ? Number(userInfo.user_id) : null,
+        changed_by_email: userInfo?.email || null,
+        changed_by_role: userInfo?.role_name || null,
+        description: `تحديث هدف النشر "${updated.name}" — الحقول: ${changedFields}`,
+      });
+
+      console.log(`✏️  تم تحديث هدف النشر: ${updated.name} (ID: ${targetId}) — بواسطة: ${userInfo?.email || 'unknown'}`);
 
       res.status(200).json({
         success: true,
@@ -319,8 +349,26 @@ export class AutoPublishController {
         return;
       }
 
+      // تسجيل التغيير
+      const userInfo = req.user ? {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role_name: req.user.role_name,
+      } : undefined;
+
+      await SystemSettingsService.logChange({
+        setting_key: `target_${targetId}_manual_enabled`,
+        old_value: String(!enabled),
+        new_value: String(enabled),
+        action_type: 'toggle',
+        changed_by: userInfo?.user_id ? Number(userInfo.user_id) : null,
+        changed_by_email: userInfo?.email || null,
+        changed_by_role: userInfo?.role_name || null,
+        description: `${enabled ? 'تفعيل' : 'إيقاف'} النشر اليدوي لهدف "${updated.name}"`,
+      });
+
       const status = enabled ? 'مفعّل ✅' : 'متوقف ⏸️';
-      console.log(`✋ النشر اليدوي لـ "${updated.name}": ${status}`);
+      console.log(`✋ النشر اليدوي لـ "${updated.name}": ${status} — بواسطة: ${userInfo?.email || 'unknown'}`);
 
       res.status(200).json({
         success: true,
@@ -358,8 +406,26 @@ export class AutoPublishController {
         return;
       }
 
+      // تسجيل التغيير
+      const userInfo = req.user ? {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role_name: req.user.role_name,
+      } : undefined;
+
+      await SystemSettingsService.logChange({
+        setting_key: `target_${targetId}_auto_enabled`,
+        old_value: String(!enabled),
+        new_value: String(enabled),
+        action_type: 'toggle',
+        changed_by: userInfo?.user_id ? Number(userInfo.user_id) : null,
+        changed_by_email: userInfo?.email || null,
+        changed_by_role: userInfo?.role_name || null,
+        description: `${enabled ? 'تفعيل' : 'إيقاف'} النشر التلقائي لهدف "${updated.name}"`,
+      });
+
       const status = enabled ? 'مفعّل ✅' : 'متوقف ⏸️';
-      console.log(`⚡ النشر التلقائي لـ "${updated.name}": ${status}`);
+      console.log(`⚡ النشر التلقائي لـ "${updated.name}": ${status} — بواسطة: ${userInfo?.email || 'unknown'}`);
 
       res.status(200).json({
         success: true,

@@ -86,7 +86,13 @@ export class SystemSettingsController {
         return;
       }
 
-      const updated = await SystemSettingsService.set(key, String(value));
+      const userInfo = req.user ? {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role_name: req.user.role_name,
+      } : undefined;
+
+      const updated = await SystemSettingsService.set(key, String(value), userInfo);
 
       if (!updated) {
         res.status(404).json({
@@ -96,7 +102,7 @@ export class SystemSettingsController {
         return;
       }
 
-      console.log(`⚙️  تم تحديث الإعداد: ${key} = ${value}`);
+      console.log(`⚙️  تم تحديث الإعداد: ${key} = ${value} — بواسطة: ${userInfo?.email || 'unknown'}`);
 
       // 🔄 إعادة تشغيل الـ Scheduler تلقائياً إذا تغيّر الـ interval
       if (key === 'scheduler_interval_minutes' && schedulerService.getStatus().isRunning) {
@@ -135,6 +141,12 @@ export class SystemSettingsController {
         articles_per_source,
       } = req.body;
 
+      const userInfo = req.user ? {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role_name: req.user.role_name,
+      } : undefined;
+
       const updates: Array<{ key: string; value: string }> = [];
 
       if (scheduler_enabled !== undefined)
@@ -168,10 +180,12 @@ export class SystemSettingsController {
       }
 
       const results = await Promise.all(
-        updates.map(({ key, value }) => SystemSettingsService.set(key, value))
+        updates.map(({ key, value }) =>
+          SystemSettingsService.set(key, value, userInfo, `تحديث جماعي للإعدادات`)
+        )
       );
 
-      console.log(`⚙️  تم تحديث ${updates.length} إعداد دفعة واحدة`);
+      console.log(`⚙️  تم تحديث ${updates.length} إعداد دفعة واحدة — بواسطة: ${userInfo?.email || 'unknown'}`);
 
       // 🔄 إعادة تشغيل الـ Scheduler تلقائياً إذا تغيّر الـ interval
       const intervalChanged = updates.some(u => u.key === 'scheduler_interval_minutes');
@@ -190,6 +204,39 @@ export class SystemSettingsController {
       res.status(500).json({
         success: false,
         message: 'خطأ في تحديث الإعدادات',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * GET /api/settings/audit-log
+   * جلب سجل تغييرات الإعدادات
+   * Query: ?limit=50&offset=0&setting_key=scheduler_enabled
+   */
+  static async getAuditLog(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const setting_key = req.query.setting_key as string | undefined;
+
+      const { entries, total } = await SystemSettingsService.getAuditLog({
+        limit,
+        offset,
+        setting_key,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: entries,
+        total,
+        limit,
+        offset,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'خطأ في جلب سجل التغييرات',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

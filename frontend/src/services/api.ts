@@ -274,6 +274,8 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ value }),
     }),
+  getSettingsAuditLog: (options?: { limit?: number; offset?: number; setting_key?: string }) =>
+    request<any>(`/settings/audit-log?limit=${options?.limit || 50}&offset=${options?.offset || 0}${options?.setting_key ? `&setting_key=${options.setting_key}` : ''}`),
 
   // --- Uploaded Files ---
   getUploadedFiles: () => request<any>("/uploaded-files"),

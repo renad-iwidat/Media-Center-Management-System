@@ -18,6 +18,9 @@ router.get('/', SystemSettingsController.getAll);
 // GET /api/settings/toggles — حالة الـ toggles الثلاثة
 router.get('/toggles', SystemSettingsController.getToggles);
 
+// GET /api/settings/audit-log — سجل تغييرات الإعدادات
+router.get('/audit-log', SystemSettingsController.getAuditLog);
+
 // PATCH /api/settings/toggles/bulk — تحديث أكثر من toggle دفعة واحدة
 router.patch('/toggles/bulk', SystemSettingsController.bulkUpdate);
 
