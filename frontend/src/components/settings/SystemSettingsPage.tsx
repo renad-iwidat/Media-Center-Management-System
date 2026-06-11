@@ -328,9 +328,11 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
             </div>
 
             <div className="p-5 space-y-3">
-              <p className="text-[11px] text-[#94a3b8] leading-relaxed">
-                لكل موقع زران مستقلان — وقف الاثنين = لا يُنشر على الموقع نهائياً
-              </p>
+              <div className="text-[11px] text-[#94a3b8] leading-relaxed space-y-1">
+                <p><strong className="text-[#64748b]">✋ يدوي:</strong> المحرر يقدر ينشر أخبار لهالموقع يدوياً من استديو التحرير</p>
+                <p><strong className="text-[#64748b]">⚡ تلقائي:</strong> السكيدولر ينشر الأخبار الأوتوماتيكية تلقائياً</p>
+                <p><strong className="text-[#64748b]">ينزل مباشر / مسودة:</strong> لما الخبر يوصل للموقع الخارجي — ينزل منشور أم يبقى draft</p>
+              </div>
 
               {autoPublishTargets.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-3">
@@ -436,11 +438,12 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
                       {/* إعدادات النشر على الموقع الخارجي — فقط للمواقع التي تدعم auto_publish و pin (مثل النجاح) */}
                       {anyOn && (target.authType === 'token' || target.auth_type === 'token') && (
                         <div className="mt-3 pt-3 border-t border-[#f1f5f9] space-y-3">
-                          <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">إعدادات النشر الافتراضية</p>
+                          <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">وضع النشر على الموقع الخارجي</p>
+                          <p className="text-[9px] text-[#94a3b8]">هذا الإعداد يحدد هل الخبر ينزل مباشرةً على الموقع أم يُحفظ كمسودة بانتظار مراجعة المحرر هناك</p>
 
                           {/* وضع النشر: مباشر أو مسودة */}
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-semibold text-[#475569]">الوضع عند النشر:</span>
+                            <span className="text-[11px] font-semibold text-[#475569]">عند الإرسال للموقع:</span>
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleUpdateTargetPublishMode(target.id, true)}
@@ -451,7 +454,7 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
                                     : "bg-[#f8fafc] border-[#e2e8f0] text-[#94a3b8] hover:border-emerald-200"
                                 }`}
                               >
-                                نشر مباشر
+                                ينزل مباشر
                               </button>
                               <button
                                 onClick={() => handleUpdateTargetPublishMode(target.id, false)}

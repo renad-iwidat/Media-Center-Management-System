@@ -183,20 +183,27 @@ export class AutoPublishController {
   /**
    * PATCH /api/auto-publish/targets/:id
    * تحديث هدف نشر
-   * Body: { name?, api_url?, api_token?, default_category_id?, is_enabled? }
+   * Body: { name?, api_url?, api_token?, default_category_id?, is_enabled?, default_auto_publish?, default_pin?, category_mappings?, categories_api_url?, publish_mode?, manual_enabled?, auto_enabled? }
    */
   static async updateTarget(req: Request, res: Response): Promise<void> {
     try {
       const targetId = Number(req.params.id);
-      const { name, api_url, api_token, default_category_id, is_enabled } = req.body;
 
-      const updated = await autoPublishService.updateTarget(targetId, {
-        name,
-        api_url,
-        api_token,
-        default_category_id,
-        is_enabled,
-      });
+      // نمرر فقط الحقول الموجودة فعلاً في الـ body — بدون undefined
+      const allowedFields = [
+        'name', 'api_url', 'api_token', 'default_category_id', 'is_enabled',
+        'default_auto_publish', 'default_pin', 'category_mappings',
+        'categories_api_url', 'publish_mode', 'manual_enabled', 'auto_enabled', 'auth_type'
+      ] as const;
+
+      const updateData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+
+      const updated = await autoPublishService.updateTarget(targetId, updateData);
 
       if (!updated) {
         res.status(404).json({ success: false, message: 'الهدف غير موجود أو لا توجد تغييرات' });
