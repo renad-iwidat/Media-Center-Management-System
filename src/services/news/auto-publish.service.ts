@@ -357,6 +357,7 @@ class AutoPublishService {
    */
   async getUnpublishedForTarget(targetId: number, mediaUnitId: number, limit: number = 20): Promise<AutoPublishArticle[]> {
     // التصنيفات الأوتوماتيكية — من categories.flow = 'automated' (مستقر بالـ slug)
+    // ⚠️ فقط الأخبار اللي تمت إعادة صياغتها (is_rewritten = true) — ما بننشر خبر خام
     const result = await query(
       `SELECT rd.id,
               COALESCE(pi.title, rd.title)         AS title,
@@ -371,6 +372,7 @@ class AutoPublishService {
        WHERE pi.media_unit_id = $1
          AND pi.is_active = true
          AND c.flow = 'automated'
+         AND rd.is_rewritten = true
          AND rd.id NOT IN (
            SELECT raw_data_id FROM auto_publish_log 
            WHERE target_id = $2 AND status = 'success'
@@ -426,25 +428,31 @@ class AutoPublishService {
       let tagsString: string;
       const rawTags = article.tags as any;
       if (Array.isArray(rawTags) && rawTags.length > 0) {
-        tagsString = rawTags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0).join(',');
+        // أقصى 8 tags, كلمة واحدة لكل tag
+        tagsString = rawTags
+          .map((t: any) => String(t).trim().split(/\s+/)[0]) // أول كلمة فقط
+          .filter((t: string) => t.length > 1 && t.length < 30)
+          .slice(0, 8)
+          .join(',');
       } else if (typeof rawTags === 'string' && rawTags.trim()) {
         let cleaned = rawTags.trim();
         if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
           cleaned = cleaned.replace(/[\[\]{}"']/g, '');
         }
-        tagsString = cleaned;
+        // أقصى 8 tags
+        tagsString = cleaned.split(/[,،]/).map(t => t.trim().split(/\s+/)[0]).filter(t => t.length > 1).slice(0, 8).join(',');
       } else {
         // لا توجد تاجز → توليد بالذكاء الاصطناعي وتخزينها
         console.log(`   🤖 لا توجد تاجز — جاري التوليد بالـ AI...`);
         const aiTags = await generateAndSaveTags(article.id, article.title, article.content);
         if (aiTags.length > 0) {
-          tagsString = aiTags.join(',');
+          tagsString = aiTags.slice(0, 8).join(',');
         } else {
-          tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
+          tagsString = article.title.replace(/\*/g, '').split(/\s+/).filter(w => w.length > 2).slice(0, 5).join(',');
         }
       }
       if (!tagsString || tagsString.trim().length === 0) {
-        tagsString = article.title.split(/\s+/).slice(0, 5).join(',');
+        tagsString = article.title.replace(/\*/g, '').split(/\s+/).filter(w => w.length > 2).slice(0, 5).join(',');
       }
 
       console.log(`   📡 Sending to: ${target.api_url}`);
@@ -505,8 +513,8 @@ class AutoPublishService {
           );
         };
         
-        addField('title', article.title);
-        addField('content', article.content);
+        addField('title', article.title.replace(/\*/g, '').trim());
+        addField('content', article.content.replace(/\*/g, '').trim());
         addField('category_id', String(externalCategoryId));
         // keywords: حقل واحد بقيمة مفصولة بفواصل — مثل curl: -F "keywords=test,api"
         // ملاحظة: backend النجاح فيه bug يحوّلها list — بانتظار إصلاحهم
