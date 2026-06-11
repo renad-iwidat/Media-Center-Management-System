@@ -1105,7 +1105,7 @@ class AutoPublishService {
     const result = await query(
       `SELECT 
          apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled,
-         apt.default_auto_publish, apt.default_pin,
+         apt.default_auto_publish, apt.default_pin, apt.auth_type,
          mu.name as media_unit_name,
          COUNT(apl.id) FILTER (WHERE apl.status = 'success') as total_published,
          COUNT(apl.id) FILTER (WHERE apl.status = 'failed') as total_failed,
@@ -1114,7 +1114,7 @@ class AutoPublishService {
        FROM auto_publish_targets apt
        JOIN media_units mu ON mu.id = apt.media_unit_id
        LEFT JOIN auto_publish_log apl ON apl.target_id = apt.id
-       GROUP BY apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled, apt.default_auto_publish, apt.default_pin, mu.name
+       GROUP BY apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled, apt.default_auto_publish, apt.default_pin, apt.auth_type, mu.name
        ORDER BY apt.media_unit_id, apt.name`
     );
 
@@ -1129,6 +1129,7 @@ class AutoPublishService {
         autoEnabled: row.auto_enabled ?? false,
         defaultAutoPublish: row.default_auto_publish ?? true,
         defaultPin: row.default_pin ?? 0,
+        authType: row.auth_type || 'bearer',
         totalPublished: parseInt(row.total_published) || 0,
         totalFailed: parseInt(row.total_failed) || 0,
         publishedToday: parseInt(row.published_today) || 0,

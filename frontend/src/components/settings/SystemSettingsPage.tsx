@@ -433,8 +433,8 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
                         {statusText}
                       </p>
 
-                      {/* إعدادات النشر على الموقع الخارجي */}
-                      {anyOn && (
+                      {/* إعدادات النشر على الموقع الخارجي — فقط للمواقع التي تدعم auto_publish و pin (مثل النجاح) */}
+                      {anyOn && (target.authType === 'token' || target.auth_type === 'token') && (
                         <div className="mt-3 pt-3 border-t border-[#f1f5f9] space-y-3">
                           <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">إعدادات النشر الافتراضية</p>
 
