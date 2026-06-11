@@ -69,7 +69,7 @@ const MIN_CONTENT_LENGTH_FOR_REWRITE = 100;
 const MAX_CONTENT_LENGTH_FOR_REWRITE = 15000;
 
 /** حجم الـ batch لإعادة الصياغة بالتوازي */
-const REWRITE_BATCH_SIZE = 3;
+const REWRITE_BATCH_SIZE = 5;
 
 /**
  * تنظيف النص من الأحرف التي تسبب مشاكل في vLLM
@@ -101,6 +101,7 @@ class ArticleRewriterService {
 
   /**
    * إعادة صياغة خبر واحد عبر AI_MODEL المحلي
+   * مع retry تلقائي في حالة timeout
    *
    * @param title    عنوان الخبر
    * @param content  نص الخبر الكامل
@@ -110,95 +111,104 @@ class ArticleRewriterService {
   async rewriteArticle(
     title: string,
     content: string,
-    sourceName?: string
+    _sourceName?: string
   ): Promise<{ title: string; content: string }> {
     // لا نعيد صياغة نصوص قصيرة جداً
     if (!content || content.trim().length < MIN_CONTENT_LENGTH_FOR_REWRITE) {
       return { title, content };
     }
 
-    try {
-      // تحضير النص للإرسال — مع تقليم النصوص الطويلة جداً
-      const textToRewrite = content.length > MAX_CONTENT_LENGTH_FOR_REWRITE
-        ? content.substring(0, MAX_CONTENT_LENGTH_FOR_REWRITE)
-        : content;
+    // محاولتين: الأولى بالنص الكامل، الثانية (retry) بنص مقلّم إذا عمل timeout
+    const maxRetries = 1;
 
-      // بناء الـ prompt وتنظيفه لتفادي 400 من vLLM
-      const rawPrompt = `${REWRITER_PROMPT}\n${sanitizeForModel(title)}\n${sanitizeForModel(textToRewrite)}/no_think`;
-      const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // تحضير النص — في الـ retry نقلّم أكثر
+        let textToRewrite = content;
+        let maxTokens = 1500;
 
-      const requestBody = {
-        prompt: cleanPrompt,
-        think: false,
-        max_tokens: 1500,
-        temperature: 0.3,
-      };
+        if (content.length > MAX_CONTENT_LENGTH_FOR_REWRITE) {
+          textToRewrite = content.substring(0, MAX_CONTENT_LENGTH_FOR_REWRITE);
+        }
 
-      console.log(`✍️  [إعادة صياغة] إرسال للـ AI...`);
+        // في الـ retry: نقلّم النص ونقلل tokens عشان يرد أسرع
+        if (attempt > 0) {
+          textToRewrite = textToRewrite.substring(0, Math.min(textToRewrite.length, 3000));
+          maxTokens = 800;
+          console.log(`   🔄 [إعادة صياغة] retry بنص مقلّم (${textToRewrite.length} حرف)...`);
+        }
 
-      const response = await axios.post(this.apiUrl, requestBody, {
-        timeout: 90000, // 90 ثانية — إعادة الصياغة تأخذ وقت أكثر من التصنيف
-      });
+        // بناء الـ prompt وتنظيفه لتفادي 400 من vLLM
+        const rawPrompt = `${REWRITER_PROMPT}\n${sanitizeForModel(title)}\n${sanitizeForModel(textToRewrite)}/no_think`;
+        const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
-      const rawData = response.data;
+        const requestBody = {
+          prompt: cleanPrompt,
+          think: false,
+          max_tokens: maxTokens,
+          temperature: 0.3,
+        };
 
-      // فحص خطأ من الـ AI server
-      if (rawData.status === 'failed' || rawData.error) {
-        const errorMsg = rawData.error || 'AI server returned failed status';
-        console.error(`❌ [إعادة صياغة] خطأ من AI server:`, errorMsg);
+        const response = await axios.post(this.apiUrl, requestBody, {
+          timeout: 120000, // 120 ثانية
+        });
+
+        const rawData = response.data;
+
+        // فحص خطأ من الـ AI server
+        if (rawData.status === 'failed' || rawData.error) {
+          const errorMsg = rawData.error || 'AI server returned failed status';
+          console.error(`❌ [إعادة صياغة] خطأ من AI server:`, errorMsg);
+          return { title, content };
+        }
+
+        // استخراج النص من الـ response
+        const rewrittenContent: string =
+          rawData.result ||
+          rawData.text ||
+          rawData.output ||
+          rawData.response ||
+          rawData.generated_text ||
+          rawData.content ||
+          (rawData.choices && rawData.choices[0]?.text) ||
+          (rawData.choices && rawData.choices[0]?.message?.content) ||
+          '';
+
+        if (!rewrittenContent || !rewrittenContent.trim()) {
+          console.warn(`⚠️ [إعادة صياغة] الـ AI رجّع نص فارغ — نستخدم الأصلي`);
+          return { title, content };
+        }
+
+        const finalContent = rewrittenContent.trim();
+
+        // فحص أمان: أقصر بكثير أو أطول بكثير → مشبوه
+        if (finalContent.length < content.length * 0.4) {
+          console.warn(`⚠️ [إعادة صياغة] قصير جداً (${finalContent.length} vs ${content.length}) — نستخدم الأصلي`);
+          return { title, content };
+        }
+        if (finalContent.length > content.length * 2) {
+          console.warn(`⚠️ [إعادة صياغة] طويل جداً (${finalContent.length} vs ${content.length}) — نستخدم الأصلي`);
+          return { title, content };
+        }
+
+        console.log(`✅ [إعادة صياغة] تمت (${content.length} → ${finalContent.length} حرف)`);
+        return { title, content: finalContent };
+
+      } catch (error: any) {
+        const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+
+        if (isTimeout && attempt < maxRetries) {
+          // timeout — نجرب مرة ثانية بنص أقصر
+          console.warn(`⚠️ [إعادة صياغة] timeout — retry بنص مقلّم...`);
+          continue;
+        }
+
+        console.error(`❌ [إعادة صياغة] خطأ:`, error?.message || error);
         return { title, content };
       }
-
-      // استخراج النص من الـ response (نفس البنية المستخدمة في content-cleaner)
-      const rewrittenContent: string =
-        rawData.result ||
-        rawData.text ||
-        rawData.output ||
-        rawData.response ||
-        rawData.generated_text ||
-        rawData.content ||
-        (rawData.choices && rawData.choices[0]?.text) ||
-        (rawData.choices && rawData.choices[0]?.message?.content) ||
-        '';
-
-      if (!rewrittenContent || !rewrittenContent.trim()) {
-        console.warn(`⚠️ [إعادة صياغة] الـ AI رجّع نص فارغ — نستخدم الأصلي`);
-        return { title, content };
-      }
-
-      const finalContent = rewrittenContent.trim();
-
-      // فحص أمان: إذا النص المعاد صياغته أقصر بكثير (أقل من 40%) → مشبوه
-      if (finalContent.length < content.length * 0.4) {
-        console.warn(
-          `⚠️ [إعادة صياغة] النص المُعاد صياغته قصير جداً ` +
-          `(${finalContent.length} vs ${content.length}) — نستخدم الأصلي`
-        );
-        return { title, content };
-      }
-
-      // فحص أمان: إذا النص المعاد صياغته أطول بكثير (أكثر من 200%) → مشبوه
-      if (finalContent.length > content.length * 2) {
-        console.warn(
-          `⚠️ [إعادة صياغة] النص المُعاد صياغته طويل جداً ` +
-          `(${finalContent.length} vs ${content.length}) — نستخدم الأصلي`
-        );
-        return { title, content };
-      }
-
-      console.log(
-        `✅ [إعادة صياغة] تمت (${content.length} → ${finalContent.length} حرف)`
-      );
-
-      return { title, content: finalContent };
-    } catch (error: any) {
-      console.error(
-        `❌ [إعادة صياغة] خطأ:`,
-        error?.message || error
-      );
-      // fallback → النص الأصلي دائماً (لا نوقف العملية بسبب خطأ)
-      return { title, content };
     }
+
+    return { title, content };
   }
 
   /**
@@ -233,7 +243,7 @@ class ArticleRewriterService {
 
       // Delay بين الـ batches لتجنب الحمل على السيرفر
       if (i + REWRITE_BATCH_SIZE < articles.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
 

@@ -2,7 +2,6 @@ import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
 import { MediaUnitArticleService } from '../database/media-unit-article.service';
-import { contentCleanerService } from './content-cleaner.service';
 import { aiClassifierService } from './ai-classifier.service';
 
 /**
@@ -69,7 +68,7 @@ export function getFlowByCategory(_categoryId: number | null): 'automated' | 'ed
 const USER_INPUT_SOURCE_TYPE_IDS = new Set([6, 7, 8]);
 
 /** حجم الـ batch للـ AI classifier */
-const AI_BATCH_SIZE = 3;
+const AI_BATCH_SIZE = 10;
 
 interface RawDataItem {
   id: number;
@@ -269,8 +268,7 @@ export class FlowRouterService {
       // ══════════════════════════════════════════════════════════════════════
       console.log(`\n🔀 بدء توجيه ${rawArticles.length} خبر...`);
 
-      // تجميع الأخبار الأوتوماتيكية للتنظيف بالتوازي
-      const automatedToClean: RawDataItem[] = [];
+      // تجميع الأخبار الأوتوماتيكية للتوزيع
       const automatedQueuePending: Array<{ article: RawDataItem; mediaUnits: MediaUnit[] }> = [];
 
       for (const article of rawArticles) {
@@ -343,11 +341,8 @@ export class FlowRouterService {
             flowType = 'automated';
           }
 
-          // ── ج. تنظيف النص — فقط للأوتوماتيك ───────────────────────────
-          if (flowType === 'automated' && isComplete) {
-            // التنظيف يتم لاحقاً بالتوازي (batch) بعد تجميع كل الأخبار الأوتوماتيكية
-            automatedToClean.push(article);
-          }
+          // ── ج. الأوتوماتيك لا يحتاج تنظيف إضافي ─────────────────────
+          // (إعادة الصياغة تمت بمرحلة الحفظ — article-saver)
 
           // ── د. التوزيع على media_units المستهدفة عبر editorial_queue ──────────
           if (!isComplete) {
@@ -381,31 +376,12 @@ export class FlowRouterService {
       }
 
       // ══════════════════════════════════════════════════════════════════════
-      // الخطوة 4: تنظيف الأخبار الأوتوماتيكية بالتوازي ثم توزيعها
+      // الخطوة 4: توزيع ونشر الأخبار الأوتوماتيكية
+      // (النص أصلاً منظّف ومُعاد صياغته من مرحلة الحفظ — article-saver)
       // ══════════════════════════════════════════════════════════════════════
-      if (automatedToClean.length > 0) {
-        console.log(`\n🧹 تنظيف ${automatedToClean.length} خبر أوتوماتيكي بالتوازي...`);
+      if (automatedQueuePending.length > 0) {
+        console.log(`\n⚡ توزيع ونشر ${automatedQueuePending.length} خبر أوتوماتيكي...`);
 
-        // تنظيف بالتوازي — كل الأخبار سوا
-        const cleanResults = await Promise.allSettled(
-          automatedToClean.map(article =>
-            contentCleanerService.cleanContent(article.content, article.id)
-          )
-        );
-
-        // تحديث المحتوى المنظف في الذاكرة والداتابيس
-        for (let i = 0; i < automatedToClean.length; i++) {
-          const article = automatedToClean[i];
-          const cleanResult = cleanResults[i];
-          if (cleanResult.status === 'fulfilled' && cleanResult.value !== article.content) {
-            await query(`UPDATE raw_data SET content = $1 WHERE id = $2`, [cleanResult.value, article.id]);
-            article.content = cleanResult.value;
-          }
-        }
-
-        console.log(`   ✅ انتهى التنظيف`);
-
-        // التوزيع والنشر بعد التنظيف
         for (const { article, mediaUnits: units } of automatedQueuePending) {
           try {
             const queueIds = await this.distributeToQueue(article, units, 'pending');
@@ -606,8 +582,7 @@ export class FlowRouterService {
 
       // Delay بين الـ batches
       if (batchNum < totalBatches) {
-        console.log(`   ⏸️  انتظار 1 ثانية قبل الـ batch التالي...`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
   }

@@ -6,9 +6,12 @@
  * التصنيف والتنظيف والتوجيه = مسؤولية FlowRouterService
  * 
  * يدعم المقالات القادمة من NewsDesk API (مصنفة مسبقاً بالـ AI)
+ *
+ * الأسلوب: Pipeline متوازي — كل خبر يُفحص + يُعاد صياغته + يُحفظ مباشرة
+ * بدون انتظار بقية الأخبار (streaming approach)
  */
 
-import { RawDataService, CategoryService, GeoScopeService } from '../database/database.service';
+import { RawDataService, GeoScopeService } from '../database/database.service';
 import { MediaUnitArticleService } from '../database/media-unit-article.service';
 import { ArticleToSave } from './news-pipeline.service';
 import { mapApiCategoryToLocalId } from './ai-classifier.service';
@@ -20,6 +23,8 @@ export interface SaveResult {
   totalArticles: number;
   savedCount: number;
   failedCount: number;
+  rewrittenCount: number;
+  skippedCount: number;
 }
 
 /** تحويل pubDate string إلى Date أو null */
@@ -29,166 +34,169 @@ function parsePubDate(pubDate: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-/** حجم الـ batch لحفظ الداتابيس */
-const DB_SAVE_BATCH = 10;
+/**
+ * عدد الأخبار اللي تتعالج بالتوازي
+ * كل خبر = فحص تكرار + إعادة صياغة (AI) + حفظ DB
+ * 5 بالتوازي = توازن بين السرعة وقدرة سيرفر الموديل
+ */
+const CONCURRENT_WORKERS = 5;
 
 class ArticleSaverService {
   /**
-   * حفظ مجموعة من الأخبار في الداتابيس
-   * - فحص التكرار بالعنوان/المحتوى
-   * - حفظ بستيتوس 'fetched' مع category_id (من AI أو الافتراضي)
-   * - المقالات من NewsDesk API تأتي مصنفة مسبقاً — نحاول ربط التصنيف
+   * حفظ مجموعة من الأخبار في الداتابيس — Pipeline متوازي
+   *
+   * كل خبر يمر بالمراحل التالية بشكل مستقل:
+   * 1. فحص التكرار
+   * 2. إعادة الصياغة (AI) — إذا مفعّلة
+   * 3. حفظ في DB
+   *
+   * 10 أخبار تتعالج بالتوازي — كل خبر يخلص وينحفظ فوراً
    */
   async saveArticles(articles: ArticleToSave[]): Promise<SaveResult> {
     if (articles.length === 0) {
-      return { totalArticles: 0, savedCount: 0, failedCount: 0 };
+      return { totalArticles: 0, savedCount: 0, failedCount: 0, rewrittenCount: 0, skippedCount: 0 };
     }
 
-    console.log(`\n💾 بدء حفظ ${articles.length} خبر...`);
+    console.log(`\n💾 بدء حفظ ${articles.length} خبر (pipeline متوازي — ${CONCURRENT_WORKERS} بالتوازي)...`);
     const startTime = Date.now();
 
-    // ── المرحلة 1: فحص التكرار بالعنوان/المحتوى (similarity) ─────────────
-    const toSave: ArticleToSave[] = [];
-    for (const article of articles) {
-      const similar = await RawDataService.existsBySimilarity(article.title, article.description);
-      if (similar) {
-        console.log(`   ⏭️  تخطي (مكرر): ${article.title.substring(0, 50)}`);
-      } else {
-        toSave.push(article);
-      }
-    }
-
-    // ── المرحلة 2: إعادة صياغة النصوص قبل التخزين ─────────────────────────
     const rewriterEnabled = await articleRewriterService.isEnabled();
-    if (rewriterEnabled && toSave.length > 0) {
-      console.log(`\n✍️  إعادة صياغة ${toSave.length} خبر قبل التخزين...`);
-      const rewriteStartTime = Date.now();
-
-      const articlesToRewrite = toSave.map(a => ({
-        title: a.title,
-        content: a.full_text || a.description,
-        sourceName: a.sourceName,
-      }));
-
-      const rewrittenResults = await articleRewriterService.rewriteBatch(articlesToRewrite);
-
-      // تحديث النصوص المعاد صياغتها في الـ articles
-      for (let i = 0; i < toSave.length; i++) {
-        const rewritten = rewrittenResults[i];
-        if (rewritten) {
-          // تحديث النص الكامل (full_text) و description
-          if (toSave[i].full_text) {
-            toSave[i].full_text = rewritten.content;
-          } else {
-            toSave[i].description = rewritten.content;
-          }
-          // تحديث العنوان إذا تغيّر (اختياري — الـ rewriter يبقي العنوان الأصلي غالباً)
-          if (rewritten.title && rewritten.title !== toSave[i].title) {
-            toSave[i].title = rewritten.title;
-          }
-        }
-      }
-
-      const rewriteTime = ((Date.now() - rewriteStartTime) / 1000).toFixed(1);
-      console.log(`   ✅ تمت إعادة الصياغة (${rewriteTime}s)\n`);
-    } else if (!rewriterEnabled) {
-      console.log(`   ⏸️  إعادة الصياغة متوقفة (rewriter_enabled = false)`);
+    if (rewriterEnabled) {
+      console.log(`   ✍️  إعادة الصياغة مفعّلة — كل خبر يُعاد صياغته ويُحفظ مباشرة`);
+    } else {
+      console.log(`   ⏸️  إعادة الصياغة متوقفة — حفظ مباشر بدون معالجة`);
     }
 
-    // ── المرحلة 3: حفظ DB بـ batches parallel ────────────────────────────
+    // العدادات
     let savedCount = 0;
     let failedCount = 0;
+    let rewrittenCount = 0;
+    let skippedCount = 0;
+    let processedCount = 0;
 
-    console.log(`   💾 حفظ ${toSave.length} خبر في DB (batches من ${DB_SAVE_BATCH})...`);
+    /**
+     * معالجة خبر واحد: فحص تكرار → إعادة صياغة → حفظ
+     */
+    const processOneArticle = async (article: ArticleToSave): Promise<void> => {
+      try {
+        // ── 1. فحص التكرار ──────────────────────────────────────────
+        const similar = await RawDataService.existsBySimilarity(article.title, article.description);
+        if (similar) {
+          skippedCount++;
+          return;
+        }
 
-    for (let i = 0; i < toSave.length; i += DB_SAVE_BATCH) {
-      const batch = toSave.slice(i, i + DB_SAVE_BATCH);
+        // ── 2. إعادة الصياغة (إذا مفعّلة) ──────────────────────────
+        if (rewriterEnabled) {
+          const contentToRewrite = article.full_text || article.description;
+          const rewritten = await articleRewriterService.rewriteArticle(
+            article.title,
+            contentToRewrite,
+            article.sourceName
+          );
 
-      const results = await Promise.allSettled(
-        batch.map(async (article) => {
-          // ربط التصنيف: أولاً من الـ API (ai_category_slug) → ثانياً default
-          let categoryId: number | null = null;
-          
-          // أولاً: بحث بالـ slug من الـ API بجدول categories
-          if (article.ai_category_slug) {
-            categoryId = await mapApiCategoryToLocalId(article.ai_category_slug);
+          // تحديث النص
+          if (rewritten.content !== contentToRewrite) {
+            if (article.full_text) {
+              article.full_text = rewritten.content;
+            } else {
+              article.description = rewritten.content;
+            }
+            rewrittenCount++;
           }
-          
-          // ثانياً: fallback للـ default_category_id من المصدر
-          if (!categoryId && article.source.default_category_id) {
-            categoryId = article.source.default_category_id;
-          }
+        }
 
-          // categoryId يبقى null إذا ما لقى تطابق → FlowRouter بيصنفه بالـ AI المحلي لاحقاً
-          // بس الـ category_slug محفوظ بالداتابيس للمرجعية
+        // ── 3. حفظ في DB ────────────────────────────────────────────
+        let categoryId: number | null = null;
+        if (article.ai_category_slug) {
+          categoryId = await mapApiCategoryToLocalId(article.ai_category_slug);
+        }
+        if (!categoryId && article.source.default_category_id) {
+          categoryId = article.source.default_category_id;
+        }
 
-          // ربط النطاق الجغرافي
-          let geoScopeId: number | null = null;
-          if (article.geo_scope_slug) {
-            try {
-              const geoScope = await GeoScopeService.getBySlug(article.geo_scope_slug);
-              if (geoScope) geoScopeId = geoScope.id;
-            } catch { /* تجاهل */ }
-          }
-
-          const created = await RawDataService.create({
-            source_id: article.source.id, // مربوط بجدول sources (تم ربطه بالـ pipeline)
-            source_type_id: article.source.source_type_id,
-            category_id: categoryId,
-            geo_scope_id: geoScopeId,
-            url: article.link,
-            title: article.title,
-            content: article.full_text || article.description, // النص الكامل (أو الملخص إذا ما في نص كامل)
-            image_url: article.image_url || '',
-            tags: article.tags || [],
-            fetch_status: 'fetched',
-            pub_date: parsePubDate(article.pubDate),
-            // ── الحقول الجديدة ──────────────────────────────
-            summary: article.summary || article.description || '',
-            authors: article.authors || '',
-            language: article.language || 'ar',
-            source_slug: article.source_slug || '',
-            geo_scope_slug: article.geo_scope_slug || '',
-            ai_confidence: article.ai_confidence || undefined,
-            newsdesk_article_id: article.newsdesk_article_id || undefined,
-            category_slug: article.ai_category_slug || '',
-            media_unit_id: article.media_unit_id || undefined,
-          });
-
-          // ── إنشاء النسخ (projections) للوحدات الإعلامية ──────────────
-          // الخبر الأصلي اتخزن مرة وحدة في raw_data؛ هلق منعمل نسخة لكل
-          // وحدة مرتبطة بالمصدر (أو الوحدة اللي سحبت الخبر) — بدون تكرار المحتوى.
+        let geoScopeId: number | null = null;
+        if (article.geo_scope_slug) {
           try {
-            await MediaUnitArticleService.fanOut({
-              rawDataId: created.id,
-              sourceId: article.source.id || null,
-              newsdeskArticleId: article.newsdesk_article_id || null,
-              categoryId: categoryId,
-              geoScopeId: geoScopeId,
-              aiConfidence: article.ai_confidence || null,
-              explicitMediaUnitIds: article.media_unit_id ? [article.media_unit_id] : [],
-            });
-          } catch (fanErr) {
-            console.warn(`   ⚠️ فشل إنشاء نسخ الوحدات للخبر ${created.id}:`, fanErr instanceof Error ? fanErr.message : fanErr);
-          }
+            const geoScope = await GeoScopeService.getBySlug(article.geo_scope_slug);
+            if (geoScope) geoScopeId = geoScope.id;
+          } catch { /* تجاهل */ }
+        }
 
-          return created;
-        })
-      );
+        const created = await RawDataService.create({
+          source_id: article.source.id,
+          source_type_id: article.source.source_type_id,
+          category_id: categoryId,
+          geo_scope_id: geoScopeId,
+          url: article.link,
+          title: article.title,
+          content: article.full_text || article.description,
+          image_url: article.image_url || '',
+          tags: article.tags || [],
+          fetch_status: 'fetched',
+          pub_date: parsePubDate(article.pubDate),
+          summary: article.summary || article.description || '',
+          authors: article.authors || '',
+          language: article.language || 'ar',
+          source_slug: article.source_slug || '',
+          geo_scope_slug: article.geo_scope_slug || '',
+          ai_confidence: article.ai_confidence || undefined,
+          newsdesk_article_id: article.newsdesk_article_id || undefined,
+          category_slug: article.ai_category_slug || '',
+          media_unit_id: article.media_unit_id || undefined,
+        });
 
-      for (const r of results) {
-        if (r.status === 'fulfilled') savedCount++;
-        else {
-          failedCount++;
-          console.log(`   ❌ خطأ حفظ: ${r.reason?.message || r.reason}`);
+        // ── 4. إنشاء النسخ (projections) للوحدات الإعلامية ──────────
+        try {
+          await MediaUnitArticleService.fanOut({
+            rawDataId: created.id,
+            sourceId: article.source.id || null,
+            newsdeskArticleId: article.newsdesk_article_id || null,
+            categoryId: categoryId,
+            geoScopeId: geoScopeId,
+            aiConfidence: article.ai_confidence || null,
+            explicitMediaUnitIds: article.media_unit_id ? [article.media_unit_id] : [],
+          });
+        } catch (fanErr) {
+          console.warn(`   ⚠️ فشل إنشاء نسخ الوحدات للخبر ${created.id}:`, fanErr instanceof Error ? fanErr.message : fanErr);
+        }
+
+        savedCount++;
+      } catch (error: any) {
+        failedCount++;
+        console.error(`   ❌ خطأ: ${error?.message || error}`);
+      } finally {
+        processedCount++;
+        // Progress log كل 20 خبر
+        if (processedCount % 20 === 0) {
+          console.log(`   📊 ${processedCount}/${articles.length} — ✅${savedCount} | ✍️${rewrittenCount} | ⏭️${skippedCount} | ❌${failedCount}`);
         }
       }
-    }
+    };
 
+    // ══════════════════════════════════════════════════════════════════════
+    // تشغيل Pipeline متوازي — 10 workers بالتوازي
+    // كل worker يأخذ الخبر التالي من القائمة ويعالجه كاملاً
+    // ══════════════════════════════════════════════════════════════════════
+    let currentIndex = 0;
+
+    const worker = async (): Promise<void> => {
+      while (true) {
+        const index = currentIndex++;
+        if (index >= articles.length) break;
+        await processOneArticle(articles[index]);
+      }
+    };
+
+    // إطلاق الـ workers
+    const workers = Array.from({ length: Math.min(CONCURRENT_WORKERS, articles.length) }, () => worker());
+    await Promise.all(workers);
+
+    // ── ملخص ─────────────────────────────────────────────────────────────
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`   ✅ تم حفظ ${savedCount} | ❌ فشل ${failedCount} | ⏱️  ${totalTime}s\n`);
+    console.log(`\n   ✅ النتيجة: حفظ ${savedCount} | ✍️ صياغة ${rewrittenCount} | ⏭️ تكرار ${skippedCount} | ❌ فشل ${failedCount} | ⏱️ ${totalTime}s\n`);
 
-    return { totalArticles: articles.length, savedCount, failedCount };
+    return { totalArticles: articles.length, savedCount, failedCount, rewrittenCount, skippedCount };
   }
 }
 
