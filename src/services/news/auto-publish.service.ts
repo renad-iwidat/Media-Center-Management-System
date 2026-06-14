@@ -496,17 +496,9 @@ class AutoPublishService {
       // نوع الموقع للحقول الإضافية
       const supportsAutoPublish = target.auth_type === 'token' || target.api_url.includes('nn.najah.edu');
 
-      // ── تنظيف المحتوى مرة واحدة قبل الإرسال ─────────────────────────
-      let cleanedContent = article.content;
-      try {
-        cleanedContent = await contentCleanerService.cleanContent(article.content, article.id);
-      } catch (cleanErr) {
-        console.log(`   ⚠️ AI cleaning failed — applying regex fallback: ${cleanErr instanceof Error ? cleanErr.message : 'unknown'}`);
-        // Fallback: تنظيف يدوي بدون AI
-        cleanedContent = this.regexCleanContent(article.content);
-      }
-      // تنظيف نهائي
-      cleanedContent = cleanedContent.replace(/\*/g, '').trim();
+      // ── تنظيف نهائي للنشر الخارجي (إزالة إيموجي/نجمات — فوري بدون AI) ───
+      // ⚠️ التنظيف الأساسي (AI) يتم بمرحلة الـ editorial flow قبل وصول الخبر هنا
+      let cleanedContent = this.sanitizeForExternal(article.content);
 
       let response!: Response;
       let responseBody = '';
@@ -527,7 +519,7 @@ class AutoPublishService {
           );
         };
         
-        addField('title', article.title.replace(/\*/g, '').trim());
+        addField('title', this.sanitizeForExternal(article.title));
         addField('content', cleanedContent);
         addField('category_id', String(externalCategoryId));
         // keywords: حقل واحد بقيمة مفصولة بفواصل — مثل curl: -F "keywords=test,api"
@@ -1150,6 +1142,43 @@ class AutoPublishService {
         lastPublishedAt: row.last_published_at || null,
       })),
     };
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // تنظيف للنشر الخارجي (إزالة إيموجي + أحرف خاصة)
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * تنظيف النص من الإيموجي والأحرف الخاصة التي لا يقبلها الموقع الخارجي
+   * يُطبق على العنوان والمحتوى قبل الإرسال
+   */
+  private sanitizeForExternal(text: string): string {
+    if (!text) return text;
+
+    let cleaned = text;
+
+    // إزالة الإيموجي (Unicode ranges)
+    cleaned = cleaned.replace(/[\u{1F600}-\u{1F64F}]/gu, ''); // Emoticons
+    cleaned = cleaned.replace(/[\u{1F300}-\u{1F5FF}]/gu, ''); // Misc Symbols
+    cleaned = cleaned.replace(/[\u{1F680}-\u{1F6FF}]/gu, ''); // Transport
+    cleaned = cleaned.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, ''); // Flags
+    cleaned = cleaned.replace(/[\u{2600}-\u{26FF}]/gu, '');   // Misc symbols
+    cleaned = cleaned.replace(/[\u{2700}-\u{27BF}]/gu, '');   // Dingbats
+    cleaned = cleaned.replace(/[\u{FE00}-\u{FE0F}]/gu, '');   // Variation Selectors
+    cleaned = cleaned.replace(/[\u{1F900}-\u{1F9FF}]/gu, ''); // Supplemental
+    cleaned = cleaned.replace(/[\u{1FA00}-\u{1FA6F}]/gu, ''); // Chess symbols
+    cleaned = cleaned.replace(/[\u{1FA70}-\u{1FAFF}]/gu, ''); // Symbols Extended
+    cleaned = cleaned.replace(/[\u{200D}]/gu, '');             // Zero Width Joiner
+    cleaned = cleaned.replace(/[\u{FE0F}]/gu, '');             // Presentation selector
+
+    // إزالة النجمات والأقواس الخاصة
+    cleaned = cleaned.replace(/\*/g, '');
+    cleaned = cleaned.replace(/[""'']/g, '"'); // توحيد علامات التنصيص
+
+    // إزالة المسافات الزائدة
+    cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+
+    return cleaned;
   }
 
   // ════════════════════════════════════════════════════════════════════════════
