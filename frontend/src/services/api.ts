@@ -713,7 +713,7 @@ export const api = {
     }),
 
   // --- Archive (الأرشيف — المقالات المنشورة بنجاح) ---
-  getArchive: (options?: { platform?: string; limit?: number; offset?: number }) =>
+  getArchive: (options?: { platform?: string; media_unit_id?: number; limit?: number; offset?: number }) =>
     request<any>(`/publishing/archive${options ? `?${new URLSearchParams(
       Object.entries(options).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
     ).toString()}` : ""}`),
@@ -725,8 +725,8 @@ export const api = {
     request<any>(`/publishing/logs/${articleId}`),
   getPublishingStats: () =>
     request<any>("/publishing/stats"),
-  getPlatformConfigs: () =>
-    request<any>("/publishing/configs"),
+  getPlatformConfigs: (mediaUnitId?: number) =>
+    request<any>(`/publishing/configs${mediaUnitId ? `?media_unit_id=${mediaUnitId}` : ""}`),
   publishToPlatform: (articleId: number, platformConfigId: number, customContent?: string) =>
     request<any>("/publishing/publish", {
       method: "POST",

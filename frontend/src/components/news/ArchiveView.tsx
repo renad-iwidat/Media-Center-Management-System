@@ -84,6 +84,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
     const offset = (currentPage - 1) * itemsPerPage;
     api.getArchive({
       platform: selectedPlatform || undefined,
+      media_unit_id: unitId || undefined,
       limit: itemsPerPage,
       offset,
     })
@@ -96,7 +97,7 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
         setTotal(0);
       })
       .finally(() => setLoading(false));
-  }, [currentPage, selectedPlatform]);
+  }, [currentPage, selectedPlatform, unitId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

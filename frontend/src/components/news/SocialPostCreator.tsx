@@ -15,13 +15,14 @@ interface SocialPostCreatorProps {
     content: string;
     image_url?: string | null;
   };
+  unitId?: number | null;
   onClose: () => void;
   onSuccess?: (url: string) => void;
 }
 
 type Step = "edit" | "processing" | "preview" | "publishing" | "done";
 
-export function SocialPostCreator({ article, onClose, onSuccess }: SocialPostCreatorProps) {
+export function SocialPostCreator({ article, unitId, onClose, onSuccess }: SocialPostCreatorProps) {
   const [step, setStep] = useState<Step>("edit");
   const [postText, setPostText] = useState("");
   const [imageUrl, setImageUrl] = useState(article.image_url || "");
@@ -42,7 +43,7 @@ export function SocialPostCreator({ article, onClose, onSuccess }: SocialPostCre
   // تحميل إعدادات المنصات
   useEffect(() => {
     setLoadingConfigs(true);
-    api.getPlatformConfigs()
+    api.getPlatformConfigs(unitId || undefined)
       .then((res) => {
         const socialConfigs = (res.data || res.configs || []).filter(
           (c: any) => c.is_enabled && c.platform !== "external_website"
@@ -51,7 +52,7 @@ export function SocialPostCreator({ article, onClose, onSuccess }: SocialPostCre
       })
       .catch(() => setConfigs([]))
       .finally(() => setLoadingConfigs(false));
-  }, []);
+  }, [unitId]);
 
   // تنظيف الـ interval عند إغلاق المكون
   useEffect(() => {

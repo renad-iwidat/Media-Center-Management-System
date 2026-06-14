@@ -457,15 +457,16 @@ export class PublishingController {
   /**
    * GET /api/publishing/archive
    * المقالات المؤرشفة (المنشورة بنجاح)
-   * Query: ?platform=facebook&limit=50&offset=0
+   * Query: ?platform=facebook&media_unit_id=1&limit=50&offset=0
    */
   static async getArchive(req: Request, res: Response): Promise<void> {
     try {
       const platform = req.query.platform as PublishingPlatform | undefined;
+      const media_unit_id = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
-      const result = await publishingService.getArchivedArticles({ platform, limit, offset });
+      const result = await publishingService.getArchivedArticles({ platform, media_unit_id, limit, offset });
 
       res.status(200).json({
         success: true,

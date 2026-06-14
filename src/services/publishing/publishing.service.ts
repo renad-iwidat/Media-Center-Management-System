@@ -622,10 +622,11 @@ class PublishingService {
 
   async getArchivedArticles(options: {
     platform?: PublishingPlatform;
+    media_unit_id?: number;
     limit?: number;
     offset?: number;
   } = {}): Promise<{ articles: any[]; total: number }> {
-    const { platform, limit = 50, offset = 0 } = options;
+    const { platform, media_unit_id, limit = 50, offset = 0 } = options;
 
     // الأرشيف = كل مقال منشور بنجاح (أوتوماتيكي أو يدوي)
     // المصادر:
@@ -634,12 +635,27 @@ class PublishingService {
     // 3. أو موجود في publishing_status بحالة success
 
     let platformFilter = '';
+    let unitFilter = '';
     const params: any[] = [];
     let idx = 1;
 
     if (platform) {
       platformFilter = `AND (ps.platform = $${idx} OR ($${idx} = 'external_website' AND apl.id IS NOT NULL))`;
       params.push(platform);
+      idx++;
+    }
+
+    if (media_unit_id) {
+      unitFilter = `AND (
+        rd.id IN (SELECT raw_data_id FROM published_items WHERE media_unit_id = $${idx})
+        OR rd.id IN (SELECT raw_data_id FROM editorial_queue WHERE media_unit_id = $${idx})
+        OR rd.id IN (
+          SELECT apl2.raw_data_id FROM auto_publish_log apl2
+          JOIN auto_publish_targets apt2 ON apt2.id = apl2.target_id
+          WHERE apt2.media_unit_id = $${idx} AND apl2.status = 'success'
+        )
+      )`;
+      params.push(media_unit_id);
       idx++;
     }
 
@@ -652,7 +668,7 @@ class PublishingService {
          rd.publish_status IN ('archived', 'published_external', 'published_social')
          OR ps.id IS NOT NULL
          OR apl.id IS NOT NULL
-       ) ${platformFilter}`,
+       ) ${platformFilter} ${unitFilter}`,
       params
     );
 
@@ -702,7 +718,7 @@ class PublishingService {
          rd.publish_status IN ('archived', 'published_external', 'published_social')
          OR ps.id IS NOT NULL
          OR apl.id IS NOT NULL
-       ) ${platformFilter}
+       ) ${platformFilter} ${unitFilter}
        ORDER BY rd.id, rd.fetched_at DESC
        LIMIT $${idx++} OFFSET $${idx}`,
       dataParams

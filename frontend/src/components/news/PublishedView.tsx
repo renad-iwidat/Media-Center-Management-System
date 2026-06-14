@@ -71,7 +71,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
     setExternalCategories([]);
     setPublishConfig({ category_id: undefined, auto_publish: true, pin: 0 });
     try {
-      const res = await api.getAutoPublishTargets();
+      const res = await api.getAutoPublishTargets(unitId || undefined);
       // جلب أسماء المواقع المنشور عليها فعلاً من published_platforms
       const publishedTargetNames: string[] = (item.published_platforms || [])
         .filter((p: any) => p.platform === 'external_website')
@@ -861,6 +861,7 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                     content: selectedItem.content || "",
                     image_url: selectedItem.image_url || null,
                   }}
+                  unitId={unitId}
                   onClose={() => setShowSocialPostCreator(false)}
                   onSuccess={(url) => {
                     setLastPublishedUrl(url);
