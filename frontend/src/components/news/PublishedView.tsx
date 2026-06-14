@@ -91,9 +91,17 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
   // عند اختيار موقع — جلب تصنيفاته
   const handleSelectTarget = async (target: any) => {
     setPublishConfigTarget(target);
-    // إعادة تعيين الإعدادات بالقيم الافتراضية من الداتابيس
+
+    // حساب التصنيف التلقائي من الـ mapping إذا موجود
+    let autoMappedCategoryId: number | undefined = undefined;
+    if (target.category_mappings && selectedPublishItem?.category_id) {
+      const mapped = target.category_mappings[String(selectedPublishItem.category_id)];
+      if (mapped) autoMappedCategoryId = mapped;
+    }
+
+    // إعادة تعيين الإعدادات بالقيم الافتراضية
     setPublishConfig({
-      category_id: target.default_category_id || undefined,
+      category_id: autoMappedCategoryId || target.default_category_id || undefined,
       auto_publish: target.default_auto_publish ?? true,
       pin: target.default_pin ?? 0,
     });
@@ -735,19 +743,34 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                                 ))}
                             </select>
                           ) : (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min={1}
-                                value={publishConfig.category_id ?? ''}
-                                onChange={(e) => setPublishConfig(prev => ({
-                                  ...prev,
-                                  category_id: e.target.value ? Number(e.target.value) : undefined
-                                }))}
-                                placeholder={`افتراضي: ${publishConfigTarget.default_category_id}`}
-                                className="flex-1 bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-400 text-[#1e293b]"
-                              />
-                              <span className="text-[10px] text-[#94a3b8]">ID التصنيف</span>
+                            <div className="space-y-1.5">
+                              {publishConfigTarget.category_mappings && selectedPublishItem?.category_id && publishConfigTarget.category_mappings[String(selectedPublishItem.category_id)] ? (
+                                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+                                  <span className="text-[11px] text-emerald-700 font-bold">✓ تصنيف محسوب تلقائياً:</span>
+                                  <span className="text-[11px] text-emerald-800 font-mono">{publishConfigTarget.category_mappings[String(selectedPublishItem.category_id)]}</span>
+                                  <button
+                                    onClick={() => setPublishConfig(prev => ({ ...prev, category_id: undefined }))}
+                                    className="text-[9px] text-emerald-600 hover:text-emerald-800 underline mr-auto"
+                                  >
+                                    تغيير يدوي
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={publishConfig.category_id ?? ''}
+                                    onChange={(e) => setPublishConfig(prev => ({
+                                      ...prev,
+                                      category_id: e.target.value ? Number(e.target.value) : undefined
+                                    }))}
+                                    placeholder={`افتراضي: ${publishConfigTarget.default_category_id}`}
+                                    className="flex-1 bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-400 text-[#1e293b]"
+                                  />
+                                  <span className="text-[10px] text-[#94a3b8]">ID التصنيف</span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

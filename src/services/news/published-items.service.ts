@@ -207,6 +207,7 @@ export class PublishedItemsService {
           rd.image_url,
           rd.url as original_url,
           rd.pub_date,
+          rd.category_id,
           COALESCE(c.name, '—') as category_name,
           mu.name as media_unit_name,
           COALESCE(c.flow, 'editorial') as flow_type,
