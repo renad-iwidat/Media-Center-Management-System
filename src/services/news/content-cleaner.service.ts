@@ -84,7 +84,7 @@ class ContentCleanerService {
       console.log(`🧹 [تنظيف] الخبر ${articleId} — إرسال للـ AI...`);
 
       const response = await axios.post(this.apiUrl, requestBody, {
-        timeout: 60000,
+        timeout: 30000,
       });
 
       const rawData = response.data;

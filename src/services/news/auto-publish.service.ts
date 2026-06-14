@@ -496,6 +496,18 @@ class AutoPublishService {
       // نوع الموقع للحقول الإضافية
       const supportsAutoPublish = target.auth_type === 'token' || target.api_url.includes('nn.najah.edu');
 
+      // ── تنظيف المحتوى مرة واحدة قبل الإرسال ─────────────────────────
+      let cleanedContent = article.content;
+      try {
+        cleanedContent = await contentCleanerService.cleanContent(article.content, article.id);
+      } catch (cleanErr) {
+        console.log(`   ⚠️ AI cleaning failed — applying regex fallback: ${cleanErr instanceof Error ? cleanErr.message : 'unknown'}`);
+        // Fallback: تنظيف يدوي بدون AI
+        cleanedContent = this.regexCleanContent(article.content);
+      }
+      // تنظيف نهائي
+      cleanedContent = cleanedContent.replace(/\*/g, '').trim();
+
       let response!: Response;
       let responseBody = '';
       const maxRetries = 2;
@@ -516,15 +528,7 @@ class AutoPublishService {
         };
         
         addField('title', article.title.replace(/\*/g, '').trim());
-        
-        // تنظيف المحتوى من العناصر الترويجية والروابط قبل النشر الخارجي
-        let cleanedContent = article.content;
-        try {
-          cleanedContent = await contentCleanerService.cleanContent(article.content, article.id);
-        } catch (cleanErr) {
-          console.log(`   ⚠️ فشل التنظيف، سيُنشر المحتوى الأصلي: ${cleanErr instanceof Error ? cleanErr.message : 'unknown'}`);
-        }
-        addField('content', cleanedContent.replace(/\*/g, '').trim());
+        addField('content', cleanedContent);
         addField('category_id', String(externalCategoryId));
         // keywords: حقل واحد بقيمة مفصولة بفواصل — مثل curl: -F "keywords=test,api"
         // ملاحظة: backend النجاح فيه bug يحوّلها list — بانتظار إصلاحهم
@@ -1146,6 +1150,54 @@ class AutoPublishService {
         lastPublishedAt: row.last_published_at || null,
       })),
     };
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // تنظيف Regex (Fallback بدون AI)
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * تنظيف المحتوى بدون AI — يُستخدم كـ fallback عندما يكون AI server غير متاح
+   * يحذف: روابط، هاشتاغات، جمل ترويجية، أسماء قنوات بالصيغة الترويجية
+   */
+  private regexCleanContent(content: string): string {
+    if (!content) return content;
+
+    let cleaned = content;
+
+    // حذف الروابط (http/https/www)
+    cleaned = cleaned.replace(/https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi, '');
+    cleaned = cleaned.replace(/www\.[^\s<>"{}|\\^`\[\]]+/gi, '');
+
+    // حذف الهاشتاغات
+    cleaned = cleaned.replace(/#[\u0600-\u06FFa-zA-Z0-9_]+/g, '');
+
+    // حذف جمل ترويجية شائعة
+    const promoPatterns = [
+      /تابعونا\s*(على|عبر|في)?\s*[^\.\n]*/gi,
+      /اشتركو?ا?\s*(في|على|بـ)?\s*[^\.\n]*/gi,
+      /للمزيد\s*(تابعو|زوروا|اضغطوا)?\s*[^\.\n]*/gi,
+      /اقرأ\/ي?\s*أيضا?ً?\s*[^\.\n]*/gi,
+      /تغطية\s*متواصلة\s*[^\.\n]*/gi,
+      /انضم\s*(إلى|الى)?\s*(قناتنا|مجموعتنا)?\s*[^\.\n]*/gi,
+      /للاشتراك\s*[^\.\n]*/gi,
+      /رابط\s*(الخبر|المقال|القناة|التلغرام|التيليجرام)\s*[^\.\n]*/gi,
+      /المصدر\s*:\s*(تليغرام|تيليجرام|فيسبوك|تويتر|إنستغرام|واتساب)\s*[^\.\n]*/gi,
+    ];
+
+    for (const pattern of promoPatterns) {
+      cleaned = cleaned.replace(pattern, '');
+    }
+
+    // حذف أسماء منصات التواصل بالصيغة الترويجية
+    cleaned = cleaned.replace(/(قناة|قناتنا|حسابنا|صفحتنا)\s*(على|في|بـ)?\s*(تليغرام|تيليجرام|فيسبوك|تويتر|إنستغرام|واتساب|يوتيوب)[^\.\n]*/gi, '');
+
+    // تنظيف المسافات الزائدة
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    cleaned = cleaned.trim();
+
+    return cleaned;
   }
 }
 
