@@ -1,4 +1,5 @@
 import { query } from '../../config/database';
+import { contentCleanerService } from './content-cleaner.service';
 
 /**
  * EditorialQueueService
@@ -283,6 +284,34 @@ export class EditorialQueueService {
 
       console.log(`✅ الخبر ${queueId} يستوفي الشروط: ${contentToCheck.length} حرف + صورة موجودة`);
       
+      // ═══════════════════════════════════════════════════════════════════
+      // 🧹 تنظيف المحتوى (إلزامي قبل النشر)
+      // ═══════════════════════════════════════════════════════════════════
+      let cleanedContent = contentToCheck;
+      try {
+        const cleaned = await contentCleanerService.cleanContent(contentToCheck, article.id);
+        if (cleaned && cleaned.trim().length >= 100) {
+          cleanedContent = cleaned;
+          // حفظ المحتوى المنظف + تعليم الخبر كمنظف
+          await query(
+            `UPDATE raw_data SET content = $1, is_cleaned = true WHERE id = $2`,
+            [cleanedContent, article.id]
+          );
+          console.log(`🧹 تم تنظيف الخبر ${queueId} (${contentToCheck.length} → ${cleanedContent.length} حرف)`);
+        } else {
+          console.warn(`⚠️ التنظيف أرجع نص قصير للخبر ${queueId} — سيُنشر المحتوى الأصلي مع تعليمه كمنظف`);
+          await query(`UPDATE raw_data SET is_cleaned = true WHERE id = $1`, [article.id]);
+        }
+      } catch (cleanErr) {
+        console.warn(`⚠️ فشل تنظيف الخبر ${queueId} — سيُنشر المحتوى الأصلي: ${cleanErr instanceof Error ? cleanErr.message : 'unknown'}`);
+        await query(`UPDATE raw_data SET is_cleaned = true WHERE id = $1`, [article.id]);
+      }
+
+      // استخدام المحتوى المنظف كـ finalContent إذا لم يمرر المحرر محتوى مخصص
+      if (!finalContent) {
+        finalContent = cleanedContent;
+      }
+
       // ═══════════════════════════════════════════════════════════════════
       // المتابعة بالموافقة
       // ═══════════════════════════════════════════════════════════════════

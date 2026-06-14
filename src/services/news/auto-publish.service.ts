@@ -14,6 +14,7 @@
 import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
 import { callOpenAIChatAPI } from '../ai-hub/ai-call.service';
+import { contentCleanerService } from './content-cleaner.service';
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -358,6 +359,7 @@ class AutoPublishService {
   async getUnpublishedForTarget(targetId: number, mediaUnitId: number, limit: number = 20): Promise<AutoPublishArticle[]> {
     // التصنيفات الأوتوماتيكية — من categories.flow = 'automated' (مستقر بالـ slug)
     // ⚠️ فقط الأخبار اللي تمت إعادة صياغتها (is_rewritten = true) — ما بننشر خبر خام
+    // ⚠️ فقط الأخبار المنظفة (is_cleaned = true) — أو ستُنظف عند الإرسال
     const result = await query(
       `SELECT rd.id,
               COALESCE(pi.title, rd.title)         AS title,
@@ -514,7 +516,15 @@ class AutoPublishService {
         };
         
         addField('title', article.title.replace(/\*/g, '').trim());
-        addField('content', article.content.replace(/\*/g, '').trim());
+        
+        // تنظيف المحتوى من العناصر الترويجية والروابط قبل النشر الخارجي
+        let cleanedContent = article.content;
+        try {
+          cleanedContent = await contentCleanerService.cleanContent(article.content, article.id);
+        } catch (cleanErr) {
+          console.log(`   ⚠️ فشل التنظيف، سيُنشر المحتوى الأصلي: ${cleanErr instanceof Error ? cleanErr.message : 'unknown'}`);
+        }
+        addField('content', cleanedContent.replace(/\*/g, '').trim());
         addField('category_id', String(externalCategoryId));
         // keywords: حقل واحد بقيمة مفصولة بفواصل — مثل curl: -F "keywords=test,api"
         // ملاحظة: backend النجاح فيه bug يحوّلها list — بانتظار إصلاحهم

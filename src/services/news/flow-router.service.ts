@@ -3,6 +3,7 @@ import { SystemSettingsService } from '../database/system-settings.service';
 import { MediaUnitSourceService } from '../database/media-unit-source.service';
 import { MediaUnitArticleService } from '../database/media-unit-article.service';
 import { aiClassifierService } from './ai-classifier.service';
+import { contentCleanerService } from './content-cleaner.service';
 
 /**
  * FlowRouterService
@@ -139,7 +140,7 @@ export class FlowRouterService {
       // التصنيف الأوتوماتيكي يُحدّد من categories.flow = 'automated' (مستقر بالـ slug)
       const stuckItems = await query(
         `SELECT eq.id as queue_id, eq.media_unit_id, eq.raw_data_id,
-                rd.title, rd.content, rd.tags
+                rd.title, rd.content, rd.tags, rd.is_cleaned
          FROM editorial_queue eq
          JOIN raw_data rd ON eq.raw_data_id = rd.id
          JOIN categories c ON rd.category_id = c.id
@@ -157,10 +158,27 @@ export class FlowRouterService {
 
       if (stuckItems.rows.length === 0) return { published: 0, errors: 0 };
 
-      console.log(`🔄 [Auto-Publish] وجدنا ${stuckItems.rows.length} خبر أوتوماتيكي عالق — جاري النشر...`);
+      console.log(`🔄 [Auto-Publish] وجدنا ${stuckItems.rows.length} خبر أوتوماتيكي عالق — جاري التنظيف والنشر...`);
 
       for (const item of stuckItems.rows) {
         try {
+          // ── تنظيف إلزامي إذا لم يُنظّف بعد ──────────────────────────
+          let contentToPublish = item.content;
+
+          if (!item.is_cleaned) {
+            const cleaned = await contentCleanerService.cleanContent(item.content, item.raw_data_id);
+            if (!cleaned || cleaned.trim().length < 100) {
+              console.warn(`  ⚠️ [Auto-Publish] فشل تنظيف الخبر ${item.raw_data_id} — تم تخطيه`);
+              errors++;
+              continue;
+            }
+            contentToPublish = cleaned;
+            await query(
+              `UPDATE raw_data SET content = $1, is_cleaned = true WHERE id = $2`,
+              [cleaned, item.raw_data_id]
+            );
+          }
+
           // تحديث الحالة إلى approved
           await query(
             `UPDATE editorial_queue SET status = 'approved', updated_at = NOW() WHERE id = $1`,
@@ -172,7 +190,7 @@ export class FlowRouterService {
             `INSERT INTO published_items 
              (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())`,
-            [item.media_unit_id, item.raw_data_id, item.queue_id, this.NEWS_CONTENT_TYPE_ID, item.title, item.content, item.tags || []]
+            [item.media_unit_id, item.raw_data_id, item.queue_id, this.NEWS_CONTENT_TYPE_ID, item.title, contentToPublish, item.tags || []]
           );
 
           published++;
@@ -376,14 +394,36 @@ export class FlowRouterService {
       }
 
       // ══════════════════════════════════════════════════════════════════════
-      // الخطوة 4: توزيع ونشر الأخبار الأوتوماتيكية
-      // (النص أصلاً منظّف ومُعاد صياغته من مرحلة الحفظ — article-saver)
+      // الخطوة 4: تنظيف + توزيع ونشر الأخبار الأوتوماتيكية
+      // ⚠️ التنظيف إلزامي — لا يُنشر خبر بدون تنظيف ناجح
       // ══════════════════════════════════════════════════════════════════════
       if (automatedQueuePending.length > 0) {
-        console.log(`\n⚡ توزيع ونشر ${automatedQueuePending.length} خبر أوتوماتيكي...`);
+        console.log(`\n⚡ تنظيف وتوزيع ${automatedQueuePending.length} خبر أوتوماتيكي...`);
 
         for (const { article, mediaUnits: units } of automatedQueuePending) {
           try {
+            // ── تنظيف المحتوى (إلزامي) ──────────────────────────────────
+            const cleanedContent = await contentCleanerService.cleanContent(article.content, article.id);
+            
+            // التحقق من نجاح التنظيف: يجب أن يكون المحتوى المنظف مختلفاً أو على الأقل بنفس الطول المعقول
+            const cleaningSuccessful = cleanedContent && cleanedContent.trim().length >= 100;
+            
+            if (!cleaningSuccessful) {
+              console.warn(`⚠️ الخبر ${article.id} — فشل التنظيف، لن يُنشر حتى يتم تنظيفه`);
+              result.errors.push(`الخبر ${article.id}: فشل التنظيف — لم يُنشر`);
+              await this.updateArticleStatus(article.id, 'processed');
+              continue;
+            }
+
+            // حفظ المحتوى المنظف + تعليمه كمنظف
+            await query(
+              `UPDATE raw_data SET content = $1, is_cleaned = true WHERE id = $2`,
+              [cleanedContent, article.id]
+            );
+            article.content = cleanedContent;
+            console.log(`   🧹 تنظيف: ${article.title.substring(0, 50)}... (${article.content.length} → ${cleanedContent.length})`);
+
+            // ── التوزيع والنشر ───────────────────────────────────────────
             const queueIds = await this.distributeToQueue(article, units, 'pending');
             await this.autoApproveAndPublish(article, queueIds);
             await this.updateArticleStatus(article.id, 'published');

@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import { SourceService, RawDataService, CategoryService, GeoScopeService } from '../../services/database/database.service';
 import { query } from '../../config/database';
+import { contentCleanerService } from '../../services/news/content-cleaner.service';
 
 /**
  * الحصول على جميع وحدات الإعلام النشطة
@@ -377,8 +378,26 @@ export async function updateArticleContent(req: Request, res: Response): Promise
     }
 
     if (flowType === 'automated') {
-      // أوتوماتيكي: incomplete → approved → published_items
-      console.log(`⚡ الخبر ${articleId} — أوتوماتيكي → auto-approve ونشر بواسطة المستخدم ${userId}`);
+      // أوتوماتيكي: incomplete → تنظيف إلزامي → approved → published_items
+      console.log(`⚡ الخبر ${articleId} — أوتوماتيكي → تنظيف + auto-approve ونشر بواسطة المستخدم ${userId}`);
+
+      // ── تنظيف المحتوى (إلزامي) ──────────────────────────────────────
+      let cleanedContent = content.trim();
+      try {
+        const cleaned = await contentCleanerService.cleanContent(cleanedContent, articleId);
+        if (cleaned && cleaned.trim().length >= 100) {
+          cleanedContent = cleaned;
+          console.log(`   🧹 تنظيف: ${cleanedContent.length} حرف`);
+        }
+      } catch (cleanErr) {
+        console.warn(`   ⚠️ فشل التنظيف — سيُنشر المحتوى كما هو: ${cleanErr instanceof Error ? cleanErr.message : 'unknown'}`);
+      }
+
+      // تحديث الخبر بالمحتوى المنظف + تعليمه كمنظف
+      await query(
+        `UPDATE raw_data SET content = $1, is_cleaned = true WHERE id = $2`,
+        [cleanedContent, articleId]
+      );
 
       for (const record of queueRecords.rows) {
         try {
@@ -397,7 +416,7 @@ export async function updateArticleContent(req: Request, res: Response): Promise
               `INSERT INTO published_items 
                (media_unit_id, raw_data_id, queue_id, content_type_id, title, content, tags, is_active, published_at, approved_by, task_id)
                VALUES ($1, $2, $3, 1, $4, $5, $6, true, NOW(), $7, $8)`,
-              [record.media_unit_id, articleId, record.id, article.title, content.trim(), article.tags || [], userId ? parseInt(userId) : null, taskId || null]
+              [record.media_unit_id, articleId, record.id, article.title, cleanedContent, article.tags || [], userId ? parseInt(userId) : null, taskId || null]
             );
             console.log(`   ✅ نشر في ${record.media_unit_name} بواسطة المستخدم ${userId}`);
           }
