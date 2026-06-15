@@ -361,6 +361,7 @@ class AutoPublishService {
    * ⚠️ قواعد النشر التلقائي:
    * - الأخبار الأوتوماتيكية (حسب CATEGORY_FLOW_MAP) → تنشر تلقائياً
    * - الأخبار التحريرية (محلي، سياسي، دولي) → المحرر ينشرها يدوياً من استديو التحرير
+   * - فقط أخبار اليوم (published_at >= CURRENT_DATE) — لا ننشر أخبار قديمة
    */
   async getUnpublishedForTarget(targetId: number, mediaUnitId: number, limit: number = 20): Promise<AutoPublishArticle[]> {
     // التصنيفات الأوتوماتيكية — من categories.flow = 'automated' (مستقر بالـ slug)
@@ -381,6 +382,7 @@ class AutoPublishService {
          AND pi.is_active = true
          AND c.flow = 'automated'
          AND rd.is_rewritten = true
+         AND pi.published_at >= CURRENT_DATE
          AND rd.id NOT IN (
            SELECT raw_data_id FROM auto_publish_log 
            WHERE target_id = $2 AND status = 'success'
@@ -798,6 +800,7 @@ class AutoPublishService {
        WHERE apl.status = 'failed' 
          AND apl.retry_count < 3
          AND apt.auto_enabled = true
+         AND apl.created_at >= CURRENT_DATE
        ORDER BY apl.updated_at ASC
        LIMIT 10`
     );
