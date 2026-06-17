@@ -251,6 +251,65 @@ class SchedulerService {
         console.error('   ⚠️ خطأ في إعادة الصياغة:', rewriteError instanceof Error ? rewriteError.message : rewriteError);
       }
 
+      // ══════════════════════════════════════════════════════════════════════
+      // المرحلة 6: تنظيف الأخبار المعتمدة (خلفية)
+      // تأخذ أخبار معتمدة (approved) لم تُنظّف بعد وتنظّفها
+      // ══════════════════════════════════════════════════════════════════════
+      console.log('\n🧹 المرحلة 6: تنظيف الأخبار المعتمدة (خلفية)...');
+      try {
+        const { contentCleanerService } = await import('./content-cleaner.service');
+        const { query: dbQuery } = await import('../../config/database');
+
+        // جلب أخبار معتمدة لم تُنظّف بعد
+        const uncleanedResult = await dbQuery(
+          `SELECT rd.id, rd.content
+           FROM editorial_queue eq
+           JOIN raw_data rd ON eq.raw_data_id = rd.id
+           WHERE eq.status = 'approved'
+             AND rd.is_rewritten = true
+             AND COALESCE(rd.is_cleaned, false) = false
+             AND LENGTH(rd.content) >= 100
+           ORDER BY eq.updated_at DESC
+           LIMIT 50`
+        );
+
+        if (uncleanedResult.rows.length === 0) {
+          console.log('   ✅ لا توجد أخبار تحتاج تنظيف');
+        } else {
+          console.log(`   🧹 تنظيف ${uncleanedResult.rows.length} خبر...`);
+          let cleaned = 0, cleanFailed = 0;
+
+          for (const row of uncleanedResult.rows) {
+            try {
+              const cleanedContent = await contentCleanerService.cleanContent(row.content, row.id);
+              if (cleanedContent && cleanedContent.trim().length >= 100) {
+                await dbQuery(
+                  `UPDATE raw_data SET content = $1, is_cleaned = true WHERE id = $2`,
+                  [cleanedContent, row.id]
+                );
+                // تحديث أيضاً في published_items إذا موجود
+                await dbQuery(
+                  `UPDATE published_items SET content = $1 WHERE raw_data_id = $2`,
+                  [cleanedContent, row.id]
+                );
+                cleaned++;
+              } else {
+                // تعليمه كمنظف عشان ما يتكرر
+                await dbQuery(`UPDATE raw_data SET is_cleaned = true WHERE id = $1`, [row.id]);
+                cleanFailed++;
+              }
+            } catch {
+              await dbQuery(`UPDATE raw_data SET is_cleaned = true WHERE id = $1`, [row.id]);
+              cleanFailed++;
+            }
+          }
+
+          console.log(`   📊 تنظيف: ✅ ${cleaned} | ❌ ${cleanFailed}`);
+        }
+      } catch (cleanError) {
+        console.error('   ⚠️ خطأ في تنظيف الأخبار:', cleanError instanceof Error ? cleanError.message : cleanError);
+      }
+
       // ── ملخص ──────────────────────────────────────────────────────────────
       this.status.lastRun = now;
       this.status.totalRuns++;

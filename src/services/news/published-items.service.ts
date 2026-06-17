@@ -236,6 +236,7 @@ export class PublishedItemsService {
           AND eq.media_unit_id = $1
           AND COALESCE(rd.publish_status, 'draft') != 'archived'
           AND rd.is_rewritten = true
+          AND COALESCE(rd.is_cleaned, false) = true
         ORDER BY eq.updated_at DESC
         LIMIT $2`,
         [mediaUnitId, limit]
