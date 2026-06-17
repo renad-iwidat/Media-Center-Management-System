@@ -34,6 +34,7 @@ import bulletinsRoutes from './routes/news/bulletins.routes';
 import publishingRoutes from './routes/publishing/publishing.routes';
 import newsIntegrationRoutes from './routes/management/news-integration.routes';
 import { runPublishingMigration } from './services/publishing';
+import { errorHandler } from './middleware/error-handler';
 
 const app = express();
 
@@ -319,8 +320,11 @@ app.use('/api/management/news', newsIntegrationRoutes);
 
 // 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ success: false, message: 'Route not found', path: req.path });
 });
+
+// Global Error Handler (يجب أن يكون بعد كل الـ routes)
+app.use(errorHandler);
 
 // Start Server
 const PORT = Number(environment.PORT);

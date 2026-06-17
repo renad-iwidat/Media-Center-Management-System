@@ -13,50 +13,10 @@ import { contentCleanerService } from '../../services/news/content-cleaner.servi
  */
 export async function getMediaUnits(req: Request, res: Response): Promise<void> {
   try {
-    console.log('🏢 [MEDIA-UNITS] طلب جلب وحدات الإعلام من:', req.ip);
-    console.log('🔐 [MEDIA-UNITS] المستخدم:', (req as any).user?.name || 'غير معروف');
-    
-    // التحقق من وجود الجدول أولاً
-    const tableCheck = await query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'media_units'
-      );
-    `);
-    
-    if (!tableCheck.rows[0].exists) {
-      console.log('⚠️ [MEDIA-UNITS] جدول media_units غير موجود - إنشاء الجدول');
-      
-      // إنشاء الجدول
-      await query(`
-        CREATE TABLE media_units (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          description TEXT,
-          is_active BOOLEAN DEFAULT true,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      
-      // إدراج البيانات الأساسية
-      await query(`
-        INSERT INTO media_units (name, description, is_active) VALUES 
-        ('النجاح الإخبارية', 'وحدة الأخبار الرئيسية لمؤسسة النجاح الإخبارية', true),
-        ('هنا غزة', 'وحدة أخبار غزة والأراضي المحتلة', true);
-      `);
-      
-      console.log('✅ [MEDIA-UNITS] تم إنشاء الجدول وإدراج البيانات');
-    }
-    
     const result = await query(
       'SELECT id, name, is_active FROM media_units WHERE is_active = true ORDER BY id'
     );
-    
-    console.log('📋 [MEDIA-UNITS] تم جلب', result.rows.length, 'وحدة إعلامية');
-    console.log('📋 [MEDIA-UNITS] البيانات:', result.rows);
-    
+
     res.status(200).json({
       success: true,
       count: result.rows.length,
