@@ -34,6 +34,7 @@ export interface AutoPublishTarget {
   manual_enabled: boolean;                   // تفعيل/إيقاف النشر اليدوي من قِبل المحرر
   auto_enabled: boolean;                     // تفعيل/إيقاف النشر التلقائي بالسكيدولر
   is_enabled: boolean;                       // محتفظ به للتوافق مع الكود القديم (= manual_enabled || auto_enabled)
+  daily_auto_limit: number | null;           // الحد اليومي للنشر التلقائي (null = بلا حد)
   created_at: string;
   updated_at: string;
   media_unit_name?: string;
@@ -273,6 +274,7 @@ class AutoPublishService {
     manual_enabled: boolean;
     auto_enabled: boolean;
     is_enabled: boolean;
+    daily_auto_limit: number | null;
   }>): Promise<AutoPublishTarget | null> {
     const fields: string[] = [];
     const values: any[] = [];
@@ -290,6 +292,7 @@ class AutoPublishService {
     if (data.publish_mode !== undefined)       { fields.push(`publish_mode = $${paramIndex++}`);       values.push(data.publish_mode); }
     if (data.manual_enabled !== undefined)     { fields.push(`manual_enabled = $${paramIndex++}`);     values.push(data.manual_enabled); }
     if (data.auto_enabled !== undefined)       { fields.push(`auto_enabled = $${paramIndex++}`);       values.push(data.auto_enabled); }
+    if (data.daily_auto_limit !== undefined)   { fields.push(`daily_auto_limit = $${paramIndex++}`);   values.push(data.daily_auto_limit); }
 
     // is_enabled = manual_enabled OR auto_enabled (يُحدَّث تلقائياً)
     if (data.manual_enabled !== undefined || data.auto_enabled !== undefined) {
@@ -415,6 +418,7 @@ class AutoPublishService {
       category_id?: number;       // التصنيف الخارجي الذي اختاره المحرر
       auto_publish?: boolean;     // نشر فوري أم مسودة
       pin?: number;               // 0-5
+      isManual?: boolean;         // هل النشر يدوي (من المحرر)
     }
   ): Promise<{ success: boolean; responseCode?: number; error?: string; responseBody?: string; externalUrl?: string; externalId?: number }> {
     try {
@@ -614,7 +618,7 @@ class AutoPublishService {
 
         console.log(`   🔗 External URL: ${externalUrl || '(لم يُرجع رابط)'}`);
 
-        await this.logPublish(target.id, article.id, 'success', response.status, responseBody, undefined, externalUrl, externalId);
+        await this.logPublish(target.id, article.id, 'success', response.status, responseBody, undefined, externalUrl, externalId, overrides?.isManual ?? false);
         await query(
           `UPDATE raw_data SET publish_status = 'published_external'
            WHERE id = $1 AND publish_status NOT IN ('archived')`,
@@ -623,12 +627,12 @@ class AutoPublishService {
 
         return { success: true, responseCode: response.status, responseBody, externalUrl, externalId };
       } else {
-        await this.logPublish(target.id, article.id, 'failed', response.status, responseBody, `HTTP ${response.status}`);
+        await this.logPublish(target.id, article.id, 'failed', response.status, responseBody, `HTTP ${response.status}`, undefined, undefined, overrides?.isManual ?? false);
         return { success: false, responseCode: response.status, error: `HTTP ${response.status}: ${responseBody.substring(0, 200)}` };
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      await this.logPublish(target.id, article.id, 'failed', undefined, undefined, errorMsg);
+      await this.logPublish(target.id, article.id, 'failed', undefined, undefined, errorMsg, undefined, undefined, overrides?.isManual ?? false);
       return { success: false, error: errorMsg };
     }
   }
@@ -644,7 +648,8 @@ class AutoPublishService {
     responseBody?: string,
     errorMessage?: string,
     externalUrl?: string,
-    externalId?: number
+    externalId?: number,
+    isManual: boolean = false
   ): Promise<void> {
     try {
       const existing = await query(
@@ -662,9 +667,9 @@ class AutoPublishService {
         );
       } else {
         await query(
-          `INSERT INTO auto_publish_log (target_id, raw_data_id, status, response_code, response_body, error_message, external_url, external_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [targetId, rawDataId, status, responseCode || null, responseBody || null, errorMessage || null, externalUrl || null, externalId || null]
+          `INSERT INTO auto_publish_log (target_id, raw_data_id, status, response_code, response_body, error_message, external_url, external_id, is_manual)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [targetId, rawDataId, status, responseCode || null, responseBody || null, errorMessage || null, externalUrl || null, externalId || null, isManual]
         );
       }
     } catch (err) {
@@ -710,7 +715,31 @@ class AutoPublishService {
     for (const target of enabledTargets) {
       console.log(`\n📤 النشر على: ${target.name} (${target.media_unit_name})`);
 
-      const articles = await this.getUnpublishedForTarget(target.id, target.media_unit_id, 20);
+      // ── فحص الحد اليومي للنشر التلقائي ──
+      let remainingQuota = Infinity;
+      if (target.daily_auto_limit !== null && target.daily_auto_limit > 0) {
+        // نحسب فقط الأخبار المنشورة تلقائياً (من السكيدولر) خلال آخر 24 ساعة
+        // النشر اليدوي لا يُحتسب ضمن الحد
+        const todayCountResult = await query(
+          `SELECT COUNT(*) as cnt FROM auto_publish_log
+           WHERE target_id = $1 
+             AND status = 'success'
+             AND is_manual = false
+             AND published_at > NOW() - INTERVAL '24 hours'`,
+          [target.id]
+        );
+        const todayAutoCount = parseInt(todayCountResult.rows[0]?.cnt || '0', 10);
+        remainingQuota = Math.max(0, target.daily_auto_limit - todayAutoCount);
+        
+        if (remainingQuota === 0) {
+          console.log(`   🚫 تم الوصول للحد اليومي (${target.daily_auto_limit} خبر) — تخطي هذا الهدف`);
+          continue;
+        }
+        console.log(`   📊 الحد اليومي: ${target.daily_auto_limit} | منشور اليوم (تلقائي): ${todayAutoCount} | متبقي: ${remainingQuota}`);
+      }
+
+      const fetchLimit = remainingQuota === Infinity ? 20 : Math.min(20, remainingQuota);
+      const articles = await this.getUnpublishedForTarget(target.id, target.media_unit_id, fetchLimit);
 
       if (articles.length === 0) {
         console.log(`   ✅ لا يوجد أخبار جديدة للنشر`);
@@ -719,7 +748,14 @@ class AutoPublishService {
 
       console.log(`   📰 ${articles.length} خبر جاهز للنشر`);
 
+      let publishedInThisRun = 0;
       for (const article of articles) {
+        // فحص الحد اليومي أثناء النشر
+        if (remainingQuota !== Infinity && publishedInThisRun >= remainingQuota) {
+          console.log(`   🚫 تم الوصول للحد اليومي أثناء النشر — توقف`);
+          break;
+        }
+
         result.total++;
 
         // تخطي المقالات بدون عنوان أو محتوى
@@ -740,6 +776,7 @@ class AutoPublishService {
 
         if (publishResult.success) {
           result.success++;
+          publishedInThisRun++;
           result.details.push({
             articleId: article.id,
             targetId: target.id,
@@ -847,6 +884,7 @@ class AutoPublishService {
         manual_enabled: row.manual_enabled ?? false,
         auto_enabled: row.auto_enabled ?? true,
         is_enabled: true,
+        daily_auto_limit: row.daily_auto_limit ?? null,
         created_at: '',
         updated_at: '',
       };
@@ -983,7 +1021,7 @@ class AutoPublishService {
       return { success: false, error: 'الخبر منشور مسبقاً على هذا الهدف' };
     }
 
-    return this.publishOneToTarget(article, target, overrides);
+    return this.publishOneToTarget(article, target, { ...overrides, isManual: true });
   }
 
   /**
@@ -1109,6 +1147,7 @@ class AutoPublishService {
       autoEnabled: boolean;
       defaultAutoPublish: boolean;
       defaultPin: number;
+      dailyAutoLimit: number | null;
       totalPublished: number;
       totalFailed: number;
       publishedToday: number;
@@ -1120,7 +1159,7 @@ class AutoPublishService {
     const result = await query(
       `SELECT 
          apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled,
-         apt.default_auto_publish, apt.default_pin, apt.auth_type,
+         apt.default_auto_publish, apt.default_pin, apt.auth_type, apt.daily_auto_limit,
          mu.name as media_unit_name,
          COUNT(apl.id) FILTER (WHERE apl.status = 'success') as total_published,
          COUNT(apl.id) FILTER (WHERE apl.status = 'failed') as total_failed,
@@ -1129,7 +1168,7 @@ class AutoPublishService {
        FROM auto_publish_targets apt
        JOIN media_units mu ON mu.id = apt.media_unit_id
        LEFT JOIN auto_publish_log apl ON apl.target_id = apt.id
-       GROUP BY apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled, apt.default_auto_publish, apt.default_pin, apt.auth_type, mu.name
+       GROUP BY apt.id, apt.name, apt.is_enabled, apt.manual_enabled, apt.auto_enabled, apt.default_auto_publish, apt.default_pin, apt.auth_type, apt.daily_auto_limit, mu.name
        ORDER BY apt.media_unit_id, apt.name`
     );
 
@@ -1145,6 +1184,7 @@ class AutoPublishService {
         defaultAutoPublish: row.default_auto_publish ?? true,
         defaultPin: row.default_pin ?? 0,
         authType: row.auth_type || 'bearer',
+        dailyAutoLimit: row.daily_auto_limit ?? null,
         totalPublished: parseInt(row.total_published) || 0,
         totalFailed: parseInt(row.total_failed) || 0,
         publishedToday: parseInt(row.published_today) || 0,

@@ -204,7 +204,8 @@ export class AutoPublishController {
       const allowedFields = [
         'name', 'api_url', 'api_token', 'default_category_id', 'is_enabled',
         'default_auto_publish', 'default_pin', 'category_mappings',
-        'categories_api_url', 'publish_mode', 'manual_enabled', 'auto_enabled', 'auth_type'
+        'categories_api_url', 'publish_mode', 'manual_enabled', 'auto_enabled', 'auth_type',
+        'daily_auto_limit'
       ] as const;
 
       const updateData: Record<string, any> = {};

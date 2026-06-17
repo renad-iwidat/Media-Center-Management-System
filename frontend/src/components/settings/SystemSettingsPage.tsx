@@ -122,6 +122,11 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
     setAutoPublishTargets(prev => prev.map(t => t.id === targetId ? { ...t, defaultPin: pin } : t));
   });
 
+  const handleUpdateDailyAutoLimit = (targetId: number, limit: number | null) => withSave(async () => {
+    await api.updateAutoPublishTarget(targetId, { daily_auto_limit: limit });
+    setAutoPublishTargets(prev => prev.map(t => t.id === targetId ? { ...t, dailyAutoLimit: limit } : t));
+  });
+
   const handleSaveNumbers = () => withSave(async () => {
     const mins = parseInt(intervalInput, 10);
     const arts = parseInt(articlesInput, 10);
@@ -450,6 +455,50 @@ export function SystemSettingsPage({ onSystemStatusChange }: Props) {
                       <p className={`text-[10px] font-semibold mt-2.5 ${statusColor}`}>
                         {statusText}
                       </p>
+
+                      {/* ── الحد اليومي للنشر التلقائي ── */}
+                      {autoOn && (
+                        <div className="mt-3 pt-3 border-t border-[#f1f5f9] space-y-2">
+                          <label className="flex items-center gap-1.5 text-[10px] font-bold text-[#64748b] uppercase tracking-wider">
+                            <Hash size={11} className="text-blue-500" />
+                            الحد اليومي للنشر التلقائي
+                          </label>
+                          <p className="text-[9px] text-[#94a3b8]">الحد الأقصى لعدد الأخبار التي تُنشر تلقائياً يومياً — لا يؤثر على النشر اليدوي</p>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={500}
+                              placeholder="بلا حد"
+                              value={target.dailyAutoLimit ?? target.daily_auto_limit ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const numVal = val === "" ? null : parseInt(val, 10);
+                                setAutoPublishTargets(prev => prev.map(t => t.id === target.id ? { ...t, dailyAutoLimit: numVal, daily_auto_limit: numVal } : t));
+                              }}
+                              className="flex-1 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg px-3 py-1.5 text-[11px] text-[#1e293b] focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 transition-colors text-center font-mono"
+                            />
+                            <button
+                              onClick={() => {
+                                const val = target.dailyAutoLimit ?? target.daily_auto_limit ?? null;
+                                handleUpdateDailyAutoLimit(target.id, val);
+                              }}
+                              disabled={saveStatus === "saving"}
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-bold border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 transition-all disabled:opacity-50"
+                            >
+                              حفظ
+                            </button>
+                          </div>
+                          {(target.dailyAutoLimit ?? target.daily_auto_limit) != null && target.publishedToday > 0 && (
+                            <p className="text-[9px] text-[#64748b]">
+                              📊 منشور اليوم: <strong className="text-[#1e293b]">{target.publishedToday}</strong> / <strong className="text-blue-600">{target.dailyAutoLimit ?? target.daily_auto_limit}</strong>
+                              {target.publishedToday >= (target.dailyAutoLimit ?? target.daily_auto_limit ?? Infinity) && (
+                                <span className="text-rose-500 mr-1"> — تم الوصول للحد ⛔</span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* إعدادات النشر على الموقع الخارجي — فقط للمواقع التي تدعم auto_publish و pin (مثل النجاح) */}
                       {anyOn && (target.authType === 'token' || target.auth_type === 'token') && (
