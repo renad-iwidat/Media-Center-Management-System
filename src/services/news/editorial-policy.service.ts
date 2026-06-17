@@ -335,7 +335,7 @@ class EditorialPolicyService {
       console.log(JSON.stringify(requestBody, null, 2));
       console.log(`${'='.repeat(80)}\n`);
 
-      const response = await axios.post(apiUrl, requestBody, { timeout: 120000 });
+      const response = await axios.post(apiUrl, requestBody, { timeout: 300000 });
 
       const executionTime = Date.now() - startTime;
       const rawData = response.data;
