@@ -629,11 +629,12 @@ class PublishingService {
   } = {}): Promise<{ articles: any[]; total: number }> {
     const { platform, media_unit_id, limit = 50, offset = 0 } = options;
 
-    // الأرشيف = كل مقال منشور بنجاح (أوتوماتيكي أو يدوي)
-    // المصادر:
-    // 1. publish_status IN ('archived', 'published_external', 'published_social')
-    // 2. أو موجود في auto_publish_log بحالة success
-    // 3. أو موجود في publishing_status بحالة success
+    // الأرشيف = الأخبار المؤرشفة فقط (publish_status = 'archived')
+    // عند اختيار وحدة إعلامية: تُطبّق الشرطان معاً (AND):
+    //   1. الخبر مؤرشف (archived)
+    //   2. الخبر تابع للوحدة الإعلامية المختارة
+    // ملاحظة: الـ JOINs على publishing_status / auto_publish_log تبقى
+    // لأغراض الفلترة حسب المنصة وعرض روابط النشر فقط، وليست شرطاً للأرشفة.
 
     let platformFilter = '';
     let unitFilter = '';
@@ -671,11 +672,7 @@ class PublishingService {
        FROM raw_data rd
        LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
        LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
-       WHERE (
-         rd.publish_status IN ('archived', 'published_external', 'published_social')
-         OR ps.id IS NOT NULL
-         OR apl.id IS NOT NULL
-       ) ${platformFilter} ${unitFilter}`,
+       WHERE rd.publish_status = 'archived' ${platformFilter} ${unitFilter}`,
       params
     );
 
@@ -687,11 +684,7 @@ class PublishingService {
         FROM raw_data rd
         LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
         LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
-        WHERE (
-          rd.publish_status IN ('archived', 'published_external', 'published_social')
-          OR ps.id IS NOT NULL
-          OR apl.id IS NOT NULL
-        ) ${platformFilter} ${unitFilter}
+        WHERE rd.publish_status = 'archived' ${platformFilter} ${unitFilter}
         ORDER BY sort_date DESC
         LIMIT $${idx++} OFFSET $${idx}
       )

@@ -258,7 +258,9 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
           <EmptyState
             icon={Archive}
             title="لا يوجد محتوى مؤرشف"
-            description="سيظهر هنا المحتوى بعد أرشفته من قسم النشر."
+            description={unitId
+              ? "لا توجد أخبار مؤرشفة لهذه الوحدة الإعلامية."
+              : "سيظهر هنا المحتوى بعد أرشفته من قسم النشر."}
           />
         ) : (
           <div className="space-y-3">
