@@ -648,12 +648,18 @@ class PublishingService {
 
     if (media_unit_id) {
       unitFilter = `AND (
-        rd.id IN (SELECT raw_data_id FROM published_items WHERE media_unit_id = $${idx})
+        rd.media_unit_id = $${idx}
+        OR rd.id IN (SELECT raw_data_id FROM published_items WHERE media_unit_id = $${idx})
         OR rd.id IN (SELECT raw_data_id FROM editorial_queue WHERE media_unit_id = $${idx})
         OR rd.id IN (
           SELECT apl2.raw_data_id FROM auto_publish_log apl2
           JOIN auto_publish_targets apt2 ON apt2.id = apl2.target_id
           WHERE apt2.media_unit_id = $${idx} AND apl2.status = 'success'
+        )
+        OR rd.id IN (
+          SELECT ps2.article_id FROM publishing_status ps2
+          JOIN platform_configs pc2 ON pc2.id = ps2.platform_config_id
+          WHERE pc2.media_unit_id = $${idx} AND ps2.status = 'success'
         )
       )`;
       params.push(media_unit_id);
