@@ -27,6 +27,7 @@ interface ArchiveItem {
   publish_status: string;
   category_name: string | null;
   fetched_at: string;
+  archived_at: string | null;
   platforms: PlatformInfo[] | null;
 }
 
@@ -113,19 +114,29 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
       filtered = filtered.filter(item => item.category_name === selectedCategory);
     }
     if (dateFrom) {
-      filtered = filtered.filter(item =>
-        new Date(item.fetched_at) >= new Date(dateFrom)
-      );
+      filtered = filtered.filter(item => {
+        const itemDate = item.archived_at || item.fetched_at;
+        return new Date(itemDate) >= new Date(dateFrom);
+      });
     }
     if (dateTo) {
-      filtered = filtered.filter(item =>
-        new Date(item.fetched_at) <= new Date(dateTo + 'T23:59:59')
-      );
+      filtered = filtered.filter(item => {
+        const itemDate = item.archived_at || item.fetched_at;
+        return new Date(itemDate) <= new Date(dateTo + 'T23:59:59');
+      });
     }
     if (sortBy === "newest") {
-      filtered.sort((a, b) => new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime());
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.archived_at || a.fetched_at).getTime();
+        const dateB = new Date(b.archived_at || b.fetched_at).getTime();
+        return dateB - dateA;
+      });
     } else {
-      filtered.sort((a, b) => new Date(a.fetched_at).getTime() - new Date(b.fetched_at).getTime());
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.archived_at || a.fetched_at).getTime();
+        const dateB = new Date(b.archived_at || b.fetched_at).getTime();
+        return dateA - dateB;
+      });
     }
     setFilteredItems(filtered);
   }, [items, searchTitle, selectedCategory, dateFrom, dateTo, sortBy]);
@@ -353,9 +364,9 @@ export function ArchiveView({ unitId }: ArchiveViewProps) {
                     <p className="text-sm font-bold text-emerald-600">مؤرشف ✓</p>
                   </div>
                   <div className="bg-[#f8fafc] rounded-xl border border-[#e2e8f0] p-3">
-                    <p className="text-[10px] text-[#94a3b8] font-semibold mb-1">تاريخ الإضافة</p>
+                    <p className="text-[10px] text-[#94a3b8] font-semibold mb-1">تاريخ الأرشفة</p>
                     <p className="text-sm font-bold text-[#1e293b]">
-                      {new Date(selectedItem.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(selectedItem.archived_at || selectedItem.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
@@ -461,7 +472,7 @@ function ArchiveCard({
                   </span>
                 )}
                 <span className="text-[10px] text-[#94a3b8] font-mono">
-                  {new Date(item.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(item.archived_at || item.fetched_at).toLocaleString('ar-EG', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>

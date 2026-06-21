@@ -472,6 +472,15 @@ app.listen(PORT, '0.0.0.0', async () => {
       CREATE INDEX IF NOT EXISTS idx_raw_data_is_rewritten ON raw_data(is_rewritten) WHERE is_rewritten = false;
     `);
 
+    // عمود archived_at لتتبع وقت الأرشفة (safe migration)
+    await dbQuery(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='raw_data' AND column_name='archived_at') THEN
+          ALTER TABLE raw_data ADD COLUMN archived_at TIMESTAMP DEFAULT NULL;
+        END IF;
+      END $$;
+    `);
+
     // جدول editorial_queue
     await dbQuery(`
       CREATE TABLE IF NOT EXISTS editorial_queue (
