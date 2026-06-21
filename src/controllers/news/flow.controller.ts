@@ -255,7 +255,7 @@ export class FlowController {
    */
   static async getReadyToPublish(req: Request, res: Response): Promise<void> {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 200;
       const mediaUnitId = req.query.media_unit_id ? parseInt(req.query.media_unit_id as string) : undefined;
       
       if (!mediaUnitId) {

@@ -68,8 +68,8 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
             icon={Clock}
             variant="warning"
           />
-          <StatCard label="منشور" value={unitPublished?.count || 0} icon={CheckCircle2} variant="success" />
-          <StatCard label="مرفوض" value={selectedUnit.rejected_count || 0} icon={AlertTriangle} variant="error" />
+          <StatCard label="منشور" value={Number(unitPublished?.count || 0)} icon={CheckCircle2} variant="success" />
+          <StatCard label="مرفوض" value={Number(selectedUnit.rejected_count || 0)} icon={AlertTriangle} variant="error" />
           <StatCard label="المصادر النشطة" value={stats?.activeSources ?? "—"} icon={Rss} variant="info" />
         </div>
       ) : null}
@@ -90,7 +90,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                   (u: any) => u.media_unit === unit.name
                 );
                 const pending = Number(unit.pending_count || 0) + Number(unit.incomplete_count || 0);
-                const published = unitPub?.count || 0;
+                const published = Number(unitPub?.count || 0);
                 const rejected = Number(unit.rejected_count || 0);
                 return (
                   <div key={unit.id} className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4 flex flex-col gap-3">
@@ -120,11 +120,11 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
       {/* Daily Stats Chart */}
       {unitId && dailyStats.length > 0 && (() => {
         const last14 = dailyStats.slice(0, 14);
-        const maxVal = Math.max(...last14.map((d: any) => d.published_count || 0), 1);
-        const totalPublishedSum = dailyStats.reduce((s: number, d: any) => s + (d.published_count || 0), 0);
-        const totalEditorialSum = dailyStats.reduce((s: number, d: any) => s + (d.editorial_count || 0), 0);
-        const totalAutoSum = dailyStats.reduce((s: number, d: any) => s + (d.automated_count || 0), 0);
-        const totalRejectedSum = dailyStats.reduce((s: number, d: any) => s + (d.rejected_count || 0), 0);
+        const maxVal = Math.max(...last14.map((d: any) => Number(d.published_count || 0)), 1);
+        const totalPublishedSum = dailyStats.reduce((s: number, d: any) => s + Number(d.published_count || 0), 0);
+        const totalEditorialSum = dailyStats.reduce((s: number, d: any) => s + Number(d.editorial_count || 0), 0);
+        const totalAutoSum = dailyStats.reduce((s: number, d: any) => s + Number(d.automated_count || 0), 0);
+        const totalRejectedSum = dailyStats.reduce((s: number, d: any) => s + Number(d.rejected_count || 0), 0);
         const tableRows = showAllDays ? dailyStats : dailyStats.slice(0, 7);
         // تحديد تاريخ اليوم بتوقيت فلسطين للمقارنة
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hebron' });
@@ -167,7 +167,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                 {/* Bars */}
                 <div className="flex items-end gap-2 h-48 relative">
                   {last14.map((day: any, idx: number) => {
-                    const pubCount = day.published_count || 0;
+                    const pubCount = Number(day.published_count || 0);
                     const pubH = (pubCount / maxVal) * 100;
                     const dateObj = new Date(day.date);
                     const dayLabel = dateObj.toLocaleDateString('ar-SA', { day: 'numeric', month: 'numeric', timeZone: 'Asia/Hebron' });
@@ -186,7 +186,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                               <span className="w-2 h-2 rounded-full bg-emerald-400" />
                               <span className="text-emerald-300">منشور: {pubCount}</span>
                             </p>
-                            {(day.editorial_count || 0) > 0 && (
+                            {Number(day.editorial_count || 0) > 0 && (
                               <p className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-[#93c5fd]" />
                                 <span className="text-[#93c5fd]">تحريري: {day.editorial_count}</span>
@@ -198,7 +198,7 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                                 <span className="text-sky-300">آلي: {day.automated_count}</span>
                               </p>
                             )}
-                            {(day.rejected_count || 0) > 0 && (
+                            {Number(day.rejected_count || 0) > 0 && (
                               <p className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-rose-300" />
                                 <span className="text-rose-300">مرفوض: {day.rejected_count}</span>
@@ -286,10 +286,10 @@ export function OverviewView({ unitId }: { unitId: number | null }) {
                     const dateObj = new Date(day.date);
                     const dayName = dateObj.toLocaleDateString('ar-SA', { weekday: 'long', timeZone: 'Asia/Hebron' });
                     const formattedDate = dateObj.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hebron' });
-                    const pub = day.published_count || 0;
-                    const ed = day.editorial_count || 0;
-                    const auto = day.automated_count || 0;
-                    const rej = day.rejected_count || 0;
+                    const pub = Number(day.published_count || 0);
+                    const ed = Number(day.editorial_count || 0);
+                    const auto = Number(day.automated_count || 0);
+                    const rej = Number(day.rejected_count || 0);
                     const total = pub + rej;
                     const pubPct = total > 0 ? Math.round((pub / total) * 100) : 0;
                     const dayDateStr = dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Hebron' });

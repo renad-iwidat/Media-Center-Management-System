@@ -175,12 +175,27 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
       const itemType = item.flow_type === 'automated' ? "أوتوماتيكي" : "تحريري";
       return itemType === selectedType;
     });
-    if (dateFrom) filtered = filtered.filter(item => new Date(item.published_at) >= new Date(dateFrom));
-    if (dateTo) filtered = filtered.filter(item => new Date(item.published_at) <= new Date(dateTo));
+    if (dateFrom) filtered = filtered.filter(item => {
+      const itemDate = item.published_at || item.pub_date;
+      return itemDate && new Date(itemDate) >= new Date(dateFrom);
+    });
+    if (dateTo) filtered = filtered.filter(item => {
+      const itemDate = item.published_at || item.pub_date;
+      return itemDate && new Date(itemDate) <= new Date(dateTo + 'T23:59:59');
+    });
+    // الترتيب حسب التاريخ - الأحدث أولاً أو الأقدم أولاً
     if (sortBy === "newest") {
-      filtered.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.published_at || a.pub_date || 0).getTime();
+        const dateB = new Date(b.published_at || b.pub_date || 0).getTime();
+        return dateB - dateA;
+      });
     } else {
-      filtered.sort((a, b) => new Date(a.published_at).getTime() - new Date(b.published_at).getTime());
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.published_at || a.pub_date || 0).getTime();
+        const dateB = new Date(b.published_at || b.pub_date || 0).getTime();
+        return dateA - dateB;
+      });
     }
     setFilteredItems(filtered);
     setCurrentPage(1);
