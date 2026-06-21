@@ -406,7 +406,9 @@ class PublishingService {
 
   /**
    * تحديث حالة المقال بناءً على النشر الناجح
-   * ⚠️ الأرشفة لا تحصل تلقائياً — فقط عبر archiveArticle()
+   * - publish_status يعكس دورة الحياة (published_external / published_social)
+   * - archived_at يُضبط تلقائياً عند أول نشر ناجح = الخبر أصبح في الأرشيف
+   *   (لا نغيّر publish_status إلى 'archived' حتى لا نمنع النشر على منصات أخرى)
    */
   private async updateArticleLifecycle(
     articleId: number,
@@ -420,20 +422,29 @@ class PublishingService {
       newStatus = 'published_social';
     }
 
-    // لا نرجع للخلف ولا نؤرشف تلقائياً
+    // لا نرجع للخلف ولا نؤرشف يدوياً، ونضبط archived_at تلقائياً عند أول نشر ناجح
     await query(
-      `UPDATE raw_data SET publish_status = $1 
-       WHERE id = $2 AND publish_status NOT IN ('archived', 'published_external', 'published_social')`,
+      `UPDATE raw_data
+         SET publish_status = CASE
+               WHEN publish_status NOT IN ('archived', 'published_external', 'published_social') THEN $1
+               ELSE publish_status
+             END,
+             archived_at = COALESCE(archived_at, NOW())
+       WHERE id = $2`,
       [newStatus, articleId]
     );
   }
 
   /**
    * تغيير حالة المقال يدوياً
+   * عند الأرشفة اليدوية نضبط archived_at أيضاً للحفاظ على اتساق مصدر الحقيقة
    */
   async setArticleStatus(articleId: number, status: ArticlePublishStatus): Promise<boolean> {
     const result = await query(
-      `UPDATE raw_data SET publish_status = $1 WHERE id = $2 RETURNING id`,
+      `UPDATE raw_data
+         SET publish_status = $1,
+             archived_at = CASE WHEN $1 = 'archived' THEN COALESCE(archived_at, NOW()) ELSE archived_at END
+       WHERE id = $2 RETURNING id`,
       [status, articleId]
     );
     return result.rows.length > 0;
@@ -629,12 +640,11 @@ class PublishingService {
   } = {}): Promise<{ articles: any[]; total: number }> {
     const { platform, media_unit_id, limit = 50, offset = 0 } = options;
 
-    // الأرشيف = الأخبار المؤرشفة فقط (publish_status = 'archived')
-    // عند اختيار وحدة إعلامية: تُطبّق الشرطان معاً (AND):
-    //   1. الخبر مؤرشف (archived)
-    //   2. الخبر تابع للوحدة الإعلامية المختارة
-    // ملاحظة: الـ JOINs على publishing_status / auto_publish_log تبقى
-    // لأغراض الفلترة حسب المنصة وعرض روابط النشر فقط، وليست شرطاً للأرشفة.
+    // الأرشيف = الأخبار التي تمت أرشفتها (archived_at IS NOT NULL).
+    // archived_at يُضبط تلقائياً عند أول نشر ناجح على أي منصة،
+    // أو يدوياً عبر archiveArticle(). فهو مصدر الحقيقة الوحيد للأرشفة.
+    // عند اختيار وحدة إعلامية: يُطبّق شرط الوحدة (unitFilter) بـ AND،
+    // فتظهر فقط أخبار هذه الوحدة المؤرشفة ولا تظهر أخبار وحدات أخرى.
 
     let platformFilter = '';
     let unitFilter = '';
@@ -648,11 +658,14 @@ class PublishingService {
     }
 
     if (media_unit_id) {
+      // الخبر يخصّ أرشيف الوحدة فقط إذا نُشر فعلاً على منصة تابعة لهذه الوحدة:
+      //   - auto_publish_log ناجح عبر هدف نشر تابع للوحدة (المواقع الخارجية مثل نجاح)
+      //   - publishing_status ناجح عبر إعداد منصة تابع للوحدة (السوشال ميديا)
+      // لا نعتمد على rd.media_unit_id / editorial_queue / published_items لأنها تمثّل
+      // الملكية أو الإسناد أو كتالوج المحتوى، وليست نشراً فعلياً على منصة الوحدة،
+      // وكانت تسرّب أخباراً تخصّ وحدات أخرى.
       unitFilter = `AND (
-        rd.media_unit_id = $${idx}
-        OR rd.id IN (SELECT raw_data_id FROM published_items WHERE media_unit_id = $${idx})
-        OR rd.id IN (SELECT raw_data_id FROM editorial_queue WHERE media_unit_id = $${idx})
-        OR rd.id IN (
+        rd.id IN (
           SELECT apl2.raw_data_id FROM auto_publish_log apl2
           JOIN auto_publish_targets apt2 ON apt2.id = apl2.target_id
           WHERE apt2.media_unit_id = $${idx} AND apl2.status = 'success'
@@ -672,7 +685,7 @@ class PublishingService {
        FROM raw_data rd
        LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
        LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
-       WHERE rd.publish_status = 'archived' ${platformFilter} ${unitFilter}`,
+       WHERE rd.archived_at IS NOT NULL ${platformFilter} ${unitFilter}`,
       params
     );
 
@@ -684,7 +697,7 @@ class PublishingService {
         FROM raw_data rd
         LEFT JOIN publishing_status ps ON ps.article_id = rd.id AND ps.status = 'success'
         LEFT JOIN auto_publish_log apl ON apl.raw_data_id = rd.id AND apl.status = 'success'
-        WHERE rd.publish_status = 'archived' ${platformFilter} ${unitFilter}
+        WHERE rd.archived_at IS NOT NULL ${platformFilter} ${unitFilter}
         ORDER BY sort_date DESC
         LIMIT $${idx++} OFFSET $${idx}
       )

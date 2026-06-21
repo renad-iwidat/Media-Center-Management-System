@@ -277,7 +277,10 @@ class AutoPublishService {
         });
 
         await query(
-          `UPDATE raw_data SET publish_status = 'published_external' WHERE id = $1 AND publish_status NOT IN ('archived')`,
+          `UPDATE raw_data
+             SET publish_status = CASE WHEN publish_status NOT IN ('archived') THEN 'published_external' ELSE publish_status END,
+                 archived_at = COALESCE(archived_at, NOW())
+           WHERE id = $1`,
           [article.id]
         );
 

@@ -481,6 +481,34 @@ app.listen(PORT, '0.0.0.0', async () => {
       END $$;
     `);
 
+    // Backfill: تعبئة archived_at للأخبار المنشورة سابقاً (حتى لا تختفي من الأرشيف)
+    // مفهوم الأرشفة: أي خبر نُشر بنجاح على منصة واحدة على الأقل يُعتبر مؤرشفاً.
+    // archived_at هو مصدر الحقيقة الوحيد لكون الخبر في الأرشيف.
+    await dbQuery(`
+      UPDATE raw_data rd
+      SET archived_at = COALESCE(
+        (SELECT MAX(ps.published_at) FROM publishing_status ps
+           WHERE ps.article_id = rd.id AND ps.status = 'success'),
+        (SELECT MAX(apl.published_at) FROM auto_publish_log apl
+           WHERE apl.raw_data_id = rd.id AND apl.status = 'success'),
+        rd.fetched_at,
+        NOW()
+      )
+      WHERE rd.archived_at IS NULL
+        AND (
+          rd.publish_status IN ('archived', 'published_external', 'published_social')
+          OR EXISTS (SELECT 1 FROM publishing_status ps
+                       WHERE ps.article_id = rd.id AND ps.status = 'success')
+          OR EXISTS (SELECT 1 FROM auto_publish_log apl
+                       WHERE apl.raw_data_id = rd.id AND apl.status = 'success')
+        );
+    `);
+
+    // فهرس لتسريع استعلامات الأرشيف
+    await dbQuery(`
+      CREATE INDEX IF NOT EXISTS idx_raw_data_archived_at ON raw_data(archived_at) WHERE archived_at IS NOT NULL;
+    `);
+
     // جدول editorial_queue
     await dbQuery(`
       CREATE TABLE IF NOT EXISTS editorial_queue (
