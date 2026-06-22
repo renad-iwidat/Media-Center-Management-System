@@ -99,6 +99,47 @@ function buildPrompt(
 }
 
 /**
+ * استخراج قيمة حقل نصّي من JSON خام حتى لو كان مقطوعاً/ناقصاً.
+ * يبدأ من `"field": "` ويقرأ القيمة حرفاً حرفاً مع احترام الـ escapes،
+ * ويتوقف عند علامة الاقتباس غير المهرّبة أو نهاية النص (في حالة الانقطاع).
+ * يُرجع null إذا لم يجد الحقل.
+ */
+function extractStringField(raw: string, field: string): string | null {
+  const keyPattern = new RegExp(`"${field}"\\s*:\\s*"`);
+  const match = keyPattern.exec(raw);
+  if (!match) return null;
+
+  let i = match.index + match[0].length;
+  let out = '';
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (ch === '\\') {
+      // معالجة الـ escape
+      const next = raw[i + 1];
+      switch (next) {
+        case 'n': out += '\n'; break;
+        case 't': out += '\t'; break;
+        case 'r': out += '\r'; break;
+        case '"': out += '"'; break;
+        case '\\': out += '\\'; break;
+        case '/': out += '/'; break;
+        default: out += next ?? ''; break;
+      }
+      i += 2;
+      continue;
+    }
+    if (ch === '"') {
+      // نهاية القيمة (علامة اقتباس غير مهرّبة)
+      return out;
+    }
+    out += ch;
+    i++;
+  }
+  // وصلنا لنهاية النص بدون علامة إغلاق → القيمة مقطوعة، نرجّع المتوفّر
+  return out;
+}
+
+/**
  * استخراج JSON من نتيجة الـ AI
  * بيحاول عدة طرق لاستخراج الـ JSON من الـ response
  * ويتأكد من أن الـ response يطابق الـ output_schema
@@ -158,6 +199,23 @@ function extractJSON(
           console.warn('⚠️ Escaped {} extracted but schema validation failed');
         }
         return p;
+      }
+    }
+  } catch {}
+
+  // محاولة 3.5: استرجاع حقل نصّي من JSON مقطوع/ناقص (بسبب انقطاع التوليد)
+  // لو الرد انقطع جوّا modified_text، الـ JSON بيصير ناقص؛ هون منستخرج
+  // قيمة الحقل النصّي مباشرة بدل ما نخسرها ونرجع للنص الأصلي.
+  try {
+    const textFields = [
+      'modified_text', 'modifiedText', 'rewritten_text', 'cleaned_text',
+      'balanced_text', 'formatted_text', 'result_text', 'replaced_text',
+      'new_text', 'edited_text', 'text', 'output', 'content',
+    ];
+    for (const field of textFields) {
+      const recovered = extractStringField(cleaned, field);
+      if (recovered && recovered.trim().length > 50) {
+        return { [field]: recovered };
       }
     }
   } catch {}
@@ -274,10 +332,31 @@ function resolveOutputSchema(
 
 class EditorialPolicyService {
   /**
-   * حساب max_tokens للـ completion
+   * حساب max_tokens للـ completion بناءً على طول النص ونوع السياسة.
+   *
+   * سياسات التعديل (is_modifying) لازم ترجّع النص كامل داخل modified_text
+   * إضافةً للـ JSON wrapper (notes/changes)، فبتحتاج توكنات أكثر من طول النص.
+   * النص العربي ≈ 2.5 توكن/حرف → نحسب على هالأساس مع هامش أمان،
+   * عشان ما ينقطع الرد ويصير JSON ناقص (اللي بيخلي النظام يحسبها "بدون تغيير").
+   *
+   * سياسات الفحص (is_modifying = false) بترجّع تقرير قصير فقط.
+   * السقف الأقصى قابل للضبط عبر AI_MODEL_MAX_TOKENS (افتراضي 32000).
    */
-  private calculateMaxTokens(): number {
-    return 1000;
+  private calculateMaxTokens(textLength: number, isModifying: boolean): number {
+    // سقف أقصى قابل للضبط من البيئة (الموديل بيتحمّل كونتكست كبير)
+    const hardCap = Number(process.env.AI_MODEL_MAX_TOKENS) || 32000;
+
+    if (!isModifying) {
+      // فحص فقط — تقرير JSON قصير
+      return Math.min(2048, hardCap);
+    }
+
+    // تعديل — لازم نعيد النص كامل + wrapper (notes/changes)
+    // ~2.5 توكن للحرف العربي + هامش 2000 توكن للـ JSON والتغييرات
+    const estimated = Math.ceil(textLength * 2.5) + 2000;
+
+    // حد أدنى 4096، وحد أقصى = hardCap (افتراضي 32000)
+    return Math.min(Math.max(estimated, 4096), hardCap);
   }
 
   /**
@@ -322,7 +401,7 @@ class EditorialPolicyService {
     try {
       const resolvedSchema = resolveOutputSchema(outputSchema, isModifying);
       const prompt = buildPrompt(editorInstructions, text, injectedVars, resolvedSchema, promptTemplate);
-      const maxTokens = this.calculateMaxTokens();
+      const maxTokens = this.calculateMaxTokens(text.length, isModifying);
 
       // === LOG: الريكويست الكامل ===
       console.log(`\n${'='.repeat(80)}`);

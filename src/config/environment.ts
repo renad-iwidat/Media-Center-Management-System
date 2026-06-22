@@ -32,6 +32,7 @@ const schema = Joi.object({
   AI_MODEL: Joi.string().uri().optional(),
   AI_MODEL_NAME: Joi.string().default('Qwen/Qwen3-14B-AWQ'),
   AI_MODEL_API_KEY: Joi.string().default('not-needed'),
+  AI_MODEL_MAX_TOKENS: Joi.number().integer().min(256).default(42000),
   AI_MODEL_TIMEOUT: Joi.number().integer().min(1000).default(120000),
 
   // ── OpenAI (TTS/STT) ──────────────────────────────────────
@@ -80,6 +81,7 @@ export const environment = {
   AI_MODEL: env.AI_MODEL as string | undefined,
   AI_MODEL_NAME: env.AI_MODEL_NAME as string,
   AI_MODEL_API_KEY: env.AI_MODEL_API_KEY as string,
+  AI_MODEL_MAX_TOKENS: env.AI_MODEL_MAX_TOKENS as number,
   AI_MODEL_TIMEOUT: env.AI_MODEL_TIMEOUT as number,
   OPENAI_API_KEY: env.OPENAI_API_KEY as string | undefined,
 

@@ -6,7 +6,7 @@
  * (محلي / دولي / سياسي كلها editorial ولا تصل هنا أصلاً)
  */
 
-import { callAIChat } from '../ai-hub/ai-chat.service';
+import { callAIChat, estimateMaxTokensForText } from '../ai-hub/ai-chat.service';
 
 /**
  * البرومبت الثابت لتنظيف نصوص RSS
@@ -73,9 +73,9 @@ class ContentCleanerService {
 
       const cleanedText: string = await callAIChat(prompt, {
         system: 'أنت محرر صحفي محترف تنظّف نصوص الأخبار من العناصر الترويجية دون تغيير المحتوى الصحفي.',
-        maxTokens: 900,
+        maxTokens: estimateMaxTokensForText(content),
         temperature: 0,
-        timeout: 30000,
+        timeout: 60000,
       });
 
       if (!cleanedText || !cleanedText.trim()) {

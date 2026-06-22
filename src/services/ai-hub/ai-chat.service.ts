@@ -163,3 +163,14 @@ export async function callAIChat(
   ];
   return callAIChatMessages(messages, options);
 }
+
+/**
+ * تقدير عدد توكنات المخرجات المناسب لنص لازم الموديل يعيد كتابته كاملاً
+ * (تنظيف / إعادة صياغة / تعديل). النص العربي ≈ 2.5 توكن/حرف، مع هامش أمان.
+ * مقيّد بالسقف الأقصى AI_MODEL_MAX_TOKENS (افتراضي 32000).
+ */
+export function estimateMaxTokensForText(text: string, margin = 1500): number {
+  const hardCap = Number(process.env.AI_MODEL_MAX_TOKENS) || 32000;
+  const estimated = Math.ceil((text?.length || 0) * 2.5) + margin;
+  return Math.min(Math.max(estimated, 2048), hardCap);
+}

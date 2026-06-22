@@ -18,7 +18,7 @@
 
 import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
-import { callAIChat } from '../ai-hub/ai-chat.service';
+import { callAIChat, estimateMaxTokensForText } from '../ai-hub/ai-chat.service';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PROMPT — مختصر ومركّز (أقل tokens = أسرع response)
@@ -183,7 +183,7 @@ class ArticleRewriterService {
 
     const result: string = await callAIChat(cleanPrompt, {
       system: 'أنت محرر صحفي عربي محترف. تعيد صياغة الأخبار بدقة مع الحفاظ الكامل على المعنى والحقائق.',
-      maxTokens: 1000,
+      maxTokens: estimateMaxTokensForText(text),
       temperature: 0.3,
       timeout: 120000,
     });
