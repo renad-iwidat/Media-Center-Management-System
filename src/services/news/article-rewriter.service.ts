@@ -16,9 +16,9 @@
  * يستخدم AI_MODEL المحلي (vLLM)
  */
 
-import axios from 'axios';
 import { query } from '../../config/database';
 import { SystemSettingsService } from '../database/system-settings.service';
+import { callAIChat } from '../ai-hub/ai-chat.service';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PROMPT — مختصر ومركّز (أقل tokens = أسرع response)
@@ -69,13 +69,6 @@ function sanitize(text: string): string {
 // ════════════════════════════════════════════════════════════════════════════
 
 class ArticleRewriterService {
-  private readonly apiUrl: string;
-
-  constructor() {
-    const baseUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
-    this.apiUrl = `${baseUrl}/generate`;
-  }
-
   /**
    * التحقق مما إذا كانت إعادة الصياغة مفعّلة
    */
@@ -184,32 +177,18 @@ class ArticleRewriterService {
     // تقليم النص الطويل (أكثر من 4000 حرف → نأخذ أول 4000)
     const text = content.length > 4000 ? content.substring(0, 4000) : content;
 
-    const cleanPrompt = `${REWRITER_PROMPT} ${sanitize(title)} ${sanitize(text)}/no_think`
+    const cleanPrompt = `${REWRITER_PROMPT} ${sanitize(title)} ${sanitize(text)}`
       .replace(/\s{2,}/g, ' ')
       .trim();
 
-    const response = await axios.post(this.apiUrl, {
-      prompt: cleanPrompt,
-      think: false,
-      max_tokens: 1000,
+    const result: string = await callAIChat(cleanPrompt, {
+      system: 'أنت محرر صحفي عربي محترف. تعيد صياغة الأخبار بدقة مع الحفاظ الكامل على المعنى والحقائق.',
+      maxTokens: 1000,
       temperature: 0.3,
-    }, {
       timeout: 120000,
     });
 
-    const data = response.data;
-
-    if (data.status === 'failed' || data.error) {
-      console.warn(`   ⚠️ AI error:`, data.error);
-      return null;
-    }
-
-    const result: string =
-      data.result || data.text || data.output || data.response ||
-      data.generated_text || data.content ||
-      (data.choices?.[0]?.text) || (data.choices?.[0]?.message?.content) || '';
-
-    if (!result.trim()) return null;
+    if (!result || !result.trim()) return null;
 
     const final = result.trim();
 

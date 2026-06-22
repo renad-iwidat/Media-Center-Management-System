@@ -24,6 +24,12 @@ services:
         sync: false # Set this in Render dashboard (secret)
       - key: AI_MODEL
         sync: false # Set this in Render dashboard
+      - key: AI_MODEL_NAME
+        value: Qwen/Qwen3-14B-AWQ
+      - key: AI_MODEL_API_KEY
+        sync: false # Set this in Render dashboard (local model: not-needed)
+      - key: AI_MODEL_TIMEOUT
+        value: 120000
       - key: OPENAI_API_KEY
         sync: false # Set this in Render dashboard (secret)
       - key: JWT_SECRET

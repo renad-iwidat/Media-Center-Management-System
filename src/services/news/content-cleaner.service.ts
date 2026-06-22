@@ -6,7 +6,7 @@
  * (محلي / دولي / سياسي كلها editorial ولا تصل هنا أصلاً)
  */
 
-import axios from 'axios';
+import { callAIChat } from '../ai-hub/ai-chat.service';
 
 /**
  * البرومبت الثابت لتنظيف نصوص RSS
@@ -55,13 +55,6 @@ function sanitizeText(text: string): string {
 // ============================================================================
 
 class ContentCleanerService {
-  private readonly apiUrl: string;
-
-  constructor() {
-    const baseUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
-    this.apiUrl = `${baseUrl}/generate`;
-  }
-
   /**
    * تنظيف نص الخبر من العناصر الترويجية عبر AI
    *
@@ -76,39 +69,14 @@ class ContentCleanerService {
       const sanitizedContent = sanitizeText(content);
       const prompt = `${sanitizeText(CLEANING_PROMPT)} ${sanitizedContent}`;
 
-      const requestBody = {
-        prompt,
-        think: false,
-        max_tokens:900,
-        temperature: 0,
-      };
-
       console.log(`🧹 [تنظيف] الخبر ${articleId} — إرسال للـ AI...`);
 
-      const response = await axios.post(this.apiUrl, requestBody, {
+      const cleanedText: string = await callAIChat(prompt, {
+        system: 'أنت محرر صحفي محترف تنظّف نصوص الأخبار من العناصر الترويجية دون تغيير المحتوى الصحفي.',
+        maxTokens: 900,
+        temperature: 0,
         timeout: 30000,
       });
-
-      const rawData = response.data;
-
-      // فحص خطأ من الـ AI server
-      if (rawData.status === 'failed' || rawData.error) {
-        const errorMsg = rawData.error || 'AI server returned failed status';
-        console.error(`❌ [تنظيف] خطأ من AI server للخبر ${articleId}:`, errorMsg);
-        return content; // fallback للنص الأصلي
-      }
-
-      // استخراج النص من الـ response
-      const cleanedText: string =
-        rawData.result ||
-        rawData.text ||
-        rawData.output ||
-        rawData.response ||
-        rawData.generated_text ||
-        rawData.content ||
-        (rawData.choices && rawData.choices[0]?.text) ||
-        (rawData.choices && rawData.choices[0]?.message?.content) ||
-        '';
 
       if (!cleanedText || !cleanedText.trim()) {
         console.warn(`⚠️ [تنظيف] الخبر ${articleId} — الـ AI رجّع نص فارغ، نستخدم الأصلي`);

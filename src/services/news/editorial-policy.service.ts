@@ -3,8 +3,8 @@
  * خدمة تطبيق سياسات التحرير على الأخبار عبر AI Model
  */
 
-import axios from 'axios';
 import { logAIUsage } from '../ai-hub/ai-usage-logger.service';
+import { callAIChat, getChatCompletionsUrl } from '../ai-hub/ai-chat.service';
 
 // ============================================================================
 // HELPERS
@@ -317,55 +317,36 @@ class EditorialPolicyService {
     error?: string;
   }> {
     const startTime = Date.now();
-    const baseUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
-    const apiUrl = `${baseUrl}/${endpoint}`;
+    const apiUrl = getChatCompletionsUrl();
 
     try {
       const resolvedSchema = resolveOutputSchema(outputSchema, isModifying);
       const prompt = buildPrompt(editorInstructions, text, injectedVars, resolvedSchema, promptTemplate);
       const maxTokens = this.calculateMaxTokens();
 
-      const requestBody = { prompt, think: false, max_tokens: maxTokens, temperature: 0.3 };
-
       // === LOG: الريكويست الكامل ===
       console.log(`\n${'='.repeat(80)}`);
-      console.log(`📤 [${policyName}] REQUEST → ${apiUrl}`);
+      console.log(`📤 [${policyName}] REQUEST → ${apiUrl} (endpoint hint: ${endpoint})`);
       console.log(`${'='.repeat(80)}`);
-      console.log(`📤 [${policyName}] FULL REQUEST BODY:`);
-      console.log(JSON.stringify(requestBody, null, 2));
+      console.log(`📤 [${policyName}] PROMPT:`);
+      console.log(prompt);
       console.log(`${'='.repeat(80)}\n`);
 
-      const response = await axios.post(apiUrl, requestBody, { timeout: 300000 });
+      const responseText: string = await callAIChat(prompt, {
+        system: 'أنت محرر صحفي محترف تطبّق سياسات التحرير بدقة وتعيد المخرجات بالصيغة المطلوبة.',
+        maxTokens,
+        temperature: 0.3,
+        timeout: 300000,
+      });
 
       const executionTime = Date.now() - startTime;
-      const rawData = response.data;
 
       // === LOG: الريسبونس الكامل ===
       console.log(`\n${'='.repeat(80)}`);
       console.log(`📡 [${policyName}] RESPONSE (${executionTime}ms)`);
       console.log(`${'='.repeat(80)}`);
-      console.log(`📡 [${policyName}] FULL RESPONSE:`);
-      console.log(JSON.stringify(rawData, null, 2));
+      console.log(responseText);
       console.log(`${'='.repeat(80)}\n`);
-
-      // فحص إذا الـ AI server رجّع خطأ داخل الـ response body
-      if (rawData.status === 'failed' || rawData.error) {
-        const errorMsg = rawData.error || 'AI server returned failed status';
-        console.error(`❌ [${policyName}] AI server error:`, errorMsg);
-        throw new Error(`AI server error: ${errorMsg}`);
-      }
-
-      // استخراج النص من الـ response
-      const responseText: string =
-        rawData.result ||
-        rawData.text ||
-        rawData.output ||
-        rawData.response ||
-        rawData.generated_text ||
-        rawData.content ||
-        (rawData.choices && rawData.choices[0]?.text) ||
-        (rawData.choices && rawData.choices[0]?.message?.content) ||
-        (typeof rawData === 'string' ? rawData : '');
 
       const result = extractJSON(responseText, resolvedSchema);
 

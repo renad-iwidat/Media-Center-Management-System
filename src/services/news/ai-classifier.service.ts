@@ -3,7 +3,7 @@
  * خدمة تصنيف الأخبار باستخدام AI
  */
 
-import axios from 'axios';
+import { callAIChat } from '../ai-hub/ai-chat.service';
 
 /**
  * واجهة لنتيجة التصنيف من الـ API
@@ -66,12 +66,9 @@ export async function mapApiCategoryToLocalId(apiSlug: string | undefined | null
  * فئة AI Classifier Service
  */
 class AIClassifierService {
-  private apiUrl: string;
   private systemPrompt: string;
 
   constructor() {
-    const baseUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
-    this.apiUrl = `${baseUrl}/generate`;
     this.systemPrompt = `SYSTEM: أنت مصنف أخبار فلسطيني آلي صارم.
 مهمتك تصنيف الأخبار وفق المنظور التحريري الفلسطيني وليس فقط الموضوع العام للخبر.
 
@@ -130,27 +127,17 @@ USER:
       try {
         const articleText = `${title}\n${content}`;
         
-        // تنظيف الـ prompt من newlines لتفادي 400 من vLLM
-        const rawPrompt = `${this.systemPrompt}\n${articleText}/no_think`;
+        // تنظيف الـ prompt من newlines
+        const rawPrompt = `${this.systemPrompt}\n${articleText}`;
         const cleanPrompt = rawPrompt.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
-        const payload = {
-          prompt: cleanPrompt,
-          think: false,
-          max_tokens: 200,
+        const rawResult = await callAIChat(cleanPrompt, {
+          maxTokens: 200,
           temperature: 0,
-        };
+          timeout: 30000,
+        });
 
-        const response = await axios.post<AIClassificationResponse>(
-          this.apiUrl,
-          payload,
-          {
-            timeout: 30000,
-          }
-        );
-
-        const rawResult = response.data.result || '';
-        const category = this.extractCategory(rawResult);
+        const category = this.extractCategory(rawResult || '');
         const categoryId = CATEGORY_MAP[category] || null;
         
         // confidence=true إذا الـ AI رجع تصنيف معروف، false إذا رجع "غير مصنف"

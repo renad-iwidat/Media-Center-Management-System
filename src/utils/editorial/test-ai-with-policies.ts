@@ -4,7 +4,6 @@
  * يطبع البرومت الكامل والاوتبوت
  */
 
-import axios from 'axios';
 import * as db from '../../config/database';
 
 // ============================================================================
@@ -177,8 +176,7 @@ async function callAIModel(
   textLength: number
 ): Promise<{ response: string; executionTime: number }> {
   const startTime = Date.now();
-  const baseUrl = process.env.AI_MODEL || 'http://93.127.132.59:8080';
-  const apiUrl = `${baseUrl}/generate`;
+  const { callAIChat } = await import('../../services/ai-hub/ai-chat.service');
 
   // حساب max_tokens بناءً على نوع المهمة وطول النص
   const textTasks = ['rewrite', 'replace', 'remove', 'cleanup', 'formatting', 'balance', 'disclaimer'];
@@ -187,23 +185,16 @@ async function callAIModel(
     : 1024;
 
   try {
-    const response = await axios.post(
-      apiUrl,
-      {
-        prompt: sanitizeForJSON(prompt),
-        think: false,
-        max_tokens: maxTokens,
-        temperature: 0.3,
-      },
-      { timeout: 120000 }
-    );
+    const responseText = await callAIChat(sanitizeForJSON(prompt), {
+      system: 'أنت محرر صحفي محترف تطبّق سياسات التحرير بدقة.',
+      maxTokens,
+      temperature: 0.3,
+      timeout: 120000,
+    });
 
     const executionTime = Date.now() - startTime;
-    const responseText = response.data.result || response.data.text || response.data.output || '';
-
     return { response: responseText, executionTime };
   } catch (error: any) {
-    const executionTime = Date.now() - startTime;
     const errorMsg = error?.response?.data?.detail || error?.message || 'خطأ غير معروف';
     throw new Error(`خطأ في استدعاء AI API: ${errorMsg}`);
   }

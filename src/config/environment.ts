@@ -30,6 +30,9 @@ const schema = Joi.object({
 
   // ── AI Model (تصنيف/تنظيف/STT) ────────────────────────────
   AI_MODEL: Joi.string().uri().optional(),
+  AI_MODEL_NAME: Joi.string().default('Qwen/Qwen3-14B-AWQ'),
+  AI_MODEL_API_KEY: Joi.string().default('not-needed'),
+  AI_MODEL_TIMEOUT: Joi.number().integer().min(1000).default(120000),
 
   // ── OpenAI (TTS/STT) ──────────────────────────────────────
   OPENAI_API_KEY: Joi.string().optional(),
@@ -75,6 +78,9 @@ export const environment = {
 
   // AI
   AI_MODEL: env.AI_MODEL as string | undefined,
+  AI_MODEL_NAME: env.AI_MODEL_NAME as string,
+  AI_MODEL_API_KEY: env.AI_MODEL_API_KEY as string,
+  AI_MODEL_TIMEOUT: env.AI_MODEL_TIMEOUT as number,
   OPENAI_API_KEY: env.OPENAI_API_KEY as string | undefined,
 
   // Scheduler / Pipeline
