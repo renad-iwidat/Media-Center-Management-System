@@ -1,9 +1,9 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
  * Media Center Management System - Elderly-Friendly UI
- * تصميم مبسط وواضح لكبار السن مع تنقل تسلسلي
+ * ØªØµÙ…ÙŠÙ… Ù…Ø¨Ø³Ø· ÙˆÙˆØ§Ø¶Ø­ Ù„ÙƒØ¨Ø§Ø± Ø§Ù„Ø³Ù† Ù…Ø¹ ØªÙ†Ù‚Ù„ ØªØ³Ù„Ø³Ù„ÙŠ
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -57,7 +57,7 @@ import { api, getAuthToken, setAuthToken, getCurrentUser, setCurrentUser, clearA
 import { useMediaUnits, clearMediaUnitsCache } from './lib/useMediaUnits';
 import { useRenderTracker } from './lib/useRenderTracker';
 
-// دعم runtime environment variables من Docker
+// Ø¯Ø¹Ù… runtime environment variables Ù…Ù† Docker
 const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
   if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
     return window.ENV[key];
@@ -79,38 +79,38 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'news-admin', label: 'لوحة الإدارة',      description: 'إحصائيات الموظفين والأداء',   icon: TrendingUp,     group: 'news' },
-  { id: 'overview',   label: 'نظرة عامة',         description: 'ملخص الأخبار والإحصائيات',    icon: LayoutDashboard, group: 'news' },
-  { id: 'sources',    label: 'مصادر المحتوى',      description: 'إدارة مصادر الأخبار',         icon: Rss,            group: 'news' },
-  { id: 'incomplete', label: 'أخبار غير مكتملة',   description: 'أخبار تحتاج إكمال',           icon: AlertTriangle,  group: 'news' },
-  { id: 'queue',      label: 'قسم التحرير',         description: 'تحرير ومراجعة الأخبار',       icon: FileEdit,       group: 'news' },
-  { id: 'policies',   label: 'السياسات التحريرية',  description: 'قواعد وسياسات النشر',         icon: PenTool,        group: 'news' },
-  { id: 'published',  label: 'قسم النشر',           description: 'الأخبار التحريرية الجاهزة للنشر', icon: CheckCircle,    group: 'news' },
-  { id: 'archive',    label: 'الأرشيف',             description: 'الأخبار المؤرشفة مع روابط النشر', icon: Archive,       group: 'news' },
-  { id: 'ai-dashboard', label: 'أدوات الذكاء الاصطناعي', description: 'جميع أدوات AI',        icon: Sparkles,       group: 'ai' },
-  { id: 'ideas',      label: 'وحدة التفكير',       description: 'توليد أفكار وعناوين',         icon: Lightbulb,      group: 'ai' },
-  { id: 'editing',    label: 'التحرير الصحفي',     description: 'إعادة صياغة وتلخيص',          icon: PenTool,        group: 'ai' },
-  { id: 'social',     label: 'التواصل الاجتماعي',  description: 'منشورات وهاشتاجات',           icon: Share2,         group: 'ai' },
-  { id: 'audio',      label: 'المختبر الصوتي',     description: 'تحويل صوت لنص',               icon: Mic2,           group: 'ai' },
-  { id: 'newsroom',   label: 'غرفة الأخبار',       description: 'إنشاء نشرات إخبارية',         icon: Newspaper,      group: 'ai' },
-  { id: 'chat',       label: 'مساعد AI ذكي',       description: 'دردشة مع المساعد',            icon: MessageSquare,  group: 'ai' },
-  { id: 'smart-transcription', label: 'التفريغ الذكي', description: 'تفريغ صوتي ذكي',          icon: Sparkles,       group: 'ai' },
+  { id: 'news-admin', label: 'Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©',      description: 'Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ† ÙˆØ§Ù„Ø£Ø¯Ø§Ø¡',   icon: TrendingUp,     group: 'news' },
+  { id: 'overview',   label: 'Ù†Ø¸Ø±Ø© Ø¹Ø§Ù…Ø©',         description: 'Ù…Ù„Ø®Øµ Ø§Ù„Ø£Ø®Ø¨Ø§Ø± ÙˆØ§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª',    icon: LayoutDashboard, group: 'news' },
+  { id: 'sources',    label: 'Ù…ØµØ§Ø¯Ø± Ø§Ù„Ù…Ø­ØªÙˆÙ‰',      description: 'Ø¥Ø¯Ø§Ø±Ø© Ù…ØµØ§Ø¯Ø± Ø§Ù„Ø£Ø®Ø¨Ø§Ø±',         icon: Rss,            group: 'news' },
+  { id: 'incomplete', label: 'Ø£Ø®Ø¨Ø§Ø± ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©',   description: 'Ø£Ø®Ø¨Ø§Ø± ØªØ­ØªØ§Ø¬ Ø¥ÙƒÙ…Ø§Ù„',           icon: AlertTriangle,  group: 'news' },
+  { id: 'queue',      label: 'Ù‚Ø³Ù… Ø§Ù„ØªØ­Ø±ÙŠØ±',         description: 'ØªØ­Ø±ÙŠØ± ÙˆÙ…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø£Ø®Ø¨Ø§Ø±',       icon: FileEdit,       group: 'news' },
+  { id: 'policies',   label: 'Ø§Ù„Ø³ÙŠØ§Ø³Ø§Øª Ø§Ù„ØªØ­Ø±ÙŠØ±ÙŠØ©',  description: 'Ù‚ÙˆØ§Ø¹Ø¯ ÙˆØ³ÙŠØ§Ø³Ø§Øª Ø§Ù„Ù†Ø´Ø±',         icon: PenTool,        group: 'news' },
+  { id: 'published',  label: 'Ù‚Ø³Ù… Ø§Ù„Ù†Ø´Ø±',           description: 'Ø§Ù„Ø£Ø®Ø¨Ø§Ø± Ø§Ù„ØªØ­Ø±ÙŠØ±ÙŠØ© Ø§Ù„Ø¬Ø§Ù‡Ø²Ø© Ù„Ù„Ù†Ø´Ø±', icon: CheckCircle,    group: 'news' },
+  { id: 'archive',    label: 'Ø§Ù„Ø£Ø±Ø´ÙŠÙ',             description: 'Ø§Ù„Ø£Ø®Ø¨Ø§Ø± Ø§Ù„Ù…Ø¤Ø±Ø´ÙØ© Ù…Ø¹ Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ù†Ø´Ø±', icon: Archive,       group: 'news' },
+  { id: 'ai-dashboard', label: 'Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ', description: 'Ø¬Ù…ÙŠØ¹ Ø£Ø¯ÙˆØ§Øª AI',        icon: Sparkles,       group: 'ai' },
+  { id: 'ideas',      label: 'ÙˆØ­Ø¯Ø© Ø§Ù„ØªÙÙƒÙŠØ±',       description: 'ØªÙˆÙ„ÙŠØ¯ Ø£ÙÙƒØ§Ø± ÙˆØ¹Ù†Ø§ÙˆÙŠÙ†',         icon: Lightbulb,      group: 'ai' },
+  { id: 'editing',    label: 'Ø§Ù„ØªØ­Ø±ÙŠØ± Ø§Ù„ØµØ­ÙÙŠ',     description: 'Ø¥Ø¹Ø§Ø¯Ø© ØµÙŠØ§ØºØ© ÙˆØªÙ„Ø®ÙŠØµ',          icon: PenTool,        group: 'ai' },
+  { id: 'social',     label: 'Ø§Ù„ØªÙˆØ§ØµÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ',  description: 'Ù…Ù†Ø´ÙˆØ±Ø§Øª ÙˆÙ‡Ø§Ø´ØªØ§Ø¬Ø§Øª',           icon: Share2,         group: 'ai' },
+  { id: 'audio',      label: 'Ø§Ù„Ù…Ø®ØªØ¨Ø± Ø§Ù„ØµÙˆØªÙŠ',     description: 'ØªØ­ÙˆÙŠÙ„ ØµÙˆØª Ù„Ù†Øµ',               icon: Mic2,           group: 'ai' },
+  { id: 'newsroom',   label: 'ØºØ±ÙØ© Ø§Ù„Ø£Ø®Ø¨Ø§Ø±',       description: 'Ø¥Ù†Ø´Ø§Ø¡ Ù†Ø´Ø±Ø§Øª Ø¥Ø®Ø¨Ø§Ø±ÙŠØ©',         icon: Newspaper,      group: 'ai' },
+  { id: 'chat',       label: 'Ù…Ø³Ø§Ø¹Ø¯ AI Ø°ÙƒÙŠ',       description: 'Ø¯Ø±Ø¯Ø´Ø© Ù…Ø¹ Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯',            icon: MessageSquare,  group: 'ai' },
+  { id: 'smart-transcription', label: 'Ø§Ù„ØªÙØ±ÙŠØº Ø§Ù„Ø°ÙƒÙŠ', description: 'ØªÙØ±ÙŠØº ØµÙˆØªÙŠ Ø°ÙƒÙŠ',          icon: Sparkles,       group: 'ai' },
 ];
 
 const SECTION_LABELS: Record<SectionId, string> = {} as any;
 NAV_ITEMS.forEach(i => { (SECTION_LABELS as any)[i.id] = i.label; });
-(SECTION_LABELS as any)['settings'] = 'إعدادات النظام';
+(SECTION_LABELS as any)['settings'] = 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù…';
 
 const SECTION_ICONS: Record<SectionId, any> = {} as any;
 NAV_ITEMS.forEach(i => { (SECTION_ICONS as any)[i.id] = i.icon; });
 (SECTION_ICONS as any)['settings'] = Settings2;
 
 /**
- * ربط كل section بالـ permission المطلوب
- * null = متاح للجميع بدون شرط
+ * Ø±Ø¨Ø· ÙƒÙ„ section Ø¨Ø§Ù„Ù€ permission Ø§Ù„Ù…Ø·Ù„ÙˆØ¨
+ * null = Ù…ØªØ§Ø­ Ù„Ù„Ø¬Ù…ÙŠØ¹ Ø¨Ø¯ÙˆÙ† Ø´Ø±Ø·
  */
 const SECTION_PERMISSIONS: Record<SectionId, string | null> = {
-  // وحدة الأخبار
+  // ÙˆØ­Ø¯Ø© Ø§Ù„Ø£Ø®Ø¨Ø§Ø±
   'news-admin':          'news.dashboard',
   'overview':            'news.view',
   'sources':             'news.settings',
@@ -119,7 +119,7 @@ const SECTION_PERMISSIONS: Record<SectionId, string | null> = {
   'policies':            'news.settings',
   'published':           'news.publish',
   'archive':             'news.view',
-  // وحدة AI (ai.use = الكل)
+  // ÙˆØ­Ø¯Ø© AI (ai.use = Ø§Ù„ÙƒÙ„)
   'ai-dashboard':        'ai.use',
   'ideas':               'ai.use',
   'editing':             'ai.use',
@@ -128,12 +128,12 @@ const SECTION_PERMISSIONS: Record<SectionId, string | null> = {
   'newsroom':            'ai.use',
   'chat':                null,
   'smart-transcription': 'ai.use',
-  // إعدادات
+  // Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª
   'settings':            'news.settings',
 };
 
 /**
- * دالة فحص الصلاحية من بيانات المستخدم المحفوظة
+ * Ø¯Ø§Ù„Ø© ÙØ­Øµ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ© Ù…Ù† Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ù…Ø­ÙÙˆØ¸Ø©
  */
 function hasPermission(user: any, permission: string): boolean {
   if (!user || !user.permissions) return false;
@@ -141,7 +141,7 @@ function hasPermission(user: any, permission: string): boolean {
 }
 
 /**
- * فحص إذا المستخدم يملك أي صلاحية أخبار — لإظهار/إخفاء مجموعة الأخبار كاملة
+ * ÙØ­Øµ Ø¥Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙŠÙ…Ù„Ùƒ Ø£ÙŠ ØµÙ„Ø§Ø­ÙŠØ© Ø£Ø®Ø¨Ø§Ø± â€” Ù„Ø¥Ø¸Ù‡Ø§Ø±/Ø¥Ø®ÙØ§Ø¡ Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø£Ø®Ø¨Ø§Ø± ÙƒØ§Ù…Ù„Ø©
  */
 function hasAnyNewsPermission(user: any): boolean {
   if (!user || !user.permissions) return false;
@@ -149,7 +149,7 @@ function hasAnyNewsPermission(user: any): boolean {
 }
 
 /**
- * فحص إذا المستخدم يملك صلاحية AI
+ * ÙØ­Øµ Ø¥Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙŠÙ…Ù„Ùƒ ØµÙ„Ø§Ø­ÙŠØ© AI
  */
 function hasAIPermission(user: any): boolean {
   if (!user || !user.permissions) return false;
@@ -202,7 +202,7 @@ export default function App() {
     }
   }, [selectedMediaUnitId]);
 
-  // === Auto-login من التوكن بالـ URL (redirect من مشروع خارجي) ===
+  // === Auto-login Ù…Ù† Ø§Ù„ØªÙˆÙƒÙ† Ø¨Ø§Ù„Ù€ URL (redirect Ù…Ù† Ù…Ø´Ø±ÙˆØ¹ Ø®Ø§Ø±Ø¬ÙŠ) ===
   useEffect(() => {
     let isMounted = true;
 
@@ -210,19 +210,19 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const urlToken = params.get('token');
 
-      // إذا ما في توكن بالـ URL أو المستخدم مسجل دخول أصلاً، ما نعمل شي
+      // Ø¥Ø°Ø§ Ù…Ø§ ÙÙŠ ØªÙˆÙƒÙ† Ø¨Ø§Ù„Ù€ URL Ø£Ùˆ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø³Ø¬Ù„ Ø¯Ø®ÙˆÙ„ Ø£ØµÙ„Ø§Ù‹ØŒ Ù…Ø§ Ù†Ø¹Ù…Ù„ Ø´ÙŠ
       if (!urlToken || isAuthenticated) return;
 
-      // نظّف الـ URL من الـ params (عشان ما يضل التوكن ظاهر)
+      // Ù†Ø¸Ù‘Ù Ø§Ù„Ù€ URL Ù…Ù† Ø§Ù„Ù€ params (Ø¹Ø´Ø§Ù† Ù…Ø§ ÙŠØ¶Ù„ Ø§Ù„ØªÙˆÙƒÙ† Ø¸Ø§Ù‡Ø±)
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
 
-      // احفظ التوكن وحاول تتحقق منه
+      // Ø§Ø­ÙØ¸ Ø§Ù„ØªÙˆÙƒÙ† ÙˆØ­Ø§ÙˆÙ„ ØªØªØ­Ù‚Ù‚ Ù…Ù†Ù‡
       setAuthToken(urlToken);
       setIsCheckingAuth(true);
 
       try {
-        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-iqsv.onrender.com';
+        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-backend-iw71.onrender.com';
         const response = await fetch(`${managementApiUrl}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${urlToken}`, 'Content-Type': 'application/json' },
         });
@@ -236,19 +236,19 @@ export default function App() {
             setCurrentUserState(data.data);
             setIsAuthenticated(true);
           } else {
-            // التوكن مش صالح
+            // Ø§Ù„ØªÙˆÙƒÙ† Ù…Ø´ ØµØ§Ù„Ø­
             clearAuthToken();
             clearCurrentUser();
             setIsAuthenticated(false);
           }
         } else {
-          // التوكن انتهى أو غير صالح
+          // Ø§Ù„ØªÙˆÙƒÙ† Ø§Ù†ØªÙ‡Ù‰ Ø£Ùˆ ØºÙŠØ± ØµØ§Ù„Ø­
           clearAuthToken();
           clearCurrentUser();
           setIsAuthenticated(false);
         }
       } catch {
-        // خطأ بالشبكة — نحاول نستخدم بيانات الـ URL كـ fallback
+        // Ø®Ø·Ø£ Ø¨Ø§Ù„Ø´Ø¨ÙƒØ© â€” Ù†Ø­Ø§ÙˆÙ„ Ù†Ø³ØªØ®Ø¯Ù… Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù€ URL ÙƒÙ€ fallback
         if (isMounted) {
           const userId = params.get('user_id');
           const userEmail = params.get('user_email');
@@ -292,7 +292,7 @@ export default function App() {
           return;
         }
 
-        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-iqsv.onrender.com';
+        const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-backend-iw71.onrender.com';
         try {
           const response = await fetch(`${managementApiUrl}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -333,6 +333,31 @@ export default function App() {
     return () => { isMounted = false; clearTimeout(emergencyTimeout); };
   }, []);
 
+  // â•â•â• ØªØ­Ø¯ÙŠØ« ØµÙ„Ø§Ø­ÙŠØ§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ù†Ø¯ ÙƒÙ„ ÙØªØ­/refresh â•â•â•
+  // Ù‡ÙŠÙƒ Ù„Ùˆ Ø§Ù„Ø£Ø¯Ù…Ù† Ø¹Ø¯Ù‘Ù„ ØµÙ„Ø§Ø­ÙŠØ§Øª Ù…Ø³ØªØ®Ø¯Ù…ØŒ Ø¨ØªÙ†Ø¹ÙƒØ³ Ø¹Ù†Ø¯ Ø£ÙˆÙ„ ÙØªØ­ Ø¨Ø¯ÙˆÙ† Ø­Ø§Ø¬Ø© Ù„Ù€ logout/login
+  useEffect(() => {
+    let isMounted = true;
+    if (!isAuthenticated) return;
+
+    const token = getAuthToken();
+    if (!token) return;
+
+    const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-backend-iw71.onrender.com';
+    fetch(`${managementApiUrl}/api/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!isMounted || !data?.success || !data?.data) return;
+        // Ø­Ø¯Ù‘Ø« localStorage + state Ø¨Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© (ÙÙŠÙ‡Ø§ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ§Øª Ø§Ù„Ù…Ø­Ø¯Ù‘Ø«Ø©)
+        setCurrentUser(data.data);
+        setCurrentUserState(data.data);
+      })
+      .catch(() => { /* ØµØ§Ù…Øª â€” Ù„Ùˆ ÙØ´Ù„ Ø§Ù„Ø´Ø¨ÙƒØ© Ù†ÙƒÙ…Ù‘Ù„ Ø¨Ø§Ù„Ù†Ø³Ø®Ø© Ø§Ù„Ù…Ø®Ø²Ù‘Ù†Ø© */ });
+
+    return () => { isMounted = false; };
+  }, [isAuthenticated]);
+
   useEffect(() => {
     let isMounted = true;
     if (!isAuthenticated) return;
@@ -370,7 +395,7 @@ export default function App() {
   const ActiveIcon = SECTION_ICONS[activeSection] || LayoutDashboard;
   const isAISection = activeSection.startsWith('ai-') || ['ideas', 'editing', 'social', 'audio', 'newsroom', 'chat', 'smart-transcription'].includes(activeSection);
 
-  // ═══ Login Screen ═══
+  // â•â•â• Login Screen â•â•â•
   if (!isAuthenticated) {
     return (
       <LoginPage
@@ -384,7 +409,7 @@ export default function App() {
     );
   }
 
-  // ═══ Loading Screen ═══
+  // â•â•â• Loading Screen â•â•â•
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1f3a4f] via-[#2d5570] to-[#1f3a4f] flex items-center justify-center">
@@ -397,28 +422,28 @@ export default function App() {
             <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
             <div className="w-2 h-2 bg-[#FF9F4A] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
-          <p className="text-white/60 text-sm">جاري التحقق من بيانات الدخول...</p>
+          <p className="text-white/60 text-sm">Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯Ø®ÙˆÙ„...</p>
         </div>
       </div>
     );
   }
 
-  // ═══ Main Layout ═══
+  // â•â•â• Main Layout â•â•â•
   return (
     <div className="min-h-screen flex text-[#1e293b] bg-[#f0f4f8]">
       {/* Skip to content - Accessibility */}
       <a href="#main-content" className="skip-to-content">
-        انتقل إلى المحتوى الرئيسي
+        Ø§Ù†ØªÙ‚Ù„ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ
       </a>
 
-      {/* ══ SIDEBAR ══ */}
+      {/* â•â• SIDEBAR â•â• */}
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 272 : 72 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="bg-gradient-to-b from-[#1f3a4f] to-[#0f2535] flex flex-col h-screen fixed right-0 top-0 z-50 overflow-hidden shadow-2xl"
         role="navigation"
-        aria-label="القائمة الرئيسية"
+        aria-label="Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©"
       >
         {/* Logo Header */}
         <div className="h-16 flex items-center justify-between px-4 shrink-0 border-b border-white/8">
@@ -434,8 +459,8 @@ export default function App() {
                   <TrendingUp className="text-white w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-arabic font-bold text-base text-white leading-none">مركز <span className="text-[#FF9F4A]">الإعلام</span></p>
-                  <p className="text-white/40 text-[10px] mt-0.5">نظام الأخبار</p>
+                  <p className="font-arabic font-bold text-base text-white leading-none">Ù…Ø±ÙƒØ² <span className="text-[#FF9F4A]">Ø§Ù„Ø¥Ø¹Ù„Ø§Ù…</span></p>
+                  <p className="text-white/40 text-[10px] mt-0.5">Ù†Ø¸Ø§Ù… Ø§Ù„Ø£Ø®Ø¨Ø§Ø±</p>
                 </div>
               </motion.div>
             )}
@@ -450,7 +475,7 @@ export default function App() {
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
-            aria-label={isSidebarOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+            aria-label={isSidebarOpen ? 'Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©' : 'ÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©'}
           >
             {isSidebarOpen ? <ChevronLeft size={18} className="text-white/60" /> : <Menu size={18} className="text-white/60" />}
           </button>
@@ -463,7 +488,7 @@ export default function App() {
             <>
               {isSidebarOpen && (
                 <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
-                  إدارة الأخبار
+                  Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø£Ø®Ø¨Ø§Ø±
                 </p>
               )}
               {NAV_ITEMS.filter(i => i.group === 'news').filter(item => {
@@ -510,7 +535,7 @@ export default function App() {
             <>
               {isSidebarOpen && (
                 <p className="text-[10px] font-bold text-[#FF9F4A]/70 uppercase tracking-widest px-3 mb-2">
-                  أدوات الذكاء الاصطناعي
+                  Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ
                 </p>
               )}
               {NAV_ITEMS.filter(i => i.group === 'ai').filter(item => {
@@ -554,8 +579,8 @@ export default function App() {
           {hasPermission(currentUser, 'news.settings') && (
             <button
               onClick={() => setActiveSection('settings')}
-              title="إعدادات النظام"
-              aria-label="إعدادات النظام"
+              title="Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù…"
+              aria-label="Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù…"
               aria-current={activeSection === 'settings' ? 'page' : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
                 activeSection === 'settings'
@@ -566,7 +591,7 @@ export default function App() {
               <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${activeSection === 'settings' ? 'bg-white/20' : 'group-hover:bg-white/8'}`}>
                 <Settings2 size={16} />
               </div>
-              {isSidebarOpen && <span className="text-sm font-medium">إعدادات النظام</span>}
+              {isSidebarOpen && <span className="text-sm font-medium">Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù…</span>}
             </button>
           )}
 
@@ -576,14 +601,14 @@ export default function App() {
                 {currentUser?.name?.charAt(0) || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{currentUser?.name || 'المستخدم'}</p>
-                <p className="text-[10px] text-[#FF9F4A]/80 truncate">{currentUser?.roles?.[0]?.name || 'موظف'}</p>
+                <p className="text-xs font-semibold text-white truncate">{currentUser?.name || 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…'}</p>
+                <p className="text-[10px] text-[#FF9F4A]/80 truncate">{currentUser?.roles?.[0]?.name || 'Ù…ÙˆØ¸Ù'}</p>
               </div>
               <button
                 onClick={handleLogout}
                 className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-white/30 hover:text-red-400 shrink-0"
-                title="تسجيل الخروج"
-                aria-label="تسجيل الخروج"
+                title="ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬"
+                aria-label="ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬"
               >
                 <LogOut size={14} />
               </button>
@@ -591,8 +616,8 @@ export default function App() {
           ) : (
             <button
               onClick={handleLogout}
-              title="تسجيل الخروج"
-              aria-label="تسجيل الخروج"
+              title="ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬"
+              aria-label="ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬"
               className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all text-white/30 hover:bg-red-500/15 hover:text-red-400"
             >
               <LogOut size={16} />
@@ -601,7 +626,7 @@ export default function App() {
         </div>
       </motion.aside>
 
-      {/* ══ MAIN CONTENT ══ */}
+      {/* â•â• MAIN CONTENT â•â• */}
       <main
         id="main-content"
         className="flex-1 flex flex-col h-screen overflow-hidden"
@@ -619,7 +644,7 @@ export default function App() {
               <button
                 onClick={() => setActiveSection('overview')}
                 className="p-2 rounded-lg hover:bg-[#f0f4f8] transition-colors"
-                aria-label="الصفحة الرئيسية"
+                aria-label="Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©"
               >
                 <Home size={18} className="text-[#3d6a8a]" />
               </button>
@@ -644,7 +669,7 @@ export default function App() {
                   : 'bg-gray-50 border-gray-200 text-gray-400'
               }`}>
                 <div className={`w-2 h-2 rounded-full shrink-0 ${isSystemOnline ? 'bg-emerald-400 animate-pulse' : 'bg-gray-300'}`} />
-                <span>{isSystemOnline ? 'النظام نشط' : 'النظام متوقف'}</span>
+                <span>{isSystemOnline ? 'Ø§Ù„Ù†Ø¸Ø§Ù… Ù†Ø´Ø·' : 'Ø§Ù„Ù†Ø¸Ø§Ù… Ù…ØªÙˆÙ‚Ù'}</span>
               </div>
             </div>
           </div>
@@ -654,7 +679,7 @@ export default function App() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 shrink-0">
                 <Building2 size={15} className="text-[#3d6a8a]" />
-                <span className="text-xs font-bold text-[#64748b]">الوحدة:</span>
+                <span className="text-xs font-bold text-[#64748b]">Ø§Ù„ÙˆØ­Ø¯Ø©:</span>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
@@ -665,10 +690,10 @@ export default function App() {
                       : 'bg-white text-[#64748b] border-[#e2e8f0] hover:border-[#3d6a8a] hover:text-[#1e293b]'
                   }`}
                 >
-                  الكل
+                  Ø§Ù„ÙƒÙ„
                 </button>
                 {loading ? (
-                  <span className="text-xs text-[#94a3b8]">تحميل...</span>
+                  <span className="text-xs text-[#94a3b8]">ØªØ­Ù…ÙŠÙ„...</span>
                 ) : (
                   mediaUnits.map((mu: { id: number; name: string }) => (
                     <button
@@ -709,7 +734,7 @@ export default function App() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-[#1e293b]">{SECTION_LABELS[activeSection]}</h2>
-                      <p className="text-[#64748b] text-xs mt-0.5">نظام الأخبار</p>
+                      <p className="text-[#64748b] text-xs mt-0.5">Ù†Ø¸Ø§Ù… Ø§Ù„Ø£Ø®Ø¨Ø§Ø±</p>
                     </div>
                   </div>
                 </div>
@@ -747,13 +772,13 @@ export default function App() {
   );
 }
 
-// ─── AI Dashboard - Elderly Friendly ────────────────────────────────────────
+// â”€â”€â”€ AI Dashboard - Elderly Friendly â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: SectionId) => void }) => {
   const cards = [
     {
       id: 'ideas' as SectionId,
-      title: 'وحدة التفكير',
-      desc: 'توليد أفكار مبدعة، أسئلة مقابلات، وعناوين جذابة.',
+      title: 'ÙˆØ­Ø¯Ø© Ø§Ù„ØªÙÙƒÙŠØ±',
+      desc: 'ØªÙˆÙ„ÙŠØ¯ Ø£ÙÙƒØ§Ø± Ù…Ø¨Ø¯Ø¹Ø©ØŒ Ø£Ø³Ø¦Ù„Ø© Ù…Ù‚Ø§Ø¨Ù„Ø§ØªØŒ ÙˆØ¹Ù†Ø§ÙˆÙŠÙ† Ø¬Ø°Ø§Ø¨Ø©.',
       icon: Lightbulb,
       bg: 'bg-amber-50',
       border: 'border-amber-200',
@@ -762,8 +787,8 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
     },
     {
       id: 'editing' as SectionId,
-      title: 'التحرير الصحفي',
-      desc: 'إعادة صياغة، تلخيص، وتدقيق لغوي فوري.',
+      title: 'Ø§Ù„ØªØ­Ø±ÙŠØ± Ø§Ù„ØµØ­ÙÙŠ',
+      desc: 'Ø¥Ø¹Ø§Ø¯Ø© ØµÙŠØ§ØºØ©ØŒ ØªÙ„Ø®ÙŠØµØŒ ÙˆØªØ¯Ù‚ÙŠÙ‚ Ù„ØºÙˆÙŠ ÙÙˆØ±ÙŠ.',
       icon: PenTool,
       bg: 'bg-blue-50',
       border: 'border-blue-200',
@@ -772,8 +797,8 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
     },
     {
       id: 'social' as SectionId,
-      title: 'التواصل الاجتماعي',
-      desc: 'منشورات تفاعلية، هاشتاجات، وتحويل الأخبار لمنشورات.',
+      title: 'Ø§Ù„ØªÙˆØ§ØµÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ',
+      desc: 'Ù…Ù†Ø´ÙˆØ±Ø§Øª ØªÙØ§Ø¹Ù„ÙŠØ©ØŒ Ù‡Ø§Ø´ØªØ§Ø¬Ø§ØªØŒ ÙˆØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø£Ø®Ø¨Ø§Ø± Ù„Ù…Ù†Ø´ÙˆØ±Ø§Øª.',
       icon: Share2,
       bg: 'bg-orange-50',
       border: 'border-orange-200',
@@ -782,8 +807,8 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
     },
     {
       id: 'audio' as SectionId,
-      title: 'المختبر الصوتي',
-      desc: 'تحويل الصوت إلى نص مكتوب والعكس.',
+      title: 'Ø§Ù„Ù…Ø®ØªØ¨Ø± Ø§Ù„ØµÙˆØªÙŠ',
+      desc: 'ØªØ­ÙˆÙŠÙ„ Ø§Ù„ØµÙˆØª Ø¥Ù„Ù‰ Ù†Øµ Ù…ÙƒØªÙˆØ¨ ÙˆØ§Ù„Ø¹ÙƒØ³.',
       icon: Mic2,
       bg: 'bg-violet-50',
       border: 'border-violet-200',
@@ -792,8 +817,8 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
     },
     {
       id: 'newsroom' as SectionId,
-      title: 'غرفة الأخبار',
-      desc: 'إنشاء نشرات ومواجيز إخبارية احترافية.',
+      title: 'ØºØ±ÙØ© Ø§Ù„Ø£Ø®Ø¨Ø§Ø±',
+      desc: 'Ø¥Ù†Ø´Ø§Ø¡ Ù†Ø´Ø±Ø§Øª ÙˆÙ…ÙˆØ§Ø¬ÙŠØ² Ø¥Ø®Ø¨Ø§Ø±ÙŠØ© Ø§Ø­ØªØ±Ø§ÙÙŠØ©.',
       icon: Newspaper,
       bg: 'bg-teal-50',
       border: 'border-teal-200',
@@ -802,8 +827,8 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
     },
     {
       id: 'chat' as SectionId,
-      title: 'مساعد AI ذكي',
-      desc: 'دردشة تفاعلية لمساعدتك في أي مهمة إعلامية.',
+      title: 'Ù…Ø³Ø§Ø¹Ø¯ AI Ø°ÙƒÙŠ',
+      desc: 'Ø¯Ø±Ø¯Ø´Ø© ØªÙØ§Ø¹Ù„ÙŠØ© Ù„Ù…Ø³Ø§Ø¹Ø¯ØªÙƒ ÙÙŠ Ø£ÙŠ Ù…Ù‡Ù…Ø© Ø¥Ø¹Ù„Ø§Ù…ÙŠØ©.',
       icon: MessageSquare,
       bg: 'bg-pink-50',
       border: 'border-pink-200',
@@ -824,8 +849,8 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
             <Sparkles className="text-white w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-arabic font-bold text-white">أدوات الذكاء الاصطناعي</h1>
-            <p className="text-white/60 text-sm mt-1">استخدم قوة الـ AI لتسريع عملك الإعلامي</p>
+            <h1 className="text-xl sm:text-2xl font-arabic font-bold text-white">Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ</h1>
+            <p className="text-white/60 text-sm mt-1">Ø§Ø³ØªØ®Ø¯Ù… Ù‚ÙˆØ© Ø§Ù„Ù€ AI Ù„ØªØ³Ø±ÙŠØ¹ Ø¹Ù…Ù„Ùƒ Ø§Ù„Ø¥Ø¹Ù„Ø§Ù…ÙŠ</p>
           </div>
         </div>
       </div>
@@ -839,7 +864,7 @@ const AIDashboard = React.memo(({ setActiveSection }: { setActiveSection: (s: Se
             whileTap={{ scale: 0.98 }}
             onClick={() => setActiveSection(card.id)}
             className={`${card.bg} border ${card.border} rounded-2xl p-5 text-right group hover:shadow-lg transition-all duration-200 flex flex-col gap-4`}
-            aria-label={`فتح ${card.title}`}
+            aria-label={`ÙØªØ­ ${card.title}`}
           >
             <div className="flex items-start justify-between">
               <motion.div

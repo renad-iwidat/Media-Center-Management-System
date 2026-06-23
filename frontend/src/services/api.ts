@@ -15,7 +15,7 @@ const getEnvVar = (key: keyof ImportMetaEnv): string | undefined => {
 // استخدام VITE_MANAGEMENT_API_URL لسيرفر الإدارة و VITE_API_URL لسيرفر الأخبار
 const MANAGEMENT_API_BASE = getEnvVar('VITE_MANAGEMENT_API_URL')
   ? `${getEnvVar('VITE_MANAGEMENT_API_URL')}/api`
-  : "https://mcms-iqsv.onrender.com/api";
+  : "https://mcms-backend-iw71.onrender.com/api";
 
 const API_BASE = getEnvVar('VITE_API_URL')
   ? `${getEnvVar('VITE_API_URL')}/api`

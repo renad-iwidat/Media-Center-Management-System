@@ -2,7 +2,7 @@
  * نقاط وصول المصادقة
  * 
  * ⚠️ ملاحظة مهمة:
- * - اللوجين يتم من نظام الإدارة فقط: https://media-center-management-system.onrender.com/api/auth/login
+ * - اللوجين يتم من نظام الإدارة فقط
  * - نظام الأخبار يستقبل التوكن من نظام الإدارة ويستخدمه للتحقق من الصلاحيات
  * - لا يوجد تسجيل دخول مستقل في نظام الأخبار
  * 
@@ -16,64 +16,20 @@ import { authenticate } from '../../middleware/auth';
 const router = Router();
 
 /**
- * ⚠️ تسجيل الدخول معطّل
- * 
- * اللوجين يجب أن يكون من نظام الإدارة فقط:
- * POST https://media-center-management-system.onrender.com/api/auth/login
- * 
- * هذا الـ endpoint معطّل لأن نظام الأخبار يستقبل التوكن من نظام الإدارة فقط
- * ولا يقوم بتسجيل دخول مستقل.
- */
-// router.post('/login', async (req: Request, res: Response): Promise<void> => {
-//   // معطّل - استخدم نظام الإدارة للوجين
-// });
-
-/**
  * معلومات عن اللوجين
  * GET /api/auth/login-info
  * 
- * يرجع معلومات عن كيفية تسجيل الدخول
+ * يرجع تعليمات عامة عن كيفية تسجيل الدخول (بدون كشف بيانات حساسة)
  */
 router.get('/login-info', (_req: Request, res: Response): void => {
   res.status(200).json({
     success: true,
     message: 'اللوجين يتم من نظام الإدارة فقط',
-    loginUrl: 'https://media-center-management-system.onrender.com/api/auth/login',
     instructions: {
       step1: 'سجّل الدخول من نظام الإدارة',
       step2: 'احصل على التوكن من الرد',
       step3: 'استخدم التوكن في جميع طلبات نظام الأخبار',
       step4: 'أرسل التوكن في الـ Authorization Header: Bearer <token>'
-    },
-    example: {
-      loginRequest: {
-        method: 'POST',
-        url: 'https://media-center-management-system.onrender.com/api/auth/login',
-        body: {
-          email: 'user@example.com',
-          password: 'your_password'
-        }
-      },
-      loginResponse: {
-        success: true,
-        data: {
-          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          user: {
-            id: 57,
-            name: 'أحمد موقدي',
-            email: 'a.moqadi@najah.edu',
-            roles: [{ id: 19, name: 'مخرج' }]
-          }
-        }
-      },
-      newsSystemRequest: {
-        method: 'GET',
-        url: 'https://automation-and-ai-hub-backend.onrender.com/api/ai-hub/analytics/overview',
-        headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          'Content-Type': 'application/json'
-        }
-      }
     },
     timestamp: new Date().toISOString(),
   });
@@ -86,22 +42,7 @@ router.get('/login-info', (_req: Request, res: Response): void => {
  * الهيدر:
  * Authorization: Bearer TOKEN
  * 
- * الرد:
- * {
- *   "success": true,
- *   "data": {
- *     "id": 57,
- *     "name": "أحمد موقدي",
- *     "email": "a.moqadi@najah.edu",
- *     "work_days": "الأحد,الاثنين,الثلاثاء,الأربعاء,الخميس",
- *     "start_time": "08:00",
- *     "end_time": "16:00",
- *     "is_active": true,
- *     "last_login": "2026-04-28T10:00:00.000Z",
- *     "roles": [{ "id": 19, "name": "مخرج" }],
- *     "permissions": ["orders.view", "tasks.view", "shootings.view", "content.view", "content.create", "programs.view"]
- *   }
- * }
+ * الرد: بيانات المستخدم + أدواره + صلاحياته
  */
 router.get('/me', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -136,14 +77,14 @@ router.get('/me', authenticate, async (req: Request, res: Response): Promise<voi
 
 import { requirePermission } from '../../middleware/auth';
 import { PermissionService } from '../../services/management/PermissionService';
-import pool from '../../config/database';
+import { query } from '../../config/database';
 
 /**
  * GET /api/auth/users — جلب كل الموظفين مع صلاحياتهم
  */
 router.get('/users', authenticate, requirePermission('news.dashboard'), async (_req: Request, res: Response): Promise<void> => {
   try {
-    const result = await pool.query(
+    const result = await query(
       `SELECT u.id, u.name, u.email, u.is_active, u.role_id, r.name as role_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
@@ -190,11 +131,11 @@ router.put('/users/:userId/permissions', authenticate, requirePermission('news.d
     }
 
     // حذف كل الصلاحيات اليدوية الحالية
-    await pool.query('DELETE FROM user_permissions WHERE user_id = $1', [userId]);
+    await query('DELETE FROM user_permissions WHERE user_id = $1', [userId]);
 
     // إضافة الصلاحيات الجديدة
     if (permissions.length > 0) {
-      await pool.query(
+      await query(
         `INSERT INTO user_permissions (user_id, permission_id)
          SELECT $1, p.id FROM permissions p WHERE p.name = ANY($2)
          ON CONFLICT DO NOTHING`,

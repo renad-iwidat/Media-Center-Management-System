@@ -67,7 +67,7 @@ METRICS_INTERVAL_MS=60000
 #### **المتغيرات المطلوبة:**
 ```bash
 VITE_API_URL=https://your-backend-service.onrender.com
-VITE_MANAGEMENT_API_URL=https://media-center-management-system.onrender.com
+VITE_MANAGEMENT_API_URL=https://mcms-backend-iw71.onrender.com
 ```
 
 ## 🔧 **خطوات الإعداد في Render:**

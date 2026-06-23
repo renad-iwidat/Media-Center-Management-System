@@ -6,7 +6,7 @@
 
 ```bash
 # 1. سجّل دخول من نظام الإدارة
-curl -X POST "https://media-center-management-system.onrender.com/api/auth/login" \
+curl -X POST "https://mcms-backend-iw71.onrender.com/api/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email": "your_email@example.com", "password": "your_password"}'
 

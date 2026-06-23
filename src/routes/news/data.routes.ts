@@ -42,7 +42,7 @@ router.use(authenticate);
 // Media Units
 router.get('/media-units', (req, res, next) => {
   console.log('🛣️ [ROUTE] /api/data/media-units - طلب جديد');
-  console.log('🔐 [ROUTE] المستخدم المصادق عليه:', (req as any).user?.name || 'غير موجود');
+  console.log('🔐 [ROUTE] المستخدم المصادق عليه:', (req as any).user?.email || 'غير موجود');
   next();
 }, getMediaUnits);
 

@@ -5,7 +5,7 @@ Arabic RTL media center management system for multi-unit newsrooms. Built with R
 
 ## Architecture
 - **Frontend only** — communicates with two external backend APIs
-- **Management API**: `https://media-center-management-system.onrender.com/api`
+- **Management API**: `https://mcms-backend-iw71.onrender.com/api`
 - **News/AI API**: `https://automation-and-ai-hub-backend.onrender.com/api`
 
 ## Tech Stack

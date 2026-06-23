@@ -48,7 +48,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-iqsv.onrender.com';
+      const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-backend-iw71.onrender.com';
 
       const loginResponse = await fetch(`${managementApiUrl}/api/auth/login`, {
         method: 'POST',

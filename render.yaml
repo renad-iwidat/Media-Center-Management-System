@@ -53,7 +53,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: VITE_MANAGEMENT_API_URL
-        value: https://mcms-iqsv.onrender.com
+        value: https://mcms-backend-iw71.onrender.com
       - key: VITE_API_URL
         fromService:
           type: web

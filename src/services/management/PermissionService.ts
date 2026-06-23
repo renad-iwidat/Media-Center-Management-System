@@ -1,4 +1,4 @@
-import pool from '../../config/database';
+import { query } from '../../config/database';
 
 export class PermissionService {
 
@@ -6,7 +6,7 @@ export class PermissionService {
    * جلب كل صلاحيات المستخدم (من كل أدواره + user_permissions + primary role)
    */
   static async getUserPermissions(userId: bigint): Promise<string[]> {
-    const result = await pool.query(
+    const result = await query(
       `SELECT DISTINCT p.name FROM permissions p
        WHERE p.id IN (
          -- صلاحيات من user_roles -> role_permissions
@@ -40,7 +40,7 @@ export class PermissionService {
    * جلب كل أدوار المستخدم
    */
   static async getUserRoles(userId: bigint): Promise<any[]> {
-    const result = await pool.query(
+    const result = await query(
       'SELECT r.id, r.name, r.description ' +
       'FROM roles r ' +
       'INNER JOIN user_roles ur ON r.id = ur.role_id ' +
@@ -54,7 +54,7 @@ export class PermissionService {
    * إضافة دور لمستخدم
    */
   static async addRoleToUser(userId: bigint, roleId: bigint): Promise<void> {
-    await pool.query(
+    await query(
       'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [userId, roleId]
     );
@@ -64,7 +64,7 @@ export class PermissionService {
    * حذف دور من مستخدم
    */
   static async removeRoleFromUser(userId: bigint, roleId: bigint): Promise<void> {
-    await pool.query(
+    await query(
       'DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2',
       [userId, roleId]
     );
@@ -74,7 +74,7 @@ export class PermissionService {
    * جلب كل الصلاحيات المتاحة
    */
   static async getAllPermissions(): Promise<any[]> {
-    const result = await pool.query('SELECT * FROM permissions ORDER BY name');
+    const result = await query('SELECT * FROM permissions ORDER BY name');
     return result.rows;
   }
 
@@ -82,7 +82,7 @@ export class PermissionService {
    * جلب صلاحيات دور معين
    */
   static async getRolePermissions(roleId: bigint): Promise<string[]> {
-    const result = await pool.query(
+    const result = await query(
       'SELECT p.name FROM permissions p ' +
       'INNER JOIN role_permissions rp ON p.id = rp.permission_id ' +
       'WHERE rp.role_id = $1',

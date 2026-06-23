@@ -7,13 +7,20 @@ import { environment } from './environment';
  */
 const pool = new Pool({
   connectionString: environment.DATABASE_URL,
-  max: 10, // قلل عدد الاتصالات المتزامنة
-  idleTimeoutMillis: 60000, // زيد وقت انتظار الاتصالات الخاملة
-  connectionTimeoutMillis: 30000, // زيد وقت انتظار الاتصال
-  statement_timeout: 60000, // زيد وقت انتظار تنفيذ الاستعلامات
-  query_timeout: 60000, // زيد وقت انتظار الاستعلامات
-  keepAlive: true, // حافظ على الاتصال حياً
+  max: 10, // عدد الاتصالات المتزامنة
+  // مهم: نخلي الـ pool يسكّر الاتصال الخامل قبل ما Render يقطعه من جهته
+  // (Render بيقطع الاتصالات الخاملة، فلو خلّيناها طويلة بيتسلّم اتصال "ميت" للطلب التالي)
+  idleTimeoutMillis: 15000,
+  connectionTimeoutMillis: 30000, // وقت انتظار الحصول على اتصال
+  statement_timeout: 60000, // وقت انتظار تنفيذ الاستعلام
+  query_timeout: 60000, // وقت انتظار الاستعلام
+  keepAlive: true, // حافظ على الاتصال حياً (TCP keepalive)
   keepAliveInitialDelayMillis: 10000,
+  allowExitOnIdle: false,
+  // SSL مطلوب على Render — صريح لتفادي مشاكل الشهادات
+  ssl: environment.DATABASE_URL.includes('render.com')
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 pool.on('error', (err) => {

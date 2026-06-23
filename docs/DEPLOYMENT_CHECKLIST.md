@@ -85,7 +85,7 @@ curl https://your-frontend-url.onrender.com/health
 console.log(window.ENV);
 // {
 //   VITE_API_URL: "https://your-backend-url.onrender.com",
-//   VITE_MANAGEMENT_API_URL: "https://media-center-management-system.onrender.com"
+//   VITE_MANAGEMENT_API_URL: "https://mcms-backend-iw71.onrender.com"
 // }
 ```
 
