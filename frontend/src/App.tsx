@@ -333,8 +333,10 @@ export default function App() {
     return () => { isMounted = false; clearTimeout(emergencyTimeout); };
   }, []);
 
-  // ═══ تحديث صلاحيات المستخدم عند كل فتح/refresh ═══
-  // هيك لو الأدمن عدّل صلاحيات مستخدم، بتنعكس عند أول فتح بدون حاجة لـ logout/login
+  // ═══ تحديث صلاحيات المستخدم من سيرفر الأخبار ═══
+  // مهم: سيرفر الإدارة (login) قد لا يضمّ user_permissions (الصلاحيات اليدوية)،
+  // فنجيب الصلاحيات الكاملة من سيرفر الأخبار الذي يضمّ كل المصادر (أدوار + يدوي).
+  // التوكن مشترك بين السيرفرين (نفس JWT_SECRET).
   useEffect(() => {
     let isMounted = true;
     if (!isAuthenticated) return;
@@ -342,15 +344,17 @@ export default function App() {
     const token = getAuthToken();
     if (!token) return;
 
-    const managementApiUrl = getEnvVar('VITE_MANAGEMENT_API_URL') || 'https://mcms-backend-iw71.onrender.com';
-    fetch(`${managementApiUrl}/api/auth/me`, {
+    const newsApiUrl = getEnvVar('VITE_API_URL') || 'https://automation-and-ai-hub-backend.onrender.com';
+    fetch(`${newsApiUrl}/api/auth/me`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (!isMounted || !data?.success || !data?.data) return;
-        setCurrentUser(data.data);
-        setCurrentUserState(data.data);
+        // ندمج: نحافظ على الحقول الموجودة ونحدّث الصلاحيات/الأدوار من سيرفر الأخبار
+        const merged = { ...(getCurrentUser() || {}), ...data.data };
+        setCurrentUser(merged);
+        setCurrentUserState(merged);
       })
       .catch(() => { /* صامت — لو فشل الشبكة نكمّل بالنسخة المخزّنة */ });
 
