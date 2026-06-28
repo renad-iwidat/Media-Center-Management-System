@@ -5,6 +5,7 @@
 
 import { IPublishingProvider } from './base-provider';
 import { ArticleForPublishing, PlatformConfig, PublishResult } from '../types';
+import { prepareTagsString } from '../../news/auto-publish/tag-generator';
 
 export class ExternalWebsiteProvider implements IPublishingProvider {
   readonly platformName = 'external_website';
@@ -17,8 +18,13 @@ export class ExternalWebsiteProvider implements IPublishingProvider {
         return { success: false, platform: 'external_website', error: 'Missing api_url or api_token in credentials' };
       }
 
-      // تجهيز الـ tags
-      const tagsString = Array.isArray(article.tags) ? article.tags.join(',') : '';
+      // تجهيز الـ tags (نفس منطق النشر التلقائي: تنظيف + توليد بالـ AI عند الفراغ)
+      const tagsString = await prepareTagsString(
+        article.tags,
+        article.id,
+        article.title,
+        article.content
+      );
 
       // بناء FormData
       const formData = new FormData();

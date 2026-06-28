@@ -48,6 +48,10 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
     pin: number;
   }>({ category_id: undefined, auto_publish: true, pin: 0 });
 
+  // النص القابل للتحرير قبل النشر الفعلي على الموقع الخارجي
+  const [editableTitle, setEditableTitle] = useState("");
+  const [editableContent, setEditableContent] = useState("");
+
   const loadData = useCallback(() => {
     setLoading(true);
     // جلب الأخبار المرشحة للنشر (status = approved في editorial_queue)
@@ -70,6 +74,9 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
     setPublishConfigTarget(null);
     setExternalCategories([]);
     setPublishConfig({ category_id: undefined, auto_publish: true, pin: 0 });
+    // تهيئة النص القابل للتحرير من نص الخبر الحالي
+    setEditableTitle(item.title || "");
+    setEditableContent(item.content || "");
     try {
       const res = await api.getAutoPublishTargets(unitId || undefined);
       // جلب أسماء المواقع المنشور عليها فعلاً من published_platforms
@@ -134,6 +141,8 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
           category_id: publishConfig.category_id,
           auto_publish: publishConfig.auto_publish,
           pin: publishConfig.pin,
+          title: editableTitle,
+          content: editableContent,
         }
       );
       const externalUrl = res?.data?.externalUrl;
@@ -475,12 +484,12 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
               </div>
 
               {/* URL */}
-              {selectedItem.url && (
+              {(selectedItem.original_url || selectedItem.url) && (
                 <div>
                   <p className="text-[10px] text-[#94a3b8] font-bold uppercase mb-2">الرابط الأصلي</p>
-                  <a href={selectedItem.url} target="_blank" rel="noopener noreferrer"
+                  <a href={selectedItem.original_url || selectedItem.url} target="_blank" rel="noopener noreferrer"
                     className="text-xs text-[#3d6a8a] hover:text-[#2d5570] break-all transition-colors">
-                    {selectedItem.url}
+                    {selectedItem.original_url || selectedItem.url}
                   </a>
                 </div>
               )}
@@ -721,6 +730,66 @@ export function PublishedView({ unitId, onNavigateToAI }: PublishedViewProps) {
                           >
                             <X size={11} /> تغيير
                           </button>
+                        </div>
+
+                        {/* الرابط الأصلي للخبر — ليطّلع عليه المحرر قبل النشر */}
+                        {(selectedPublishItem?.original_url || selectedPublishItem?.url) && (
+                          <div className="bg-white border border-[#e2e8f0] rounded-xl p-3">
+                            <p className="text-[10px] text-[#94a3b8] font-bold uppercase mb-1.5 flex items-center gap-1">
+                              <ExternalLink size={11} /> الرابط الأصلي للخبر
+                            </p>
+                            <a
+                              href={selectedPublishItem.original_url || selectedPublishItem.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] text-[#3d6a8a] hover:text-[#2d5570] underline break-all transition-colors"
+                            >
+                              {selectedPublishItem.original_url || selectedPublishItem.url}
+                            </a>
+                          </div>
+                        )}
+
+                        {/* تحرير العنوان قبل النشر */}
+                        <div>
+                          <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-1.5 flex items-center gap-1">
+                            <PenTool size={11} /> العنوان (قابل للتعديل)
+                          </label>
+                          <input
+                            type="text"
+                            value={editableTitle}
+                            onChange={(e) => setEditableTitle(e.target.value)}
+                            className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-400 text-[#1e293b]"
+                            placeholder="عنوان الخبر..."
+                          />
+                        </div>
+
+                        {/* تحرير المحتوى قبل النشر */}
+                        <div>
+                          <label className="text-[10px] text-[#64748b] font-bold uppercase block mb-1.5 flex items-center gap-1">
+                            <PenTool size={11} /> المحتوى (قابل للتعديل)
+                          </label>
+                          <textarea
+                            value={editableContent}
+                            onChange={(e) => setEditableContent(e.target.value)}
+                            rows={8}
+                            className="w-full bg-white border border-[#e2e8f0] rounded-xl px-3 py-2 text-xs leading-relaxed focus:outline-none focus:border-blue-400 text-[#1e293b] resize-y custom-scrollbar whitespace-pre-wrap"
+                            placeholder="محتوى الخبر..."
+                          />
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-[9px] text-[#94a3b8]">
+                              سيُنشر هذا النص المعدّل على {publishConfigTarget.name}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditableTitle(selectedPublishItem?.title || "");
+                                setEditableContent(selectedPublishItem?.content || "");
+                              }}
+                              className="text-[9px] text-[#94a3b8] hover:text-[#1e293b] underline"
+                            >
+                              استعادة النص الأصلي
+                            </button>
+                          </div>
                         </div>
 
                         {/* التصنيف */}

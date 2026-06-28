@@ -78,6 +78,9 @@ export interface PublishOverrides {
   auto_publish?: boolean;
   pin?: number;
   isManual?: boolean;
+  // نص معدّل من المحرر قبل النشر الفعلي (يتجاوز نص الخبر المخزّن)
+  title?: string;
+  content?: string;
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────

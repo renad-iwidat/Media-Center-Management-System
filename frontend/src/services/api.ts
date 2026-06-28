@@ -691,6 +691,8 @@ export const api = {
     category_id?: number;
     auto_publish?: boolean;
     pin?: number;
+    title?: string;
+    content?: string;
   }) =>
     request<any>("/auto-publish/publish-one", {
       method: "POST",

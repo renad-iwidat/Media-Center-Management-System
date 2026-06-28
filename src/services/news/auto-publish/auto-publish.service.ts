@@ -249,9 +249,11 @@ class AutoPublishService {
       // تحميل الصورة
       const image = await this.downloadImage(article.image_url);
 
-      // تجهيز المحتوى
-      const cleanTitle = prepareTitleForPublish(article.title);
-      const cleanContent = prepareContentForPublish(article.content);
+      // تجهيز المحتوى — مع دعم النص المعدّل من المحرر (overrides)
+      const titleSource = overrides?.title && overrides.title.trim() ? overrides.title : article.title;
+      const contentSource = overrides?.content && overrides.content.trim() ? overrides.content : article.content;
+      const cleanTitle = prepareTitleForPublish(titleSource);
+      const cleanContent = prepareContentForPublish(contentSource);
 
       // إرسال مع retry
       const { response, responseBody } = await this.sendRequest(target, {

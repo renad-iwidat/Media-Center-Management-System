@@ -453,7 +453,7 @@ export class AutoPublishController {
    */
   static async publishOneManually(req: Request, res: Response): Promise<void> {
     try {
-      const { raw_data_id, target_id, category_id, auto_publish, pin } = req.body;
+      const { raw_data_id, target_id, category_id, auto_publish, pin, title, content } = req.body;
 
       if (!raw_data_id || !target_id) {
         res.status(400).json({
@@ -463,10 +463,12 @@ export class AutoPublishController {
         return;
       }
 
-      const overrides: { category_id?: number; auto_publish?: boolean; pin?: number } = {};
+      const overrides: { category_id?: number; auto_publish?: boolean; pin?: number; title?: string; content?: string } = {};
       if (category_id !== undefined) overrides.category_id = Number(category_id);
       if (auto_publish !== undefined) overrides.auto_publish = Boolean(auto_publish);
       if (pin !== undefined) overrides.pin = Number(pin);
+      if (typeof title === 'string' && title.trim()) overrides.title = title;
+      if (typeof content === 'string' && content.trim()) overrides.content = content;
 
       console.log(`📤 نشر يدوي: خبر #${raw_data_id} → هدف #${target_id}`, overrides);
       const result = await autoPublishService.publishOneManually(
