@@ -19,6 +19,7 @@ const SUMMARIZE_STYLES: { value: SummarizeStyle; label: string }[] = [
 ];
 
 const REWRITE_STYLES: { value: RewriteStyle; label: string }[] = [
+  { value: 'news_report',     label: 'أسلوب خبر صحفي' },
   { value: 'radio_broadcast', label: 'بث إذاعي'       },
   { value: 'investigative',   label: 'صحفي استقصائي'  },
   { value: 'social_media',    label: 'سوشل ميديا'     },

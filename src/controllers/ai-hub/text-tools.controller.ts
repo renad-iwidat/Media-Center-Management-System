@@ -80,7 +80,7 @@ export async function summarizeText(
 
 interface RewriteRequest {
   text: string;
-  style?: 'radio_broadcast' | 'investigative' | 'social_media' | 'formal' | 'casual';
+  style?: 'news_report' | 'radio_broadcast' | 'investigative' | 'social_media' | 'formal' | 'casual';
   language?: string;
 }
 
@@ -91,11 +91,33 @@ interface RewriteResponse {
 }
 
 const REWRITE_STYLE_LABELS: Record<string, string> = {
+  news_report:     'أسلوب خبر صحفي',
   radio_broadcast: 'بث إذاعي',
   investigative:   'صحفي استقصائي',
   social_media:    'سوشل ميديا',
   formal:          'رسمي مؤسسي',
   casual:          'عامي/كاجوال',
+};
+
+/**
+ * تعليمات تفصيلية إضافية لبعض الأساليب.
+ * الأساليب غير المذكورة هنا تعتمد على الـ styleLabel فقط (السلوك الافتراضي).
+ */
+const REWRITE_STYLE_GUIDELINES: Record<string, string> = {
+  news_report: `اكتب خبرًا صحفيًا محترفًا وفق الأصول التالية، والتزم بالحقائق الواردة في النص دون إضافة أو استنتاج أو رأي:
+
+1) العنوان: دقيق يعكس أهم معلومة، بلا رأي أو مبالغة، قصير نسبيًا (7-14 كلمة غالبًا)، يحتوي كلمة مفتاحية، ولا يضلّل القارئ.
+2) المقدمة (Lead): أهم فقرة، تجيب في أول سطرين عن ماذا حدث؟ من؟ أين؟ متى؟ ولماذا/كيف إن أمكن.
+3) جسم الخبر (الهرم المقلوب): أهم المعلومات ثم التفاصيل ثم الخلفية ثم المعلومات الثانوية، بحيث يبقى الخبر مفهومًا لو حُذف آخره.
+4) الدقة: لا إضافة من المحرر ولا استنتاجات ولا تفسير شخصي، ولا تغيير في معنى التصريحات، وانقل الأرقام كما وردت، وانسب كل معلومة إلى مصدرها (وفقًا للتقرير... / بحسب... / قال...).
+5) اللغة: عربية سليمة، جمل قصيرة، أفعال قوية واضحة، تجنّب التكرار والإنشاء.
+6) الموضوعية: افصل بين الوقائع والاتهامات والآراء (اكتب "اتهمت الجهة بـ..." بدل الجزم)، إلا إذا كانت الواقعة مثبتة من مصدر رسمي أو قضائي.
+7) الخلفية: أضف عند الحاجة فقرة قصيرة تشرح السياق دون إطالة.
+8) الاقتباسات: اختر أهم تصريح فقط، بلا تصريحات طويلة، واحذف التكرار وأبقِ الأكثر قيمة.
+9) المصطلحات المعتمدة (النجاح الإخباري): جيش الاحتلال، قوات الاحتلال، مستوطنون، مستوطنة، الضفة الغربية المحتلة (عند الحاجة)، وتجنّب أي مفردات تخالف السياسة التحريرية.
+10) النهاية: أنهِ الخبر بمعلومة مهمة أو خلفية مرتبطة، وليس بجملة إنشائية مثل "يُذكر أن..." إلا إذا أضافت قيمة.
+
+أعد النص كخبر صحفي متكامل (عنوان + مقدمة + جسم) ملتزمًا بكل ما سبق.`,
 };
 
 /**
@@ -125,16 +147,18 @@ export async function rewriteText(
     }
 
     const styleLabel = REWRITE_STYLE_LABELS[style] ?? REWRITE_STYLE_LABELS.radio_broadcast;
+    const styleGuidelines = REWRITE_STYLE_GUIDELINES[style];
     const langNote   = language === 'ar' ? 'باللغة العربية' : `in ${language}`;
 
     const system = 'أنت محرر نصوص محترف. مهمتك إعادة صياغة النص بالأسلوب المطلوب مع الحفاظ على المعنى الأصلي.';
-    const prompt  = `الأسلوب المطلوب: ${styleLabel}\n${langNote}\n\nالنص الأصلي:\n${text.trim()}\n\nيرجى إعادة صياغة النص.`;
+    const guidelinesBlock = styleGuidelines ? `\n\nتعليمات الأسلوب:\n${styleGuidelines}` : '';
+    const prompt  = `الأسلوب المطلوب: ${styleLabel}\n${langNote}${guidelinesBlock}\n\nالنص الأصلي:\n${text.trim()}\n\nيرجى إعادة صياغة النص.`;
 
     console.log(`\n✏️  [REWRITE] style=${style} | textLength=${text.length}`);
 
     const result = await generateAIResponse(`${system}\n\n${prompt}`, {
-      max_tokens: 800,
-      temperature: 0.5,
+      max_tokens: style === 'news_report' ? 1500 : 800,
+      temperature: style === 'news_report' ? 0.3 : 0.5,
     });
 
     res.status(200).json({ success: true, result });

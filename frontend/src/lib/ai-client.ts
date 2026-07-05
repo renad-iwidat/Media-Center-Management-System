@@ -139,7 +139,7 @@ export async function summarizeContent(
 }
 
 // ─── Rewrite ──────────────────────────────────────────────────
-export type RewriteStyle = 'radio_broadcast' | 'investigative' | 'social_media' | 'formal' | 'casual';
+export type RewriteStyle = 'news_report' | 'radio_broadcast' | 'investigative' | 'social_media' | 'formal' | 'casual';
 
 export async function rewriteContent(
   text: string,
